@@ -185,7 +185,7 @@ export async function sendInvoiceNotificationEmail(
   category: string,
   notes: string | null,
   fileUrl: string | null
-): Promise<void> {
+): Promise<{ success: boolean; error?: string }> {
   const formattedDate = new Date(date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
   const subject = `Factura - ${supplierName} - ${formattedDate}`;
   
@@ -209,13 +209,15 @@ export async function sendInvoiceNotificationEmail(
 
   const fileName = fileUrl ? `Factura_${supplierName.replace(/\s+/g, '_')}_${formattedDate.replace(/\//g, '-')}.${fileUrl.split('.').pop() || 'pdf'}` : undefined;
   
-  await sendEmailWithAttachment(
+  const result = await sendEmailWithAttachment(
     'thespotcentralhostel@gmail.com',
     subject,
     html,
     fileUrl || undefined,
     fileName
   );
+  console.log("[Email] Invoice notification result:", result);
+  return result;
 }
 
 // Send shift notification email

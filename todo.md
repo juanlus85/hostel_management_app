@@ -328,3 +328,14 @@
 
 ## Bug Corregido (v16)
 - [x] Al eliminar un empleado, sus turnos se eliminan automáticamente en cascada
+
+
+## Mejoras Responsive (v17)
+- [ ] Mejorar responsive del Dashboard (tarjetas en columna en móvil)
+- [ ] Mejorar responsive del calendario de Turnos (scroll horizontal, vista compacta)
+- [ ] Mejorar responsive de Caja (formulario en columna)
+- [ ] Mejorar responsive de Facturas (lista compacta en móvil)
+
+
+## Bug Corregido (v17)
+- [x] Añadido logging detallado al envío de email de facturas para diagnosticar problemas

@@ -1,0 +1,190 @@
+{
+  "query": "SELECT s.id, s.userId, s.scheduledDate, s.scheduledStart, s.scheduledEnd, u.name as userName, u.isActive \nFROM shifts s \nLEFT JOIN users u ON s.userId = u.id \nWHERE u.id IS NULL OR u.isActive = 0 \nORDER BY s.scheduledDate DESC \nLIMIT 20",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user uN1yFnMXg2uz2sS.48d4e14bb92a --database nKwKaPpEnuCPRfjQgd5Gdt --execute SELECT s.id, s.userId, s.scheduledDate, s.scheduledStart, s.scheduledEnd, u.name as userName, u.isActive \nFROM shifts s \nLEFT JOIN users u ON s.userId = u.id \nWHERE u.id IS NULL OR u.isActive = 0 \nORDER BY s.scheduledDate DESC \nLIMIT 20",
+  "rows": [
+    {
+      "id": "90184",
+      "userId": "150080",
+      "scheduledDate": "2026-01-31",
+      "scheduledStart": "19:00",
+      "scheduledEnd": "04:00",
+      "userName": "Regis",
+      "isActive": "0"
+    },
+    {
+      "id": "90161",
+      "userId": "90022",
+      "scheduledDate": "2026-01-31",
+      "scheduledStart": "10:00",
+      "scheduledEnd": "14:00",
+      "userName": "Maylin",
+      "isActive": "0"
+    },
+    {
+      "id": "90183",
+      "userId": "150080",
+      "scheduledDate": "2026-01-30",
+      "scheduledStart": "19:00",
+      "scheduledEnd": "04:00",
+      "userName": "Regis",
+      "isActive": "0"
+    },
+    {
+      "id": "90182",
+      "userId": "150080",
+      "scheduledDate": "2026-01-29",
+      "scheduledStart": "17:00",
+      "scheduledEnd": "01:30",
+      "userName": "Regis",
+      "isActive": "0"
+    },
+    {
+      "id": "90160",
+      "userId": "90022",
+      "scheduledDate": "2026-01-29",
+      "scheduledStart": "10:00",
+      "scheduledEnd": "14:00",
+      "userName": "Maylin",
+      "isActive": "0"
+    },
+    {
+      "id": "90181",
+      "userId": "150080",
+      "scheduledDate": "2026-01-28",
+      "scheduledStart": "17:00",
+      "scheduledEnd": "00:30",
+      "userName": "Regis",
+      "isActive": "0"
+    },
+    {
+      "id": "90159",
+      "userId": "90022",
+      "scheduledDate": "2026-01-28",
+      "scheduledStart": "10:00",
+      "scheduledEnd": "14:00",
+      "userName": "Maylin",
+      "isActive": "0"
+    },
+    {
+      "id": "90180",
+      "userId": "150080",
+      "scheduledDate": "2026-01-27",
+      "scheduledStart": "17:00",
+      "scheduledEnd": "00:30",
+      "userName": "Regis",
+      "isActive": "0"
+    },
+    {
+      "id": "90158",
+      "userId": "90022",
+      "scheduledDate": "2026-01-27",
+      "scheduledStart": "10:00",
+      "scheduledEnd": "14:00",
+      "userName": "Maylin",
+      "isActive": "0"
+    },
+    {
+      "id": "90157",
+      "userId": "90022",
+      "scheduledDate": "2026-01-26",
+      "scheduledStart": "10:00",
+      "scheduledEnd": "14:00",
+      "userName": "Maylin",
+      "isActive": "0"
+    },
+    {
+      "id": "90156",
+      "userId": "90022",
+      "scheduledDate": "2026-01-25",
+      "scheduledStart": "10:00",
+      "scheduledEnd": "14:00",
+      "userName": "Maylin",
+      "isActive": "0"
+    },
+    {
+      "id": "90179",
+      "userId": "150080",
+      "scheduledDate": "2026-01-24",
+      "scheduledStart": "19:00",
+      "scheduledEnd": "04:00",
+      "userName": "Regis",
+      "isActive": "0"
+    },
+    {
+      "id": "90155",
+      "userId": "90022",
+      "scheduledDate": "2026-01-24",
+      "scheduledStart": "10:00",
+      "scheduledEnd": "14:00",
+      "userName": "Maylin",
+      "isActive": "0"
+    },
+    {
+      "id": "90178",
+      "userId": "150080",
+      "scheduledDate": "2026-01-23",
+      "scheduledStart": "19:00",
+      "scheduledEnd": "04:00",
+      "userName": "Regis",
+      "isActive": "0"
+    },
+    {
+      "id": "90177",
+      "userId": "150080",
+      "scheduledDate": "2026-01-22",
+      "scheduledStart": "17:00",
+      "scheduledEnd": "01:30",
+      "userName": "Regis",
+      "isActive": "0"
+    },
+    {
+      "id": "90154",
+      "userId": "90022",
+      "scheduledDate": "2026-01-22",
+      "scheduledStart": "10:00",
+      "scheduledEnd": "14:00",
+      "userName": "Maylin",
+      "isActive": "0"
+    },
+    {
+      "id": "90176",
+      "userId": "150080",
+      "scheduledDate": "2026-01-21",
+      "scheduledStart": "17:00",
+      "scheduledEnd": "00:30",
+      "userName": "Regis",
+      "isActive": "0"
+    },
+    {
+      "id": "90153",
+      "userId": "90022",
+      "scheduledDate": "2026-01-21",
+      "scheduledStart": "10:00",
+      "scheduledEnd": "14:00",
+      "userName": "Maylin",
+      "isActive": "0"
+    },
+    {
+      "id": "90175",
+      "userId": "150080",
+      "scheduledDate": "2026-01-20",
+      "scheduledStart": "17:00",
+      "scheduledEnd": "00:30",
+      "userName": "Regis",
+      "isActive": "0"
+    },
+    {
+      "id": "90152",
+      "userId": "90022",
+      "scheduledDate": "2026-01-20",
+      "scheduledStart": "10:00",
+      "scheduledEnd": "14:00",
+      "userName": "Maylin",
+      "isActive": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tuserId\tscheduledDate\tscheduledStart\tscheduledEnd\tuserName\tisActive\n90184\t150080\t2026-01-31\t19:00\t04:00\tRegis\t0\n90161\t90022\t2026-01-31\t10:00\t14:00\tMaylin\t0\n90183\t150080\t2026-01-30\t19:00\t04:00\tRegis\t0\n90182\t150080\t2026-01-29\t17:00\t01:30\tRegis\t0\n90160\t90022\t2026-01-29\t10:00\t14:00\tMaylin\t0\n90181\t150080\t2026-01-28\t17:00\t00:30\tRegis\t0\n90159\t90022\t2026-01-28\t10:00\t14:00\tMaylin\t0\n90180\t150080\t2026-01-27\t17:00\t00:30\tRegis\t0\n90158\t90022\t2026-01-27\t10:00\t14:00\tMaylin\t0\n90157\t90022\t2026-01-26\t10:00\t14:00\tMaylin\t0\n90156\t90022\t2026-01-25\t10:00\t14:00\tMaylin\t0\n90179\t150080\t2026-01-24\t19:00\t04:00\tRegis\t0\n90155\t90022\t2026-01-24\t10:00\t14:00\tMaylin\t0\n90178\t150080\t2026-01-23\t19:00\t04:00\tRegis\t0\n90177\t150080\t2026-01-22\t17:00\t01:30\tRegis\t0\n90154\t90022\t2026-01-22\t10:00\t14:00\tMaylin\t0\n90176\t150080\t2026-01-21\t17:00\t00:30\tRegis\t0\n90153\t90022\t2026-01-21\t10:00\t14:00\tMaylin\t0\n90175\t150080\t2026-01-20\t17:00\t00:30\tRegis\t0\n90152\t90022\t2026-01-20\t10:00\t14:00\tMaylin\t0\n",
+  "stderr": "",
+  "execution_time_ms": 3528
+}

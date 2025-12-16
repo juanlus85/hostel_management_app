@@ -541,57 +541,62 @@ export default function Turnos() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-7 gap-1">
-                {/* Header */}
-                {DAYS.map(day => (
-                  <div key={day} className="p-2 text-center text-sm font-medium text-muted-foreground">
-                    {day}
-                  </div>
-                ))}
-                
-                {/* Days */}
-                {monthDays.map((day, i) => {
-                  if (!day) {
-                    return <div key={`empty-${i}`} className="p-2 min-h-[100px]" />;
-                  }
-                  const dateStr = day.toISOString().split('T')[0];
-                  const dayShifts = shiftsByDate.get(dateStr) || [];
-                  const isToday = day.toDateString() === new Date().toDateString();
-                  
-                  return (
-                    <div 
-                      key={dateStr} 
-                      className={`p-2 min-h-[100px] border rounded-lg ${isToday ? 'bg-primary/5 border-primary/20' : ''} ${isAdmin ? 'cursor-pointer hover:bg-muted/30' : ''}`}
-                      onClick={() => handleDayClick(day)}
-                    >
-                      <div className={`text-sm font-medium mb-1 ${isToday ? 'text-primary' : ''}`}>
-                        {day.getDate()}
+              <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+                <div className="min-w-[600px] sm:min-w-0">
+                  <div className="grid grid-cols-7 gap-1">
+                    {/* Header */}
+                    {DAYS.map(day => (
+                      <div key={day} className="p-1 sm:p-2 text-center text-xs sm:text-sm font-medium text-muted-foreground">
+                        {day}
                       </div>
-                      <div className="space-y-1">
-                        {dayShifts.slice(0, 3).map((shift: any) => (
-                          <div 
-                            key={shift.id}
-                            className={`text-xs px-1 py-0.5 rounded truncate ${getUserColor(shift.userId)} group relative cursor-pointer hover:opacity-80`}
-                            onClick={(e) => { e.stopPropagation(); if (isAdmin) openEditDialog(shift); }}
-                          >
-                            {getUserName(shift.userId)} {shift.scheduledStart} - {shift.scheduledEnd}
-                            {isAdmin && (
-                              <button 
-                                className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                                onClick={(e) => { e.stopPropagation(); handleDeleteShift(shift.id); }}
+                    ))}
+                    {/* Days */}
+                    {monthDays.map((day, i) => {
+                      if (!day) {
+                        return <div key={`empty-${i}`} className="p-1 sm:p-2 min-h-[80px] sm:min-h-[100px]" />;
+                      }
+                      const dateStr = day.toISOString().split('T')[0];
+                      const dayShifts = shiftsByDate.get(dateStr) || [];
+                      const isToday = day.toDateString() === new Date().toDateString();
+                      
+                      return (
+                        <div 
+                          key={dateStr} 
+                          className={`p-1 sm:p-2 min-h-[80px] sm:min-h-[100px] border rounded-lg ${isToday ? 'bg-primary/5 border-primary/20' : ''} ${isAdmin ? 'cursor-pointer hover:bg-muted/30' : ''}`}
+                          onClick={() => handleDayClick(day)}
+                        >
+                          <div className={`text-xs sm:text-sm font-medium mb-1 ${isToday ? 'text-primary' : ''}`}>
+                            {day.getDate()}
+                          </div>
+                          <div className="space-y-1">
+                            {dayShifts.slice(0, 3).map((shift: any) => (
+                              <div 
+                                key={shift.id}
+                                className={`text-[10px] sm:text-xs px-1 py-0.5 rounded truncate ${getUserColor(shift.userId)} group relative cursor-pointer hover:opacity-80`}
+                                onClick={(e) => { e.stopPropagation(); if (isAdmin) openEditDialog(shift); }}
                               >
-                                <Trash2 className="h-3 w-3" />
-                              </button>
+                                <span className="hidden sm:inline">{getUserName(shift.userId)} </span>
+                                <span className="sm:hidden">{getUserName(shift.userId).split(' ')[0]} </span>
+                                {shift.scheduledStart} - {shift.scheduledEnd}
+                                {isAdmin && (
+                                  <button 
+                                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                    onClick={(e) => { e.stopPropagation(); handleDeleteShift(shift.id); }}
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                            {dayShifts.length > 3 && (
+                              <div className="text-[10px] sm:text-xs text-muted-foreground">+{dayShifts.length - 3} más</div>
                             )}
                           </div>
-                        ))}
-                        {dayShifts.length > 3 && (
-                          <div className="text-xs text-muted-foreground">+{dayShifts.length - 3} más</div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>

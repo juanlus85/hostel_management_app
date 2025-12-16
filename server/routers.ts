@@ -407,8 +407,9 @@ export const appRouter = router({
       
       // Send email notification with invoice
       try {
+        console.log("[Invoices] Sending email notification for invoice:", input.invoiceNumber, "with file:", input.imageUrl);
         const { sendInvoiceNotificationEmail } = await import("./email");
-        await sendInvoiceNotificationEmail(
+        const emailResult = await sendInvoiceNotificationEmail(
           input.invoiceNumber || "Sin número",
           input.supplier || "Sin proveedor",
           parseFloat(input.totalAmount || "0"),
@@ -417,6 +418,7 @@ export const appRouter = router({
           input.notes || null,
           input.imageUrl || null
         );
+        console.log("[Invoices] Email notification result:", emailResult);
       } catch (error) {
         console.error("[Invoices] Failed to send email notification:", error);
       }
