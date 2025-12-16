@@ -344,3 +344,32 @@ export const weeklySummaries = mysqlTable("weekly_summaries", {
 
 export type WeeklySummary = typeof weeklySummaries.$inferSelect;
 export type InsertWeeklySummary = typeof weeklySummaries.$inferInsert;
+
+
+// ==================== NOTIFICATIONS (Notificaciones) ====================
+export const notifications = mysqlTable("notifications", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(), // Usuario que recibe la notificación
+  type: mysqlEnum("type", ["shift_assigned", "shift_modified", "shift_deleted", "general"]).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  message: text("message").notNull(),
+  relatedShiftId: int("relatedShiftId"), // ID del turno relacionado (opcional)
+  isRead: boolean("isRead").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = typeof notifications.$inferInsert;
+
+
+// ==================== SYSTEM SETTINGS (Configuración del Sistema) ====================
+export const systemSettings = mysqlTable("system_settings", {
+  id: int("id").autoincrement().primaryKey(),
+  key: varchar("key", { length: 100 }).notNull().unique(),
+  value: text("value"),
+  description: varchar("description", { length: 255 }),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type SystemSetting = typeof systemSettings.$inferSelect;
+export type InsertSystemSetting = typeof systemSettings.$inferInsert;

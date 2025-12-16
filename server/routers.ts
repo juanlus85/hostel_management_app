@@ -108,6 +108,33 @@ export const appRouter = router({
       notes: z.string().optional(),
     })).mutation(async ({ input }) => {
       const id = await db.createShift(input);
+      
+      // Send notification and email
+      const user = await db.getUserById(input.userId);
+      if (user) {
+        // Create in-app notification
+        await db.createNotification({
+          userId: input.userId,
+          type: "shift_assigned",
+          title: "Nuevo turno asignado",
+          message: `Se te ha asignado un turno el ${input.scheduledDate} de ${input.scheduledStart} a ${input.scheduledEnd}`,
+          relatedShiftId: id,
+        });
+        
+        // Send email if user has email
+        if (user.email) {
+          const { sendShiftNotificationEmail } = await import("./email");
+          await sendShiftNotificationEmail(
+            user.email,
+            user.name || "Empleado",
+            "assigned",
+            input.scheduledDate,
+            input.scheduledStart,
+            input.scheduledEnd
+          );
+        }
+      }
+      
       return { success: true, id };
     }),
     update: adminProcedure.input(z.object({
@@ -119,10 +146,71 @@ export const appRouter = router({
       status: z.enum(["scheduled", "in_progress", "completed", "cancelled"]).optional(),
     })).mutation(async ({ input }) => {
       const { id, ...data } = input;
+      
+      // Get shift before update to get userId and send notification
+      const shift = await db.getShiftById(id);
       await db.updateShift(id, data);
+      
+      // Send notification if shift date/time changed
+      if (shift && (data.scheduledDate || data.scheduledStart || data.scheduledEnd)) {
+        const user = await db.getUserById(shift.userId);
+        if (user) {
+          const newDate = data.scheduledDate || shift.scheduledDate;
+          const newStart = data.scheduledStart || shift.scheduledStart;
+          const newEnd = data.scheduledEnd || shift.scheduledEnd;
+          
+          await db.createNotification({
+            userId: shift.userId,
+            type: "shift_modified",
+            title: "Turno modificado",
+            message: `Tu turno del ${newDate} ha sido modificado: ${newStart} - ${newEnd}`,
+            relatedShiftId: id,
+          });
+          
+          if (user.email) {
+            const { sendShiftNotificationEmail } = await import("./email");
+            await sendShiftNotificationEmail(
+              user.email,
+              user.name || "Empleado",
+              "modified",
+              newDate,
+              newStart,
+              newEnd
+            );
+          }
+        }
+      }
+      
       return { success: true };
     }),
     delete: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
+      // Get shift before delete to send notification
+      const shift = await db.getShiftById(input.id);
+      
+      if (shift) {
+        const user = await db.getUserById(shift.userId);
+        if (user) {
+          await db.createNotification({
+            userId: shift.userId,
+            type: "shift_deleted",
+            title: "Turno eliminado",
+            message: `Tu turno del ${shift.scheduledDate} (${shift.scheduledStart} - ${shift.scheduledEnd}) ha sido eliminado`,
+          });
+          
+          if (user.email) {
+            const { sendShiftNotificationEmail } = await import("./email");
+            await sendShiftNotificationEmail(
+              user.email,
+              user.name || "Empleado",
+              "deleted",
+              shift.scheduledDate,
+              shift.scheduledStart,
+              shift.scheduledEnd
+            );
+          }
+        }
+      }
+      
       await db.deleteShift(input.id);
       return { success: true };
     }),
@@ -804,6 +892,78 @@ export const appRouter = router({
     })).mutation(async ({ input }) => {
       await db.deleteCashMovement(input.id);
       return { success: true };
+    }),
+  }),
+
+  // ==================== NOTIFICATIONS ====================
+  notifications: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      return db.getNotificationsByUser(ctx.user.id);
+    }),
+    unreadCount: protectedProcedure.query(async ({ ctx }) => {
+      return db.getUnreadNotificationsCount(ctx.user.id);
+    }),
+    markAsRead: protectedProcedure.input(z.object({
+      id: z.number(),
+    })).mutation(async ({ input }) => {
+      await db.markNotificationAsRead(input.id);
+      return { success: true };
+    }),
+    markAllAsRead: protectedProcedure.mutation(async ({ ctx }) => {
+      await db.markAllNotificationsAsRead(ctx.user.id);
+      return { success: true };
+    }),
+  }),
+
+  // ==================== SETTINGS (Configuración) ====================
+  settings: router({
+    getSMTP: adminProcedure.query(async () => {
+      const { getSMTPConfig } = await import("./email");
+      const config = await getSMTPConfig();
+      // Don't return password for security
+      if (config) {
+        return { ...config, password: config.password ? "********" : "" };
+      }
+      return null;
+    }),
+    saveSMTP: adminProcedure.input(z.object({
+      host: z.string(),
+      port: z.number(),
+      secure: z.boolean(),
+      user: z.string(),
+      password: z.string(),
+      fromEmail: z.string(),
+      fromName: z.string(),
+    })).mutation(async ({ input }) => {
+      const { saveSMTPConfig, getSMTPConfig } = await import("./email");
+      // If password is masked, keep the old one
+      if (input.password === "********") {
+        const oldConfig = await getSMTPConfig();
+        if (oldConfig) {
+          input.password = oldConfig.password;
+        }
+      }
+      await saveSMTPConfig(input);
+      return { success: true };
+    }),
+    testSMTP: adminProcedure.input(z.object({
+      host: z.string(),
+      port: z.number(),
+      secure: z.boolean(),
+      user: z.string(),
+      password: z.string(),
+      fromEmail: z.string(),
+      fromName: z.string(),
+    })).mutation(async ({ input }) => {
+      const { testSMTPConnection, getSMTPConfig } = await import("./email");
+      // If password is masked, use the old one
+      if (input.password === "********") {
+        const oldConfig = await getSMTPConfig();
+        if (oldConfig) {
+          input.password = oldConfig.password;
+        }
+      }
+      return testSMTPConnection(input);
     }),
   }),
 });

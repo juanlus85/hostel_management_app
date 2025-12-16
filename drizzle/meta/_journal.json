@@ -57,6 +57,20 @@
       "when": 1765887114857,
       "tag": "0007_sweet_supernaut",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1765889565998,
+      "tag": "0008_lazy_fenris",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1765889646545,
+      "tag": "0009_outstanding_luckman",
+      "breakpoints": true
     }
   ]
 }

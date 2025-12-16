@@ -271,3 +271,34 @@
 - [x] Mostrar efectivo retirado y tarjetas retiradas
 - [x] Corregir que tarjetas aparece a 0 cuando no debería
 - [x] Verificar que los totales coinciden con los datos reales de los cierres
+
+
+## Sistema de Notificaciones con Email (v14)
+
+### Base de datos
+- [x] Crear tabla de notificaciones (userId, type, title, message, read, createdAt)
+- [x] Crear tabla de configuración del sistema (SMTP settings)
+
+### Backend - Notificaciones
+- [x] Crear endpoints: list, markAsRead, markAllAsRead, getUnreadCount
+- [x] Crear función para enviar notificaciones al asignar/modificar/eliminar turnos
+
+### Backend - Email SMTP
+- [x] Implementar servicio de envío de emails con nodemailer
+- [x] Crear endpoints para guardar/obtener configuración SMTP
+- [x] Enviar email al empleado cuando se le asigne/modifique un turno
+
+### Frontend - Notificaciones
+- [x] Añadir icono de campana con contador en el header
+- [x] Crear panel desplegable de notificaciones
+- [x] Marcar notificaciones como leídas al hacer click
+
+### Frontend - Configuración
+- [x] Crear página de Configuración en el menú de administración
+- [x] Formulario para configurar servidor SMTP (host, puerto, usuario, contraseña, SSL)
+- [x] Botón para probar la conexión SMTP
+
+### Integración
+- [x] Notificar y enviar email al crear un turno nuevo
+- [x] Notificar y enviar email al modificar un turno existente
+- [x] Notificar y enviar email al eliminar un turno

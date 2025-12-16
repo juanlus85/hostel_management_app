@@ -17,6 +17,7 @@ import Tareas from "./pages/Tareas";
 import Empleados from "./pages/Empleados";
 import Proveedores from "./pages/Proveedores";
 import CierreTrimestral from "./pages/CierreTrimestral";
+import Configuracion from "./pages/Configuracion";
 
 function Router() {
   return (
@@ -32,6 +33,7 @@ function Router() {
         <Route path="/empleados" component={Empleados} />
         <Route path="/proveedores" component={Proveedores} />
         <Route path="/cierre-trimestral" component={CierreTrimestral} />
+        <Route path="/configuracion" component={Configuracion} />
         <Route path="/404" component={NotFound} />
         <Route component={NotFound} />
       </Switch>

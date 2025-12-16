@@ -17,7 +17,9 @@ import {
   suppliers, InsertSupplier, Supplier,
   shiftTemplates, InsertShiftTemplate, ShiftTemplate,
   cashClosings, InsertCashClosing, CashClosing,
-  cashMovements, InsertCashMovement, CashMovement
+  cashMovements, InsertCashMovement, CashMovement,
+  notifications, InsertNotification, Notification,
+  systemSettings, InsertSystemSetting, SystemSetting
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -169,6 +171,13 @@ export async function updateShift(id: number, data: Partial<InsertShift>) {
   const db = await getDb();
   if (!db) return;
   await db.update(shifts).set(data).where(eq(shifts.id, id));
+}
+
+export async function getShiftById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(shifts).where(eq(shifts.id, id)).limit(1);
+  return result.length > 0 ? result[0] : null;
 }
 
 export async function deleteShift(id: number) {
@@ -904,4 +913,51 @@ export async function exportCashClosingsToCSV(businessId: number, startDate: str
   
   const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
   return csv;
+}
+
+
+// ==================== NOTIFICATIONS ====================
+export async function createNotification(data: InsertNotification) {
+  const db = await getDb();
+  if (!db) return;
+  const result = await db.insert(notifications).values(data);
+  return result[0].insertId;
+}
+
+export async function getNotificationsByUser(userId: number, limit = 50) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(notifications)
+    .where(eq(notifications.userId, userId))
+    .orderBy(desc(notifications.createdAt))
+    .limit(limit);
+}
+
+export async function getUnreadNotificationsCount(userId: number) {
+  const db = await getDb();
+  if (!db) return 0;
+  const result = await db.select({ count: sql<number>`count(*)` })
+    .from(notifications)
+    .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
+  return result[0]?.count || 0;
+}
+
+export async function markNotificationAsRead(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(notifications).set({ isRead: true }).where(eq(notifications.id, id));
+}
+
+export async function markAllNotificationsAsRead(userId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(notifications).set({ isRead: true }).where(eq(notifications.userId, userId));
+}
+
+export async function deleteOldNotifications(daysOld = 30) {
+  const db = await getDb();
+  if (!db) return;
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+  await db.delete(notifications).where(sql`${notifications.createdAt} < ${cutoffDate}`);
 }

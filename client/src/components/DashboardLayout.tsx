@@ -36,7 +36,8 @@ import {
   Building2,
   Store,
   Truck,
-  FileArchive
+  FileArchive,
+  Settings
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -47,6 +48,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import { NotificationBell } from "./NotificationBell";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
@@ -62,6 +64,7 @@ const adminMenuItems = [
   { icon: Users, label: "Empleados", path: "/empleados" },
   { icon: Truck, label: "Proveedores", path: "/proveedores" },
   { icon: FileArchive, label: "Cierre Trimestral", path: "/cierre-trimestral" },
+  { icon: Settings, label: "Configuración", path: "/configuracion" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -447,6 +450,7 @@ function DashboardLayoutContent({
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            <NotificationBell />
           </div>
         )}
         <main className="flex-1 p-4 md:p-6 bg-muted/30 min-h-screen">{children}</main>
