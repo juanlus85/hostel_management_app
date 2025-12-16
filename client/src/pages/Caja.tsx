@@ -100,6 +100,13 @@ export default function Caja() {
     },
   });
 
+  const reopenClosing = trpc.cashClosings.reopen.useMutation({
+    onSuccess: () => {
+      refetchClosing();
+      toast.success("Caja reabierta");
+    },
+  });
+
   const createMovement = trpc.cashMovements.create.useMutation({
     onSuccess: () => {
       refetchMovements();
@@ -141,6 +148,7 @@ export default function Caja() {
       setPrepaidBooking(cashClosing.prepaidBooking || "");
       setWithdrawnCash(cashClosing.withdrawnCash || "");
       setWithdrawnCards(cashClosing.withdrawnCards || "");
+      // Solo cargar changeForNextDay si ya tiene valor guardado, sino se calcula automáticamente
       setChangeForNextDay(cashClosing.changeForNextDay || "");
       setNotes(cashClosing.notes || "");
     }
@@ -206,8 +214,30 @@ export default function Caja() {
 
   const handleClose = () => {
     if (!cashClosing?.id) return;
-    handleSave();
+    // Asegurar que el cambio para mañana sea el total efectivo si no se ha modificado
+    const finalChangeForNextDay = changeForNextDay || totalCashCalc.toFixed(2);
+    updateClosing.mutate({
+      id: cashClosing.id,
+      coins010, coins020, coins050, coins100, coins200,
+      bills5, bills10, bills20, bills50,
+      totalCash: totalCashCalc.toFixed(2),
+      totalCards: cardsTotal.toFixed(2),
+      zReading: zTotal.toFixed(2),
+      prepaidBooking: prepaidTotal.toFixed(2),
+      withdrawnCash: withdrawnCashTotal.toFixed(2),
+      withdrawnCards: withdrawnCardsTotal.toFixed(2),
+      expectedTotal: expectedTotal.toFixed(2),
+      actualTotal: actualTotal.toFixed(2),
+      difference: difference.toFixed(2),
+      changeForNextDay: finalChangeForNextDay,
+      notes,
+    });
     closeClosing.mutate({ id: cashClosing.id });
+  };
+
+  const handleReopen = () => {
+    if (!cashClosing?.id) return;
+    reopenClosing.mutate({ id: cashClosing.id });
   };
 
   const handleAddMovement = () => {
@@ -642,15 +672,16 @@ export default function Caja() {
               </div>
               <Separator />
               <div className="space-y-2">
-                <Label>Cambio para mañana</Label>
+                <Label>Cambio para mañana (por defecto = efectivo)</Label>
                 <Input
                   type="number"
                   step="0.01"
-                  value={changeForNextDay}
+                  value={changeForNextDay || totalCashCalc.toFixed(2)}
                   onChange={(e) => setChangeForNextDay(e.target.value)}
                   disabled={isClosed}
-                  placeholder="0.00"
+                  placeholder={totalCashCalc.toFixed(2)}
                 />
+                <p className="text-xs text-muted-foreground">Se usa el total efectivo si no se modifica</p>
               </div>
             </CardContent>
           </Card>
@@ -710,13 +741,19 @@ export default function Caja() {
           </Card>
 
           {/* Actions */}
-          {!isClosed && (
+          {!isClosed ? (
             <div className="flex flex-col gap-2">
               <Button onClick={handleSave} className="w-full">
                 <Save className="h-4 w-4 mr-2" /> Guardar Borrador
               </Button>
               <Button onClick={handleClose} variant="destructive" className="w-full">
                 <Lock className="h-4 w-4 mr-2" /> Cerrar Caja
+              </Button>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <Button onClick={handleReopen} variant="outline" className="w-full">
+                <Lock className="h-4 w-4 mr-2" /> Reabrir Caja
               </Button>
             </div>
           )}

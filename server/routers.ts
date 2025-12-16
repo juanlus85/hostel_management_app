@@ -677,6 +677,12 @@ export const appRouter = router({
       await db.closeCashClosing(input.id);
       return { success: true };
     }),
+    reopen: protectedProcedure.input(z.object({
+      id: z.number(),
+    })).mutation(async ({ input }) => {
+      await db.reopenCashClosing(input.id);
+      return { success: true };
+    }),
     exportCSV: protectedProcedure.input(z.object({
       businessId: z.number(),
       startDate: z.string(),

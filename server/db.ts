@@ -744,6 +744,12 @@ export async function closeCashClosing(id: number) {
   await db.update(cashClosings).set({ status: "closed" }).where(eq(cashClosings.id, id));
 }
 
+export async function reopenCashClosing(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(cashClosings).set({ status: "draft" }).where(eq(cashClosings.id, id));
+}
+
 // ==================== CASH MOVEMENTS (Entradas/Salidas) ====================
 export async function getCashMovementsByClosing(cashClosingId: number) {
   const db = await getDb();

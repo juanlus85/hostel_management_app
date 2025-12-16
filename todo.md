@@ -152,3 +152,23 @@
 - [x] Exportación a CSV descargable
 - [x] Datos accesibles en MySQL directamente
 - [x] Histórico de cierres consultable
+
+
+## Mejoras Caja (v6)
+
+### Cambio para Mañana
+- [x] Por defecto = total efectivo (no manual)
+- [x] Sigue siendo editable si se quiere cambiar
+
+### Reabrir Caja
+- [x] Botón para reabrir caja cerrada
+- [x] Permitir editar datos después de reabrir
+
+### Cierre Trimestral
+- [x] Nuevo módulo de cierre por trimestres
+- [x] Flexible: cerrar en cualquier fecha después de terminar el trimestre
+- [x] Descarga CSV del trimestre:
+  - [x] Cierres de caja
+  - [x] Facturas
+  - [x] Resumen
+- [x] Resumen del trimestre (ingresos, gastos, balance)
