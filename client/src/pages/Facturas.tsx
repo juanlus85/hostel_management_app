@@ -477,7 +477,7 @@ export default function Facturas() {
                         disabled={!!invoice.imageUrl}
                       />
                       <span className="text-xs text-muted-foreground">
-                        {invoice.imageUrl ? "Archivo" : "Contab."}
+                        Escaneada
                       </span>
                     </div>
                     <div className="text-right">

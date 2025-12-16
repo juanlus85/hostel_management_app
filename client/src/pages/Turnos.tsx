@@ -574,7 +574,7 @@ export default function Turnos() {
                             className={`text-xs px-1 py-0.5 rounded truncate ${getUserColor(shift.userId)}`}
                             onClick={(e) => { e.stopPropagation(); if (isAdmin) openEditDialog(shift); }}
                           >
-                            {getUserName(shift.userId)} {shift.scheduledStart}
+                            {getUserName(shift.userId)} {shift.scheduledStart} - {shift.scheduledEnd}
                           </div>
                         ))}
                         {dayShifts.length > 3 && (

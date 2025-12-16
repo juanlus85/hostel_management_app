@@ -498,11 +498,15 @@ export async function getDashboardStats(businessId: number, startDate: string, e
   let totalIncome = 0;
   let totalExpenses = 0;
   let totalDifference = 0;
+  let withdrawnCash = 0;
+  let withdrawnCards = 0;
   
-  // Sumar ingresos de cashClosings (totalCash + totalCards)
+  // Sumar ingresos de cashClosings usando zReading (la Z de caja = ingresos reales)
   closings.forEach(c => {
-    totalIncome += parseFloat(c.totalCash || "0") + parseFloat(c.totalCards || "0");
+    totalIncome += parseFloat(c.zReading || "0");
     totalDifference += parseFloat(c.difference || "0");
+    withdrawnCash += parseFloat(c.withdrawnCash || "0");
+    withdrawnCards += parseFloat(c.withdrawnCards || "0");
   });
   
   // Sumar gastos de facturas
@@ -531,6 +535,8 @@ export async function getDashboardStats(businessId: number, startDate: string, e
     totalExpenses,
     netResult: totalIncome - totalExpenses,
     totalDifference,
+    withdrawnCash,
+    withdrawnCards,
     lowStockCount: lowStock.length,
     openIncidentsCount: openIncidents.length,
     pendingOrdersCount: pendingOrders.length

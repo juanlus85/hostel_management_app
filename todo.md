@@ -256,3 +256,18 @@
 
 ### Documentación
 - [ ] Documentación de despliegue en VPS
+
+
+## Mejoras Solicitadas (v13)
+
+### Vista de Turnos
+- [x] Mostrar hora inicio - hora fin en el calendario mensual (ej: "Maylin 10:00 - 14:00")
+
+### Facturas
+- [x] Cambiar texto del checkbox de "Contab." a "Escaneada"
+
+### Dashboard y Cierres - Cálculo de Ingresos
+- [x] Los ingresos deben calcularse de la Z de caja (no del efectivo en caja)
+- [x] Mostrar efectivo retirado y tarjetas retiradas
+- [x] Corregir que tarjetas aparece a 0 cuando no debería
+- [x] Verificar que los totales coinciden con los datos reales de los cierres

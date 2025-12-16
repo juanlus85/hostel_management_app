@@ -89,16 +89,18 @@ export default function CierreTrimestral() {
   const summary = useMemo(() => {
     let totalIncome = 0;
     let totalExpenses = 0;
-    let totalCash = 0;
-    let totalCards = 0;
+    let withdrawnCash = 0;
+    let withdrawnCards = 0;
     let totalDifference = 0;
     let closedDays = 0;
 
     cashClosings?.forEach((closing: any) => {
       if (closing.status === "closed") {
         closedDays++;
-        totalCash += parseFloat(closing.totalCash || "0");
-        totalCards += parseFloat(closing.totalCards || "0");
+        // Usar zReading como ingresos (la Z de caja)
+        totalIncome += parseFloat(closing.zReading || "0");
+        withdrawnCash += parseFloat(closing.withdrawnCash || "0");
+        withdrawnCards += parseFloat(closing.withdrawnCards || "0");
         totalDifference += parseFloat(closing.difference || "0");
       }
     });
@@ -107,14 +109,12 @@ export default function CierreTrimestral() {
       totalExpenses += parseFloat(inv.total || "0");
     });
 
-    totalIncome = totalCash + totalCards;
-
     return {
       totalIncome,
       totalExpenses,
       balance: totalIncome - totalExpenses,
-      totalCash,
-      totalCards,
+      withdrawnCash,
+      withdrawnCards,
       totalDifference,
       closedDays,
       totalInvoices: quarterInvoices.length,
@@ -160,8 +160,8 @@ export default function CierreTrimestral() {
         `Total Gastos (Facturas),${summary.totalExpenses.toFixed(2)}`,
         `Balance,${summary.balance.toFixed(2)}`,
         "",
-        `Total Efectivo,${summary.totalCash.toFixed(2)}`,
-        `Total Tarjetas,${summary.totalCards.toFixed(2)}`,
+        `Total Efectivo,${summary.withdrawnCash.toFixed(2)}`,
+        `Total Tarjetas,${summary.withdrawnCards.toFixed(2)}`,
         `Descuadre Acumulado,${summary.totalDifference.toFixed(2)}`,
         "",
         `Días Cerrados,${summary.closedDays}`,
@@ -273,7 +273,7 @@ export default function CierreTrimestral() {
           <CardContent>
             <p className="text-2xl font-bold text-green-600">€{summary.totalIncome.toFixed(2)}</p>
             <p className="text-xs text-muted-foreground">
-              Efectivo: €{summary.totalCash.toFixed(2)} | Tarjetas: €{summary.totalCards.toFixed(2)}
+              Efectivo: €{summary.withdrawnCash.toFixed(2)} | Tarjetas: €{summary.withdrawnCards.toFixed(2)}
             </p>
           </CardContent>
         </Card>
