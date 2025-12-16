@@ -130,3 +130,25 @@
 - [x] Añadir botón de eliminar cuando llegue el pedido
 - [x] Permitir editar cantidad
 - [x] Interfaz más simple y directa
+
+
+## Rediseño Caja (v5)
+
+### Cierre de Caja Detallado
+- [x] Desglose de monedas: 0.10€, 0.20€, 0.50€, 1€, 2€
+- [x] Desglose de billetes: 5€, 10€, 20€, 50€
+- [x] Campo para tarjetas (Tjtas)
+- [x] Campo para Z de cada caja
+- [x] Cambio anterior automático (del cierre del día anterior)
+- [x] Entradas/salidas de efectivo con descripción
+- [x] Prepago Booking
+- [x] Retirado Efectivo
+- [x] Retirado Tarjetas
+- [x] Cálculo automático de descuadre
+- [x] Todo editable
+- [x] Separación Hostel/Tienda
+
+### Exportación y Acceso a Datos
+- [x] Exportación a CSV descargable
+- [x] Datos accesibles en MySQL directamente
+- [x] Histórico de cierres consultable

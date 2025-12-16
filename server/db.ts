@@ -15,7 +15,9 @@ import {
   stockMovements, InsertStockMovement, StockMovement,
   weeklySummaries, InsertWeeklySummary, WeeklySummary,
   suppliers, InsertSupplier, Supplier,
-  shiftTemplates, InsertShiftTemplate, ShiftTemplate
+  shiftTemplates, InsertShiftTemplate, ShiftTemplate,
+  cashClosings, InsertCashClosing, CashClosing,
+  cashMovements, InsertCashMovement, CashMovement
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -669,4 +671,119 @@ export async function getOrCreateDailyCashRegister(businessId: number, userId: n
   
   const newCash = await db.select().from(cashRegisters).where(eq(cashRegisters.id, result[0].insertId)).limit(1);
   return newCash[0];
+}
+
+
+// ==================== CASH CLOSINGS (Cierres de Caja Detallados) ====================
+export async function getCashClosingsByBusiness(businessId: number, startDate?: string, endDate?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  let conditions = [eq(cashClosings.businessId, businessId)];
+  if (startDate) conditions.push(gte(cashClosings.date, startDate));
+  if (endDate) conditions.push(lte(cashClosings.date, endDate));
+  return db.select().from(cashClosings).where(and(...conditions)).orderBy(desc(cashClosings.date));
+}
+
+export async function getCashClosingByDate(businessId: number, date: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(cashClosings)
+    .where(and(eq(cashClosings.businessId, businessId), eq(cashClosings.date, date)))
+    .limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function getPreviousCashClosing(businessId: number, date: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(cashClosings)
+    .where(and(
+      eq(cashClosings.businessId, businessId), 
+      eq(cashClosings.status, "closed"),
+      sql`${cashClosings.date} < ${date}`
+    ))
+    .orderBy(desc(cashClosings.date))
+    .limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function getOrCreateCashClosing(businessId: number, userId: number, date: string) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  // Check if closing exists for this date
+  const existing = await getCashClosingByDate(businessId, date);
+  if (existing) return existing;
+  
+  // Get previous day's closing to get the change
+  const previous = await getPreviousCashClosing(businessId, date);
+  const previousChange = previous ? previous.changeForNextDay : "0";
+  
+  // Create new closing
+  const result = await db.insert(cashClosings).values({
+    businessId,
+    userId,
+    date,
+    previousChange,
+    status: "draft"
+  });
+  
+  const newClosing = await db.select().from(cashClosings).where(eq(cashClosings.id, result[0].insertId)).limit(1);
+  return newClosing[0];
+}
+
+export async function updateCashClosing(id: number, data: Partial<InsertCashClosing>) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(cashClosings).set(data).where(eq(cashClosings.id, id));
+}
+
+export async function closeCashClosing(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(cashClosings).set({ status: "closed" }).where(eq(cashClosings.id, id));
+}
+
+// ==================== CASH MOVEMENTS (Entradas/Salidas) ====================
+export async function getCashMovementsByClosing(cashClosingId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(cashMovements).where(eq(cashMovements.cashClosingId, cashClosingId)).orderBy(asc(cashMovements.createdAt));
+}
+
+export async function createCashMovement(data: InsertCashMovement) {
+  const db = await getDb();
+  if (!db) return;
+  const result = await db.insert(cashMovements).values(data);
+  return result[0].insertId;
+}
+
+export async function deleteCashMovement(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(cashMovements).where(eq(cashMovements.id, id));
+}
+
+// ==================== CSV EXPORT ====================
+export async function exportCashClosingsToCSV(businessId: number, startDate: string, endDate: string) {
+  const closings = await getCashClosingsByBusiness(businessId, startDate, endDate);
+  
+  const headers = [
+    "Fecha", "Monedas 0.10", "Monedas 0.20", "Monedas 0.50", "Monedas 1€", "Monedas 2€",
+    "Billetes 5€", "Billetes 10€", "Billetes 20€", "Billetes 50€",
+    "Total Efectivo", "Total Tarjetas", "Z", "Cambio Anterior",
+    "Prepago Booking", "Retirado Efectivo", "Retirado Tarjetas",
+    "Total Esperado", "Total Real", "Descuadre", "Cambio Siguiente", "Estado"
+  ];
+  
+  const rows = closings.map(c => [
+    c.date, c.coins010, c.coins020, c.coins050, c.coins100, c.coins200,
+    c.bills5, c.bills10, c.bills20, c.bills50,
+    c.totalCash, c.totalCards, c.zReading, c.previousChange,
+    c.prepaidBooking, c.withdrawnCash, c.withdrawnCards,
+    c.expectedTotal, c.actualTotal, c.difference, c.changeForNextDay, c.status
+  ]);
+  
+  const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+  return csv;
 }

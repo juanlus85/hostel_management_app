@@ -265,6 +265,60 @@ export const shiftTemplates = mysqlTable("shift_templates", {
 export type ShiftTemplate = typeof shiftTemplates.$inferSelect;
 export type InsertShiftTemplate = typeof shiftTemplates.$inferInsert;
 
+// ==================== CASH CLOSINGS (Cierres de Caja Detallados) ====================
+export const cashClosings = mysqlTable("cash_closings", {
+  id: int("id").autoincrement().primaryKey(),
+  businessId: int("businessId").notNull(),
+  userId: int("userId").notNull(),
+  date: varchar("date", { length: 10 }).notNull(), // YYYY-MM-DD format
+  // Desglose de monedas y billetes
+  coins010: int("coins010").default(0).notNull(), // Cantidad de monedas de 0.10€
+  coins020: int("coins020").default(0).notNull(), // Cantidad de monedas de 0.20€
+  coins050: int("coins050").default(0).notNull(), // Cantidad de monedas de 0.50€
+  coins100: int("coins100").default(0).notNull(), // Cantidad de monedas de 1€
+  coins200: int("coins200").default(0).notNull(), // Cantidad de monedas de 2€
+  bills5: int("bills5").default(0).notNull(), // Cantidad de billetes de 5€
+  bills10: int("bills10").default(0).notNull(), // Cantidad de billetes de 10€
+  bills20: int("bills20").default(0).notNull(), // Cantidad de billetes de 20€
+  bills50: int("bills50").default(0).notNull(), // Cantidad de billetes de 50€
+  // Totales calculados
+  totalCash: decimal("totalCash", { precision: 10, scale: 2 }).default("0").notNull(),
+  totalCards: decimal("totalCards", { precision: 10, scale: 2 }).default("0").notNull(),
+  zReading: decimal("zReading", { precision: 10, scale: 2 }).default("0").notNull(), // Z de la caja
+  // Cambio del día anterior (automático)
+  previousChange: decimal("previousChange", { precision: 10, scale: 2 }).default("0").notNull(),
+  // Retiros
+  prepaidBooking: decimal("prepaidBooking", { precision: 10, scale: 2 }).default("0").notNull(),
+  withdrawnCash: decimal("withdrawnCash", { precision: 10, scale: 2 }).default("0").notNull(),
+  withdrawnCards: decimal("withdrawnCards", { precision: 10, scale: 2 }).default("0").notNull(),
+  // Descuadre
+  expectedTotal: decimal("expectedTotal", { precision: 10, scale: 2 }).default("0").notNull(),
+  actualTotal: decimal("actualTotal", { precision: 10, scale: 2 }).default("0").notNull(),
+  difference: decimal("difference", { precision: 10, scale: 2 }).default("0").notNull(),
+  // Cambio que queda para el día siguiente
+  changeForNextDay: decimal("changeForNextDay", { precision: 10, scale: 2 }).default("0").notNull(),
+  notes: text("notes"),
+  status: mysqlEnum("status", ["draft", "closed"]).default("draft").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type CashClosing = typeof cashClosings.$inferSelect;
+export type InsertCashClosing = typeof cashClosings.$inferInsert;
+
+// ==================== CASH MOVEMENTS (Entradas/Salidas de Efectivo) ====================
+export const cashMovements = mysqlTable("cash_movements", {
+  id: int("id").autoincrement().primaryKey(),
+  cashClosingId: int("cashClosingId").notNull(),
+  type: mysqlEnum("type", ["in", "out"]).notNull(),
+  description: varchar("description", { length: 255 }).notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type CashMovement = typeof cashMovements.$inferSelect;
+export type InsertCashMovement = typeof cashMovements.$inferInsert;
+
 // ==================== WEEKLY SUMMARIES (Resúmenes Semanales) ====================
 export const weeklySummaries = mysqlTable("weekly_summaries", {
   id: int("id").autoincrement().primaryKey(),

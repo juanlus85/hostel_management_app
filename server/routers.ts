@@ -622,6 +622,93 @@ export const appRouter = router({
       return db.getHoursWorkedByUser(input.userId, input.startDate, input.endDate);
     }),
   }),
+
+  // ==================== CASH CLOSINGS (Cierres de Caja Detallados) ====================
+  cashClosings: router({
+    list: protectedProcedure.input(z.object({
+      businessId: z.number(),
+      startDate: z.string().optional(),
+      endDate: z.string().optional(),
+    })).query(async ({ input }) => {
+      return db.getCashClosingsByBusiness(input.businessId, input.startDate, input.endDate);
+    }),
+    getByDate: protectedProcedure.input(z.object({
+      businessId: z.number(),
+      date: z.string(),
+    })).query(async ({ input }) => {
+      return db.getCashClosingByDate(input.businessId, input.date);
+    }),
+    getOrCreate: protectedProcedure.input(z.object({
+      businessId: z.number(),
+      date: z.string(),
+    })).mutation(async ({ input, ctx }) => {
+      return db.getOrCreateCashClosing(input.businessId, ctx.user.id, input.date);
+    }),
+    update: protectedProcedure.input(z.object({
+      id: z.number(),
+      coins010: z.number().optional(),
+      coins020: z.number().optional(),
+      coins050: z.number().optional(),
+      coins100: z.number().optional(),
+      coins200: z.number().optional(),
+      bills5: z.number().optional(),
+      bills10: z.number().optional(),
+      bills20: z.number().optional(),
+      bills50: z.number().optional(),
+      totalCash: z.string().optional(),
+      totalCards: z.string().optional(),
+      zReading: z.string().optional(),
+      prepaidBooking: z.string().optional(),
+      withdrawnCash: z.string().optional(),
+      withdrawnCards: z.string().optional(),
+      expectedTotal: z.string().optional(),
+      actualTotal: z.string().optional(),
+      difference: z.string().optional(),
+      changeForNextDay: z.string().optional(),
+      notes: z.string().optional(),
+    })).mutation(async ({ input }) => {
+      const { id, ...data } = input;
+      await db.updateCashClosing(id, data);
+      return { success: true };
+    }),
+    close: protectedProcedure.input(z.object({
+      id: z.number(),
+    })).mutation(async ({ input }) => {
+      await db.closeCashClosing(input.id);
+      return { success: true };
+    }),
+    exportCSV: protectedProcedure.input(z.object({
+      businessId: z.number(),
+      startDate: z.string(),
+      endDate: z.string(),
+    })).query(async ({ input }) => {
+      return db.exportCashClosingsToCSV(input.businessId, input.startDate, input.endDate);
+    }),
+  }),
+
+  // ==================== CASH MOVEMENTS ====================
+  cashMovements: router({
+    list: protectedProcedure.input(z.object({
+      cashClosingId: z.number(),
+    })).query(async ({ input }) => {
+      return db.getCashMovementsByClosing(input.cashClosingId);
+    }),
+    create: protectedProcedure.input(z.object({
+      cashClosingId: z.number(),
+      type: z.enum(["in", "out"]),
+      description: z.string(),
+      amount: z.string(),
+    })).mutation(async ({ input }) => {
+      const id = await db.createCashMovement(input);
+      return { success: true, id };
+    }),
+    delete: protectedProcedure.input(z.object({
+      id: z.number(),
+    })).mutation(async ({ input }) => {
+      await db.deleteCashMovement(input.id);
+      return { success: true };
+    }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;
