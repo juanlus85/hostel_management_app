@@ -187,3 +187,10 @@
 ### Dashboard
 - [x] Los ingresos de la semana no coinciden con los datos reales
 - [x] Revisar la lógica de cálculo de métricas
+
+
+## Bug Corregido (v8)
+
+### Cambio Anterior
+- [x] El cambio anterior ahora se actualiza automáticamente si el registro existe pero tiene valor 0
+- [x] Busca el changeForNextDay o totalCash del día anterior

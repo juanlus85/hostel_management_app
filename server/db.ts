@@ -730,14 +730,28 @@ export async function getOrCreateCashClosing(businessId: number, userId: number,
   
   // Check if closing exists for this date
   const existing = await getCashClosingByDate(businessId, date);
-  if (existing) return existing;
   
   // Get previous day's closing to get the change
   const previous = await getPreviousCashClosing(businessId, date);
-  // Usar changeForNextDay si existe, sino usar totalCash del día anterior
-  const previousChange = previous 
-    ? (previous.changeForNextDay || previous.totalCash || "0") 
+  // Usar changeForNextDay si existe y no es 0, sino usar totalCash del día anterior
+  const previousChangeValue = previous 
+    ? (parseFloat(previous.changeForNextDay || "0") > 0 
+        ? previous.changeForNextDay 
+        : (parseFloat(previous.totalCash || "0") > 0 ? previous.totalCash : "0"))
     : "0";
+  
+  // Si ya existe pero el previousChange es 0 y tenemos un valor del día anterior, actualizarlo
+  if (existing) {
+    if (parseFloat(existing.previousChange || "0") === 0 && parseFloat(previousChangeValue) > 0) {
+      await db.update(cashClosings)
+        .set({ previousChange: previousChangeValue })
+        .where(eq(cashClosings.id, existing.id));
+      return { ...existing, previousChange: previousChangeValue };
+    }
+    return existing;
+  }
+  
+  const previousChange = previousChangeValue;
   
   // Create new closing
   const result = await db.insert(cashClosings).values({
