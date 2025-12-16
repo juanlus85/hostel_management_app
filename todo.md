@@ -340,3 +340,13 @@
 ## Bug Corregido (v17)
 - [x] Añadido logging detallado al envío de email de facturas para diagnosticar problemas
 - [x] Email de facturas funcionando correctamente con configuración SMTP
+
+
+## Bug Corregido (v18)
+- [x] El email de facturas ahora incluye el archivo adjunto (se descarga primero y se adjunta como buffer)
+
+
+## Mejoras Solicitadas (v18)
+- [x] Añadir campo de color personalizado para cada empleado
+- [x] Selector de color en la ficha del empleado
+- [x] Usar el color del empleado en el calendario de turnos

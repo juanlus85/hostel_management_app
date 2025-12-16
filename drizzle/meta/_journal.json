@@ -71,6 +71,13 @@
       "when": 1765889646545,
       "tag": "0009_outstanding_luckman",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1765897751216,
+      "tag": "0010_salty_reavers",
+      "breakpoints": true
     }
   ]
 }

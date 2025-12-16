@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `color` varchar(7);

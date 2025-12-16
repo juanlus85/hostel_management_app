@@ -158,12 +158,28 @@ export async function sendEmailWithAttachment(
       html,
     };
 
-    // Add attachment if URL provided
+    // Add attachment if URL provided - download file first
     if (attachmentUrl) {
-      mailOptions.attachments = [{
-        filename: attachmentName || "factura.pdf",
-        path: attachmentUrl,
-      }];
+      try {
+        console.log(`[Email] Downloading attachment from: ${attachmentUrl}`);
+        const response = await fetch(attachmentUrl);
+        if (response.ok) {
+          const arrayBuffer = await response.arrayBuffer();
+          const buffer = Buffer.from(arrayBuffer);
+          const contentType = response.headers.get('content-type') || 'application/octet-stream';
+          
+          mailOptions.attachments = [{
+            filename: attachmentName || "factura.pdf",
+            content: buffer,
+            contentType: contentType,
+          }];
+          console.log(`[Email] Attachment downloaded successfully, size: ${buffer.length} bytes`);
+        } else {
+          console.error(`[Email] Failed to download attachment: ${response.status} ${response.statusText}`);
+        }
+      } catch (downloadError: any) {
+        console.error(`[Email] Error downloading attachment:`, downloadError.message);
+      }
     }
 
     await transporter.sendMail(mailOptions);

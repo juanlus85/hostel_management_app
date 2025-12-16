@@ -52,6 +52,7 @@ export default function Empleados() {
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
   const [editUsername, setEditUsername] = useState("");
+  const [editColor, setEditColor] = useState("#3b82f6");
   
   // Delete confirmation dialog
   const [isDeleteDialog, setIsDeleteDialog] = useState(false);
@@ -240,6 +241,7 @@ export default function Empleados() {
     setEditName(user.name || "");
     setEditEmail(user.email || "");
     setEditUsername(user.username || "");
+    setEditColor(user.color || "#3b82f6");
     setIsEditDialog(true);
   };
 
@@ -253,6 +255,7 @@ export default function Empleados() {
       id: editUser.id,
       name: editName.trim(),
       email: editEmail.trim() || undefined,
+      color: editColor,
     });
   };
 
@@ -655,6 +658,30 @@ export default function Empleados() {
                 <p className="text-xs text-muted-foreground">El nombre de usuario no se puede cambiar</p>
               </div>
             )}
+            <div className="grid gap-2">
+              <Label>Color en calendario</Label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="color"
+                  value={editColor}
+                  onChange={e => setEditColor(e.target.value)}
+                  className="w-12 h-10 rounded cursor-pointer border border-border"
+                />
+                <Input
+                  value={editColor}
+                  onChange={e => setEditColor(e.target.value)}
+                  placeholder="#3b82f6"
+                  className="w-28"
+                />
+                <div 
+                  className="flex-1 h-10 rounded flex items-center justify-center text-white text-sm font-medium"
+                  style={{ backgroundColor: editColor }}
+                >
+                  Vista previa
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">Este color se usará para identificar al empleado en el calendario de turnos</p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditDialog(false)}>Cancelar</Button>
