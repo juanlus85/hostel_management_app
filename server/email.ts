@@ -150,81 +150,28 @@ export async function sendEmailWithAttachment(
       },
     });
 
-    const mailOptions: nodemailer.SendMailOptions = {
+    const mailOptions: any = {
       from: `"${config.fromName}" <${config.fromEmail}>`,
       to,
       subject,
       text: html.replace(/<[^>]*>/g, ""),
       html,
-      attachments: [],
     };
 
-    // Add attachment if URL provided - download file first
+    // Add attachment if URL provided
     if (attachmentUrl) {
-      console.log(`[Email] Attachment URL provided: ${attachmentUrl}`);
-      console.log(`[Email] Attachment name: ${attachmentName}`);
-      
-      try {
-        console.log(`[Email] Downloading attachment from: ${attachmentUrl}`);
-        
-        // Use node-fetch style with timeout
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-        
-        const response = await fetch(attachmentUrl, {
-          signal: controller.signal,
-          headers: {
-            'Accept': '*/*',
-          },
-        });
-        
-        clearTimeout(timeoutId);
-        
-        console.log(`[Email] Fetch response status: ${response.status}`);
-        console.log(`[Email] Fetch response headers:`, Object.fromEntries(response.headers.entries()));
-        
-        if (response.ok) {
-          const arrayBuffer = await response.arrayBuffer();
-          const buffer = Buffer.from(arrayBuffer);
-          const contentType = response.headers.get('content-type') || 'application/octet-stream';
-          
-          console.log(`[Email] Downloaded ${buffer.length} bytes, content-type: ${contentType}`);
-          
-          if (buffer.length > 0) {
-            mailOptions.attachments = [{
-              filename: attachmentName || "factura.pdf",
-              content: buffer,
-              contentType: contentType,
-            }];
-            console.log(`[Email] Attachment added successfully: ${attachmentName}, size: ${buffer.length} bytes, type: ${contentType}`);
-          } else {
-            console.error(`[Email] Downloaded file is empty (0 bytes)`);
-          }
-        } else {
-          const errorText = await response.text();
-          console.error(`[Email] Failed to download attachment: ${response.status} ${response.statusText}`);
-          console.error(`[Email] Error response body: ${errorText.substring(0, 500)}`);
-        }
-      } catch (downloadError: any) {
-        console.error(`[Email] Error downloading attachment:`, downloadError.message);
-        console.error(`[Email] Download error stack:`, downloadError.stack);
-      }
-    } else {
-      console.log(`[Email] No attachment URL provided`);
+      mailOptions.attachments = [{
+        filename: attachmentName || "factura.pdf",
+        path: attachmentUrl,
+      }];
     }
 
-    console.log(`[Email] Sending email with ${mailOptions.attachments?.length || 0} attachments`);
-    
-    const info = await transporter.sendMail(mailOptions);
+    await transporter.sendMail(mailOptions);
 
     console.log(`[Email] Sent to ${to}: ${subject}`);
-    console.log(`[Email] Message ID: ${info.messageId}`);
-    console.log(`[Email] Response: ${info.response}`);
-    
     return { success: true };
   } catch (error: any) {
     console.error(`[Email] Failed to send to ${to}:`, error.message);
-    console.error(`[Email] Error stack:`, error.stack);
     return { success: false, error: error.message };
   }
 }

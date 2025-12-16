@@ -256,15 +256,10 @@ export default function Turnos() {
     return map;
   }, [shifts]);
 
-  // Get user color - uses custom color if set, otherwise falls back to default palette
+  // Get user color
   const getUserColor = (userId: number) => {
-    const u = users?.find(u => u.id === userId);
-    if (u?.color) {
-      // Return inline style-compatible format for custom color
-      return { custom: true, color: u.color };
-    }
     const index = (users?.findIndex(u => u.id === userId) || 0) % COLORS.length;
-    return { custom: false, className: COLORS[index] };
+    return COLORS[index];
   };
 
   // Get user name
@@ -482,22 +477,13 @@ export default function Turnos() {
                   {/* Rows */}
                   {users?.map(u => {
                     const userShifts = shiftsByUser.get(u.id) || [];
-                    const colorInfo = getUserColor(u.id);
+                    const colorClass = getUserColor(u.id);
                     return (
                       <div key={u.id} className="grid grid-cols-8 gap-1 border-t py-2">
                         <div className="p-2 flex items-center">
-                          {colorInfo.custom ? (
-                            <span 
-                              className="text-sm font-medium px-2 py-1 rounded border"
-                              style={{ backgroundColor: colorInfo.color + '20', borderColor: colorInfo.color, color: colorInfo.color }}
-                            >
-                              {u.name?.split(' ')[0] || 'Sin nombre'}
-                            </span>
-                          ) : (
-                            <span className={`text-sm font-medium px-2 py-1 rounded ${colorInfo.className} border`}>
-                              {u.name?.split(' ')[0] || 'Sin nombre'}
-                            </span>
-                          )}
+                          <span className={`text-sm font-medium px-2 py-1 rounded ${colorClass} border`}>
+                            {u.name?.split(' ')[0] || 'Sin nombre'}
+                          </span>
                         </div>
                         {weekDays.map((day, i) => {
                           const dateStr = day.toISOString().split('T')[0];
@@ -509,42 +495,22 @@ export default function Turnos() {
                               onClick={() => dayShifts.length === 0 && handleDayClick(day, u.id)}
                             >
                               {dayShifts.map((shift: any) => (
-                                colorInfo.custom ? (
-                                  <div 
-                                    key={shift.id} 
-                                    className="text-xs p-1.5 rounded mb-1 border cursor-pointer hover:opacity-80 group relative"
-                                    style={{ backgroundColor: colorInfo.color + '20', borderColor: colorInfo.color, color: colorInfo.color }}
-                                    onClick={(e) => { e.stopPropagation(); if (isAdmin) openEditDialog(shift); }}
-                                  >
-                                    <div className="font-medium">{shift.scheduledStart}</div>
-                                    <div>{shift.scheduledEnd}</div>
-                                    {isAdmin && (
-                                      <button 
-                                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                                        onClick={(e) => { e.stopPropagation(); handleDeleteShift(shift.id); }}
-                                      >
-                                        <Trash2 className="h-3 w-3" />
-                                      </button>
-                                    )}
-                                  </div>
-                                ) : (
-                                  <div 
-                                    key={shift.id} 
-                                    className={`text-xs p-1.5 rounded mb-1 ${colorInfo.className} border cursor-pointer hover:opacity-80 group relative`}
-                                    onClick={(e) => { e.stopPropagation(); if (isAdmin) openEditDialog(shift); }}
-                                  >
-                                    <div className="font-medium">{shift.scheduledStart}</div>
-                                    <div>{shift.scheduledEnd}</div>
-                                    {isAdmin && (
-                                      <button 
-                                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                                        onClick={(e) => { e.stopPropagation(); handleDeleteShift(shift.id); }}
-                                      >
-                                        <Trash2 className="h-3 w-3" />
-                                      </button>
-                                    )}
-                                  </div>
-                                )
+                                <div 
+                                  key={shift.id} 
+                                  className={`text-xs p-1.5 rounded mb-1 ${colorClass} border cursor-pointer hover:opacity-80 group relative`}
+                                  onClick={(e) => { e.stopPropagation(); if (isAdmin) openEditDialog(shift); }}
+                                >
+                                  <div className="font-medium">{shift.scheduledStart}</div>
+                                  <div>{shift.scheduledEnd}</div>
+                                  {isAdmin && (
+                                    <button 
+                                      className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                      onClick={(e) => { e.stopPropagation(); handleDeleteShift(shift.id); }}
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </button>
+                                  )}
+                                </div>
                               ))}
                             </div>
                           );
@@ -603,47 +569,25 @@ export default function Turnos() {
                             {day.getDate()}
                           </div>
                           <div className="space-y-1">
-                            {dayShifts.slice(0, 3).map((shift: any) => {
-                              const shiftColorInfo = getUserColor(shift.userId);
-                              return shiftColorInfo.custom ? (
-                                <div 
-                                  key={shift.id}
-                                  className="text-[10px] sm:text-xs px-1 py-0.5 rounded truncate group relative cursor-pointer hover:opacity-80"
-                                  style={{ backgroundColor: shiftColorInfo.color + '20', color: shiftColorInfo.color }}
-                                  onClick={(e) => { e.stopPropagation(); if (isAdmin) openEditDialog(shift); }}
-                                >
-                                  <span className="hidden sm:inline">{getUserName(shift.userId)} </span>
-                                  <span className="sm:hidden">{getUserName(shift.userId).split(' ')[0]} </span>
-                                  {shift.scheduledStart} - {shift.scheduledEnd}
-                                  {isAdmin && (
-                                    <button 
-                                      className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                                      onClick={(e) => { e.stopPropagation(); handleDeleteShift(shift.id); }}
-                                    >
-                                      <Trash2 className="h-3 w-3" />
-                                    </button>
-                                  )}
-                                </div>
-                              ) : (
-                                <div 
-                                  key={shift.id}
-                                  className={`text-[10px] sm:text-xs px-1 py-0.5 rounded truncate ${shiftColorInfo.className} group relative cursor-pointer hover:opacity-80`}
-                                  onClick={(e) => { e.stopPropagation(); if (isAdmin) openEditDialog(shift); }}
-                                >
-                                  <span className="hidden sm:inline">{getUserName(shift.userId)} </span>
-                                  <span className="sm:hidden">{getUserName(shift.userId).split(' ')[0]} </span>
-                                  {shift.scheduledStart} - {shift.scheduledEnd}
-                                  {isAdmin && (
-                                    <button 
-                                      className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                                      onClick={(e) => { e.stopPropagation(); handleDeleteShift(shift.id); }}
-                                    >
-                                      <Trash2 className="h-3 w-3" />
-                                    </button>
-                                  )}
-                                </div>
-                              );
-                            })}
+                            {dayShifts.slice(0, 3).map((shift: any) => (
+                              <div 
+                                key={shift.id}
+                                className={`text-[10px] sm:text-xs px-1 py-0.5 rounded truncate ${getUserColor(shift.userId)} group relative cursor-pointer hover:opacity-80`}
+                                onClick={(e) => { e.stopPropagation(); if (isAdmin) openEditDialog(shift); }}
+                              >
+                                <span className="hidden sm:inline">{getUserName(shift.userId)} </span>
+                                <span className="sm:hidden">{getUserName(shift.userId).split(' ')[0]} </span>
+                                {shift.scheduledStart} - {shift.scheduledEnd}
+                                {isAdmin && (
+                                  <button 
+                                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                    onClick={(e) => { e.stopPropagation(); handleDeleteShift(shift.id); }}
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </button>
+                                )}
+                              </div>
+                            ))}
                             {dayShifts.length > 3 && (
                               <div className="text-[10px] sm:text-xs text-muted-foreground">+{dayShifts.length - 3} más</div>
                             )}
@@ -681,22 +625,13 @@ export default function Turnos() {
                 if (hours < 0) hours += 24;
                 return sum + hours;
               }, 0);
-              const colorInfo = getUserColor(u.id);
+              const colorClass = getUserColor(u.id);
               return (
                 <div key={u.id} className="flex items-center justify-between p-3 rounded-lg border">
                   <div className="flex items-center gap-3">
-                    {colorInfo.custom ? (
-                      <span 
-                        className="text-sm font-medium px-2 py-1 rounded border"
-                        style={{ backgroundColor: colorInfo.color + '20', borderColor: colorInfo.color, color: colorInfo.color }}
-                      >
-                        {u.name?.split(' ')[0] || 'Sin nombre'}
-                      </span>
-                    ) : (
-                      <span className={`text-sm font-medium px-2 py-1 rounded ${colorInfo.className} border`}>
-                        {u.name?.split(' ')[0] || 'Sin nombre'}
-                      </span>
-                    )}
+                    <span className={`text-sm font-medium px-2 py-1 rounded ${colorClass} border`}>
+                      {u.name?.split(' ')[0] || 'Sin nombre'}
+                    </span>
                     <span className="text-sm text-muted-foreground">{u.name}</span>
                   </div>
                   <div className="text-right">

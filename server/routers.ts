@@ -64,7 +64,6 @@ export const appRouter = router({
       pin: z.string().max(6).optional(),
       isActive: z.boolean().optional(),
       scheduleTemplate: z.string().optional(), // JSON string with weekly schedule template
-      color: z.string().max(7).optional(), // Hex color for calendar display
     })).mutation(async ({ input }) => {
       const { id, ...data } = input;
       await db.updateUser(id, data);

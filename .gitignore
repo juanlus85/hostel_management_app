@@ -105,3 +105,13 @@ temp/
 *.db
 *.sqlite
 *.sqlite3
+
+# Deployment
+deploy-package/
+hostel-management-deploy.zip
+
+# Drizzle cache
+drizzle/.cache/
+
+# PM2
+.pm2/

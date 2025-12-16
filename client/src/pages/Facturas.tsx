@@ -175,36 +175,6 @@ export default function Facturas() {
       return;
     }
     
-    let uploadedImageUrl: string | undefined = undefined;
-    let uploadedImageKey: string | undefined = undefined;
-    
-    // Upload file to S3 if there's an image/PDF
-    if (imageFile) {
-      try {
-        toast.info("Subiendo archivo...");
-        const formData = new FormData();
-        formData.append('file', imageFile);
-        
-        const uploadResponse = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData,
-        });
-        
-        if (!uploadResponse.ok) {
-          throw new Error('Error al subir el archivo');
-        }
-        
-        const uploadResult = await uploadResponse.json();
-        uploadedImageUrl = uploadResult.url;
-        uploadedImageKey = uploadResult.key;
-        console.log('[Facturas] File uploaded:', uploadedImageUrl);
-      } catch (error: any) {
-        console.error('[Facturas] Upload error:', error);
-        toast.error("Error al subir el archivo: " + error.message);
-        return;
-      }
-    }
-    
     createInvoice.mutate({
       businessId: currentBusinessId,
       supplier: finalSupplier || undefined,
@@ -213,8 +183,6 @@ export default function Facturas() {
       totalAmount: total || undefined,
       paymentMethod: paymentMethod || undefined,
       notes: notes.trim() || undefined,
-      imageUrl: uploadedImageUrl,
-      imageKey: uploadedImageKey,
     });
   };
 

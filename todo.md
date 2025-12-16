@@ -339,17 +339,12 @@
 
 ## Bug Corregido (v17)
 - [x] Añadido logging detallado al envío de email de facturas para diagnosticar problemas
-- [x] Email de facturas funcionando correctamente con configuración SMTP
 
 
-## Bug Corregido (v18)
-- [x] El email de facturas ahora incluye el archivo adjunto (se descarga primero y se adjunta como buffer)
-- [x] Añadido endpoint /api/upload para subir archivos a S3
-- [x] El frontend ahora sube el archivo a S3 antes de crear la factura
-- [x] El email descarga el archivo desde S3 y lo adjunta correctamente
-
-
-## Mejoras Solicitadas (v18)
-- [x] Añadir campo de color personalizado para cada empleado
-- [x] Selector de color en la ficha del empleado
-- [x] Usar el color del empleado en el calendario de turnos
+## Scripts de Despliegue (v20)
+- [x] Script prepare-deploy.sh para automatizar preparación de archivos
+- [x] Checklist de despliegue completo
+- [x] Instrucciones rápidas para Plesk
+- [x] Archivo .env.example con todas las variables
+- [x] Configuración PM2 para producción
+- [x] Script probado y funcionando correctamente

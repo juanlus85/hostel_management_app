@@ -15,8 +15,6 @@ export const users = mysqlTable("users", {
   // Schedule template: JSON with default shifts per day of week
   // Format: {"monday": {"start": "10:00", "end": "18:00"}, "tuesday": null, ...}
   scheduleTemplate: text("scheduleTemplate"),
-  // Color for calendar display (hex format, e.g., "#3b82f6")
-  color: varchar("color", { length: 7 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
