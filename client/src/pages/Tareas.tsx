@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
-import { CheckSquare, Plus, Clock, User, Calendar } from "lucide-react";
+import { CheckSquare, Plus, Clock, User, Calendar, Edit2, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -20,14 +20,28 @@ const PRIORITIES = [
   { value: "urgent", label: "Urgente", color: "bg-red-100 text-red-800" },
 ];
 
+type PriorityValue = "low" | "medium" | "high" | "urgent";
+
 export default function Tareas() {
   const { user } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<any>(null);
+  
+  // Create form
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [priority, setPriority] = useState<"low" | "medium" | "high" | "urgent">("medium");
+  const [priority, setPriority] = useState<PriorityValue>("medium");
   const [assignedTo, setAssignedTo] = useState<string>("");
   const [dueDate, setDueDate] = useState("");
+  
+  // Edit form
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editPriority, setEditPriority] = useState<PriorityValue>("medium");
+  const [editAssignedTo, setEditAssignedTo] = useState<string>("");
+  const [editDueDate, setEditDueDate] = useState("");
+  
   const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "completed">("pending");
 
   const utils = trpc.useUtils();
@@ -48,6 +62,16 @@ export default function Tareas() {
   const updateTask = trpc.tasks.update.useMutation({
     onSuccess: () => {
       toast.success("Tarea actualizada");
+      utils.tasks.list.invalidate();
+      setIsEditDialogOpen(false);
+      setSelectedTask(null);
+    },
+    onError: (error) => toast.error("Error: " + error.message),
+  });
+
+  const deleteTask = trpc.tasks.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Tarea eliminada");
       utils.tasks.list.invalidate();
     },
     onError: (error) => toast.error("Error: " + error.message),
@@ -73,6 +97,38 @@ export default function Tareas() {
       assignedTo: assignedTo ? parseInt(assignedTo) : undefined,
       dueDate: dueDate || undefined,
     });
+  };
+
+  const openEditDialog = (task: any) => {
+    setSelectedTask(task);
+    setEditTitle(task.title);
+    setEditDescription(task.description || "");
+    setEditPriority(task.priority);
+    setEditAssignedTo(task.assignedTo?.toString() || "");
+    setEditDueDate(task.dueDate || "");
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateTask = () => {
+    if (!selectedTask) return;
+    if (!editTitle) {
+      toast.error("El título es obligatorio");
+      return;
+    }
+    updateTask.mutate({
+      id: selectedTask.id,
+      title: editTitle,
+      description: editDescription,
+      priority: editPriority,
+      assignedTo: editAssignedTo ? parseInt(editAssignedTo) : undefined,
+      dueDate: editDueDate || undefined,
+    });
+  };
+
+  const handleDeleteTask = (id: number) => {
+    if (confirm("¿Seguro que quieres eliminar esta tarea?")) {
+      deleteTask.mutate({ id });
+    }
   };
 
   const toggleTaskStatus = (id: number, currentStatus: string) => {
@@ -146,7 +202,7 @@ export default function Tareas() {
           {tasks.map(task => (
             <div 
               key={task.id} 
-              className={`flex items-start gap-3 p-3 rounded-lg border ${task.status === "completed" ? 'bg-muted/50' : ''} ${isOverdue ? 'border-red-200' : ''}`}
+              className={`flex items-start gap-3 p-3 rounded-lg border group ${task.status === "completed" ? 'bg-muted/50' : ''} ${isOverdue ? 'border-red-200' : ''}`}
             >
               <Checkbox 
                 checked={task.status === "completed"}
@@ -177,6 +233,14 @@ export default function Tareas() {
                     </span>
                   )}
                 </div>
+              </div>
+              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDialog(task)}>
+                  <Edit2 className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-600" onClick={() => handleDeleteTask(task.id)}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </div>
             </div>
           ))}
@@ -225,7 +289,7 @@ export default function Tareas() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label>Prioridad</Label>
-                  <Select value={priority} onValueChange={(v: any) => setPriority(v)}>
+                  <Select value={priority} onValueChange={(v: PriorityValue) => setPriority(v)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -320,6 +384,69 @@ export default function Tareas() {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar tarea</DialogTitle>
+            <DialogDescription>Modifica los detalles de la tarea</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label>Título *</Label>
+              <Input value={editTitle} onChange={e => setEditTitle(e.target.value)} placeholder="¿Qué hay que hacer?" />
+            </div>
+            <div className="grid gap-2">
+              <Label>Descripción</Label>
+              <Textarea 
+                value={editDescription} 
+                onChange={e => setEditDescription(e.target.value)} 
+                placeholder="Detalles adicionales..."
+                rows={3}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label>Prioridad</Label>
+                <Select value={editPriority} onValueChange={(v: PriorityValue) => setEditPriority(v)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PRIORITIES.map(p => (
+                      <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label>Asignar a</Label>
+                <Select value={editAssignedTo} onValueChange={setEditAssignedTo}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sin asignar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {users?.map(u => (
+                      <SelectItem key={u.id} value={u.id.toString()}>{u.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label>Fecha límite</Label>
+              <Input type="date" value={editDueDate} onChange={e => setEditDueDate(e.target.value)} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleUpdateTask} disabled={updateTask.isPending}>
+              {updateTask.isPending ? "Guardando..." : "Guardar cambios"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

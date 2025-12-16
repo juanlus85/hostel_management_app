@@ -69,6 +69,8 @@ export default function Home() {
                         selectedBusiness === "tienda" ? "Sweet & Salty" : "Ambos negocios";
   const BusinessIcon = selectedBusiness === "hostel" ? Building2 : 
                        selectedBusiness === "tienda" ? Store : Building2;
+  
+  const isAdmin = user?.role === "admin";
 
   return (
     <div className="space-y-6">
@@ -83,20 +85,21 @@ export default function Home() {
         </p>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ingresos</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              €{stats?.totalIncome?.toFixed(2) || "0.00"}
-            </div>
-            <p className="text-xs text-muted-foreground">Esta semana</p>
-          </CardContent>
-        </Card>
+      {/* Stats Grid - Solo visible para admin */}
+      {isAdmin && (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Ingresos</CardTitle>
+              <TrendingUp className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">
+                €{stats?.totalIncome?.toFixed(2) || "0.00"}
+              </div>
+              <p className="text-xs text-muted-foreground">Esta semana</p>
+            </CardContent>
+          </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -132,18 +135,19 @@ export default function Home() {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Descuadre</CardTitle>
-            <Clock className="h-4 w-4 text-orange-500" />
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${Math.abs(stats?.totalDifference || 0) > 5 ? 'text-orange-500' : 'text-foreground'}`}>
-              €{stats?.totalDifference?.toFixed(2) || "0.00"}
-            </div>
-            <p className="text-xs text-muted-foreground">Acumulado en caja</p>
-          </CardContent>
-        </Card>
-      </div>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Descuadre</CardTitle>
+              <Clock className="h-4 w-4 text-orange-500" />
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${Math.abs(stats?.totalDifference || 0) > 5 ? 'text-orange-500' : 'text-foreground'}`}>
+                €{stats?.totalDifference?.toFixed(2) || "0.00"}
+              </div>
+              <p className="text-xs text-muted-foreground">Acumulado en caja</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Alerts Section */}
       <div className="grid gap-4 md:grid-cols-3">

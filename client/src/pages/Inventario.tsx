@@ -11,17 +11,18 @@ import { Package, Plus, AlertTriangle, Search, ArrowUp, ArrowDown, Edit2 } from 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
-const CATEGORIES = ["Bebidas", "Alimentación", "Limpieza", "Papelería", "Otros"];
-const SUPPLIERS = ["Coca Cola", "Frigo/Helados", "Cerbedam", "Matutano/Pepsi", "Reyes", "Ramirex", "Sarigabo", "Risi", "Cruzcampo", "Hielo", "Carrefour", "Distribuidor mayorista", "Otros"];
+const CATEGORIES = ["Bebidas", "Alimentación", "Limpieza", "Papelería", "Bocatas", "Otros"];
 
 export default function Inventario() {
   const { selectedBusiness } = useBusinessContext();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isAdjustDialog, setIsAdjustDialog] = useState(false);
+  const [isEditDialog, setIsEditDialog] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
   const [supplier, setSupplier] = useState("");
+  const [customSupplier, setCustomSupplier] = useState("");
   const [currentStock, setCurrentStock] = useState("");
   const [minimumStock, setMinimumStock] = useState("");
   const [unit, setUnit] = useState("unidad");
@@ -30,6 +31,13 @@ export default function Inventario() {
   const [adjustReason, setAdjustReason] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
+  
+  // Edit states
+  const [editName, setEditName] = useState("");
+  const [editCategory, setEditCategory] = useState("");
+  const [editSupplier, setEditSupplier] = useState("");
+  const [editMinimumStock, setEditMinimumStock] = useState("");
+  const [editUnit, setEditUnit] = useState("");
 
   const utils = trpc.useUtils();
 
@@ -49,6 +57,9 @@ export default function Inventario() {
     { enabled: !!currentBusinessId }
   );
 
+  // Get suppliers from database
+  const { data: suppliers } = trpc.suppliers.list.useQuery();
+
   const createItem = trpc.inventory.create.useMutation({
     onSuccess: () => {
       toast.success("Producto añadido");
@@ -56,6 +67,17 @@ export default function Inventario() {
       utils.inventory.lowStock.invalidate();
       setIsDialogOpen(false);
       resetForm();
+    },
+    onError: (error) => toast.error("Error: " + error.message),
+  });
+
+  const updateItem = trpc.inventory.update.useMutation({
+    onSuccess: () => {
+      toast.success("Producto actualizado");
+      utils.inventory.list.invalidate();
+      utils.inventory.lowStock.invalidate();
+      setIsEditDialog(false);
+      setSelectedItem(null);
     },
     onError: (error) => toast.error("Error: " + error.message),
   });
@@ -77,6 +99,7 @@ export default function Inventario() {
     setName("");
     setCategory("");
     setSupplier("");
+    setCustomSupplier("");
     setCurrentStock("");
     setMinimumStock("");
     setUnit("unidad");
@@ -87,11 +110,12 @@ export default function Inventario() {
       toast.error("El nombre es obligatorio");
       return;
     }
+    const finalSupplier = supplier === "_custom" ? customSupplier : supplier;
     createItem.mutate({
       businessId: currentBusinessId,
       name,
       category,
-      supplier,
+      supplier: finalSupplier,
       currentStock: currentStock || "0",
       minimumStock: minimumStock || "0",
       unit,
@@ -112,6 +136,31 @@ export default function Inventario() {
     setSelectedItem(item);
     setAdjustType(type);
     setIsAdjustDialog(true);
+  };
+
+  const openEditDialog = (item: any) => {
+    setSelectedItem(item);
+    setEditName(item.name);
+    setEditCategory(item.category || "");
+    setEditSupplier(item.supplier || "");
+    setEditMinimumStock(item.minimumStock || "0");
+    setEditUnit(item.unit || "unidad");
+    setIsEditDialog(true);
+  };
+
+  const handleUpdateItem = () => {
+    if (!selectedItem || !editName) {
+      toast.error("El nombre es obligatorio");
+      return;
+    }
+    updateItem.mutate({
+      id: selectedItem.id,
+      name: editName,
+      category: editCategory,
+      supplier: editSupplier,
+      minimumStock: editMinimumStock,
+      unit: editUnit,
+    });
   };
 
   // Filter and search
@@ -188,11 +237,20 @@ export default function Inventario() {
                       <SelectValue placeholder="Seleccionar" />
                     </SelectTrigger>
                     <SelectContent>
-                      {SUPPLIERS.map(sup => (
-                        <SelectItem key={sup} value={sup}>{sup}</SelectItem>
+                      {suppliers?.map(sup => (
+                        <SelectItem key={sup.id} value={sup.name}>{sup.name}</SelectItem>
                       ))}
+                      <SelectItem value="_custom">Otro (escribir)</SelectItem>
                     </SelectContent>
                   </Select>
+                  {supplier === "_custom" && (
+                    <Input 
+                      value={customSupplier} 
+                      onChange={e => setCustomSupplier(e.target.value)} 
+                      placeholder="Nombre del proveedor"
+                      className="mt-2"
+                    />
+                  )}
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-4">
@@ -206,14 +264,25 @@ export default function Inventario() {
                 </div>
                 <div className="grid gap-2">
                   <Label>Unidad</Label>
-                  <Input value={unit} onChange={e => setUnit(e.target.value)} placeholder="unidad" />
+                  <Select value={unit} onValueChange={setUnit}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unidad">Unidad</SelectItem>
+                      <SelectItem value="kg">Kg</SelectItem>
+                      <SelectItem value="litro">Litro</SelectItem>
+                      <SelectItem value="caja">Caja</SelectItem>
+                      <SelectItem value="pack">Pack</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
               <Button onClick={handleCreateItem} disabled={createItem.isPending}>
-                {createItem.isPending ? "Guardando..." : "Guardar"}
+                {createItem.isPending ? "Guardando..." : "Añadir producto"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -222,18 +291,18 @@ export default function Inventario() {
 
       {/* Low Stock Alert */}
       {lowStockItems && lowStockItems.length > 0 && (
-        <Card className="border-orange-200 bg-orange-50/50">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-orange-500" />
-              Stock bajo - {lowStockItems.length} productos
+        <Card className="border-orange-200 bg-orange-50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-orange-700 flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" />
+              Stock bajo ({lowStockItems.length} productos)
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
               {lowStockItems.map(item => (
-                <Badge key={item.id} variant="outline" className="bg-orange-100 text-orange-800 border-orange-300">
-                  {item.name}: {parseFloat(item.currentStock || "0")} {item.unit}
+                <Badge key={item.id} variant="outline" className="border-orange-300 text-orange-700">
+                  {item.name}: {item.currentStock} {item.unit}
                 </Badge>
               ))}
             </div>
@@ -241,19 +310,19 @@ export default function Inventario() {
         </Card>
       )}
 
-      {/* Filters */}
+      {/* Search and Filter */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input 
-            placeholder="Buscar producto..." 
+            placeholder="Buscar producto o proveedor..." 
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             className="pl-10"
           />
         </div>
         <Select value={filterCategory} onValueChange={setFilterCategory}>
-          <SelectTrigger className="w-full sm:w-48">
+          <SelectTrigger className="w-48">
             <SelectValue placeholder="Categoría" />
           </SelectTrigger>
           <SelectContent>
@@ -266,76 +335,85 @@ export default function Inventario() {
       </div>
 
       {/* Inventory List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Productos ({filteredInventory.length})</CardTitle>
-          <CardDescription>Lista de productos en inventario</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {Object.keys(inventoryByCategory).length > 0 ? (
-            <div className="space-y-6">
-              {Object.entries(inventoryByCategory).map(([cat, items]) => (
-                <div key={cat}>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-3">{cat}</h3>
-                  <div className="space-y-2">
-                    {items.map(item => {
-                      const current = parseFloat(item.currentStock || "0");
-                      const minimum = parseFloat(item.minimumStock || "0");
-                      const isLow = current <= minimum;
-                      return (
-                        <div key={item.id} className={`flex items-center justify-between p-3 rounded-lg border ${isLow ? 'border-orange-200 bg-orange-50/30' : ''}`}>
-                          <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-full ${isLow ? 'bg-orange-100' : 'bg-muted'}`}>
-                              <Package className={`h-4 w-4 ${isLow ? 'text-orange-500' : 'text-muted-foreground'}`} />
-                            </div>
-                            <div>
-                              <p className="font-medium">{item.name}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {item.supplier || 'Sin proveedor'} • Mín: {minimum} {item.unit}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="text-right mr-4">
-                              <p className={`text-lg font-bold ${isLow ? 'text-orange-500' : ''}`}>
-                                {current} {item.unit}
-                              </p>
-                            </div>
-                            <Button size="icon" variant="outline" onClick={() => openAdjustDialog(item, "in")}>
+      {Object.entries(inventoryByCategory).map(([category, items]) => (
+        <Card key={category}>
+          <CardHeader>
+            <CardTitle className="text-lg">{category}</CardTitle>
+            <CardDescription>{items.length} productos</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-2 px-2">Producto</th>
+                    <th className="text-left py-2 px-2">Proveedor</th>
+                    <th className="text-center py-2 px-2">Stock</th>
+                    <th className="text-center py-2 px-2">Mínimo</th>
+                    <th className="text-center py-2 px-2">Estado</th>
+                    <th className="text-right py-2 px-2">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map(item => {
+                    const stock = parseFloat(item.currentStock || "0");
+                    const min = parseFloat(item.minimumStock || "0");
+                    const isLow = stock <= min;
+                    return (
+                      <tr key={item.id} className="border-b hover:bg-muted/50">
+                        <td className="py-2 px-2 font-medium">{item.name}</td>
+                        <td className="py-2 px-2 text-muted-foreground">{item.supplier || "-"}</td>
+                        <td className="py-2 px-2 text-center">{stock} {item.unit}</td>
+                        <td className="py-2 px-2 text-center">{min} {item.unit}</td>
+                        <td className="py-2 px-2 text-center">
+                          {isLow ? (
+                            <Badge variant="destructive">Bajo</Badge>
+                          ) : (
+                            <Badge variant="secondary">OK</Badge>
+                          )}
+                        </td>
+                        <td className="py-2 px-2 text-right">
+                          <div className="flex justify-end gap-1">
+                            <Button variant="ghost" size="icon" onClick={() => openEditDialog(item)} title="Editar">
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => openAdjustDialog(item, "in")} title="Entrada">
                               <ArrowUp className="h-4 w-4 text-green-600" />
                             </Button>
-                            <Button size="icon" variant="outline" onClick={() => openAdjustDialog(item, "out")}>
+                            <Button variant="ghost" size="icon" onClick={() => openAdjustDialog(item, "out")} title="Salida">
                               <ArrowDown className="h-4 w-4 text-red-600" />
                             </Button>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <Package className="h-12 w-12 mx-auto mb-3 opacity-20" />
-              <p>No hay productos en el inventario</p>
-              <Button variant="link" onClick={() => setIsDialogOpen(true)}>
-                Añadir primer producto
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      ))}
+
+      {filteredInventory.length === 0 && (
+        <Card>
+          <CardContent className="py-8 text-center text-muted-foreground">
+            <Package className="h-12 w-12 mx-auto mb-3 opacity-20" />
+            <p>No hay productos en el inventario</p>
+            <Button variant="link" onClick={() => setIsDialogOpen(true)}>
+              Añadir el primero
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Adjust Stock Dialog */}
       <Dialog open={isAdjustDialog} onOpenChange={setIsAdjustDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {adjustType === "in" ? "Entrada de stock" : "Salida de stock"}
-            </DialogTitle>
+            <DialogTitle>{adjustType === "in" ? "Entrada de stock" : "Salida de stock"}</DialogTitle>
             <DialogDescription>
-              {selectedItem?.name} - Stock actual: {parseFloat(selectedItem?.currentStock || "0")} {selectedItem?.unit}
+              {selectedItem?.name} - Stock actual: {selectedItem?.currentStock} {selectedItem?.unit}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -345,7 +423,7 @@ export default function Inventario() {
                 type="number" 
                 value={adjustQuantity} 
                 onChange={e => setAdjustQuantity(e.target.value)} 
-                placeholder="0" 
+                placeholder="0"
               />
             </div>
             <div className="grid gap-2">
@@ -353,7 +431,7 @@ export default function Inventario() {
               <Input 
                 value={adjustReason} 
                 onChange={e => setAdjustReason(e.target.value)} 
-                placeholder="Ej: Pedido recibido, Venta, Merma..." 
+                placeholder="Ej: Pedido semanal, Venta, Rotura..."
               />
             </div>
           </div>
@@ -361,6 +439,77 @@ export default function Inventario() {
             <Button variant="outline" onClick={() => setIsAdjustDialog(false)}>Cancelar</Button>
             <Button onClick={handleAdjustStock} disabled={adjustStock.isPending}>
               {adjustStock.isPending ? "Guardando..." : "Confirmar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Item Dialog */}
+      <Dialog open={isEditDialog} onOpenChange={setIsEditDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar producto</DialogTitle>
+            <DialogDescription>Modifica los datos del producto</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label>Nombre del producto *</Label>
+              <Input value={editName} onChange={e => setEditName(e.target.value)} placeholder="Nombre" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label>Categoría</Label>
+                <Select value={editCategory} onValueChange={setEditCategory}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CATEGORIES.map(cat => (
+                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label>Proveedor</Label>
+                <Select value={editSupplier} onValueChange={setEditSupplier}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {suppliers?.map(sup => (
+                      <SelectItem key={sup.id} value={sup.name}>{sup.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label>Stock mínimo</Label>
+                <Input type="number" value={editMinimumStock} onChange={e => setEditMinimumStock(e.target.value)} placeholder="0" />
+              </div>
+              <div className="grid gap-2">
+                <Label>Unidad</Label>
+                <Select value={editUnit} onValueChange={setEditUnit}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unidad">Unidad</SelectItem>
+                    <SelectItem value="kg">Kg</SelectItem>
+                    <SelectItem value="litro">Litro</SelectItem>
+                    <SelectItem value="caja">Caja</SelectItem>
+                    <SelectItem value="pack">Pack</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialog(false)}>Cancelar</Button>
+            <Button onClick={handleUpdateItem} disabled={updateItem.isPending}>
+              {updateItem.isPending ? "Guardando..." : "Guardar cambios"}
             </Button>
           </DialogFooter>
         </DialogContent>

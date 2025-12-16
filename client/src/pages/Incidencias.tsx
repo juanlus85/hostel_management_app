@@ -35,6 +35,12 @@ export default function Incidencias() {
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<"low" | "medium" | "high" | "urgent">("medium");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [editingIncident, setEditingIncident] = useState<any>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editPriority, setEditPriority] = useState<"low" | "medium" | "high" | "urgent">("medium");
+  const [editNotes, setEditNotes] = useState("");
 
   const utils = trpc.useUtils();
 
@@ -88,6 +94,31 @@ export default function Incidencias() {
 
   const handleStatusChange = (id: number, status: string) => {
     updateIncident.mutate({ id, status: status as any });
+  };
+
+  const openEditDialog = (incident: any) => {
+    setEditingIncident(incident);
+    setEditTitle(incident.title);
+    setEditDescription(incident.description || "");
+    setEditPriority(incident.priority);
+    setEditNotes(incident.notes || "");
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateIncident = () => {
+    if (!editingIncident || !editTitle) {
+      toast.error("El título es obligatorio");
+      return;
+    }
+    updateIncident.mutate({
+      id: editingIncident.id,
+      title: editTitle,
+      description: editDescription,
+      priority: editPriority,
+      notes: editNotes,
+    });
+    setIsEditDialogOpen(false);
+    setEditingIncident(null);
   };
 
   // Filter incidents
@@ -245,19 +276,22 @@ export default function Incidencias() {
                           </p>
                         </div>
                       </div>
-                      <Select 
-                        value={incident.status} 
-                        onValueChange={(v) => handleStatusChange(incident.id, v)}
-                      >
-                        <SelectTrigger className="w-36">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {STATUSES.map(s => (
-                            <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => openEditDialog(incident)}>Editar</Button>
+                        <Select 
+                          value={incident.status} 
+                          onValueChange={(v) => handleStatusChange(incident.id, v)}
+                        >
+                          <SelectTrigger className="w-36">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {STATUSES.map(s => (
+                              <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                   </div>
                 );
@@ -274,6 +308,59 @@ export default function Incidencias() {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar incidencia</DialogTitle>
+            <DialogDescription>Modifica los datos de la incidencia</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label>Título *</Label>
+              <Input value={editTitle} onChange={e => setEditTitle(e.target.value)} placeholder="Resumen breve del problema" />
+            </div>
+            <div className="grid gap-2">
+              <Label>Descripción</Label>
+              <Textarea 
+                value={editDescription} 
+                onChange={e => setEditDescription(e.target.value)} 
+                placeholder="Describe el problema con detalle..."
+                rows={4}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Prioridad</Label>
+              <Select value={editPriority} onValueChange={(v: any) => setEditPriority(v)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PRIORITIES.map(p => (
+                    <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label>Notas</Label>
+              <Textarea 
+                value={editNotes} 
+                onChange={e => setEditNotes(e.target.value)} 
+                placeholder="Notas adicionales..."
+                rows={2}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleUpdateIncident} disabled={updateIncident.isPending}>
+              {updateIncident.isPending ? "Guardando..." : "Guardar cambios"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

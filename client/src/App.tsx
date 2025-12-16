@@ -15,6 +15,7 @@ import Inventario from "./pages/Inventario";
 import Incidencias from "./pages/Incidencias";
 import Tareas from "./pages/Tareas";
 import Empleados from "./pages/Empleados";
+import Proveedores from "./pages/Proveedores";
 
 function Router() {
   return (
@@ -28,6 +29,7 @@ function Router() {
         <Route path="/incidencias" component={Incidencias} />
         <Route path="/tareas" component={Tareas} />
         <Route path="/empleados" component={Empleados} />
+        <Route path="/proveedores" component={Proveedores} />
         <Route path="/404" component={NotFound} />
         <Route component={NotFound} />
       </Switch>

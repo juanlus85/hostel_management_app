@@ -1,11 +1,13 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
-import { Users, Shield, User, Clock, Mail } from "lucide-react";
+import { Users, Shield, User, Clock, Mail, Plus, UserPlus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -15,6 +17,12 @@ export default function Empleados() {
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [isRoleDialog, setIsRoleDialog] = useState(false);
   const [newRole, setNewRole] = useState<"user" | "admin">("user");
+  
+  // Create employee form
+  const [isCreateDialog, setIsCreateDialog] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [newEmployeeRole, setNewEmployeeRole] = useState<"user" | "admin">("user");
 
   const utils = trpc.useUtils();
 
@@ -22,6 +30,16 @@ export default function Empleados() {
   const { data: shifts } = trpc.shifts.list.useQuery({
     startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0],
+  });
+
+  const createEmployee = trpc.employees.create.useMutation({
+    onSuccess: () => {
+      toast.success("Empleado creado correctamente");
+      utils.users.list.invalidate();
+      setIsCreateDialog(false);
+      resetCreateForm();
+    },
+    onError: (error: any) => toast.error("Error: " + error.message),
   });
 
   const updateUserRole = trpc.users.update.useMutation({
@@ -33,6 +51,28 @@ export default function Empleados() {
     },
     onError: (error: any) => toast.error("Error: " + error.message),
   });
+
+  const resetCreateForm = () => {
+    setNewName("");
+    setNewEmail("");
+    setNewEmployeeRole("user");
+  };
+
+  const handleCreateEmployee = () => {
+    if (!newName.trim()) {
+      toast.error("El nombre es obligatorio");
+      return;
+    }
+    if (!newEmail.trim()) {
+      toast.error("El email es obligatorio");
+      return;
+    }
+    createEmployee.mutate({
+      name: newName.trim(),
+      email: newEmail.trim(),
+      role: newEmployeeRole,
+    });
+  };
 
   const handleRoleChange = () => {
     if (!selectedUser) return;
@@ -71,17 +111,70 @@ export default function Empleados() {
           </h1>
           <p className="text-muted-foreground">Gestión de usuarios y permisos</p>
         </div>
+        {isAdmin && (
+          <Dialog open={isCreateDialog} onOpenChange={setIsCreateDialog}>
+            <DialogTrigger asChild>
+              <Button>
+                <UserPlus className="h-4 w-4 mr-2" />
+                Nuevo empleado
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Crear nuevo empleado</DialogTitle>
+                <DialogDescription>
+                  Añade un nuevo empleado al sistema. Podrá iniciar sesión con su email.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label>Nombre completo *</Label>
+                  <Input 
+                    value={newName} 
+                    onChange={e => setNewName(e.target.value)} 
+                    placeholder="Ej: Ana García"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Email *</Label>
+                  <Input 
+                    type="email"
+                    value={newEmail} 
+                    onChange={e => setNewEmail(e.target.value)} 
+                    placeholder="ana@ejemplo.com"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    El empleado usará este email para iniciar sesión
+                  </p>
+                </div>
+                <div className="grid gap-2">
+                  <Label>Rol</Label>
+                  <Select value={newEmployeeRole} onValueChange={(v: "user" | "admin") => setNewEmployeeRole(v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="user">Empleado</SelectItem>
+                      <SelectItem value="admin">Administrador</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    {newEmployeeRole === "admin" 
+                      ? "Acceso completo: gestión de empleados, turnos, caja y configuración" 
+                      : "Acceso básico: fichaje, registro de caja e incidencias"}
+                  </p>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsCreateDialog(false)}>Cancelar</Button>
+                <Button onClick={handleCreateEmployee} disabled={createEmployee.isPending}>
+                  {createEmployee.isPending ? "Creando..." : "Crear empleado"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
-
-      {/* Info Card */}
-      <Card className="bg-blue-50/50 border-blue-200">
-        <CardContent className="pt-4">
-          <p className="text-sm text-blue-800">
-            Los empleados se registran automáticamente cuando inician sesión por primera vez. 
-            Como administrador, puedes cambiar sus roles y permisos.
-          </p>
-        </CardContent>
-      </Card>
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-3">
@@ -180,7 +273,7 @@ export default function Empleados() {
             <div className="text-center py-8 text-muted-foreground">
               <Users className="h-12 w-12 mx-auto mb-3 opacity-20" />
               <p>No hay empleados registrados</p>
-              <p className="text-sm">Los empleados aparecerán aquí cuando inicien sesión</p>
+              <p className="text-sm">Usa el botón "Nuevo empleado" para añadir empleados</p>
             </div>
           )}
         </CardContent>

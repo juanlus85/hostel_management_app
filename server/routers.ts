@@ -221,6 +221,7 @@ export const appRouter = router({
       vatRate: z.string().optional(),
       vatAmount: z.string().optional(),
       totalAmount: z.string().optional(),
+      paymentMethod: z.enum(["cuenta_bancaria", "tarjeta", "ana", "juanlu", "caja_hostel", "caja_tienda", "caja_fuerte", "caja_fuerte_cambio", "otros"]).optional(),
       imageUrl: z.string().optional(),
       imageKey: z.string().optional(),
       notes: z.string().optional(),
@@ -237,6 +238,7 @@ export const appRouter = router({
       vatRate: z.string().optional(),
       vatAmount: z.string().optional(),
       totalAmount: z.string().optional(),
+      paymentMethod: z.enum(["cuenta_bancaria", "tarjeta", "ana", "juanlu", "caja_hostel", "caja_tienda", "caja_fuerte", "caja_fuerte_cambio", "otros"]).optional(),
       ocrData: z.string().optional(),
       ocrStatus: z.enum(["pending", "processing", "completed", "failed"]).optional(),
       isVerified: z.boolean().optional(),
@@ -496,6 +498,103 @@ export const appRouter = router({
         console.error("Error parsing OCR response:", e);
         return null;
       }
+    }),
+  }),
+
+  // ==================== SUPPLIERS ====================
+  suppliers: router({
+    list: protectedProcedure.query(async () => {
+      return db.getAllSuppliers();
+    }),
+    create: adminProcedure.input(z.object({
+      name: z.string(),
+      contactName: z.string().optional(),
+      phone: z.string().optional(),
+      email: z.string().optional(),
+      address: z.string().optional(),
+      notes: z.string().optional(),
+    })).mutation(async ({ input }) => {
+      const id = await db.createSupplier(input);
+      return { success: true, id };
+    }),
+    update: adminProcedure.input(z.object({
+      id: z.number(),
+      name: z.string().optional(),
+      contactName: z.string().optional(),
+      phone: z.string().optional(),
+      email: z.string().optional(),
+      address: z.string().optional(),
+      notes: z.string().optional(),
+    })).mutation(async ({ input }) => {
+      const { id, ...data } = input;
+      await db.updateSupplier(id, data);
+      return { success: true };
+    }),
+    delete: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
+      await db.deleteSupplier(input.id);
+      return { success: true };
+    }),
+  }),
+
+  // ==================== SHIFT TEMPLATES ====================
+  shiftTemplates: router({
+    list: protectedProcedure.query(async () => {
+      return db.getAllShiftTemplates();
+    }),
+    create: adminProcedure.input(z.object({
+      name: z.string(),
+      dayOfWeek: z.number().min(0).max(6),
+      userId: z.number(),
+      scheduledStart: z.string(),
+      scheduledEnd: z.string(),
+    })).mutation(async ({ input }) => {
+      const id = await db.createShiftTemplate(input);
+      return { success: true, id };
+    }),
+    update: adminProcedure.input(z.object({
+      id: z.number(),
+      name: z.string().optional(),
+      dayOfWeek: z.number().min(0).max(6).optional(),
+      userId: z.number().optional(),
+      scheduledStart: z.string().optional(),
+      scheduledEnd: z.string().optional(),
+    })).mutation(async ({ input }) => {
+      const { id, ...data } = input;
+      await db.updateShiftTemplate(id, data);
+      return { success: true };
+    }),
+    delete: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
+      await db.deleteShiftTemplate(input.id);
+      return { success: true };
+    }),
+    generate: adminProcedure.input(z.object({
+      startDate: z.string(),
+      endDate: z.string(),
+    })).mutation(async ({ input }) => {
+      await db.generateShiftsFromTemplates(input.startDate, input.endDate);
+      return { success: true };
+    }),
+  }),
+
+  // ==================== EMPLOYEE MANAGEMENT ====================
+  employees: router({
+    create: adminProcedure.input(z.object({
+      name: z.string(),
+      email: z.string(),
+      role: z.enum(["user", "admin"]).default("user"),
+    })).mutation(async ({ input }) => {
+      const id = await db.createEmployee(input.name, input.email, input.role);
+      return { success: true, id };
+    }),
+  }),
+
+  // ==================== CASH REGISTER AUTO ====================
+  cashAuto: router({
+    getOrCreate: protectedProcedure.input(z.object({
+      businessId: z.number(),
+      date: z.string(),
+    })).mutation(async ({ input, ctx }) => {
+      return db.getOrCreateDailyCashRegister(input.businessId, ctx.user.id, input.date);
     }),
   }),
 

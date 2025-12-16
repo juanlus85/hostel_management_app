@@ -34,7 +34,8 @@ import {
   CheckSquare,
   Users,
   Building2,
-  Store
+  Store,
+  Truck
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -54,6 +55,7 @@ const menuItems = [
 
 const adminMenuItems = [
   { icon: Users, label: "Empleados", path: "/empleados" },
+  { icon: Truck, label: "Proveedores", path: "/proveedores" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";

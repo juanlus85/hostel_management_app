@@ -83,7 +83,7 @@ export const transactions = mysqlTable("transactions", {
   category: varchar("category", { length: 100 }),
   concept: varchar("concept", { length: 255 }).notNull(),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
-  paymentMethod: mysqlEnum("paymentMethod", ["cash", "card", "transfer", "other"]).default("cash").notNull(),
+  paymentMethod: mysqlEnum("paymentMethod", ["cash", "card", "transfer", "cuenta_bancaria", "ana", "juanlu", "caja_hostel", "caja_tienda", "caja_fuerte", "caja_fuerte_cambio", "other"]).default("cash").notNull(),
   date: varchar("date", { length: 10 }).notNull(), // YYYY-MM-DD format
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -106,6 +106,7 @@ export const invoices = mysqlTable("invoices", {
   vatRate: decimal("vatRate", { precision: 5, scale: 2 }),
   vatAmount: decimal("vatAmount", { precision: 10, scale: 2 }),
   totalAmount: decimal("totalAmount", { precision: 10, scale: 2 }),
+  paymentMethod: mysqlEnum("paymentMethodInvoice", ["cuenta_bancaria", "tarjeta", "ana", "juanlu", "caja_hostel", "caja_tienda", "caja_fuerte", "caja_fuerte_cambio", "otros"]).default("cuenta_bancaria"),
   imageUrl: text("imageUrl"),
   imageKey: varchar("imageKey", { length: 255 }),
   ocrData: text("ocrData"), // JSON string with OCR extracted data
@@ -230,6 +231,39 @@ export const stockMovements = mysqlTable("stock_movements", {
 
 export type StockMovement = typeof stockMovements.$inferSelect;
 export type InsertStockMovement = typeof stockMovements.$inferInsert;
+
+// ==================== SUPPLIERS (Proveedores) ====================
+export const suppliers = mysqlTable("suppliers", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  contactName: varchar("contactName", { length: 255 }),
+  phone: varchar("phone", { length: 50 }),
+  email: varchar("email", { length: 320 }),
+  address: text("address"),
+  notes: text("notes"),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Supplier = typeof suppliers.$inferSelect;
+export type InsertSupplier = typeof suppliers.$inferInsert;
+
+// ==================== SHIFT TEMPLATES (Plantillas de Turnos) ====================
+export const shiftTemplates = mysqlTable("shift_templates", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  dayOfWeek: int("dayOfWeek").notNull(), // 0=Sunday, 1=Monday, etc.
+  userId: int("userId").notNull(),
+  scheduledStart: varchar("scheduledStart", { length: 5 }).notNull(),
+  scheduledEnd: varchar("scheduledEnd", { length: 5 }).notNull(),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ShiftTemplate = typeof shiftTemplates.$inferSelect;
+export type InsertShiftTemplate = typeof shiftTemplates.$inferInsert;
 
 // ==================== WEEKLY SUMMARIES (Resúmenes Semanales) ====================
 export const weeklySummaries = mysqlTable("weekly_summaries", {

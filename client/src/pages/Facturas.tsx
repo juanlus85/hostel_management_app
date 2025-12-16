@@ -5,26 +5,51 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
-import { Receipt, Plus, Camera, Upload, Check, AlertCircle, Search, Building2, Store, Loader2, Sparkles } from "lucide-react";
+import { Receipt, Plus, Camera, Upload, Check, AlertCircle, Search, Building2, Store, Loader2, Sparkles, Edit2, FileText } from "lucide-react";
 import { useMemo, useState, useRef } from "react";
 import { toast } from "sonner";
+
+const PAYMENT_METHODS = [
+  { value: "cuenta_bancaria", label: "Cuenta Bancaria" },
+  { value: "tarjeta", label: "Tarjeta" },
+  { value: "ana", label: "Ana" },
+  { value: "juanlu", label: "Juanlu" },
+  { value: "caja_hostel", label: "Caja Hostel" },
+  { value: "caja_tienda", label: "Caja Tienda" },
+  { value: "caja_fuerte", label: "Caja Fuerte" },
+  { value: "caja_fuerte_cambio", label: "Caja Fuerte Cambio" },
+  { value: "otros", label: "Otros" },
+] as const;
+
+type PaymentMethodValue = typeof PAYMENT_METHODS[number]["value"];
 
 export default function Facturas() {
   const { selectedBusiness } = useBusinessContext();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const [supplier, setSupplier] = useState("");
+  const [customSupplier, setCustomSupplier] = useState("");
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
-  const [baseAmount, setBaseAmount] = useState("");
-  const [vatRate, setVatRate] = useState("21");
   const [totalAmount, setTotalAmount] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodValue | "">("");
   const [notes, setNotes] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [isProcessingOCR, setIsProcessingOCR] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Edit form states
+  const [editSupplier, setEditSupplier] = useState("");
+  const [editInvoiceNumber, setEditInvoiceNumber] = useState("");
+  const [editInvoiceDate, setEditInvoiceDate] = useState("");
+  const [editTotalAmount, setEditTotalAmount] = useState("");
+  const [editPaymentMethod, setEditPaymentMethod] = useState<PaymentMethodValue | "">("");
+  const [editNotes, setEditNotes] = useState("");
 
   const utils = trpc.useUtils();
 
@@ -38,6 +63,9 @@ export default function Facturas() {
     { businessId: currentBusinessId! },
     { enabled: !!currentBusinessId }
   );
+
+  // Get suppliers from database
+  const { data: suppliers } = trpc.suppliers.list.useQuery();
 
   const createInvoice = trpc.invoices.create.useMutation({
     onSuccess: () => {
@@ -53,7 +81,10 @@ export default function Facturas() {
     onSuccess: () => {
       toast.success("Factura actualizada");
       utils.invoices.list.invalidate();
+      setIsEditDialogOpen(false);
+      setSelectedInvoice(null);
     },
+    onError: (error) => toast.error("Error: " + error.message),
   });
 
   const processOCR = trpc.ocr.processInvoice.useMutation({
@@ -62,8 +93,6 @@ export default function Facturas() {
         if (data.supplier) setSupplier(data.supplier);
         if (data.invoiceNumber) setInvoiceNumber(data.invoiceNumber);
         if (data.invoiceDate) setInvoiceDate(data.invoiceDate);
-        if (data.baseAmount) setBaseAmount(data.baseAmount);
-        if (data.vatRate) setVatRate(data.vatRate);
         if (data.totalAmount) setTotalAmount(data.totalAmount);
         toast.success("Datos extraídos correctamente");
       } else {
@@ -79,11 +108,11 @@ export default function Facturas() {
 
   const resetForm = () => {
     setSupplier("");
+    setCustomSupplier("");
     setInvoiceNumber("");
     setInvoiceDate(new Date().toISOString().split('T')[0]);
-    setBaseAmount("");
-    setVatRate("21");
     setTotalAmount("");
+    setPaymentMethod("");
     setNotes("");
     setImageFile(null);
     setImagePreview(null);
@@ -92,13 +121,28 @@ export default function Facturas() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Check if it's an image or PDF
+      const isImage = file.type.startsWith('image/');
+      const isPDF = file.type === 'application/pdf';
+      
+      if (!isImage && !isPDF) {
+        toast.error("Solo se permiten imágenes o archivos PDF");
+        return;
+      }
+
       setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const dataUrl = reader.result as string;
-        setImagePreview(dataUrl);
-      };
-      reader.readAsDataURL(file);
+      
+      if (isImage) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const dataUrl = reader.result as string;
+          setImagePreview(dataUrl);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        // For PDF, just show a placeholder
+        setImagePreview("pdf:" + file.name);
+      }
     }
   };
 
@@ -107,34 +151,56 @@ export default function Facturas() {
       toast.error("Primero sube una imagen");
       return;
     }
+    if (imagePreview.startsWith("pdf:")) {
+      toast.error("OCR solo disponible para imágenes, no para PDF");
+      return;
+    }
     setIsProcessingOCR(true);
     processOCR.mutate({ imageUrl: imagePreview });
-  };
-
-  const calculateTotal = () => {
-    if (baseAmount && vatRate) {
-      const base = parseFloat(baseAmount);
-      const vat = parseFloat(vatRate);
-      const total = base * (1 + vat / 100);
-      setTotalAmount(total.toFixed(2));
-    }
   };
 
   const handleCreateInvoice = async () => {
     if (!currentBusinessId) return;
     
-    // TODO: Upload image to S3 and get URL
-    // For now, we'll create without image
+    const finalSupplier = supplier === "_custom" ? customSupplier : supplier;
+    
+    if (!finalSupplier && !totalAmount) {
+      toast.error("Indica al menos el proveedor o el total");
+      return;
+    }
+    
     createInvoice.mutate({
       businessId: currentBusinessId,
-      supplier,
+      supplier: finalSupplier,
       invoiceNumber,
       invoiceDate,
-      baseAmount,
-      vatRate,
-      vatAmount: baseAmount && vatRate ? (parseFloat(baseAmount) * parseFloat(vatRate) / 100).toFixed(2) : undefined,
       totalAmount,
+      paymentMethod: paymentMethod || undefined,
       notes,
+    });
+  };
+
+  const openEditDialog = (invoice: any) => {
+    setSelectedInvoice(invoice);
+    setEditSupplier(invoice.supplier || "");
+    setEditInvoiceNumber(invoice.invoiceNumber || "");
+    setEditInvoiceDate(invoice.invoiceDate || "");
+    setEditTotalAmount(invoice.totalAmount || "");
+    setEditPaymentMethod(invoice.paymentMethod || "");
+    setEditNotes(invoice.notes || "");
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateInvoice = () => {
+    if (!selectedInvoice) return;
+    updateInvoice.mutate({
+      id: selectedInvoice.id,
+      supplier: editSupplier,
+      invoiceNumber: editInvoiceNumber,
+      invoiceDate: editInvoiceDate,
+      totalAmount: editTotalAmount,
+      paymentMethod: editPaymentMethod || undefined,
+      notes: editNotes,
     });
   };
 
@@ -165,11 +231,9 @@ export default function Facturas() {
   // Calculate totals
   const totals = useMemo(() => {
     return filteredInvoices.reduce((acc, inv) => {
-      acc.base += parseFloat(inv.baseAmount || "0");
-      acc.vat += parseFloat(inv.vatAmount || "0");
       acc.total += parseFloat(inv.totalAmount || "0");
       return acc;
-    }, { base: 0, vat: 0, total: 0 });
+    }, { total: 0 });
   }, [filteredInvoices]);
 
   return (
@@ -190,19 +254,19 @@ export default function Facturas() {
               Nueva factura
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Registrar factura</DialogTitle>
               <DialogDescription>Añade una nueva factura o ticket de gasto</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-              {/* Image Upload */}
+              {/* Image/PDF Upload */}
               <div className="grid gap-2">
-                <Label>Foto del ticket/factura</Label>
+                <Label>Foto del ticket/factura o PDF</Label>
                 <div className="flex gap-4">
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/*,application/pdf"
                     capture="environment"
                     ref={fileInputRef}
                     onChange={handleFileChange}
@@ -230,13 +294,20 @@ export default function Facturas() {
                     className="flex-1"
                   >
                     <Upload className="h-4 w-4 mr-2" />
-                    Subir imagen
+                    Subir archivo
                   </Button>
                 </div>
                 {imagePreview && (
                   <div className="mt-2 space-y-2">
                     <div className="relative">
-                      <img src={imagePreview} alt="Preview" className="max-h-48 rounded-lg border" />
+                      {imagePreview.startsWith("pdf:") ? (
+                        <div className="flex items-center gap-2 p-4 border rounded-lg bg-muted">
+                          <FileText className="h-8 w-8 text-red-500" />
+                          <span>{imagePreview.replace("pdf:", "")}</span>
+                        </div>
+                      ) : (
+                        <img src={imagePreview} alt="Preview" className="max-h-48 rounded-lg border" />
+                      )}
                       <Button 
                         size="sm" 
                         variant="destructive" 
@@ -246,18 +317,20 @@ export default function Facturas() {
                         Eliminar
                       </Button>
                     </div>
-                    <Button 
-                      type="button"
-                      onClick={handleProcessOCR}
-                      disabled={isProcessingOCR}
-                      className="w-full bg-gradient-to-r from-primary to-accent"
-                    >
-                      {isProcessingOCR ? (
-                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Procesando OCR...</>
-                      ) : (
-                        <><Sparkles className="h-4 w-4 mr-2" />Extraer datos automáticamente (OCR)</>
-                      )}
-                    </Button>
+                    {!imagePreview.startsWith("pdf:") && (
+                      <Button 
+                        type="button"
+                        onClick={handleProcessOCR}
+                        disabled={isProcessingOCR}
+                        className="w-full bg-gradient-to-r from-primary to-accent"
+                      >
+                        {isProcessingOCR ? (
+                          <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Procesando OCR...</>
+                        ) : (
+                          <><Sparkles className="h-4 w-4 mr-2" />Extraer datos automáticamente (OCR)</>
+                        )}
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>
@@ -265,7 +338,25 @@ export default function Facturas() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label>Proveedor</Label>
-                  <Input value={supplier} onChange={e => setSupplier(e.target.value)} placeholder="Nombre del proveedor" />
+                  <Select value={supplier} onValueChange={setSupplier}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar proveedor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {suppliers?.map(sup => (
+                        <SelectItem key={sup.id} value={sup.name}>{sup.name}</SelectItem>
+                      ))}
+                      <SelectItem value="_custom">Otro (escribir)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {supplier === "_custom" && (
+                    <Input 
+                      value={customSupplier} 
+                      onChange={e => setCustomSupplier(e.target.value)} 
+                      placeholder="Nombre del proveedor"
+                      className="mt-2"
+                    />
+                  )}
                 </div>
                 <div className="grid gap-2">
                   <Label>Nº Factura</Label>
@@ -273,35 +364,13 @@ export default function Facturas() {
                 </div>
               </div>
 
-              <div className="grid gap-2">
-                <Label>Fecha</Label>
-                <Input type="date" value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} />
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label>Base imponible (€)</Label>
-                  <Input 
-                    type="number" 
-                    step="0.01" 
-                    value={baseAmount} 
-                    onChange={e => setBaseAmount(e.target.value)} 
-                    onBlur={calculateTotal}
-                    placeholder="0.00" 
-                  />
+                  <Label>Fecha</Label>
+                  <Input type="date" value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} />
                 </div>
                 <div className="grid gap-2">
-                  <Label>IVA (%)</Label>
-                  <Input 
-                    type="number" 
-                    value={vatRate} 
-                    onChange={e => setVatRate(e.target.value)} 
-                    onBlur={calculateTotal}
-                    placeholder="21" 
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label>Total (€)</Label>
+                  <Label>Total (€) *</Label>
                   <Input 
                     type="number" 
                     step="0.01" 
@@ -313,6 +382,20 @@ export default function Facturas() {
               </div>
 
               <div className="grid gap-2">
+                <Label>Forma de pago</Label>
+                <Select value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as PaymentMethodValue)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar forma de pago" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAYMENT_METHODS.map(method => (
+                      <SelectItem key={method.value} value={method.value}>{method.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid gap-2">
                 <Label>Notas</Label>
                 <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Notas adicionales" />
               </div>
@@ -320,42 +403,11 @@ export default function Facturas() {
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
               <Button onClick={handleCreateInvoice} disabled={createInvoice.isPending}>
-                {createInvoice.isPending ? "Guardando..." : "Guardar factura"}
+                {createInvoice.isPending ? "Guardando..." : "Registrar factura"}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total facturas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{filteredInvoices.length}</div>
-            <p className="text-xs text-muted-foreground">Registradas</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Base imponible</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">€{totals.base.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">IVA: €{totals.vat.toFixed(2)}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total gastos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">€{totals.total.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">Con IVA incluido</p>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Search */}
@@ -369,60 +421,127 @@ export default function Facturas() {
         />
       </div>
 
-      {/* Invoices List */}
+      {/* Summary */}
       <Card>
-        <CardHeader>
-          <CardTitle>Listado de facturas</CardTitle>
-          <CardDescription>Todas las facturas registradas</CardDescription>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg">Resumen</CardTitle>
         </CardHeader>
         <CardContent>
-          {Object.keys(invoicesByMonth).length > 0 ? (
-            <div className="space-y-6">
-              {Object.entries(invoicesByMonth).map(([month, invs]) => (
-                <div key={month}>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-3 capitalize">{month}</h3>
-                  <div className="space-y-2">
-                    {invs.map(inv => (
-                      <div key={inv.id} className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50">
-                        <div className="flex items-center gap-4">
-                          <div className={`p-2 rounded-full ${inv.isVerified ? 'bg-green-100' : 'bg-orange-100'}`}>
-                            {inv.isVerified ? (
-                              <Check className="h-4 w-4 text-green-600" />
-                            ) : (
-                              <AlertCircle className="h-4 w-4 text-orange-500" />
-                            )}
-                          </div>
-                          <div>
-                            <p className="font-medium">{inv.supplier || 'Sin proveedor'}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {inv.invoiceNumber ? `#${inv.invoiceNumber} • ` : ''}
-                              {inv.invoiceDate ? new Date(inv.invoiceDate + 'T00:00:00').toLocaleDateString('es-ES') : 'Sin fecha'}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold">€{parseFloat(inv.totalAmount || "0").toFixed(2)}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Base: €{parseFloat(inv.baseAmount || "0").toFixed(2)} + IVA
-                          </p>
-                        </div>
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">{filteredInvoices.length} facturas</span>
+            <span className="text-xl font-bold">Total: €{totals.total.toFixed(2)}</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Invoices List */}
+      {Object.entries(invoicesByMonth).map(([month, monthInvoices]) => (
+        <Card key={month}>
+          <CardHeader>
+            <CardTitle className="text-lg capitalize">{month}</CardTitle>
+            <CardDescription>{monthInvoices.length} facturas</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {monthInvoices.map(invoice => (
+                <div 
+                  key={invoice.id} 
+                  className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-md bg-primary/10">
+                      <Receipt className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium">{invoice.supplier || "Sin proveedor"}</p>
+                      <div className="flex gap-2 text-xs text-muted-foreground">
+                        {invoice.invoiceNumber && <span>#{invoice.invoiceNumber}</span>}
+                        {invoice.invoiceDate && <span>{new Date(invoice.invoiceDate + 'T00:00:00').toLocaleDateString('es-ES')}</span>}
+                        {invoice.paymentMethod && <span className="text-primary">• {invoice.paymentMethod}</span>}
                       </div>
-                    ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-right">
+                      <p className="font-bold">€{parseFloat(invoice.totalAmount || "0").toFixed(2)}</p>
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={() => openEditDialog(invoice)}>
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               ))}
             </div>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <Receipt className="h-12 w-12 mx-auto mb-3 opacity-20" />
-              <p>No hay facturas registradas</p>
-              <Button variant="link" onClick={() => setIsDialogOpen(true)}>
-                Registrar primera factura
-              </Button>
+          </CardContent>
+        </Card>
+      ))}
+
+      {filteredInvoices.length === 0 && (
+        <Card>
+          <CardContent className="py-8 text-center text-muted-foreground">
+            <Receipt className="h-12 w-12 mx-auto mb-3 opacity-20" />
+            <p>No hay facturas registradas</p>
+            <Button variant="link" onClick={() => setIsDialogOpen(true)}>
+              Añadir la primera
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar factura</DialogTitle>
+            <DialogDescription>Modifica los datos de la factura</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label>Proveedor</Label>
+                <Input value={editSupplier} onChange={e => setEditSupplier(e.target.value)} placeholder="Proveedor" />
+              </div>
+              <div className="grid gap-2">
+                <Label>Nº Factura</Label>
+                <Input value={editInvoiceNumber} onChange={e => setEditInvoiceNumber(e.target.value)} placeholder="Número" />
+              </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label>Fecha</Label>
+                <Input type="date" value={editInvoiceDate} onChange={e => setEditInvoiceDate(e.target.value)} />
+              </div>
+              <div className="grid gap-2">
+                <Label>Total (€)</Label>
+                <Input type="number" step="0.01" value={editTotalAmount} onChange={e => setEditTotalAmount(e.target.value)} placeholder="0.00" />
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label>Forma de pago</Label>
+              <Select value={editPaymentMethod} onValueChange={(v) => setEditPaymentMethod(v as PaymentMethodValue)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAYMENT_METHODS.map(method => (
+                    <SelectItem key={method.value} value={method.value}>{method.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label>Notas</Label>
+              <Textarea value={editNotes} onChange={e => setEditNotes(e.target.value)} placeholder="Notas" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleUpdateInvoice} disabled={updateInvoice.isPending}>
+              {updateInvoice.isPending ? "Guardando..." : "Guardar cambios"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

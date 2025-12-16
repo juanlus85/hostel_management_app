@@ -62,3 +62,43 @@
 - [x] Tests unitarios para funciones críticas
 - [ ] Documentación de despliegue en VPS
 
+
+## Mejoras Solicitadas (v2)
+
+### Caja
+- [x] Caja automática sin apertura manual (se abre con saldo del día anterior)
+- [x] Los días empiezan y terminan a las 6am
+- [x] Corregir bug: botón "Abrir caja" no hace nada
+
+### Calendario de Turnos
+- [x] Vista mensual de todos los turnos
+- [ ] Calendario base/plantilla para crear turnos automáticamente
+- [ ] Cambiar turnos arrastrando (drag & drop)
+- [x] Cambiar turnos haciendo click
+
+### Empleados
+- [x] Crear empleados manualmente como admin (nombre, correo, clave)
+- [ ] Crear empleados iniciales: Ana y Juanlu
+- [x] Dos perfiles: administrador y empleado
+
+### Permisos por Rol
+- [x] Empleados NO ven totales en dashboard
+- [x] Solo admins pueden ver métricas financieras
+
+### Incidencias y Tareas
+- [x] Corregir bug: error al crear incidencia (dice que no existe título)
+- [x] Poder modificar tareas/incidencias existentes
+
+### Inventario
+- [x] Corregir bug: error al crear producto en inventario
+
+### Facturas
+- [x] Permitir subir imagen o PDF
+- [x] OCR integrado (usa LLM para extraer datos de imágenes)
+- [x] Simplificar campos: solo total, nº factura, proveedor, forma de pago
+- [x] Formas de pago: Cuenta Bancaria, Tarjeta, Ana, Juanlu, Caja Hostel, Caja Tienda, Caja Fuerte, Caja Fuerte Cambio, Otros
+
+### Proveedores
+- [x] Nuevo módulo de proveedores
+- [x] Lista de proveedores para usar en inventario y facturas
+- [x] Permitir añadir proveedor nuevo si no existe en lista

@@ -13,7 +13,9 @@ import {
   incidents, InsertIncident, Incident,
   tasks, InsertTask, Task,
   stockMovements, InsertStockMovement, StockMovement,
-  weeklySummaries, InsertWeeklySummary, WeeklySummary
+  weeklySummaries, InsertWeeklySummary, WeeklySummary,
+  suppliers, InsertSupplier, Supplier,
+  shiftTemplates, InsertShiftTemplate, ShiftTemplate
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -522,4 +524,143 @@ export async function getHoursWorkedByUser(userId: number, startDate: string, en
     ));
   
   return userShifts.reduce((sum, s) => sum + parseFloat(s.hoursWorked || "0"), 0);
+}
+
+// ==================== SUPPLIERS ====================
+export async function getAllSuppliers() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(suppliers).where(eq(suppliers.isActive, true)).orderBy(asc(suppliers.name));
+}
+
+export async function createSupplier(data: InsertSupplier) {
+  const db = await getDb();
+  if (!db) return;
+  const result = await db.insert(suppliers).values(data);
+  return result[0].insertId;
+}
+
+export async function updateSupplier(id: number, data: Partial<InsertSupplier>) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(suppliers).set(data).where(eq(suppliers.id, id));
+}
+
+export async function deleteSupplier(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(suppliers).set({ isActive: false }).where(eq(suppliers.id, id));
+}
+
+// ==================== SHIFT TEMPLATES ====================
+export async function getAllShiftTemplates() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(shiftTemplates).where(eq(shiftTemplates.isActive, true)).orderBy(asc(shiftTemplates.dayOfWeek));
+}
+
+export async function createShiftTemplate(data: InsertShiftTemplate) {
+  const db = await getDb();
+  if (!db) return;
+  const result = await db.insert(shiftTemplates).values(data);
+  return result[0].insertId;
+}
+
+export async function updateShiftTemplate(id: number, data: Partial<InsertShiftTemplate>) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(shiftTemplates).set(data).where(eq(shiftTemplates.id, id));
+}
+
+export async function deleteShiftTemplate(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(shiftTemplates).set({ isActive: false }).where(eq(shiftTemplates.id, id));
+}
+
+export async function generateShiftsFromTemplates(startDate: string, endDate: string) {
+  const db = await getDb();
+  if (!db) return;
+  
+  const templates = await getAllShiftTemplates();
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const dayOfWeek = d.getDay();
+    const dateStr = d.toISOString().split('T')[0];
+    
+    // Check if shifts already exist for this date
+    const existingShifts = await db.select().from(shifts).where(eq(shifts.scheduledDate, dateStr));
+    if (existingShifts.length > 0) continue;
+    
+    // Create shifts from templates for this day
+    const dayTemplates = templates.filter(t => t.dayOfWeek === dayOfWeek);
+    for (const template of dayTemplates) {
+      await db.insert(shifts).values({
+        userId: template.userId,
+        scheduledDate: dateStr,
+        scheduledStart: template.scheduledStart,
+        scheduledEnd: template.scheduledEnd,
+        status: "scheduled"
+      });
+    }
+  }
+}
+
+// ==================== EMPLOYEE MANAGEMENT ====================
+export async function createEmployee(name: string, email: string, role: "user" | "admin" = "user") {
+  const db = await getDb();
+  if (!db) return;
+  
+  // Generate a unique openId for manual employees
+  const openId = `manual_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+  
+  const result = await db.insert(users).values({
+    openId,
+    name,
+    email,
+    role,
+    isActive: true,
+    lastSignedIn: new Date()
+  });
+  return result[0].insertId;
+}
+
+// ==================== CASH REGISTER AUTO ====================
+export async function getOrCreateDailyCashRegister(businessId: number, userId: number, date: string) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  // Check if cash register exists for this date and business
+  const existing = await db.select().from(cashRegisters)
+    .where(and(eq(cashRegisters.businessId, businessId), eq(cashRegisters.date, date)))
+    .limit(1);
+  
+  if (existing.length > 0) {
+    return existing[0];
+  }
+  
+  // Get previous day's closing amount
+  const previousDate = new Date(date);
+  previousDate.setDate(previousDate.getDate() - 1);
+  const prevDateStr = previousDate.toISOString().split('T')[0];
+  
+  const previousCash = await db.select().from(cashRegisters)
+    .where(and(eq(cashRegisters.businessId, businessId), eq(cashRegisters.date, prevDateStr), eq(cashRegisters.status, "closed")))
+    .limit(1);
+  
+  const openingAmount = previousCash.length > 0 ? (previousCash[0].closingAmount || "0") : "0";
+  
+  // Create new cash register
+  const result = await db.insert(cashRegisters).values({
+    businessId,
+    userId,
+    date,
+    openingAmount,
+    status: "open"
+  });
+  
+  const newCash = await db.select().from(cashRegisters).where(eq(cashRegisters.id, result[0].insertId)).limit(1);
+  return newCash[0];
 }
