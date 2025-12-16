@@ -324,3 +324,7 @@
 - [x] Adjuntar archivo/foto de la factura
 
 - [x] Permitir eliminar turnos del calendario haciendo clic en ellos
+
+
+## Bug Corregido (v16)
+- [x] Al eliminar un empleado, sus turnos se eliminan automáticamente en cascada

@@ -113,6 +113,8 @@ export async function updateUser(id: number, data: Partial<InsertUser>) {
 export async function deleteUser(id: number) {
   const db = await getDb();
   if (!db) return;
+  // Delete all shifts assigned to this user first
+  await db.delete(shifts).where(eq(shifts.userId, id));
   // Soft delete by setting isActive to false
   await db.update(users).set({ isActive: false }).where(eq(users.id, id));
 }
