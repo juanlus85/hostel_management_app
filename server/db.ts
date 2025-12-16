@@ -770,6 +770,35 @@ export async function updateCashClosing(id: number, data: Partial<InsertCashClos
   const db = await getDb();
   if (!db) return;
   await db.update(cashClosings).set(data).where(eq(cashClosings.id, id));
+  
+  // Si se actualiza changeForNextDay o totalCash, actualizar el previousChange del día siguiente
+  if (data.changeForNextDay || data.totalCash) {
+    // Obtener el cierre actual para saber la fecha y negocio
+    const current = await db.select().from(cashClosings).where(eq(cashClosings.id, id)).limit(1);
+    if (current.length > 0) {
+      const currentClosing = current[0];
+      const currentDate = new Date(currentClosing.date);
+      const nextDate = new Date(currentDate);
+      nextDate.setDate(nextDate.getDate() + 1);
+      const nextDateStr = nextDate.toISOString().split('T')[0];
+      
+      // Buscar si existe cierre del día siguiente
+      const nextClosing = await db.select().from(cashClosings)
+        .where(and(
+          eq(cashClosings.businessId, currentClosing.businessId),
+          eq(cashClosings.date, nextDateStr)
+        ))
+        .limit(1);
+      
+      if (nextClosing.length > 0) {
+        // Actualizar el previousChange del día siguiente
+        const newPreviousChange = data.changeForNextDay || data.totalCash || currentClosing.changeForNextDay || currentClosing.totalCash || "0";
+        await db.update(cashClosings)
+          .set({ previousChange: newPreviousChange })
+          .where(eq(cashClosings.id, nextClosing[0].id));
+      }
+    }
+  }
 }
 
 export async function closeCashClosing(id: number) {

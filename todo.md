@@ -194,3 +194,9 @@
 ### Cambio Anterior
 - [x] El cambio anterior ahora se actualiza automáticamente si el registro existe pero tiene valor 0
 - [x] Busca el changeForNextDay o totalCash del día anterior
+
+
+## Bug Reportado (v9)
+
+### Actualización en cascada
+- [x] Cuando se modifica el cambio para mañana de un día, actualizar el cambio anterior del día siguiente
