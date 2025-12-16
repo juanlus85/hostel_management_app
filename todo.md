@@ -200,3 +200,11 @@
 
 ### Actualización en cascada
 - [x] Cuando se modifica el cambio para mañana de un día, actualizar el cambio anterior del día siguiente
+
+
+## Bug Corregido (v10)
+
+### Cambio para mañana ahora muestra Total Efectivo
+- [x] El campo "Cambio para mañana" ahora muestra el Total Efectivo calculado automáticamente
+- [x] Se sincroniza automáticamente con el Total Efectivo cuando no se modifica manualmente
+- [x] El resumen "Cambio siguiente" también muestra el valor correcto

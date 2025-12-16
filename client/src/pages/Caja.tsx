@@ -183,7 +183,10 @@ export default function Caja() {
   const prepaidTotal = parseFloat(prepaidBooking) || 0;
   const withdrawnCashTotal = parseFloat(withdrawnCash) || 0;
   const withdrawnCardsTotal = parseFloat(withdrawnCards) || 0;
-  const changeNext = changeForNextDay !== "" ? parseFloat(changeForNextDay) || 0 : totalCashCalc;
+  // Si changeForNextDay está vacío o es "0.00", usar totalCashCalc
+  const changeNext = (changeForNextDay !== "" && changeForNextDay !== "0.00" && parseFloat(changeForNextDay) !== 0) 
+    ? parseFloat(changeForNextDay) 
+    : totalCashCalc;
 
   // Expected = Z + Cambio anterior + Movimientos - Prepago - Retirado
   const expectedTotal = zTotal + previousChange + movementsTotal - prepaidTotal - withdrawnCashTotal - withdrawnCardsTotal;
@@ -214,8 +217,7 @@ export default function Caja() {
 
   const handleClose = () => {
     if (!cashClosing?.id) return;
-    // Asegurar que el cambio para mañana sea el total efectivo si no se ha modificado
-    const finalChangeForNextDay = changeForNextDay || totalCashCalc.toFixed(2);
+    // Usar changeNext que ya tiene la lógica correcta (totalCashCalc si no se ha modificado)
     updateClosing.mutate({
       id: cashClosing.id,
       coins010, coins020, coins050, coins100, coins200,
@@ -229,7 +231,7 @@ export default function Caja() {
       expectedTotal: expectedTotal.toFixed(2),
       actualTotal: actualTotal.toFixed(2),
       difference: difference.toFixed(2),
-      changeForNextDay: finalChangeForNextDay,
+      changeForNextDay: changeNext.toFixed(2),
       notes,
     });
     closeClosing.mutate({ id: cashClosing.id });
@@ -676,7 +678,7 @@ export default function Caja() {
                 <Input
                   type="number"
                   step="0.01"
-                  value={changeForNextDay !== "" ? changeForNextDay : totalCashCalc.toFixed(2)}
+                  value={changeNext.toFixed(2)}
                   onChange={(e) => setChangeForNextDay(e.target.value)}
                   disabled={isClosed}
                   placeholder={totalCashCalc.toFixed(2)}
