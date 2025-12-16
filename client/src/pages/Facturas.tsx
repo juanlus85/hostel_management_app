@@ -160,23 +160,28 @@ export default function Facturas() {
   };
 
   const handleCreateInvoice = async () => {
-    if (!currentBusinessId) return;
+    if (!currentBusinessId) {
+      toast.error("Selecciona un negocio");
+      return;
+    }
     
-    const finalSupplier = supplier === "_custom" ? customSupplier : supplier;
+    const finalSupplier = supplier === "_custom" ? customSupplier.trim() : supplier;
+    const total = totalAmount.trim();
     
-    if (!finalSupplier && !totalAmount) {
+    // At least supplier or total should be provided
+    if (!finalSupplier && !total) {
       toast.error("Indica al menos el proveedor o el total");
       return;
     }
     
     createInvoice.mutate({
       businessId: currentBusinessId,
-      supplier: finalSupplier,
-      invoiceNumber,
-      invoiceDate,
-      totalAmount,
+      supplier: finalSupplier || undefined,
+      invoiceNumber: invoiceNumber.trim() || undefined,
+      invoiceDate: invoiceDate || undefined,
+      totalAmount: total || undefined,
       paymentMethod: paymentMethod || undefined,
-      notes,
+      notes: notes.trim() || undefined,
     });
   };
 

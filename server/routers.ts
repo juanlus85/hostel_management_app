@@ -177,7 +177,7 @@ export const appRouter = router({
       category: z.string().optional(),
       concept: z.string(),
       amount: z.string(),
-      paymentMethod: z.enum(["cash", "card", "transfer", "other"]).default("cash"),
+      paymentMethod: z.enum(["cash", "card", "transfer", "cuenta_bancaria", "ana", "juanlu", "caja_hostel", "caja_tienda", "caja_fuerte", "caja_fuerte_cambio", "other"]).default("cash"),
       date: z.string(),
       notes: z.string().optional(),
     })).mutation(async ({ input, ctx }) => {
@@ -190,7 +190,7 @@ export const appRouter = router({
       category: z.string().optional(),
       concept: z.string().optional(),
       amount: z.string().optional(),
-      paymentMethod: z.enum(["cash", "card", "transfer", "other"]).optional(),
+      paymentMethod: z.enum(["cash", "card", "transfer", "cuenta_bancaria", "ana", "juanlu", "caja_hostel", "caja_tienda", "caja_fuerte", "caja_fuerte_cambio", "other"]).optional(),
       notes: z.string().optional(),
     })).mutation(async ({ input }) => {
       const { id, ...data } = input;

@@ -555,8 +555,10 @@ export default function Turnos() {
               const totalHours = userShifts.reduce((sum: number, s: any) => {
                 const [startH, startM] = s.scheduledStart.split(':').map(Number);
                 const [endH, endM] = s.scheduledEnd.split(':').map(Number);
-                const hours = (endH + endM/60) - (startH + startM/60);
-                return sum + (hours > 0 ? hours : 0);
+                let hours = (endH + endM/60) - (startH + startM/60);
+                // Handle shifts that cross midnight (e.g., 17:00 to 02:00)
+                if (hours < 0) hours += 24;
+                return sum + hours;
               }, 0);
               const colorClass = getUserColor(u.id);
               return (

@@ -106,14 +106,19 @@ export default function Inventario() {
   };
 
   const handleCreateItem = () => {
-    if (!currentBusinessId || !name) {
+    const itemName = name.trim();
+    if (!currentBusinessId) {
+      toast.error("Selecciona un negocio");
+      return;
+    }
+    if (!itemName) {
       toast.error("El nombre es obligatorio");
       return;
     }
     const finalSupplier = supplier === "_custom" ? customSupplier : supplier;
     createItem.mutate({
       businessId: currentBusinessId,
-      name,
+      name: itemName,
       category,
       supplier: finalSupplier,
       currentStock: currentStock || "0",
@@ -209,7 +214,7 @@ export default function Inventario() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Añadir producto</DialogTitle>
-              <DialogDescription>Registra un nuevo producto en el inventario</DialogDescription>
+              <DialogDescription>Registra un producto que falta o necesitas pedir</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
@@ -259,7 +264,7 @@ export default function Inventario() {
                   <Input type="number" value={currentStock} onChange={e => setCurrentStock(e.target.value)} placeholder="0" />
                 </div>
                 <div className="grid gap-2">
-                  <Label>Stock mínimo</Label>
+                  <Label>Stock mínimo (opcional)</Label>
                   <Input type="number" value={minimumStock} onChange={e => setMinimumStock(e.target.value)} placeholder="0" />
                 </div>
                 <div className="grid gap-2">

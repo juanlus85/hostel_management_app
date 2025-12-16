@@ -102,3 +102,20 @@
 - [x] Nuevo módulo de proveedores
 - [x] Lista de proveedores para usar en inventario y facturas
 - [x] Permitir añadir proveedor nuevo si no existe en lista
+
+
+## Bugs Reportados (v3)
+
+### Caja
+- [x] Error al añadir ingreso: dice "Completa todos los campos" aunque estén rellenos
+- [x] Error al añadir gasto: mismo problema
+
+### Turnos
+- [x] Cálculo de horas incorrecto: vista mensual no coincide con vista semanal
+
+### Facturas
+- [x] Error al registrar factura aunque todos los campos estén rellenos
+
+### Inventario
+- [x] Error "el nombre es obligatorio" aunque esté puesto
+- [x] Simplificar: no requiere stock mínimo (es para indicar productos que faltan)

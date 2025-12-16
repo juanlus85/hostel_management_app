@@ -134,16 +134,26 @@ export default function Caja() {
   };
 
   const handleCreateTransaction = () => {
-    if (!currentBusinessId || !txConcept || !txAmount) {
-      toast.error("Completa todos los campos requeridos");
+    const concept = txConcept.trim();
+    const amount = txAmount.trim();
+    if (!currentBusinessId) {
+      toast.error("Selecciona un negocio");
+      return;
+    }
+    if (!concept) {
+      toast.error("El concepto es obligatorio");
+      return;
+    }
+    if (!amount || parseFloat(amount) <= 0) {
+      toast.error("El importe debe ser mayor que 0");
       return;
     }
     createTransaction.mutate({
       businessId: currentBusinessId,
       cashRegisterId: openCashRegister?.id,
       type: txType,
-      concept: txConcept,
-      amount: txAmount,
+      concept: concept,
+      amount: amount,
       category: txCategory,
       paymentMethod: txPaymentMethod as any,
       date: today,
