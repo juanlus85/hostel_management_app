@@ -339,3 +339,4 @@
 
 ## Bug Corregido (v17)
 - [x] Añadido logging detallado al envío de email de facturas para diagnosticar problemas
+- [x] Email de facturas funcionando correctamente con configuración SMTP
