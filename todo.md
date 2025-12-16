@@ -344,6 +344,9 @@
 
 ## Bug Corregido (v18)
 - [x] El email de facturas ahora incluye el archivo adjunto (se descarga primero y se adjunta como buffer)
+- [x] Añadido endpoint /api/upload para subir archivos a S3
+- [x] El frontend ahora sube el archivo a S3 antes de crear la factura
+- [x] El email descarga el archivo desde S3 y lo adjunta correctamente
 
 
 ## Mejoras Solicitadas (v18)

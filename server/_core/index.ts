@@ -7,6 +7,8 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import multer from "multer";
+import { storagePut } from "../storage";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -33,6 +35,45 @@ async function startServer() {
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  
+  // File upload endpoint
+  const upload = multer({ 
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit
+  });
+  
+  app.post('/api/upload', upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+      
+      const file = req.file;
+      const timestamp = Date.now();
+      const randomSuffix = Math.random().toString(36).substring(2, 8);
+      const ext = file.originalname.split('.').pop() || 'bin';
+      const fileKey = `invoices/${timestamp}-${randomSuffix}.${ext}`;
+      
+      console.log(`[Upload] Uploading file: ${file.originalname}, size: ${file.size}, type: ${file.mimetype}`);
+      
+      const result = await storagePut(fileKey, file.buffer, file.mimetype);
+      
+      console.log(`[Upload] File uploaded successfully: ${result.url}`);
+      
+      res.json({ 
+        success: true, 
+        key: result.key, 
+        url: result.url,
+        filename: file.originalname,
+        size: file.size,
+        mimetype: file.mimetype
+      });
+    } catch (error: any) {
+      console.error('[Upload] Error:', error.message);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
   // tRPC API
