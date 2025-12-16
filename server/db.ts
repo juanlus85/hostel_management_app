@@ -110,6 +110,13 @@ export async function updateUser(id: number, data: Partial<InsertUser>) {
   await db.update(users).set(data).where(eq(users.id, id));
 }
 
+export async function deleteUser(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  // Soft delete by setting isActive to false
+  await db.update(users).set({ isActive: false }).where(eq(users.id, id));
+}
+
 // ==================== BUSINESSES ====================
 export async function getAllBusinesses() {
   const db = await getDb();

@@ -302,3 +302,25 @@
 - [x] Notificar y enviar email al crear un turno nuevo
 - [x] Notificar y enviar email al modificar un turno existente
 - [x] Notificar y enviar email al eliminar un turno
+
+
+## Mejoras Solicitadas (v15)
+
+### Gestión de Empleados
+- [ ] Añadir botón para editar empleados existentes
+- [ ] Añadir botón para eliminar empleados (desactivar)
+- [ ] Permitir modificar nombre, email, rol y horarios habituales
+
+### Corrección de Cálculos
+- [ ] Revisar y corregir cálculo de efectivo retirado en Dashboard
+- [ ] Revisar y corregir cálculo de tarjetas retiradas en Dashboard
+- [ ] Verificar que los totales coinciden con los cierres de caja
+
+
+### Envío de Email con Facturas
+- [x] Enviar email automático al crear factura a thespotcentralhostel@gmail.com
+- [x] Asunto: "Factura - [Proveedor] - [Fecha]"
+- [x] Cuerpo: Datos de la factura (número, importe, categoría, notas)
+- [x] Adjuntar archivo/foto de la factura
+
+- [x] Permitir eliminar turnos del calendario haciendo clic en ellos

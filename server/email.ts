@@ -125,6 +125,99 @@ export async function sendEmail(
   }
 }
 
+// Send email with attachment
+export async function sendEmailWithAttachment(
+  to: string,
+  subject: string,
+  html: string,
+  attachmentUrl?: string,
+  attachmentName?: string
+): Promise<{ success: boolean; error?: string }> {
+  const config = await getSMTPConfig();
+  if (!config) {
+    console.log("[Email] SMTP not configured, skipping email send");
+    return { success: false, error: "SMTP no configurado" };
+  }
+
+  try {
+    const transporter = nodemailer.createTransport({
+      host: config.host,
+      port: config.port,
+      secure: config.secure,
+      auth: {
+        user: config.user,
+        pass: config.password,
+      },
+    });
+
+    const mailOptions: any = {
+      from: `"${config.fromName}" <${config.fromEmail}>`,
+      to,
+      subject,
+      text: html.replace(/<[^>]*>/g, ""),
+      html,
+    };
+
+    // Add attachment if URL provided
+    if (attachmentUrl) {
+      mailOptions.attachments = [{
+        filename: attachmentName || "factura.pdf",
+        path: attachmentUrl,
+      }];
+    }
+
+    await transporter.sendMail(mailOptions);
+
+    console.log(`[Email] Sent to ${to}: ${subject}`);
+    return { success: true };
+  } catch (error: any) {
+    console.error(`[Email] Failed to send to ${to}:`, error.message);
+    return { success: false, error: error.message };
+  }
+}
+
+// Send invoice notification email
+export async function sendInvoiceNotificationEmail(
+  invoiceNumber: string,
+  supplierName: string,
+  amount: number,
+  date: string,
+  category: string,
+  notes: string | null,
+  fileUrl: string | null
+): Promise<void> {
+  const formattedDate = new Date(date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const subject = `Factura - ${supplierName} - ${formattedDate}`;
+  
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #3b82f6;">Nueva Factura Registrada</h2>
+      <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; margin: 16px 0;">
+        <p style="margin: 0;"><strong>Proveedor:</strong> ${supplierName}</p>
+        <p style="margin: 8px 0 0;"><strong>Nº Factura:</strong> ${invoiceNumber}</p>
+        <p style="margin: 8px 0 0;"><strong>Fecha:</strong> ${formattedDate}</p>
+        <p style="margin: 8px 0 0;"><strong>Importe:</strong> €${amount.toFixed(2)}</p>
+        <p style="margin: 8px 0 0;"><strong>Categoría:</strong> ${category}</p>
+        ${notes ? `<p style="margin: 8px 0 0;"><strong>Notas:</strong> ${notes}</p>` : ''}
+      </div>
+      ${fileUrl ? '<p style="color: #059669;">Archivo adjunto incluido.</p>' : '<p style="color: #f59e0b;">Sin archivo adjunto.</p>'}
+      <p style="color: #6b7280; font-size: 12px; margin-top: 24px;">
+        Este es un mensaje automático del sistema de gestión.
+      </p>
+    </div>
+  `;
+
+  const fileName = fileUrl ? `Factura_${supplierName.replace(/\s+/g, '_')}_${formattedDate.replace(/\//g, '-')}.${fileUrl.split('.').pop() || 'pdf'}` : undefined;
+  
+  await sendEmailWithAttachment(
+    'thespotcentralhostel@gmail.com',
+    subject,
+    html,
+    fileUrl || undefined,
+    fileName
+  );
+}
+
 // Send shift notification email
 export async function sendShiftNotificationEmail(
   employeeEmail: string,

@@ -571,10 +571,18 @@ export default function Turnos() {
                         {dayShifts.slice(0, 3).map((shift: any) => (
                           <div 
                             key={shift.id}
-                            className={`text-xs px-1 py-0.5 rounded truncate ${getUserColor(shift.userId)}`}
+                            className={`text-xs px-1 py-0.5 rounded truncate ${getUserColor(shift.userId)} group relative cursor-pointer hover:opacity-80`}
                             onClick={(e) => { e.stopPropagation(); if (isAdmin) openEditDialog(shift); }}
                           >
                             {getUserName(shift.userId)} {shift.scheduledStart} - {shift.scheduledEnd}
+                            {isAdmin && (
+                              <button 
+                                className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                onClick={(e) => { e.stopPropagation(); handleDeleteShift(shift.id); }}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                            )}
                           </div>
                         ))}
                         {dayShifts.length > 3 && (

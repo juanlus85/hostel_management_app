@@ -69,6 +69,14 @@ export const appRouter = router({
       await db.updateUser(id, data);
       return { success: true };
     }),
+    delete: adminProcedure.input(z.object({ userId: z.number() })).mutation(async ({ input, ctx }) => {
+      // Prevent deleting yourself
+      if (ctx.user.id === input.userId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "No puedes eliminarte a ti mismo" });
+      }
+      await db.deleteUser(input.userId);
+      return { success: true };
+    }),
   }),
 
   // ==================== BUSINESSES ====================
@@ -396,6 +404,23 @@ export const appRouter = router({
       notes: z.string().optional(),
     })).mutation(async ({ input, ctx }) => {
       const id = await db.createInvoice({ ...input, userId: ctx.user.id });
+      
+      // Send email notification with invoice
+      try {
+        const { sendInvoiceNotificationEmail } = await import("./email");
+        await sendInvoiceNotificationEmail(
+          input.invoiceNumber || "Sin número",
+          input.supplier || "Sin proveedor",
+          parseFloat(input.totalAmount || "0"),
+          input.invoiceDate || new Date().toISOString().split('T')[0],
+          input.paymentMethod || "otros",
+          input.notes || null,
+          input.imageUrl || null
+        );
+      } catch (error) {
+        console.error("[Invoices] Failed to send email notification:", error);
+      }
+      
       return { success: true, id };
     }),
     update: protectedProcedure.input(z.object({

@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { trpc } from "@/lib/trpc";
-import { Users, Shield, User, Clock, Mail, UserPlus, Calendar, Settings } from "lucide-react";
+import { Users, Shield, User, Clock, Mail, UserPlus, Calendar, Settings, Edit, Trash2 } from "lucide-react";
 import { useMemo, useState, useEffect } from "react";
 import { toast } from "sonner";
 
@@ -45,6 +45,17 @@ export default function Empleados() {
   const [isPasswordDialog, setIsPasswordDialog] = useState(false);
   const [passwordUser, setPasswordUser] = useState<any>(null);
   const [newUserPassword, setNewUserPassword] = useState("");
+
+  // Edit employee dialog
+  const [isEditDialog, setIsEditDialog] = useState(false);
+  const [editUser, setEditUser] = useState<any>(null);
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editUsername, setEditUsername] = useState("");
+  
+  // Delete confirmation dialog
+  const [isDeleteDialog, setIsDeleteDialog] = useState(false);
+  const [deleteUser, setDeleteUser] = useState<any>(null);
 
   // Schedule template dialog
   const [isScheduleDialog, setIsScheduleDialog] = useState(false);
@@ -211,6 +222,59 @@ export default function Empleados() {
       id: scheduleUser.id,
       scheduleTemplate: JSON.stringify(scheduleTemplate),
     });
+  };
+
+  // Edit employee functions
+  const updateEmployee = trpc.users.update.useMutation({
+    onSuccess: () => {
+      toast.success("Empleado actualizado");
+      utils.users.list.invalidate();
+      setIsEditDialog(false);
+      setEditUser(null);
+    },
+    onError: (error: any) => toast.error("Error: " + error.message),
+  });
+
+  const openEditDialog = (user: any) => {
+    setEditUser(user);
+    setEditName(user.name || "");
+    setEditEmail(user.email || "");
+    setEditUsername(user.username || "");
+    setIsEditDialog(true);
+  };
+
+  const handleEditEmployee = () => {
+    if (!editUser) return;
+    if (!editName.trim()) {
+      toast.error("El nombre es obligatorio");
+      return;
+    }
+    updateEmployee.mutate({
+      id: editUser.id,
+      name: editName.trim(),
+      email: editEmail.trim() || undefined,
+    });
+  };
+
+  // Delete employee functions
+  const deleteEmployee = trpc.users.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Empleado eliminado");
+      utils.users.list.invalidate();
+      setIsDeleteDialog(false);
+      setDeleteUser(null);
+    },
+    onError: (error: any) => toast.error("Error: " + error.message),
+  });
+
+  const openDeleteDialog = (user: any) => {
+    setDeleteUser(user);
+    setIsDeleteDialog(true);
+  };
+
+  const handleDeleteEmployee = () => {
+    if (!deleteUser) return;
+    deleteEmployee.mutate({ userId: deleteUser.id });
   };
 
   // Calculate hours worked per user in last 30 days
@@ -423,6 +487,10 @@ export default function Empleados() {
                     </div>
                     {isAdmin && (
                       <div className="flex items-center gap-2 flex-wrap">
+                        <Button variant="outline" size="sm" onClick={() => openEditDialog(user)}>
+                          <Edit className="h-4 w-4 mr-1" />
+                          Editar
+                        </Button>
                         <Button variant="outline" size="sm" onClick={() => openScheduleDialog(user)}>
                           <Settings className="h-4 w-4 mr-1" />
                           Horario
@@ -433,9 +501,14 @@ export default function Empleados() {
                           </Button>
                         )}
                         {!isCurrentUser && (
-                          <Button variant="outline" size="sm" onClick={() => openRoleDialog(user)}>
-                            Cambiar rol
-                          </Button>
+                          <>
+                            <Button variant="outline" size="sm" onClick={() => openRoleDialog(user)}>
+                              Cambiar rol
+                            </Button>
+                            <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => openDeleteDialog(user)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
                         )}
                       </div>
                     )}
@@ -539,6 +612,77 @@ export default function Empleados() {
             <Button variant="outline" onClick={() => setIsScheduleDialog(false)}>Cancelar</Button>
             <Button onClick={handleSaveSchedule} disabled={updateScheduleTemplate.isPending}>
               {updateScheduleTemplate.isPending ? "Guardando..." : "Guardar horario"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Employee Dialog */}
+      <Dialog open={isEditDialog} onOpenChange={setIsEditDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar empleado</DialogTitle>
+            <DialogDescription>
+              Modifica los datos de {editUser?.name || 'este empleado'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label>Nombre completo *</Label>
+              <Input
+                value={editName}
+                onChange={e => setEditName(e.target.value)}
+                placeholder="Nombre del empleado"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Email</Label>
+              <Input
+                type="email"
+                value={editEmail}
+                onChange={e => setEditEmail(e.target.value)}
+                placeholder="email@ejemplo.com"
+              />
+            </div>
+            {editUser?.username && (
+              <div className="grid gap-2">
+                <Label>Usuario</Label>
+                <Input
+                  value={editUsername}
+                  disabled
+                  className="bg-muted"
+                />
+                <p className="text-xs text-muted-foreground">El nombre de usuario no se puede cambiar</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialog(false)}>Cancelar</Button>
+            <Button onClick={handleEditEmployee} disabled={updateEmployee.isPending}>
+              {updateEmployee.isPending ? "Guardando..." : "Guardar cambios"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Employee Dialog */}
+      <Dialog open={isDeleteDialog} onOpenChange={setIsDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Eliminar empleado</DialogTitle>
+            <DialogDescription>
+              ¿Estás seguro de que quieres eliminar a {deleteUser?.name || 'este empleado'}?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground">
+              Esta acción desactivará la cuenta del empleado. No podrá acceder al sistema pero sus datos históricos se conservarán.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteDialog(false)}>Cancelar</Button>
+            <Button variant="destructive" onClick={handleDeleteEmployee} disabled={deleteEmployee.isPending}>
+              {deleteEmployee.isPending ? "Eliminando..." : "Eliminar empleado"}
             </Button>
           </DialogFooter>
         </DialogContent>
