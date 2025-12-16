@@ -6,10 +6,25 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { trpc } from "@/lib/trpc";
-import { Users, Shield, User, Clock, Mail, Plus, UserPlus } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Users, Shield, User, Clock, Mail, UserPlus, Calendar, Settings } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
 import { toast } from "sonner";
+
+const DAYS_OF_WEEK = [
+  { key: "monday", label: "Lunes" },
+  { key: "tuesday", label: "Martes" },
+  { key: "wednesday", label: "Miércoles" },
+  { key: "thursday", label: "Jueves" },
+  { key: "friday", label: "Viernes" },
+  { key: "saturday", label: "Sábado" },
+  { key: "sunday", label: "Domingo" },
+];
+
+type ScheduleTemplate = {
+  [key: string]: { start: string; end: string } | null;
+};
 
 export default function Empleados() {
   const { user: currentUser } = useAuth();
@@ -22,7 +37,27 @@ export default function Empleados() {
   const [isCreateDialog, setIsCreateDialog] = useState(false);
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
+  const [newUsername, setNewUsername] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [newEmployeeRole, setNewEmployeeRole] = useState<"user" | "admin">("user");
+  
+  // Change password dialog
+  const [isPasswordDialog, setIsPasswordDialog] = useState(false);
+  const [passwordUser, setPasswordUser] = useState<any>(null);
+  const [newUserPassword, setNewUserPassword] = useState("");
+
+  // Schedule template dialog
+  const [isScheduleDialog, setIsScheduleDialog] = useState(false);
+  const [scheduleUser, setScheduleUser] = useState<any>(null);
+  const [scheduleTemplate, setScheduleTemplate] = useState<ScheduleTemplate>({
+    monday: null,
+    tuesday: null,
+    wednesday: null,
+    thursday: null,
+    friday: null,
+    saturday: null,
+    sunday: null,
+  });
 
   const utils = trpc.useUtils();
 
@@ -52,9 +87,21 @@ export default function Empleados() {
     onError: (error: any) => toast.error("Error: " + error.message),
   });
 
+  const updateScheduleTemplate = trpc.users.update.useMutation({
+    onSuccess: () => {
+      toast.success("Horario habitual guardado");
+      utils.users.list.invalidate();
+      setIsScheduleDialog(false);
+      setScheduleUser(null);
+    },
+    onError: (error: any) => toast.error("Error: " + error.message),
+  });
+
   const resetCreateForm = () => {
     setNewName("");
     setNewEmail("");
+    setNewUsername("");
+    setNewPassword("");
     setNewEmployeeRole("user");
   };
 
@@ -63,15 +110,46 @@ export default function Empleados() {
       toast.error("El nombre es obligatorio");
       return;
     }
-    if (!newEmail.trim()) {
-      toast.error("El email es obligatorio");
+    if (!newUsername.trim()) {
+      toast.error("El usuario es obligatorio");
+      return;
+    }
+    if (!newPassword || newPassword.length < 4) {
+      toast.error("La contraseña debe tener al menos 4 caracteres");
       return;
     }
     createEmployee.mutate({
       name: newName.trim(),
-      email: newEmail.trim(),
+      email: newEmail.trim() || undefined,
+      username: newUsername.trim(),
+      password: newPassword,
       role: newEmployeeRole,
     });
+  };
+  
+  const updatePassword = trpc.employees.updatePassword.useMutation({
+    onSuccess: () => {
+      toast.success("Contraseña actualizada");
+      setIsPasswordDialog(false);
+      setPasswordUser(null);
+      setNewUserPassword("");
+    },
+    onError: (error: any) => toast.error("Error: " + error.message),
+  });
+  
+  const handleUpdatePassword = () => {
+    if (!passwordUser) return;
+    if (!newUserPassword || newUserPassword.length < 4) {
+      toast.error("La contraseña debe tener al menos 4 caracteres");
+      return;
+    }
+    updatePassword.mutate({ userId: passwordUser.id, newPassword: newUserPassword });
+  };
+  
+  const openPasswordDialog = (user: any) => {
+    setPasswordUser(user);
+    setNewUserPassword("");
+    setIsPasswordDialog(true);
   };
 
   const handleRoleChange = () => {
@@ -83,6 +161,56 @@ export default function Empleados() {
     setSelectedUser(user);
     setNewRole(user.role);
     setIsRoleDialog(true);
+  };
+
+  const openScheduleDialog = (user: any) => {
+    setScheduleUser(user);
+    // Parse existing schedule template or use defaults
+    try {
+      const existing = user.scheduleTemplate ? JSON.parse(user.scheduleTemplate) : {};
+      setScheduleTemplate({
+        monday: existing.monday || null,
+        tuesday: existing.tuesday || null,
+        wednesday: existing.wednesday || null,
+        thursday: existing.thursday || null,
+        friday: existing.friday || null,
+        saturday: existing.saturday || null,
+        sunday: existing.sunday || null,
+      });
+    } catch {
+      setScheduleTemplate({
+        monday: null,
+        tuesday: null,
+        wednesday: null,
+        thursday: null,
+        friday: null,
+        saturday: null,
+        sunday: null,
+      });
+    }
+    setIsScheduleDialog(true);
+  };
+
+  const toggleDay = (dayKey: string, enabled: boolean) => {
+    setScheduleTemplate(prev => ({
+      ...prev,
+      [dayKey]: enabled ? { start: "10:00", end: "18:00" } : null,
+    }));
+  };
+
+  const updateDayTime = (dayKey: string, field: "start" | "end", value: string) => {
+    setScheduleTemplate(prev => ({
+      ...prev,
+      [dayKey]: prev[dayKey] ? { ...prev[dayKey]!, [field]: value } : { start: "10:00", end: "18:00", [field]: value },
+    }));
+  };
+
+  const handleSaveSchedule = () => {
+    if (!scheduleUser) return;
+    updateScheduleTemplate.mutate({
+      id: scheduleUser.id,
+      scheduleTemplate: JSON.stringify(scheduleTemplate),
+    });
   };
 
   // Calculate hours worked per user in last 30 days
@@ -100,6 +228,16 @@ export default function Empleados() {
     return map;
   }, [shifts]);
 
+  // Count configured days for each user
+  const getConfiguredDays = (user: any) => {
+    try {
+      const template = user.scheduleTemplate ? JSON.parse(user.scheduleTemplate) : {};
+      return Object.values(template).filter(Boolean).length;
+    } catch {
+      return 0;
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -109,7 +247,7 @@ export default function Empleados() {
             <Users className="h-6 w-6 text-primary" />
             Empleados
           </h1>
-          <p className="text-muted-foreground">Gestión de usuarios y permisos</p>
+          <p className="text-muted-foreground">Gestión de usuarios, permisos y horarios habituales</p>
         </div>
         {isAdmin && (
           <Dialog open={isCreateDialog} onOpenChange={setIsCreateDialog}>
@@ -123,7 +261,7 @@ export default function Empleados() {
               <DialogHeader>
                 <DialogTitle>Crear nuevo empleado</DialogTitle>
                 <DialogDescription>
-                  Añade un nuevo empleado al sistema. Podrá iniciar sesión con su email.
+                  Añade un nuevo empleado al sistema con sus credenciales de acceso.
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
@@ -135,17 +273,33 @@ export default function Empleados() {
                     placeholder="Ej: Ana García"
                   />
                 </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label>Usuario *</Label>
+                    <Input 
+                      value={newUsername} 
+                      onChange={e => setNewUsername(e.target.value)} 
+                      placeholder="ana.garcia"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Contraseña *</Label>
+                    <Input 
+                      type="password"
+                      value={newPassword} 
+                      onChange={e => setNewPassword(e.target.value)} 
+                      placeholder="Mín. 4 caracteres"
+                    />
+                  </div>
+                </div>
                 <div className="grid gap-2">
-                  <Label>Email *</Label>
+                  <Label>Email (opcional)</Label>
                   <Input 
                     type="email"
                     value={newEmail} 
                     onChange={e => setNewEmail(e.target.value)} 
                     placeholder="ana@ejemplo.com"
                   />
-                  <p className="text-xs text-muted-foreground">
-                    El empleado usará este email para iniciar sesión
-                  </p>
                 </div>
                 <div className="grid gap-2">
                   <Label>Rol</Label>
@@ -204,10 +358,10 @@ export default function Empleados() {
           <CardContent className="pt-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Empleados</p>
-                <p className="text-2xl font-bold">{users?.filter(u => u.role === "user").length || 0}</p>
+                <p className="text-sm text-muted-foreground">Con horario configurado</p>
+                <p className="text-2xl font-bold">{users?.filter(u => getConfiguredDays(u) > 0).length || 0}</p>
               </div>
-              <User className="h-8 w-8 text-muted-foreground" />
+              <Calendar className="h-8 w-8 text-green-500" />
             </div>
           </CardContent>
         </Card>
@@ -217,7 +371,7 @@ export default function Empleados() {
       <Card>
         <CardHeader>
           <CardTitle>Lista de empleados</CardTitle>
-          <CardDescription>Usuarios registrados en el sistema</CardDescription>
+          <CardDescription>Usuarios registrados en el sistema. Configura sus horarios habituales para generar turnos automáticamente.</CardDescription>
         </CardHeader>
         <CardContent>
           {users && users.length > 0 ? (
@@ -225,6 +379,7 @@ export default function Empleados() {
               {users.map(user => {
                 const hours = hoursWorked.get(user.id) || 0;
                 const isCurrentUser = user.id === currentUser?.id;
+                const configuredDays = getConfiguredDays(user);
                 return (
                   <div key={user.id} className={`flex items-center justify-between p-4 rounded-lg border ${isCurrentUser ? 'bg-primary/5 border-primary/20' : ''}`}>
                     <div className="flex items-center gap-4">
@@ -242,6 +397,12 @@ export default function Empleados() {
                           <Badge className={user.role === "admin" ? "bg-primary" : "bg-muted text-muted-foreground"}>
                             {user.role === "admin" ? "Admin" : "Empleado"}
                           </Badge>
+                          {configuredDays > 0 && (
+                            <Badge variant="outline" className="text-green-600 border-green-200">
+                              <Calendar className="h-3 w-3 mr-1" />
+                              {configuredDays} días
+                            </Badge>
+                          )}
                         </div>
                         <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
                           {user.email && (
@@ -260,10 +421,23 @@ export default function Empleados() {
                         </p>
                       </div>
                     </div>
-                    {isAdmin && !isCurrentUser && (
-                      <Button variant="outline" size="sm" onClick={() => openRoleDialog(user)}>
-                        Cambiar rol
-                      </Button>
+                    {isAdmin && (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Button variant="outline" size="sm" onClick={() => openScheduleDialog(user)}>
+                          <Settings className="h-4 w-4 mr-1" />
+                          Horario
+                        </Button>
+                        {user.username && (
+                          <Button variant="outline" size="sm" onClick={() => openPasswordDialog(user)}>
+                            Contraseña
+                          </Button>
+                        )}
+                        {!isCurrentUser && (
+                          <Button variant="outline" size="sm" onClick={() => openRoleDialog(user)}>
+                            Cambiar rol
+                          </Button>
+                        )}
+                      </div>
                     )}
                   </div>
                 );
@@ -308,6 +482,92 @@ export default function Empleados() {
             <Button variant="outline" onClick={() => setIsRoleDialog(false)}>Cancelar</Button>
             <Button onClick={handleRoleChange} disabled={updateUserRole.isPending}>
               {updateUserRole.isPending ? "Guardando..." : "Guardar cambios"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Schedule Template Dialog */}
+      <Dialog open={isScheduleDialog} onOpenChange={setIsScheduleDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Horario habitual de {scheduleUser?.name?.split(' ')[0]}</DialogTitle>
+            <DialogDescription>
+              Configura los turnos habituales. Se usarán para generar automáticamente los turnos del mes.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-3 max-h-[400px] overflow-y-auto">
+            {DAYS_OF_WEEK.map(day => {
+              const daySchedule = scheduleTemplate[day.key];
+              const isEnabled = daySchedule !== null;
+              return (
+                <div key={day.key} className={`p-3 rounded-lg border ${isEnabled ? 'bg-primary/5 border-primary/20' : 'bg-muted/30'}`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label className="font-medium">{day.label}</Label>
+                    <Switch
+                      checked={isEnabled}
+                      onCheckedChange={(checked) => toggleDay(day.key, checked)}
+                    />
+                  </div>
+                  {isEnabled && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Entrada</Label>
+                        <Input
+                          type="time"
+                          value={daySchedule?.start || "10:00"}
+                          onChange={(e) => updateDayTime(day.key, "start", e.target.value)}
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Salida</Label>
+                        <Input
+                          type="time"
+                          value={daySchedule?.end || "18:00"}
+                          onChange={(e) => updateDayTime(day.key, "end", e.target.value)}
+                          className="mt-1"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsScheduleDialog(false)}>Cancelar</Button>
+            <Button onClick={handleSaveSchedule} disabled={updateScheduleTemplate.isPending}>
+              {updateScheduleTemplate.isPending ? "Guardando..." : "Guardar horario"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Password Change Dialog */}
+      <Dialog open={isPasswordDialog} onOpenChange={setIsPasswordDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cambiar contraseña</DialogTitle>
+            <DialogDescription>
+              Establece una nueva contraseña para {passwordUser?.name || 'este usuario'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="grid gap-2">
+              <Label>Nueva contraseña</Label>
+              <Input
+                type="password"
+                value={newUserPassword}
+                onChange={e => setNewUserPassword(e.target.value)}
+                placeholder="Mínimo 4 caracteres"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsPasswordDialog(false)}>Cancelar</Button>
+            <Button onClick={handleUpdatePassword} disabled={updatePassword.isPending}>
+              {updatePassword.isPending ? "Guardando..." : "Guardar contraseña"}
             </Button>
           </DialogFooter>
         </DialogContent>

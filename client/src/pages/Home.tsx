@@ -12,26 +12,58 @@ import {
   Building2,
   Store,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  CalendarDays
 } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+type PeriodType = "week" | "month" | "quarter" | "year";
 
 export default function Home() {
   const { user } = useAuth();
   const { selectedBusiness } = useBusinessContext();
+  const [period, setPeriod] = useState<PeriodType>("month");
   
-  // Get date range for current week
+  // Get date range based on selected period
   const dateRange = useMemo(() => {
     const now = new Date();
-    const startOfWeek = new Date(now);
-    startOfWeek.setDate(now.getDate() - now.getDay() + 1);
-    const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    let start: Date, end: Date;
+    
+    switch (period) {
+      case "week":
+        start = new Date(now);
+        start.setDate(now.getDate() - now.getDay() + 1);
+        end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        break;
+      case "month":
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+        end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        break;
+      case "quarter":
+        const currentQuarter = Math.floor(now.getMonth() / 3);
+        start = new Date(now.getFullYear(), currentQuarter * 3, 1);
+        end = new Date(now.getFullYear(), currentQuarter * 3 + 3, 0);
+        break;
+      case "year":
+        start = new Date(now.getFullYear(), 0, 1);
+        end = new Date(now.getFullYear(), 11, 31);
+        break;
+    }
+    
     return {
-      startDate: startOfWeek.toISOString().split('T')[0],
-      endDate: endOfWeek.toISOString().split('T')[0],
+      startDate: start.toISOString().split('T')[0],
+      endDate: end.toISOString().split('T')[0],
     };
-  }, []);
+  }, [period]);
+  
+  const periodLabel = {
+    week: "esta semana",
+    month: "este mes",
+    quarter: "este trimestre",
+    year: "este año",
+  }[period];
 
   const { data: businesses } = trpc.businesses.list.useQuery();
   
@@ -75,14 +107,30 @@ export default function Home() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-2">
-          <BusinessIcon className="h-6 w-6 text-primary" />
-          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <BusinessIcon className="h-6 w-6 text-primary" />
+            <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+          </div>
+          <p className="text-muted-foreground">
+            Bienvenido, {user?.name}. Resumen de {businessLabel} {periodLabel}.
+          </p>
         </div>
-        <p className="text-muted-foreground">
-          Bienvenido, {user?.name}. Resumen de {businessLabel} esta semana.
-        </p>
+        <div className="flex items-center gap-2">
+          <CalendarDays className="h-4 w-4 text-muted-foreground" />
+          <Select value={period} onValueChange={(v: PeriodType) => setPeriod(v)}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="week">Esta semana</SelectItem>
+              <SelectItem value="month">Este mes</SelectItem>
+              <SelectItem value="quarter">Este trimestre</SelectItem>
+              <SelectItem value="year">Este año</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Stats Grid - Solo visible para admin */}
@@ -97,7 +145,7 @@ export default function Home() {
               <div className="text-2xl font-bold text-green-600">
                 €{stats?.totalIncome?.toFixed(2) || "0.00"}
               </div>
-              <p className="text-xs text-muted-foreground">Esta semana</p>
+              <p className="text-xs text-muted-foreground capitalize">{periodLabel}</p>
             </CardContent>
           </Card>
 

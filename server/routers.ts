@@ -24,6 +24,28 @@ export const appRouter = router({
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
       return { success: true } as const;
     }),
+    // Login with username and password
+    login: publicProcedure.input(z.object({
+      username: z.string(),
+      password: z.string(),
+    })).mutation(async ({ input, ctx }) => {
+      const user = await db.verifyUserPassword(input.username, input.password);
+      if (!user) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Usuario o contraseña incorrectos' });
+      }
+      if (!user.isActive) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Usuario desactivado' });
+      }
+      // Update last signed in
+      await db.updateUser(user.id, { lastSignedIn: new Date() });
+      // Create session token using SDK
+      const { sdk } = await import("./_core/sdk");
+      const { ONE_YEAR_MS } = await import("@shared/const");
+      const token = await sdk.createSessionToken(user.openId, { name: user.name || "", expiresInMs: ONE_YEAR_MS });
+      const cookieOptions = getSessionCookieOptions(ctx.req);
+      ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+      return { success: true, user: { id: user.id, name: user.name, role: user.role } };
+    }),
   }),
 
   // ==================== USERS ====================
@@ -41,6 +63,7 @@ export const appRouter = router({
       role: z.enum(["user", "admin"]).optional(),
       pin: z.string().max(6).optional(),
       isActive: z.boolean().optional(),
+      scheduleTemplate: z.string().optional(), // JSON string with weekly schedule template
     })).mutation(async ({ input }) => {
       const { id, ...data } = input;
       await db.updateUser(id, data);
@@ -110,6 +133,64 @@ export const appRouter = router({
     clockOut: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
       await db.clockOut(input.id);
       return { success: true };
+    }),
+    // Generate shifts for a month based on employee schedule templates
+    generateFromTemplates: adminProcedure.input(z.object({
+      year: z.number(),
+      month: z.number(), // 1-12
+    })).mutation(async ({ input }) => {
+      const { year, month } = input;
+      const users = await db.getAllUsers();
+      let created = 0;
+      let skipped = 0;
+      
+      // Get existing shifts for the month to avoid duplicates
+      const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+      const lastDay = new Date(year, month, 0).getDate();
+      const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
+      const existingShifts = await db.getShiftsByDateRange(startDate, endDate);
+      const existingSet = new Set(existingShifts.map(s => `${s.userId}-${s.scheduledDate}`));
+      
+      // Day of week mapping (0 = Sunday, 1 = Monday, etc.)
+      const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      
+      for (const user of users) {
+        if (!user.scheduleTemplate) continue;
+        
+        try {
+          const template = JSON.parse(user.scheduleTemplate);
+          
+          // Iterate through each day of the month
+          for (let day = 1; day <= lastDay; day++) {
+            const date = new Date(year, month - 1, day);
+            const dayOfWeek = date.getDay();
+            const dayKey = dayKeys[dayOfWeek];
+            const schedule = template[dayKey];
+            
+            if (schedule && schedule.start && schedule.end) {
+              const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+              
+              // Check if shift already exists
+              if (existingSet.has(`${user.id}-${dateStr}`)) {
+                skipped++;
+                continue;
+              }
+              
+              await db.createShift({
+                userId: user.id,
+                scheduledDate: dateStr,
+                scheduledStart: schedule.start,
+                scheduledEnd: schedule.end,
+              });
+              created++;
+            }
+          }
+        } catch (e) {
+          console.error(`Error parsing schedule template for user ${user.id}:`, e);
+        }
+      }
+      
+      return { success: true, created, skipped };
     }),
   }),
 
@@ -242,6 +323,7 @@ export const appRouter = router({
       ocrData: z.string().optional(),
       ocrStatus: z.enum(["pending", "processing", "completed", "failed"]).optional(),
       isVerified: z.boolean().optional(),
+      isScanned: z.boolean().optional(),
       notes: z.string().optional(),
     })).mutation(async ({ input }) => {
       const { id, ...data } = input;
@@ -587,11 +669,20 @@ export const appRouter = router({
   employees: router({
     create: adminProcedure.input(z.object({
       name: z.string(),
-      email: z.string(),
+      email: z.string().optional(),
+      username: z.string(),
+      password: z.string().min(4),
       role: z.enum(["user", "admin"]).default("user"),
     })).mutation(async ({ input }) => {
-      const id = await db.createEmployee(input.name, input.email, input.role);
+      const id = await db.createEmployeeWithCredentials(input.name, input.email, input.username, input.password, input.role);
       return { success: true, id };
+    }),
+    updatePassword: adminProcedure.input(z.object({
+      userId: z.number(),
+      newPassword: z.string().min(4),
+    })).mutation(async ({ input }) => {
+      await db.updateUserPassword(input.userId, input.newPassword);
+      return { success: true };
     }),
   }),
 

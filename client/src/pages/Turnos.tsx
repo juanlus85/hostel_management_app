@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
-import { Calendar, Clock, Plus, Play, Square, ChevronLeft, ChevronRight, Edit2, Trash2, CalendarDays, CalendarRange } from "lucide-react";
+import { Calendar, Clock, Plus, Play, Square, ChevronLeft, ChevronRight, Edit2, Trash2, CalendarDays, CalendarRange, Wand2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -39,6 +39,9 @@ export default function Turnos() {
   const [editStartTime, setEditStartTime] = useState("");
   const [editEndTime, setEditEndTime] = useState("");
   const [editDate, setEditDate] = useState("");
+  
+  // Generate shifts dialog
+  const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false);
 
   const utils = trpc.useUtils();
 
@@ -101,12 +104,11 @@ export default function Turnos() {
 
   const { data: users } = trpc.users.list.useQuery();
   
-  // Use appropriate date range based on view mode
-  const dateRangeForQuery = viewMode === "month" ? monthRange : weekRange;
-  
+  // Always load shifts for the entire month to ensure both views have complete data
+  // This prevents discrepancies between weekly and monthly views
   const { data: shifts, isLoading } = trpc.shifts.list.useQuery({
-    startDate: dateRangeForQuery.startDate,
-    endDate: dateRangeForQuery.endDate,
+    startDate: monthRange.startDate,
+    endDate: monthRange.endDate,
   });
 
   const createShift = trpc.shifts.create.useMutation({
@@ -151,6 +153,17 @@ export default function Turnos() {
     onSuccess: () => {
       toast.success("Turno eliminado");
       utils.shifts.list.invalidate();
+    },
+  });
+
+  const generateFromTemplates = trpc.shifts.generateFromTemplates.useMutation({
+    onSuccess: (result) => {
+      toast.success(`Turnos generados: ${result.created} creados, ${result.skipped} ya existían`);
+      utils.shifts.list.invalidate();
+      setIsGenerateDialogOpen(false);
+    },
+    onError: (error) => {
+      toast.error("Error al generar turnos: " + error.message);
     },
   });
 
@@ -283,13 +296,47 @@ export default function Turnos() {
           <p className="text-muted-foreground">Gestión de horarios y calendario de empleados</p>
         </div>
         {isAdmin && (
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Nuevo turno
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-2">
+            <Dialog open={isGenerateDialogOpen} onOpenChange={setIsGenerateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <Wand2 className="h-4 w-4 mr-2" />
+                  Generar mes
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Generar turnos del mes</DialogTitle>
+                  <DialogDescription>
+                    Genera automáticamente los turnos de {currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })} basados en los horarios habituales configurados en cada empleado.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Se crearán turnos para todos los empleados que tengan horarios habituales configurados. Los turnos que ya existan no se duplicarán.
+                  </p>
+                  <p className="text-sm">
+                    <strong>Mes:</strong> {currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}
+                  </p>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsGenerateDialogOpen(false)}>Cancelar</Button>
+                  <Button 
+                    onClick={() => generateFromTemplates.mutate({ year: currentDate.getFullYear(), month: currentDate.getMonth() + 1 })}
+                    disabled={generateFromTemplates.isPending}
+                  >
+                    {generateFromTemplates.isPending ? "Generando..." : "Generar turnos"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nuevo turno
+                </Button>
+              </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Crear nuevo turno</DialogTitle>
@@ -334,6 +381,7 @@ export default function Turnos() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          </div>
         )}
       </div>
 
@@ -551,7 +599,11 @@ export default function Turnos() {
         <CardContent>
           <div className="space-y-3">
             {users?.map(u => {
-              const userShifts = shiftsByUser.get(u.id) || [];
+              const allUserShifts = shiftsByUser.get(u.id) || [];
+              // Filter shifts based on current view mode
+              const userShifts = viewMode === "week" 
+                ? allUserShifts.filter((s: any) => s.scheduledDate >= weekRange.startDate && s.scheduledDate <= weekRange.endDate)
+                : allUserShifts;
               const totalHours = userShifts.reduce((sum: number, s: any) => {
                 const [startH, startM] = s.scheduledStart.split(':').map(Number);
                 const [endH, endM] = s.scheduledEnd.split(':').map(Number);

@@ -6,10 +6,15 @@ export const users = mysqlTable("users", {
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
+  username: varchar("username", { length: 100 }), // Username for login
+  passwordHash: varchar("passwordHash", { length: 255 }), // Hashed password
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
   pin: varchar("pin", { length: 6 }), // PIN for quick clock-in/out
   isActive: boolean("isActive").default(true).notNull(),
+  // Schedule template: JSON with default shifts per day of week
+  // Format: {"monday": {"start": "10:00", "end": "18:00"}, "tuesday": null, ...}
+  scheduleTemplate: text("scheduleTemplate"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -112,6 +117,7 @@ export const invoices = mysqlTable("invoices", {
   ocrData: text("ocrData"), // JSON string with OCR extracted data
   ocrStatus: mysqlEnum("ocrStatus", ["pending", "processing", "completed", "failed"]).default("pending").notNull(),
   isVerified: boolean("isVerified").default(false).notNull(),
+  isScanned: boolean("isScanned").default(false).notNull(), // Escaneado/Contabilizado
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

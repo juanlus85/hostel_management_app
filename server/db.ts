@@ -634,22 +634,65 @@ export async function generateShiftsFromTemplates(startDate: string, endDate: st
 }
 
 // ==================== EMPLOYEE MANAGEMENT ====================
-export async function createEmployee(name: string, email: string, role: "user" | "admin" = "user") {
+import bcrypt from "bcryptjs";
+
+export async function createEmployeeWithCredentials(
+  name: string, 
+  email: string | undefined, 
+  username: string, 
+  password: string, 
+  role: "user" | "admin" = "user"
+) {
   const db = await getDb();
-  if (!db) return;
+  if (!db) throw new Error("Database not available");
+  
+  // Check if username already exists
+  const existing = await db.select().from(users).where(eq(users.username, username));
+  if (existing.length > 0) {
+    throw new Error("El nombre de usuario ya existe");
+  }
   
   // Generate a unique openId for manual employees
   const openId = `manual_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+  
+  // Hash the password
+  const passwordHash = await bcrypt.hash(password, 10);
   
   const result = await db.insert(users).values({
     openId,
     name,
     email,
+    username,
+    passwordHash,
+    loginMethod: "password",
     role,
     isActive: true,
     lastSignedIn: new Date()
   });
   return result[0].insertId;
+}
+
+export async function updateUserPassword(userId: number, newPassword: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const passwordHash = await bcrypt.hash(newPassword, 10);
+  await db.update(users).set({ passwordHash }).where(eq(users.id, userId));
+}
+
+export async function getUserByUsername(username: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(users).where(eq(users.username, username));
+  return result[0] || null;
+}
+
+export async function verifyUserPassword(username: string, password: string) {
+  const user = await getUserByUsername(username);
+  if (!user || !user.passwordHash) return null;
+  
+  const isValid = await bcrypt.compare(password, user.passwordHash);
+  return isValid ? user : null;
 }
 
 // ==================== CASH REGISTER AUTO ====================

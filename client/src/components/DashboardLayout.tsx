@@ -43,6 +43,10 @@ import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
@@ -94,6 +98,19 @@ export default function DashboardLayout({
     return (saved as "hostel" | "tienda" | "all") || "hostel";
   });
   const { loading, user } = useAuth();
+  
+  // Login form state - MUST be before any conditional returns
+  const [loginUsername, setLoginUsername] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  
+  const loginMutation = trpc.auth.login.useMutation({
+    onSuccess: () => {
+      window.location.reload();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Error al iniciar sesión");
+    },
+  });
 
   useEffect(() => {
     localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
@@ -102,6 +119,15 @@ export default function DashboardLayout({
   useEffect(() => {
     localStorage.setItem("selected-business", selectedBusiness);
   }, [selectedBusiness]);
+  
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!loginUsername.trim() || !loginPassword) {
+      toast.error("Introduce usuario y contraseña");
+      return;
+    }
+    loginMutation.mutate({ username: loginUsername.trim(), password: loginPassword });
+  };
 
   if (loading) {
     return <DashboardLayoutSkeleton />
@@ -123,15 +149,37 @@ export default function DashboardLayout({
               Sistema de gestión integral. Inicia sesión para continuar.
             </p>
           </div>
-          <Button
-            onClick={() => {
-              window.location.href = getLoginUrl();
-            }}
-            size="lg"
-            className="w-full shadow-lg hover:shadow-xl transition-all bg-primary hover:bg-primary/90"
-          >
-            Iniciar sesión
-          </Button>
+          <form onSubmit={handleLogin} className="w-full space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="username">Usuario</Label>
+              <Input
+                id="username"
+                value={loginUsername}
+                onChange={(e) => setLoginUsername(e.target.value)}
+                placeholder="Tu nombre de usuario"
+                autoComplete="username"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Contraseña</Label>
+              <Input
+                id="password"
+                type="password"
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                placeholder="Tu contraseña"
+                autoComplete="current-password"
+              />
+            </div>
+            <Button
+              type="submit"
+              size="lg"
+              className="w-full shadow-lg hover:shadow-xl transition-all bg-primary hover:bg-primary/90"
+              disabled={loginMutation.isPending}
+            >
+              {loginMutation.isPending ? "Iniciando sesión..." : "Iniciar sesión"}
+            </Button>
+          </form>
         </div>
       </div>
     );

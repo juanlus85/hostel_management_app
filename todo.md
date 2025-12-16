@@ -72,7 +72,7 @@
 
 ### Calendario de Turnos
 - [x] Vista mensual de todos los turnos
-- [ ] Calendario base/plantilla para crear turnos automáticamente
+- [x] Calendario base/plantilla para crear turnos automáticamente
 - [ ] Cambiar turnos arrastrando (drag & drop)
 - [x] Cambiar turnos haciendo click
 
@@ -208,3 +208,51 @@
 - [x] El campo "Cambio para mañana" ahora muestra el Total Efectivo calculado automáticamente
 - [x] Se sincroniza automáticamente con el Total Efectivo cuando no se modifica manualmente
 - [x] El resumen "Cambio siguiente" también muestra el valor correcto
+
+
+## Mejoras Implementadas (v12)
+
+### Dashboard y Reportes
+- [x] Añadir selector de período: semana, mes, trimestre, año
+- [x] Datos se actualizan según el período seleccionado
+
+### Cierre Trimestral
+- [x] Permitir exportar CSV aunque el trimestre no haya terminado
+- [x] Mensaje informativo de "datos parciales" en lugar de bloquear
+
+### Facturas
+- [x] Añadir checkbox "Escaneado/Contabilizado"
+- [x] Marcar automáticamente si hay archivo adjunto
+- [x] Campo isScanned en base de datos
+
+### Gestión de Empleados
+- [x] Crear sistema de login con usuario y contraseña
+- [x] Administradores pueden crear empleados con credenciales (usuario + contraseña)
+- [x] Administradores pueden cambiar contraseñas de empleados
+- [x] Formulario de login con usuario/contraseña en lugar de OAuth
+
+### Calendario de Turnos
+- [x] Corregir bug de discrepancia vista semanal/mensual (ahora ambas usan datos del mes completo)
+- [x] Plantilla de turnos habituales por empleado (en ficha de empleado)
+- [x] Botón "Generar turnos del mes" que usa las plantillas configuradas
+
+
+## Pendiente
+
+### Calendario de Turnos
+- [ ] Cambiar turnos arrastrando (drag & drop)
+
+### Empleados
+- [ ] Crear empleados iniciales: Ana y Juanlu
+
+### Inventario
+- [ ] Generación de lista de compra semanal
+- [ ] Historial de pedidos
+
+### Dashboard
+- [ ] Gastos por proveedor
+- [ ] Gráficos de tendencias
+- [ ] Exportación a PDF/Excel
+
+### Documentación
+- [ ] Documentación de despliegue en VPS

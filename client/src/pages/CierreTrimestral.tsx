@@ -367,7 +367,7 @@ export default function CierreTrimestral() {
               </p>
               <Button 
                 onClick={handleExportZip} 
-                disabled={isExporting || !canCloseQuarter}
+                disabled={isExporting}
                 className="w-full sm:w-auto"
               >
                 <Download className="h-4 w-4 mr-2" />
@@ -378,7 +378,7 @@ export default function CierreTrimestral() {
             {!canCloseQuarter && (
               <p className="text-sm text-amber-600 flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4" />
-                El trimestre aún no ha finalizado. Podrás exportar los datos una vez termine.
+                Trimestre en curso. Los datos exportados son parciales hasta la fecha actual.
               </p>
             )}
           </div>

@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
-import { Receipt, Plus, Camera, Upload, Check, AlertCircle, Search, Building2, Store, Loader2, Sparkles, Edit2, FileText } from "lucide-react";
+import { Receipt, Plus, Camera, Upload, Check, AlertCircle, Search, Building2, Store, Loader2, Sparkles, Edit2, FileText, CheckCircle2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useMemo, useState, useRef } from "react";
 import { toast } from "sonner";
 
@@ -466,7 +467,19 @@ export default function Facturas() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        checked={invoice.isScanned || !!invoice.imageUrl}
+                        onCheckedChange={(checked) => {
+                          updateInvoice.mutate({ id: invoice.id, isScanned: !!checked });
+                        }}
+                        disabled={!!invoice.imageUrl}
+                      />
+                      <span className="text-xs text-muted-foreground">
+                        {invoice.imageUrl ? "Archivo" : "Contab."}
+                      </span>
+                    </div>
                     <div className="text-right">
                       <p className="font-bold">€{parseFloat(invoice.totalAmount || "0").toFixed(2)}</p>
                     </div>
