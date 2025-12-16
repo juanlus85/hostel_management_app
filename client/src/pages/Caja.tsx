@@ -183,7 +183,7 @@ export default function Caja() {
   const prepaidTotal = parseFloat(prepaidBooking) || 0;
   const withdrawnCashTotal = parseFloat(withdrawnCash) || 0;
   const withdrawnCardsTotal = parseFloat(withdrawnCards) || 0;
-  const changeNext = parseFloat(changeForNextDay) || 0;
+  const changeNext = changeForNextDay !== "" ? parseFloat(changeForNextDay) || 0 : totalCashCalc;
 
   // Expected = Z + Cambio anterior + Movimientos - Prepago - Retirado
   const expectedTotal = zTotal + previousChange + movementsTotal - prepaidTotal - withdrawnCashTotal - withdrawnCardsTotal;
@@ -676,7 +676,7 @@ export default function Caja() {
                 <Input
                   type="number"
                   step="0.01"
-                  value={changeForNextDay || totalCashCalc.toFixed(2)}
+                  value={changeForNextDay !== "" ? changeForNextDay : totalCashCalc.toFixed(2)}
                   onChange={(e) => setChangeForNextDay(e.target.value)}
                   disabled={isClosed}
                   placeholder={totalCashCalc.toFixed(2)}

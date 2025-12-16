@@ -172,3 +172,18 @@
   - [x] Facturas
   - [x] Resumen
 - [x] Resumen del trimestre (ingresos, gastos, balance)
+
+
+## Bugs Reportados (v7)
+
+### Caja - Cambio para mañana
+- [x] El campo "Cambio para mañana" no muestra el total efectivo por defecto (muestra 0.00)
+- [x] Debe mostrar automáticamente el valor del Total Efectivo calculado
+
+### Caja - Cambio anterior
+- [x] El día siguiente no hereda el "cambio para mañana" del día anterior
+- [x] Empieza siempre a 0 en lugar de usar el valor guardado
+
+### Dashboard
+- [x] Los ingresos de la semana no coinciden con los datos reales
+- [x] Revisar la lógica de cálculo de métricas

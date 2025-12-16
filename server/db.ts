@@ -479,6 +479,15 @@ export async function getDashboardStats(businessId: number, startDate: string, e
   const db = await getDb();
   if (!db) return null;
   
+  // Usar cashClosings para obtener los totales reales
+  const closings = await db.select().from(cashClosings)
+    .where(and(
+      eq(cashClosings.businessId, businessId),
+      gte(cashClosings.date, startDate),
+      lte(cashClosings.date, endDate)
+    ));
+  
+  // También obtener transacciones antiguas por compatibilidad
   const txns = await db.select().from(transactions)
     .where(and(
       eq(transactions.businessId, businessId),
@@ -486,23 +495,31 @@ export async function getDashboardStats(businessId: number, startDate: string, e
       lte(transactions.date, endDate)
     ));
   
-  const cashRegs = await db.select().from(cashRegisters)
-    .where(and(
-      eq(cashRegisters.businessId, businessId),
-      gte(cashRegisters.date, startDate),
-      lte(cashRegisters.date, endDate)
-    ));
-  
   let totalIncome = 0;
   let totalExpenses = 0;
+  let totalDifference = 0;
+  
+  // Sumar ingresos de cashClosings (totalCash + totalCards)
+  closings.forEach(c => {
+    totalIncome += parseFloat(c.totalCash || "0") + parseFloat(c.totalCards || "0");
+    totalDifference += parseFloat(c.difference || "0");
+  });
+  
+  // Sumar gastos de facturas
+  const invs = await db.select().from(invoices)
+    .where(and(
+      eq(invoices.businessId, businessId),
+      gte(invoices.invoiceDate, startDate),
+      lte(invoices.invoiceDate, endDate)
+    ));
+  invs.forEach(inv => {
+    totalExpenses += parseFloat(inv.totalAmount || "0");
+  });
+  
+  // También sumar transacciones antiguas si existen
   txns.forEach(t => {
     if (t.type === "income") totalIncome += parseFloat(t.amount || "0");
     else totalExpenses += parseFloat(t.amount || "0");
-  });
-  
-  let totalDifference = 0;
-  cashRegs.forEach(c => {
-    totalDifference += parseFloat(c.difference || "0");
   });
   
   const lowStock = await getLowStockItems(businessId);
@@ -696,10 +713,10 @@ export async function getCashClosingByDate(businessId: number, date: string) {
 export async function getPreviousCashClosing(businessId: number, date: string) {
   const db = await getDb();
   if (!db) return null;
+  // Buscar el cierre del día anterior (cerrado o no)
   const result = await db.select().from(cashClosings)
     .where(and(
       eq(cashClosings.businessId, businessId), 
-      eq(cashClosings.status, "closed"),
       sql`${cashClosings.date} < ${date}`
     ))
     .orderBy(desc(cashClosings.date))
@@ -717,7 +734,10 @@ export async function getOrCreateCashClosing(businessId: number, userId: number,
   
   // Get previous day's closing to get the change
   const previous = await getPreviousCashClosing(businessId, date);
-  const previousChange = previous ? previous.changeForNextDay : "0";
+  // Usar changeForNextDay si existe, sino usar totalCash del día anterior
+  const previousChange = previous 
+    ? (previous.changeForNextDay || previous.totalCash || "0") 
+    : "0";
   
   // Create new closing
   const result = await db.insert(cashClosings).values({
