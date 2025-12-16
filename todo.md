@@ -119,3 +119,14 @@
 ### Inventario
 - [x] Error "el nombre es obligatorio" aunque esté puesto
 - [x] Simplificar: no requiere stock mínimo (es para indicar productos que faltan)
+
+
+## Cambios Inventario (v4)
+
+### Simplificar como Lista de Faltantes
+- [x] Cambiar concepto: de "control de stock" a "lista de productos que faltan"
+- [x] Quitar stock mínimo completamente
+- [x] Campo principal: nombre del producto y unidades que quedan
+- [x] Añadir botón de eliminar cuando llegue el pedido
+- [x] Permitir editar cantidad
+- [x] Interfaz más simple y directa

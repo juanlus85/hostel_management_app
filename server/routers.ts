@@ -285,6 +285,7 @@ export const appRouter = router({
       name: z.string().optional(),
       category: z.string().optional(),
       supplier: z.string().optional(),
+      currentStock: z.string().optional(),
       minimumStock: z.string().optional(),
       unit: z.string().optional(),
       costPrice: z.string().optional(),
@@ -293,6 +294,12 @@ export const appRouter = router({
     })).mutation(async ({ input }) => {
       const { id, ...data } = input;
       await db.updateInventoryItem(id, data);
+      return { success: true };
+    }),
+    delete: protectedProcedure.input(z.object({
+      id: z.number(),
+    })).mutation(async ({ input }) => {
+      await db.deleteInventoryItem(input.id);
       return { success: true };
     }),
     adjustStock: protectedProcedure.input(z.object({

@@ -353,6 +353,12 @@ export async function updateInventoryItem(id: number, data: Partial<InsertInvent
   await db.update(inventoryItems).set(data).where(eq(inventoryItems.id, id));
 }
 
+export async function deleteInventoryItem(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(inventoryItems).where(eq(inventoryItems.id, id));
+}
+
 export async function adjustStock(itemId: number, userId: number, quantity: number, type: "in" | "out" | "adjustment", reason?: string) {
   const db = await getDb();
   if (!db) return;
