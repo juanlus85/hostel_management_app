@@ -441,3 +441,9 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Menú housekeeping muestra todo igual que empleado (corregido: ahora solo ve horarios, tareas, incidencias, inventario, housekeeping)
 - [x] Duplicado: aparece "Horarios" y "Turnos" en el menú (unificado: ahora solo "Turnos" en ambos menús)
 - [x] Agregar estado "Habitación Lista" en verde oscuro a la gestión de habitaciones (agregado con bg-green-700)
+
+
+## Bugs Corregidos v32
+- [x] Error al crear facturas: updatedBy ya estaba en el código, solo necesita recompilación
+- [x] Duplicado Turnos/Horarios: corregida lógica de currentMenuItems (housekeeping ve solo su menú, admin ve menú+admin, user ve solo menú)
+- [x] Rol housekeeping: agregado texto "Housekeeping" en lugar de "Empleado"

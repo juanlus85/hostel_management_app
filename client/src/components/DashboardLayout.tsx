@@ -233,8 +233,14 @@ function DashboardLayoutContent({
   const { selectedBusiness, setSelectedBusiness } = useBusinessContext();
   const isAdmin = user?.role === "admin";
   const isHousekeeping = user?.role === "housekeeping";
-  // Housekeeping solo ve su menú específico, otros ven el menú completo
-  const currentMenuItems = isHousekeeping ? housekeepingMenuItems : [...menuItems, ...housekeepingMenuItems];
+  // Housekeeping solo ve su menú específico
+  // Admin ve menú completo + opciones admin
+  // User ve menú completo sin opciones admin
+  const currentMenuItems = isHousekeeping 
+    ? housekeepingMenuItems 
+    : isAdmin 
+    ? [...menuItems, ...adminMenuItems] 
+    : menuItems;
 
   useEffect(() => {
     if (isCollapsed) {
@@ -402,7 +408,7 @@ function DashboardLayoutContent({
                       {user?.name || "Usuario"}
                     </p>
                     <p className="text-xs text-sidebar-foreground/60 truncate mt-1">
-                      {user?.role === "admin" ? "Administrador" : "Empleado"}
+                      {user?.role === "admin" ? "Administrador" : user?.role === "housekeeping" ? "Housekeeping" : "Empleado"}
                     </p>
                   </div>
                 </button>
