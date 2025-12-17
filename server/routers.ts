@@ -402,6 +402,7 @@ export const appRouter = router({
       paymentMethod: z.enum(["cuenta_bancaria", "tarjeta", "ana", "juanlu", "caja_hostel", "caja_tienda", "caja_fuerte", "caja_fuerte_cambio", "otros"]).optional(),
       imageUrl: z.string().optional(),
       imageKey: z.string().optional(),
+      hasVAT: z.boolean().default(true),
       notes: z.string().optional(),
     })).mutation(async ({ input, ctx }) => {
       const id = await db.createInvoice({ ...input, userId: ctx.user.id });
@@ -440,6 +441,7 @@ export const appRouter = router({
       ocrStatus: z.enum(["pending", "processing", "completed", "failed"]).optional(),
       isVerified: z.boolean().optional(),
       isScanned: z.boolean().optional(),
+      hasVAT: z.boolean().optional(),
       notes: z.string().optional(),
     })).mutation(async ({ input }) => {
       const { id, ...data } = input;

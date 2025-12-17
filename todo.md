@@ -401,3 +401,15 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Modificado server/email.ts para leer archivos desde disco local
 - [x] Modificado server/_core/vite.ts para servir /uploads como archivos estáticos
 - [x] Probado en desarrollo: archivo guardado correctamente en uploads/invoices/
+
+
+## Nuevas Funcionalidades (v28)
+- [x] Agregar checkbox "Factura con IVA / A contabilizar" en formulario de facturas
+  - [x] Agregar campo hasVAT (boolean) a la tabla invoices en schema
+  - [x] Actualizar backend para guardar y recuperar el campo (create y update)
+  - [x] Agregar checkbox en el formulario de crear factura (marcado por defecto)
+  - [x] Agregar checkbox editable en la lista de facturas junto a "Escaneada"
+- [x] Mejorar diseño responsive para móvil
+  - [x] Optimizar lista de facturas para móvil (flex-col en mobile, flex-row en desktop)
+  - [x] Ajustar formularios de crear/editar factura (grid-cols-1 en mobile, grid-cols-2 en desktop)
+  - [x] Mejorar distribución de checkboxes y botones en móvil

@@ -38,6 +38,7 @@ export default function Facturas() {
   const [totalAmount, setTotalAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodValue | "">("");
   const [notes, setNotes] = useState("");
+  const [hasVAT, setHasVAT] = useState(true);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -119,6 +120,7 @@ export default function Facturas() {
     setTotalAmount("");
     setPaymentMethod("");
     setNotes("");
+    setHasVAT(true);
     setImageFile(null);
     setImagePreview(null);
   };
@@ -219,6 +221,7 @@ export default function Facturas() {
       invoiceDate: invoiceDate || undefined,
       totalAmount: total || undefined,
       paymentMethod: paymentMethod || undefined,
+      hasVAT,
       notes: notes.trim() || undefined,
       imageUrl: fileUrl,
       imageKey: fileKey,
@@ -444,6 +447,20 @@ export default function Facturas() {
                 <Label>Notas</Label>
                 <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Notas adicionales" />
               </div>
+
+              <div className="flex items-center space-x-2 pt-2">
+                <Checkbox 
+                  id="hasVAT" 
+                  checked={hasVAT} 
+                  onCheckedChange={(checked) => setHasVAT(checked as boolean)}
+                />
+                <Label 
+                  htmlFor="hasVAT" 
+                  className="text-sm font-normal cursor-pointer"
+                >
+                  Factura con IVA / A contabilizar
+                </Label>
+              </div>
             </div>
             <DialogFooter>
               {!currentBusinessId && (
@@ -494,7 +511,7 @@ export default function Facturas() {
               {monthInvoices.map(invoice => (
                 <div 
                   key={invoice.id} 
-                  className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors gap-3"
                 >
                   <div className="flex items-center gap-3">
                     <div className="p-2 rounded-md bg-primary/10">
@@ -509,7 +526,18 @@ export default function Facturas() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-3 w-full sm:w-auto">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        checked={invoice.hasVAT}
+                        onCheckedChange={(checked) => {
+                          updateInvoice.mutate({ id: invoice.id, hasVAT: !!checked });
+                        }}
+                      />
+                      <span className="text-xs text-muted-foreground">
+                        IVA
+                      </span>
+                    </div>
                     <div className="flex items-center gap-2">
                       <Checkbox
                         checked={invoice.isScanned || !!invoice.imageUrl}
@@ -522,7 +550,7 @@ export default function Facturas() {
                         Escaneada
                       </span>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right ml-auto">
                       <p className="font-bold">€{parseFloat(invoice.totalAmount || "0").toFixed(2)}</p>
                     </div>
                     <Button variant="ghost" size="icon" onClick={() => openEditDialog(invoice)}>
@@ -556,7 +584,7 @@ export default function Facturas() {
             <DialogDescription>Modifica los datos de la factura</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label>Proveedor</Label>
                 <Input value={editSupplier} onChange={e => setEditSupplier(e.target.value)} placeholder="Proveedor" />
@@ -566,7 +594,7 @@ export default function Facturas() {
                 <Input value={editInvoiceNumber} onChange={e => setEditInvoiceNumber(e.target.value)} placeholder="Número" />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label>Fecha</Label>
                 <Input type="date" value={editInvoiceDate} onChange={e => setEditInvoiceDate(e.target.value)} />

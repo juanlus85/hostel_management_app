@@ -78,6 +78,13 @@
       "when": 1765974800786,
       "tag": "0010_colossal_mac_gargan",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "5",
+      "when": 1765978630023,
+      "tag": "0011_smart_catseye",
+      "breakpoints": true
     }
   ]
 }

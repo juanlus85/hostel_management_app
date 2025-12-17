@@ -119,6 +119,7 @@ export const invoices = mysqlTable("invoices", {
   ocrStatus: mysqlEnum("ocrStatus", ["pending", "processing", "completed", "failed"]).default("pending").notNull(),
   isVerified: boolean("isVerified").default(false).notNull(),
   isScanned: boolean("isScanned").default(false).notNull(), // Escaneado/Contabilizado
+  hasVAT: boolean("hasVAT").default(true).notNull(), // Factura con IVA / A contabilizar
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
