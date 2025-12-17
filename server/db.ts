@@ -460,6 +460,12 @@ export async function updateIncident(id: number, data: Partial<InsertIncident>) 
   await db.update(incidents).set(data).where(eq(incidents.id, id));
 }
 
+export async function deleteIncident(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(incidents).where(eq(incidents.id, id));
+}
+
 // ==================== TASKS ====================
 export async function getTasks(businessId?: number, assignedTo?: number, status?: string) {
   const db = await getDb();

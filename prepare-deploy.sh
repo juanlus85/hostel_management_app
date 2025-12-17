@@ -59,6 +59,7 @@ cp package.json $DEPLOY_DIR/
 cp pnpm-lock.yaml $DEPLOY_DIR/
 cp ecosystem.config.js $DEPLOY_DIR/
 cp drizzle.config.ts $DEPLOY_DIR/
+cp seed-businesses.mjs $DEPLOY_DIR/ 2>/dev/null || echo "  ⚠ seed-businesses.mjs no encontrado"
 
 # Copiar documentación (si existe)
 cp DEPLOY_PLESK.md $DEPLOY_DIR/ 2>/dev/null || echo "  ⚠ DEPLOY_PLESK.md no encontrado"
@@ -133,7 +134,11 @@ cat > $DEPLOY_DIR/INSTRUCCIONES_RAPIDAS.txt << 'EOF'
 6. EJECUTAR MIGRACIONES
    pnpm db:push
 
-7. INICIAR LA APLICACIÓN
+7. INSERTAR NEGOCIOS INICIALES (IMPORTANTE)
+   pnpm tsx seed-businesses.mjs
+   (Esto crea los negocios "Hostel" y "Tienda")
+
+8. INICIAR LA APLICACIÓN
    Opción A (Plesk):
    - Node.js > Application startup file: dist/server/index.js
    - Click en "Enable Node.js" y "Restart"
@@ -143,7 +148,7 @@ cat > $DEPLOY_DIR/INSTRUCCIONES_RAPIDAS.txt << 'EOF'
    pm2 save
    pm2 startup
 
-8. VERIFICAR
+9. VERIFICAR
    - Visita: https://management.thespotcentralhostel.com
    - Login con tus credenciales
 
@@ -172,6 +177,7 @@ echo "  ✓ dist/client/          - Frontend compilado"
 echo "  ✓ dist/server/          - Backend compilado"
 echo "  ✓ drizzle/              - Migraciones de BD"
 echo "  ✓ package.json          - Dependencias"
+echo "  ✓ seed-businesses.mjs   - Script de seed de negocios"
 echo "  ✓ ecosystem.config.js   - Configuración PM2"
 echo "  ✓ .env.example          - Plantilla de variables"
 echo "  ✓ DEPLOY_PLESK.md       - Guía completa"

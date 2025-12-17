@@ -52,6 +52,7 @@ export default function Empleados() {
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
   const [editUsername, setEditUsername] = useState("");
+  const [editColor, setEditColor] = useState("#3b82f6");
   
   // Delete confirmation dialog
   const [isDeleteDialog, setIsDeleteDialog] = useState(false);
@@ -240,6 +241,7 @@ export default function Empleados() {
     setEditName(user.name || "");
     setEditEmail(user.email || "");
     setEditUsername(user.username || "");
+    setEditColor(user.color || "#3b82f6");
     setIsEditDialog(true);
   };
 
@@ -253,6 +255,7 @@ export default function Empleados() {
       id: editUser.id,
       name: editName.trim(),
       email: editEmail.trim() || undefined,
+      color: editColor,
     });
   };
 
@@ -655,6 +658,29 @@ export default function Empleados() {
                 <p className="text-xs text-muted-foreground">El nombre de usuario no se puede cambiar</p>
               </div>
             )}
+            <div className="grid gap-2">
+              <Label>Color en el calendario</Label>
+              <div className="flex gap-2 items-center">
+                <Input
+                  type="color"
+                  value={editColor}
+                  onChange={e => setEditColor(e.target.value)}
+                  className="w-20 h-10 cursor-pointer"
+                />
+                <Input
+                  type="text"
+                  value={editColor}
+                  onChange={e => setEditColor(e.target.value)}
+                  placeholder="#3b82f6"
+                  className="flex-1"
+                />
+                <div 
+                  className="w-10 h-10 rounded border-2 border-border"
+                  style={{ backgroundColor: editColor }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">Elige un color para identificar a este empleado en el calendario</p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditDialog(false)}>Cancelar</Button>

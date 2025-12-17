@@ -160,15 +160,30 @@ export async function sendEmailWithAttachment(
 
     // Add attachment if URL provided
     if (attachmentUrl) {
-      mailOptions.attachments = [{
-        filename: attachmentName || "factura.pdf",
-        path: attachmentUrl,
-      }];
+      console.log(`[Email] Downloading attachment from: ${attachmentUrl}`);
+      try {
+        // Download file from URL
+        const response = await fetch(attachmentUrl);
+        if (!response.ok) {
+          console.error(`[Email] Failed to download attachment: ${response.statusText}`);
+          throw new Error(`Failed to download attachment: ${response.statusText}`);
+        }
+        const buffer = Buffer.from(await response.arrayBuffer());
+        console.log(`[Email] Downloaded attachment: ${buffer.length} bytes`);
+        
+        mailOptions.attachments = [{
+          filename: attachmentName || "factura.pdf",
+          content: buffer,
+        }];
+      } catch (downloadError: any) {
+        console.error(`[Email] Error downloading attachment:`, downloadError.message);
+        // Continue sending email without attachment
+      }
     }
 
-    await transporter.sendMail(mailOptions);
-
+    const info = await transporter.sendMail(mailOptions);
     console.log(`[Email] Sent to ${to}: ${subject}`);
+    console.log(`[Email] Response:`, info.response);
     return { success: true };
   } catch (error: any) {
     console.error(`[Email] Failed to send to ${to}:`, error.message);

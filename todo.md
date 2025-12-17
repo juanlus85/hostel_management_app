@@ -356,3 +356,13 @@
 - [x] No se pueden crear facturas - pide seleccionar un negocio (corregido: validación y mensaje de ayuda)
 - [x] Crear incidencia dice que el título es obligatorio aunque tenga título (corregido: separar validaciones)
 - [x] Inventario pide seleccionar un negocio (corregido: validación y mensaje de ayuda)
+
+## Bugs Persistentes en Producción (v23)
+- [x] currentBusinessId sigue siendo undefined - facturas/incidencias/inventario no funcionan (solucionado con seed-businesses.mjs)
+- [x] Cerrar caja sigue sin funcionar en producción (solucionado con seed-businesses.mjs)
+
+## Bugs Finales (v24)
+- [x] Adjuntos en emails de facturas no se adjuntan al correo (corregido: descargar archivo antes de adjuntar)
+- [x] Selector de color en empleados ha desaparecido (restaurado)
+- [x] Verificar que los faltantes en inventario se pueden eliminar correctamente (ya existe botón de check verde)
+- [x] Añadir funcionalidad de eliminar incidencias (botón + diálogo de confirmación)

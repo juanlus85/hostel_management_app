@@ -41,6 +41,8 @@ export default function Incidencias() {
   const [editDescription, setEditDescription] = useState("");
   const [editPriority, setEditPriority] = useState<"low" | "medium" | "high" | "urgent">("medium");
   const [editNotes, setEditNotes] = useState("");
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deletingIncident, setDeletingIncident] = useState<any>(null);
 
   const utils = trpc.useUtils();
 
@@ -69,6 +71,16 @@ export default function Incidencias() {
     onSuccess: () => {
       toast.success("Incidencia actualizada");
       utils.incidents.list.invalidate();
+    },
+    onError: (error) => toast.error("Error: " + error.message),
+  });
+
+  const deleteIncident = trpc.incidents.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Incidencia eliminada");
+      utils.incidents.list.invalidate();
+      setIsDeleteDialogOpen(false);
+      setDeletingIncident(null);
     },
     onError: (error) => toast.error("Error: " + error.message),
   });
@@ -123,6 +135,16 @@ export default function Incidencias() {
     });
     setIsEditDialogOpen(false);
     setEditingIncident(null);
+  };
+
+  const openDeleteDialog = (incident: any) => {
+    setDeletingIncident(incident);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteIncident = () => {
+    if (!deletingIncident) return;
+    deleteIncident.mutate({ id: deletingIncident.id });
   };
 
   // Filter incidents
@@ -298,6 +320,14 @@ export default function Incidencias() {
                             ))}
                           </SelectContent>
                         </Select>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => openDeleteDialog(incident)}
+                        >
+                          Eliminar
+                        </Button>
                       </div>
                     </div>
                   </div>
@@ -364,6 +394,36 @@ export default function Incidencias() {
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancelar</Button>
             <Button onClick={handleUpdateIncident} disabled={updateIncident.isPending}>
               {updateIncident.isPending ? "Guardando..." : "Guardar cambios"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Eliminar incidencia</DialogTitle>
+            <DialogDescription>
+              ¿Estás seguro de que quieres eliminar esta incidencia?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground">
+              <strong>{deletingIncident?.title}</strong>
+            </p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Esta acción no se puede deshacer.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancelar</Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDeleteIncident} 
+              disabled={deleteIncident.isPending}
+            >
+              {deleteIncident.isPending ? "Eliminando..." : "Eliminar incidencia"}
             </Button>
           </DialogFooter>
         </DialogContent>

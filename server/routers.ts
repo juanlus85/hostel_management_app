@@ -64,6 +64,7 @@ export const appRouter = router({
       pin: z.string().max(6).optional(),
       isActive: z.boolean().optional(),
       scheduleTemplate: z.string().optional(), // JSON string with weekly schedule template
+      color: z.string().optional(), // Color for calendar display
     })).mutation(async ({ input }) => {
       const { id, ...data } = input;
       await db.updateUser(id, data);
@@ -590,6 +591,10 @@ export const appRouter = router({
       } else {
         await db.updateIncident(id, data);
       }
+      return { success: true };
+    }),
+    delete: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
+      await db.deleteIncident(input.id);
       return { success: true };
     }),
   }),
