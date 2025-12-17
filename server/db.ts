@@ -989,7 +989,7 @@ export async function getRoomStatusByDate(date: string) {
 export async function updateRoomStatus(data: {
   roomNumber: string;
   date: string;
-  status: "checkout" | "continues" | "empty";
+  status: "checkout" | "continues" | "empty" | "ready";
   beds?: number;
   notes?: string;
   updatedBy: number;

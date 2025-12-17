@@ -387,7 +387,7 @@ export const roomStatus = mysqlTable("room_status", {
   id: int("id").autoincrement().primaryKey(),
   roomNumber: varchar("roomNumber", { length: 10 }).notNull(),
   date: varchar("date", { length: 10 }).notNull(), // YYYY-MM-DD
-  status: mysqlEnum("status", ["checkout", "continues", "empty"]).notNull(),
+  status: mysqlEnum("status", ["checkout", "continues", "empty", "ready"]).notNull(),
   beds: int("beds"), // Solo para habitación 42
   notes: text("notes"),
   updatedBy: int("updatedBy").notNull(),

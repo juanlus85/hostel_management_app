@@ -1,0 +1,1 @@
+ALTER TABLE `room_status` MODIFY COLUMN `status` enum('checkout','continues','empty','ready') NOT NULL;

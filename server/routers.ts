@@ -413,7 +413,7 @@ export const appRouter = router({
       hasVAT: z.boolean().default(true),
       notes: z.string().optional(),
     })).mutation(async ({ input, ctx }) => {
-      const id = await db.createInvoice({ ...input, userId: ctx.user.id });
+      const id = await db.createInvoice({ ...input, userId: ctx.user.id, updatedBy: ctx.user.id });
       
       // Send email notification with invoice
       try {
@@ -1055,7 +1055,7 @@ export const appRouter = router({
     update: housekeepingProcedure.input(z.object({
       roomNumber: z.string(),
       date: z.string(),
-      status: z.enum(["checkout", "continues", "empty"]),
+      status: z.enum(["checkout", "continues", "empty", "ready"]),
       beds: z.number().optional(),
       notes: z.string().optional(),
     })).mutation(async ({ input, ctx }) => {

@@ -25,6 +25,11 @@ const STATUS_CONFIG = {
     color: "bg-green-100 text-green-700 border-green-300",
     icon: CheckCircle2,
   },
+  ready: {
+    label: "Habitación Lista",
+    color: "bg-green-700 text-white border-green-800",
+    icon: CheckCircle2,
+  },
 };
 
 export default function Housekeeping() {
@@ -44,7 +49,7 @@ export default function Housekeeping() {
     return roomStatuses?.find(r => r.roomNumber === roomNumber);
   };
 
-  const handleStatusChange = (roomNumber: string, status: "checkout" | "continues" | "empty") => {
+  const handleStatusChange = (roomNumber: string, status: "checkout" | "continues" | "empty" | "ready") => {
     updateStatus.mutate({
       roomNumber,
       date: currentDate,

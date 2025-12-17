@@ -434,3 +434,10 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Calendario: turnos del último día del mes se crean pero no se muestran (corregido monthRange con formato local)
 - [x] Rol housekeeping no aparece en el formulario de crear/editar empleados (agregado a formularios y backend)
 - [x] Menú housekeeping ahora visible para TODOS los usuarios (admin, user, housekeeping) según requerimiento
+
+
+## Bugs y Mejoras v31
+- [x] Error al crear facturas: falta campo updatedBy en INSERT (agregado updatedBy = userId)
+- [x] Menú housekeeping muestra todo igual que empleado (corregido: ahora solo ve horarios, tareas, incidencias, inventario, housekeeping)
+- [x] Duplicado: aparece "Horarios" y "Turnos" en el menú (unificado: ahora solo "Turnos" en ambos menús)
+- [x] Agregar estado "Habitación Lista" en verde oscuro a la gestión de habitaciones (agregado con bg-green-700)

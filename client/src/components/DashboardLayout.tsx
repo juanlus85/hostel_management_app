@@ -61,7 +61,7 @@ const menuItems = [
 ];
 
 const housekeepingMenuItems = [
-  { icon: Calendar, label: "Horarios", path: "/turnos" },
+  { icon: Calendar, label: "Turnos", path: "/turnos" },
   { icon: CheckSquare, label: "Tareas", path: "/tareas" },
   { icon: AlertTriangle, label: "Incidencias", path: "/incidencias" },
   { icon: Package, label: "Inventario", path: "/inventario" },
@@ -233,8 +233,8 @@ function DashboardLayoutContent({
   const { selectedBusiness, setSelectedBusiness } = useBusinessContext();
   const isAdmin = user?.role === "admin";
   const isHousekeeping = user?.role === "housekeeping";
-  // Todos los usuarios ven el menú completo incluyendo housekeeping
-  const currentMenuItems = [...menuItems, ...housekeepingMenuItems];
+  // Housekeeping solo ve su menú específico, otros ven el menú completo
+  const currentMenuItems = isHousekeeping ? housekeepingMenuItems : [...menuItems, ...housekeepingMenuItems];
 
   useEffect(() => {
     if (isCollapsed) {
