@@ -233,7 +233,8 @@ function DashboardLayoutContent({
   const { selectedBusiness, setSelectedBusiness } = useBusinessContext();
   const isAdmin = user?.role === "admin";
   const isHousekeeping = user?.role === "housekeeping";
-  const currentMenuItems = isHousekeeping ? housekeepingMenuItems : menuItems;
+  // Todos los usuarios ven el menú completo incluyendo housekeeping
+  const currentMenuItems = [...menuItems, ...housekeepingMenuItems];
 
   useEffect(() => {
     if (isCollapsed) {

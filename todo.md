@@ -428,3 +428,9 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Agregar campos createdBy/updatedBy a tablas
 
 **Nota:** Visualización de metadatos en frontend pendiente para v30
+
+
+## Bugs Reportados v30
+- [x] Calendario: turnos del último día del mes se crean pero no se muestran (corregido monthRange con formato local)
+- [x] Rol housekeeping no aparece en el formulario de crear/editar empleados (agregado a formularios y backend)
+- [x] Menú housekeeping ahora visible para TODOS los usuarios (admin, user, housekeeping) según requerimiento

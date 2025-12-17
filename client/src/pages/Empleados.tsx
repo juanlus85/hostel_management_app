@@ -31,7 +31,7 @@ export default function Empleados() {
   const isAdmin = currentUser?.role === "admin";
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [isRoleDialog, setIsRoleDialog] = useState(false);
-  const [newRole, setNewRole] = useState<"user" | "admin">("user");
+  const [newRole, setNewRole] = useState<"user" | "admin" | "housekeeping">("user");
   
   // Create employee form
   const [isCreateDialog, setIsCreateDialog] = useState(false);
@@ -39,7 +39,7 @@ export default function Empleados() {
   const [newEmail, setNewEmail] = useState("");
   const [newUsername, setNewUsername] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  const [newEmployeeRole, setNewEmployeeRole] = useState<"user" | "admin">("user");
+  const [newEmployeeRole, setNewEmployeeRole] = useState<"user" | "admin" | "housekeeping">("user");
   
   // Change password dialog
   const [isPasswordDialog, setIsPasswordDialog] = useState(false);
@@ -370,18 +370,21 @@ export default function Empleados() {
                 </div>
                 <div className="grid gap-2">
                   <Label>Rol</Label>
-                  <Select value={newEmployeeRole} onValueChange={(v: "user" | "admin") => setNewEmployeeRole(v)}>
+                  <Select value={newEmployeeRole} onValueChange={(v: "user" | "admin" | "housekeeping") => setNewEmployeeRole(v)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="user">Empleado</SelectItem>
                       <SelectItem value="admin">Administrador</SelectItem>
+                      <SelectItem value="housekeeping">Housekeeping</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
                     {newEmployeeRole === "admin" 
-                      ? "Acceso completo: gestión de empleados, turnos, caja y configuración" 
+                      ? "Acceso completo: gestión de empleados, turnos, caja y configuración"
+                      : newEmployeeRole === "housekeeping"
+                      ? "Acceso limitado: horarios, tareas, incidencias, inventario y gestión de habitaciones" 
                       : "Acceso básico: fichaje, registro de caja e incidencias"}
                   </p>
                 </div>
@@ -539,18 +542,21 @@ export default function Empleados() {
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <Select value={newRole} onValueChange={(v: "user" | "admin") => setNewRole(v)}>
+            <Select value={newRole} onValueChange={(v: "user" | "admin" | "housekeeping") => setNewRole(v)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="user">Empleado</SelectItem>
                 <SelectItem value="admin">Administrador</SelectItem>
+                <SelectItem value="housekeeping">Housekeeping</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-sm text-muted-foreground mt-2">
               {newRole === "admin" 
                 ? "Los administradores pueden gestionar empleados, turnos y configuración." 
+                : newRole === "housekeeping"
+                ? "Housekeeping puede acceder a horarios, tareas, incidencias, inventario y gestión de habitaciones."
                 : "Los empleados pueden registrar turnos, caja e incidencias."}
             </p>
           </div>

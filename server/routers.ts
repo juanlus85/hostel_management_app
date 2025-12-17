@@ -68,7 +68,7 @@ export const appRouter = router({
       id: z.number(),
       name: z.string().optional(),
       email: z.string().optional(),
-      role: z.enum(["user", "admin"]).optional(),
+      role: z.enum(["user", "admin", "housekeeping"]).optional(),
       pin: z.string().max(6).optional(),
       isActive: z.boolean().optional(),
       scheduleTemplate: z.string().optional(), // JSON string with weekly schedule template
@@ -838,7 +838,7 @@ export const appRouter = router({
       email: z.string().optional(),
       username: z.string(),
       password: z.string().min(4),
-      role: z.enum(["user", "admin"]).default("user"),
+      role: z.enum(["user", "admin", "housekeeping"]).default("user"),
     })).mutation(async ({ input }) => {
       const id = await db.createEmployeeWithCredentials(input.name, input.email, input.username, input.password, input.role);
       return { success: true, id };
