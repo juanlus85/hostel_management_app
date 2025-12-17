@@ -476,3 +476,21 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] SOLUCIÓN: Agregado item Housekeeping con icono Sparkles al menuItems en DashboardLayout
 - [x] SOLUCIÓN: Agregado botón verde "Marcar como Lista" que aparece cuando estado != "ready"
 - [x] SOLUCIÓN: Agregada opción "Habitación Lista" al selector de estado
+
+
+## Sistema de Notificaciones (v35)
+
+### Notificaciones de Checkout
+- [ ] Crear procedimiento tRPC para enviar notificaciones cuando se registra checkout
+- [ ] Integrar notificaciones en el flujo de actualización de estado en Housekeeping
+- [ ] Notificar a todos los usuarios con rol "housekeeping"
+- [ ] Incluir número de habitación y fecha en la notificación
+
+
+## Mejora de Menú (v35)
+
+- [x] Eliminar separador "ADMINISTRACIÓN" del menú lateral
+- [x] Mostrar todos los menús en lista continua sin separación
+- [x] Los menús de admin (Empleados, Proveedores, Cierre Trimestral, Configuración) deben aparecer después de Housekeeping
+- [x] SOLUCIÓN: Fusionado adminMenuItems con menuItems en currentMenuItems para admins
+- [x] SOLUCIÓN: Eliminado bloque completo de sección ADMINISTRACIÓN con separador

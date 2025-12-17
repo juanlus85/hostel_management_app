@@ -240,6 +240,8 @@ function DashboardLayoutContent({
   // User ve menú completo sin opciones admin
   const currentMenuItems = isHousekeeping 
     ? housekeepingMenuItems 
+    : isAdmin
+    ? [...menuItems, ...adminMenuItems]
     : menuItems;
 
   useEffect(() => {
@@ -361,37 +363,7 @@ function DashboardLayoutContent({
               })}
             </SidebarMenu>
 
-            {isAdmin && (
-              <>
-                {!isCollapsed && (
-                  <div className="px-4 py-2 mt-4">
-                    <span className="text-xs font-medium text-sidebar-foreground/50 uppercase tracking-wider">
-                      Administración
-                    </span>
-                  </div>
-                )}
-                <SidebarMenu className="px-2">
-                  {adminMenuItems.map(item => {
-                    const isActive = location === item.path;
-                    return (
-                      <SidebarMenuItem key={item.path}>
-                        <SidebarMenuButton
-                          isActive={isActive}
-                          onClick={() => setLocation(item.path)}
-                          tooltip={item.label}
-                          className={`h-10 transition-all font-normal`}
-                        >
-                          <item.icon
-                            className={`h-4 w-4 ${isActive ? "text-sidebar-primary" : "text-sidebar-foreground/70"}`}
-                          />
-                          <span className="text-sidebar-foreground">{item.label}</span>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    );
-                  })}
-                </SidebarMenu>
-              </>
-            )}
+
           </SidebarContent>
 
           <SidebarFooter className="p-3 border-t border-sidebar-border">
