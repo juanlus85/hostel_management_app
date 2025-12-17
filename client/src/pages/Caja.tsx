@@ -650,7 +650,7 @@ export default function Caja() {
                   step="0.01"
                   value={prepaidBooking}
                   onChange={(e) => setPrepaidBooking(e.target.value)}
-                  disabled={isClosed}
+                  disabled={selectedBusiness === "tienda" || isClosed}
                   placeholder="0.00"
                 />
               </div>

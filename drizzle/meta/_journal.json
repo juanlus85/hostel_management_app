@@ -85,6 +85,13 @@
       "when": 1765978630023,
       "tag": "0011_smart_catseye",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "5",
+      "when": 1765989509788,
+      "tag": "0012_harsh_dagger",
+      "breakpoints": true
     }
   ]
 }

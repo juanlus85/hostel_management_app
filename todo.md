@@ -413,3 +413,18 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
   - [x] Optimizar lista de facturas para móvil (flex-col en mobile, flex-row en desktop)
   - [x] Ajustar formularios de crear/editar factura (grid-cols-1 en mobile, grid-cols-2 en desktop)
   - [x] Mejorar distribución de checkboxes y botones en móvil
+
+
+## Mejoras v29 (Completadas)
+- [x] Bloquear campo Prepago Booking en caja de Tienda
+- [x] Agregar rol housekeeping al enum de roles
+- [x] Crear housekeepingProcedure en backend
+- [x] Configurar menú de navegación para housekeeping
+- [x] Crear tabla room_status para gestión de habitaciones
+- [x] Crear página Housekeeping.tsx
+- [x] Agregar ruta /housekeeping
+- [x] Corregir bug último día del mes en calendario
+- [x] Corregir bug fecha incorrecta al añadir turno
+- [x] Agregar campos createdBy/updatedBy a tablas
+
+**Nota:** Visualización de metadatos en frontend pendiente para v30

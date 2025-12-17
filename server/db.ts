@@ -19,7 +19,8 @@ import {
   cashClosings, InsertCashClosing, CashClosing,
   cashMovements, InsertCashMovement, CashMovement,
   notifications, InsertNotification, Notification,
-  systemSettings, InsertSystemSetting, SystemSetting
+  systemSettings, InsertSystemSetting, SystemSetting,
+  roomStatus, InsertRoomStatus, RoomStatus
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -975,4 +976,54 @@ export async function deleteOldNotifications(daysOld = 30) {
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - daysOld);
   await db.delete(notifications).where(sql`${notifications.createdAt} < ${cutoffDate}`);
+}
+
+
+// ==================== ROOM STATUS ====================
+export async function getRoomStatusByDate(date: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(roomStatus).where(eq(roomStatus.date, date));
+}
+
+export async function updateRoomStatus(data: {
+  roomNumber: string;
+  date: string;
+  status: "checkout" | "continues" | "empty";
+  beds?: number;
+  notes?: string;
+  updatedBy: number;
+}) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const existing = await db.select()
+    .from(roomStatus)
+    .where(and(
+      eq(roomStatus.roomNumber, data.roomNumber),
+      eq(roomStatus.date, data.date)
+    ))
+    .limit(1);
+  
+  if (existing.length > 0) {
+    await db.update(roomStatus)
+      .set({
+        status: data.status,
+        beds: data.beds,
+        notes: data.notes,
+        updatedBy: data.updatedBy,
+      })
+      .where(eq(roomStatus.id, existing[0].id));
+    return { ...existing[0], ...data };
+  } else {
+    await db.insert(roomStatus).values(data);
+    const inserted = await db.select()
+      .from(roomStatus)
+      .where(and(
+        eq(roomStatus.roomNumber, data.roomNumber),
+        eq(roomStatus.date, data.date)
+      ))
+      .limit(1);
+    return inserted[0] || null;
+  }
 }

@@ -85,8 +85,11 @@ export default function Turnos() {
   // Get days of the month for calendar view
   const monthDays = useMemo(() => {
     const days: (Date | null)[] = [];
-    const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-    const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
     
     // Add empty days for the start of the week
     const startDayOfWeek = (firstDay.getDay() + 6) % 7; // Monday = 0
@@ -94,9 +97,9 @@ export default function Turnos() {
       days.push(null);
     }
     
-    // Add all days of the month
-    for (let d = 1; d <= lastDay.getDate(); d++) {
-      days.push(new Date(currentDate.getFullYear(), currentDate.getMonth(), d));
+    // Add all days of the month (1 to daysInMonth inclusive)
+    for (let d = 1; d <= daysInMonth; d++) {
+      days.push(new Date(year, month, d));
     }
     
     return days;
@@ -226,7 +229,9 @@ export default function Turnos() {
   // Quick add shift by clicking on a day
   const handleDayClick = (day: Date, userId?: number) => {
     if (!isAdmin) return;
-    setSelectedDate(day.toISOString().split('T')[0]);
+    // Usar formato local para evitar desplazamiento de días por UTC
+    const dateStr = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
+    setSelectedDate(dateStr);
     if (userId) setSelectedUserId(userId.toString());
     setIsDialogOpen(true);
   };

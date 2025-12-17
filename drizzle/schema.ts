@@ -9,7 +9,7 @@ export const users = mysqlTable("users", {
   username: varchar("username", { length: 100 }), // Username for login
   passwordHash: varchar("passwordHash", { length: 255 }), // Hashed password
   loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  role: mysqlEnum("role", ["user", "admin", "housekeeping"]).default("user").notNull(),
   pin: varchar("pin", { length: 6 }), // PIN for quick clock-in/out
   color: varchar("color", { length: 7 }).default("#3b82f6"), // Color for calendar display
   isActive: boolean("isActive").default(true).notNull(),
@@ -123,6 +123,7 @@ export const invoices = mysqlTable("invoices", {
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedBy: int("updatedBy"),
 });
 
 export type Invoice = typeof invoices.$inferSelect;
@@ -141,6 +142,8 @@ export const inventoryItems = mysqlTable("inventory_items", {
   costPrice: decimal("costPrice", { precision: 10, scale: 2 }),
   isActive: boolean("isActive").default(true).notNull(),
   notes: text("notes"),
+  createdBy: int("createdBy"),
+  updatedBy: int("updatedBy"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -198,6 +201,7 @@ export const incidents = mysqlTable("incidents", {
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedBy: int("updatedBy"),
 });
 
 export type Incident = typeof incidents.$inferSelect;
@@ -218,6 +222,7 @@ export const tasks = mysqlTable("tasks", {
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedBy: int("updatedBy"),
 });
 
 export type Task = typeof tasks.$inferSelect;
@@ -375,3 +380,20 @@ export const systemSettings = mysqlTable("system_settings", {
 
 export type SystemSetting = typeof systemSettings.$inferSelect;
 export type InsertSystemSetting = typeof systemSettings.$inferInsert;
+
+
+// ==================== ROOM STATUS (Estado de Habitaciones) ====================
+export const roomStatus = mysqlTable("room_status", {
+  id: int("id").autoincrement().primaryKey(),
+  roomNumber: varchar("roomNumber", { length: 10 }).notNull(),
+  date: varchar("date", { length: 10 }).notNull(), // YYYY-MM-DD
+  status: mysqlEnum("status", ["checkout", "continues", "empty"]).notNull(),
+  beds: int("beds"), // Solo para habitación 42
+  notes: text("notes"),
+  updatedBy: int("updatedBy").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type RoomStatus = typeof roomStatus.$inferSelect;
+export type InsertRoomStatus = typeof roomStatus.$inferInsert;

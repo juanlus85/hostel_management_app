@@ -60,6 +60,14 @@ const menuItems = [
   { icon: CheckSquare, label: "Tareas", path: "/tareas" },
 ];
 
+const housekeepingMenuItems = [
+  { icon: Calendar, label: "Horarios", path: "/turnos" },
+  { icon: CheckSquare, label: "Tareas", path: "/tareas" },
+  { icon: AlertTriangle, label: "Incidencias", path: "/incidencias" },
+  { icon: Package, label: "Inventario", path: "/inventario" },
+  { icon: LayoutDashboard, label: "Housekeeping", path: "/housekeeping" },
+];
+
 const adminMenuItems = [
   { icon: Users, label: "Empleados", path: "/empleados" },
   { icon: Truck, label: "Proveedores", path: "/proveedores" },
@@ -220,10 +228,12 @@ function DashboardLayoutContent({
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const activeMenuItem = [...menuItems, ...adminMenuItems].find(item => item.path === location);
+  const activeMenuItem = [...menuItems, ...adminMenuItems, ...housekeepingMenuItems].find(item => item.path === location);
   const isMobile = useIsMobile();
   const { selectedBusiness, setSelectedBusiness } = useBusinessContext();
   const isAdmin = user?.role === "admin";
+  const isHousekeeping = user?.role === "housekeeping";
+  const currentMenuItems = isHousekeeping ? housekeepingMenuItems : menuItems;
 
   useEffect(() => {
     if (isCollapsed) {
@@ -324,7 +334,7 @@ function DashboardLayoutContent({
 
           <SidebarContent className="gap-0 py-2">
             <SidebarMenu className="px-2">
-              {menuItems.map(item => {
+              {currentMenuItems.map(item => {
                 const isActive = location === item.path;
                 return (
                   <SidebarMenuItem key={item.path}>

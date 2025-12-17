@@ -14,6 +14,14 @@ const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
   return next({ ctx });
 });
 
+// Housekeeping procedure (housekeeping role or admin)
+const housekeepingProcedure = protectedProcedure.use(({ ctx, next }) => {
+  if (ctx.user.role !== 'housekeeping' && ctx.user.role !== 'admin') {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Solo housekeeping puede realizar esta acción' });
+  }
+  return next({ ctx });
+});
+
 export const appRouter = router({
   system: systemRouter,
   
@@ -1034,6 +1042,27 @@ export const appRouter = router({
         }
       }
       return testSMTPConnection(input);
+    }),
+  }),
+
+  // ==================== ROOM STATUS ====================
+  roomStatus: router({
+    getByDate: housekeepingProcedure.input(z.object({
+      date: z.string(),
+    })).query(async ({ input }) => {
+      return db.getRoomStatusByDate(input.date);
+    }),
+    update: housekeepingProcedure.input(z.object({
+      roomNumber: z.string(),
+      date: z.string(),
+      status: z.enum(["checkout", "continues", "empty"]),
+      beds: z.number().optional(),
+      notes: z.string().optional(),
+    })).mutation(async ({ input, ctx }) => {
+      return db.updateRoomStatus({
+        ...input,
+        updatedBy: ctx.user.id,
+      });
     }),
   }),
 });
