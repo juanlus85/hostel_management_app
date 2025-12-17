@@ -366,3 +366,8 @@
 - [x] Selector de color en empleados ha desaparecido (restaurado)
 - [x] Verificar que los faltantes en inventario se pueden eliminar correctamente (ya existe botón de check verde)
 - [x] Añadir funcionalidad de eliminar incidencias (botón + diálogo de confirmación)
+
+## Bugs Persistentes (v25)
+- [ ] Adjuntos en emails siguen sin adjuntarse al correo
+- [x] Color de empleados se guarda pero no persiste al recargar (corregido: campo ya existía en BD)
+- [x] Color de empleados no se muestra en el calendario (corregido: actualizado getUserColor para usar colores personalizados)

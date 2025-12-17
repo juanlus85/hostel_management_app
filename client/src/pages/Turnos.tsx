@@ -256,10 +256,20 @@ export default function Turnos() {
     return map;
   }, [shifts]);
 
-  // Get user color
+  // Get user color (returns Tailwind classes for predefined colors or null for custom colors)
   const getUserColor = (userId: number) => {
+    const user = users?.find(u => u.id === userId);
+    // If user has custom color, return null (we'll use inline styles)
+    if (user?.color) return null;
+    // Fallback to predefined Tailwind colors
     const index = (users?.findIndex(u => u.id === userId) || 0) % COLORS.length;
     return COLORS[index];
+  };
+
+  // Get user custom color hex
+  const getUserColorHex = (userId: number) => {
+    const user = users?.find(u => u.id === userId);
+    return user?.color || null;
   };
 
   // Get user name
@@ -478,10 +488,18 @@ export default function Turnos() {
                   {users?.map(u => {
                     const userShifts = shiftsByUser.get(u.id) || [];
                     const colorClass = getUserColor(u.id);
+                    const customColor = getUserColorHex(u.id);
                     return (
                       <div key={u.id} className="grid grid-cols-8 gap-1 border-t py-2">
                         <div className="p-2 flex items-center">
-                          <span className={`text-sm font-medium px-2 py-1 rounded ${colorClass} border`}>
+                          <span 
+                            className={`text-sm font-medium px-2 py-1 rounded border ${colorClass || ''}`}
+                            style={customColor ? {
+                              backgroundColor: `${customColor}15`,
+                              color: customColor,
+                              borderColor: `${customColor}50`
+                            } : {}}
+                          >
                             {u.name?.split(' ')[0] || 'Sin nombre'}
                           </span>
                         </div>
@@ -497,7 +515,12 @@ export default function Turnos() {
                               {dayShifts.map((shift: any) => (
                                 <div 
                                   key={shift.id} 
-                                  className={`text-xs p-1.5 rounded mb-1 ${colorClass} border cursor-pointer hover:opacity-80 group relative`}
+                                  className={`text-xs p-1.5 rounded mb-1 border cursor-pointer hover:opacity-80 group relative ${colorClass || ''}`}
+                                  style={customColor ? {
+                                    backgroundColor: `${customColor}15`,
+                                    color: customColor,
+                                    borderColor: `${customColor}50`
+                                  } : {}}
                                   onClick={(e) => { e.stopPropagation(); if (isAdmin) openEditDialog(shift); }}
                                 >
                                   <div className="font-medium">{shift.scheduledStart}</div>
@@ -509,8 +532,8 @@ export default function Turnos() {
                                     >
                                       <Trash2 className="h-3 w-3" />
                                     </button>
-                                  )}
-                                </div>
+                                )}
+                              </div>
                               ))}
                             </div>
                           );
@@ -570,12 +593,20 @@ export default function Turnos() {
                             {day.getDate()}
                           </div>
                           <div className="space-y-1">
-                            {dayShifts.slice(0, 3).map((shift: any) => (
-                              <div 
-                                key={shift.id}
-                                className={`text-[10px] sm:text-xs px-1 py-0.5 rounded truncate ${getUserColor(shift.userId)} group relative cursor-pointer hover:opacity-80`}
-                                onClick={(e) => { e.stopPropagation(); if (isAdmin) openEditDialog(shift); }}
-                              >
+                            {dayShifts.slice(0, 3).map((shift: any) => {
+                              const shiftColorClass = getUserColor(shift.userId);
+                              const shiftCustomColor = getUserColorHex(shift.userId);
+                              return (
+                                <div 
+                                  key={shift.id}
+                                  className={`text-[10px] sm:text-xs px-1 py-0.5 rounded truncate group relative cursor-pointer hover:opacity-80 ${shiftColorClass || ''}`}
+                                  style={shiftCustomColor ? {
+                                    backgroundColor: `${shiftCustomColor}15`,
+                                    color: shiftCustomColor,
+                                    borderColor: `${shiftCustomColor}50`
+                                  } : {}}
+                                  onClick={(e) => { e.stopPropagation(); if (isAdmin) openEditDialog(shift); }}
+                                >
                                 <span className="hidden sm:inline">{getUserName(shift.userId)} </span>
                                 <span className="sm:hidden">{getUserName(shift.userId).split(' ')[0]} </span>
                                 {shift.scheduledStart} - {shift.scheduledEnd}
@@ -588,7 +619,8 @@ export default function Turnos() {
                                   </button>
                                 )}
                               </div>
-                            ))}
+                              );
+                            })}
                             {dayShifts.length > 3 && (
                               <div className="text-[10px] sm:text-xs text-muted-foreground">+{dayShifts.length - 3} más</div>
                             )}
@@ -627,10 +659,18 @@ export default function Turnos() {
                 return sum + hours;
               }, 0);
               const colorClass = getUserColor(u.id);
+              const customColor = getUserColorHex(u.id);
               return (
                 <div key={u.id} className="flex items-center justify-between p-3 rounded-lg border">
                   <div className="flex items-center gap-3">
-                    <span className={`text-sm font-medium px-2 py-1 rounded ${colorClass} border`}>
+                    <span 
+                      className={`text-sm font-medium px-2 py-1 rounded border ${colorClass || ''}`}
+                      style={customColor ? {
+                        backgroundColor: `${customColor}15`,
+                        color: customColor,
+                        borderColor: `${customColor}50`
+                      } : {}}
+                    >
                       {u.name?.split(' ')[0] || 'Sin nombre'}
                     </span>
                     <span className="text-sm text-muted-foreground">{u.name}</span>

@@ -11,6 +11,7 @@ export const users = mysqlTable("users", {
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
   pin: varchar("pin", { length: 6 }), // PIN for quick clock-in/out
+  color: varchar("color", { length: 7 }).default("#3b82f6"), // Color for calendar display
   isActive: boolean("isActive").default(true).notNull(),
   // Schedule template: JSON with default shifts per day of week
   // Format: {"monday": {"start": "10:00", "end": "18:00"}, "tuesday": null, ...}
