@@ -348,3 +348,11 @@
 - [x] Archivo .env.example con todas las variables
 - [x] Configuración PM2 para producción
 - [x] Script probado y funcionando correctamente
+
+
+## Bugs Reportados en Producción (v22)
+- [x] Cerrar caja no funciona - el botón no hace nada (corregido: encadenar mutaciones)
+- [x] Calendario mensual desplazado un día - los turnos aparecen un día después (corregido: usar fecha local en lugar de UTC)
+- [x] No se pueden crear facturas - pide seleccionar un negocio (corregido: validación y mensaje de ayuda)
+- [x] Crear incidencia dice que el título es obligatorio aunque tenga título (corregido: separar validaciones)
+- [x] Inventario pide seleccionar un negocio (corregido: validación y mensaje de ayuda)

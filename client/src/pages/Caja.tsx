@@ -217,7 +217,7 @@ export default function Caja() {
 
   const handleClose = () => {
     if (!cashClosing?.id) return;
-    // Usar changeNext que ya tiene la lógica correcta (totalCashCalc si no se ha modificado)
+    // Primero actualizar y luego cerrar
     updateClosing.mutate({
       id: cashClosing.id,
       coins010, coins020, coins050, coins100, coins200,
@@ -233,8 +233,12 @@ export default function Caja() {
       difference: difference.toFixed(2),
       changeForNextDay: changeNext.toFixed(2),
       notes,
+    }, {
+      onSuccess: () => {
+        // Después de actualizar, cerrar la caja
+        closeClosing.mutate({ id: cashClosing.id });
+      }
     });
-    closeClosing.mutate({ id: cashClosing.id });
   };
 
   const handleReopen = () => {

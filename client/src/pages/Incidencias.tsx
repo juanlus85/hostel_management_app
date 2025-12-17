@@ -80,13 +80,17 @@ export default function Incidencias() {
   };
 
   const handleCreateIncident = () => {
-    if (!currentBusinessId || !title) {
+    if (!currentBusinessId) {
+      toast.error("Selecciona un negocio");
+      return;
+    }
+    if (!title.trim()) {
       toast.error("El título es obligatorio");
       return;
     }
     createIncident.mutate({
       businessId: currentBusinessId,
-      title,
+      title: title.trim(),
       description,
       priority,
     });
@@ -201,8 +205,11 @@ export default function Incidencias() {
               </div>
             </div>
             <DialogFooter>
+              {!currentBusinessId && (
+                <p className="text-sm text-muted-foreground mr-auto">Selecciona un negocio para continuar</p>
+              )}
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
-              <Button onClick={handleCreateIncident} disabled={createIncident.isPending}>
+              <Button onClick={handleCreateIncident} disabled={createIncident.isPending || !currentBusinessId}>
                 {createIncident.isPending ? "Guardando..." : "Reportar"}
               </Button>
             </DialogFooter>

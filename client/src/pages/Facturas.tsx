@@ -407,8 +407,11 @@ export default function Facturas() {
               </div>
             </div>
             <DialogFooter>
+              {!currentBusinessId && (
+                <p className="text-sm text-muted-foreground mr-auto">Selecciona un negocio para continuar</p>
+              )}
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
-              <Button onClick={handleCreateInvoice} disabled={createInvoice.isPending}>
+              <Button onClick={handleCreateInvoice} disabled={createInvoice.isPending || !currentBusinessId}>
                 {createInvoice.isPending ? "Guardando..." : "Registrar factura"}
               </Button>
             </DialogFooter>

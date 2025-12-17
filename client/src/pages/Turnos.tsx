@@ -555,7 +555,8 @@ export default function Turnos() {
                       if (!day) {
                         return <div key={`empty-${i}`} className="p-1 sm:p-2 min-h-[80px] sm:min-h-[100px]" />;
                       }
-                      const dateStr = day.toISOString().split('T')[0];
+                      // Usar formato local en lugar de UTC para evitar desplazamiento de días
+                      const dateStr = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
                       const dayShifts = shiftsByDate.get(dateStr) || [];
                       const isToday = day.toDateString() === new Date().toDateString();
                       
