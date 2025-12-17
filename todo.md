@@ -368,6 +368,12 @@
 - [x] Añadir funcionalidad de eliminar incidencias (botón + diálogo de confirmación)
 
 ## Bugs Persistentes (v25)
-- [ ] Adjuntos en emails siguen sin adjuntarse al correo
 - [x] Color de empleados se guarda pero no persiste al recargar (corregido: campo ya existía en BD)
 - [x] Color de empleados no se muestra en el calendario (corregido: actualizado getUserColor para usar colores personalizados)
+
+## Bug Crítico Resuelto (v26)
+- [x] Adjuntos en emails de facturas siguen sin adjuntarse al correo - SOLUCIONADO: implementado upload a S3 antes de crear factura
+  - [x] Creado procedimiento invoices.uploadFile en backend para subir archivos a S3
+  - [x] Modificado frontend para subir archivo a S3 antes de crear factura
+  - [x] Factura ahora se crea con imageUrl válida
+  - [x] Email se envía correctamente con adjunto descargado desde S3

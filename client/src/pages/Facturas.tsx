@@ -88,6 +88,10 @@ export default function Facturas() {
     onError: (error) => toast.error("Error: " + error.message),
   });
 
+  const uploadFile = trpc.invoices.uploadFile.useMutation({
+    onError: (error) => toast.error("Error al subir archivo: " + error.message),
+  });
+
   const processOCR = trpc.ocr.processInvoice.useMutation({
     onSuccess: (data) => {
       if (data) {
@@ -175,6 +179,39 @@ export default function Facturas() {
       return;
     }
     
+    // Upload file to S3 if present
+    let fileUrl: string | undefined;
+    let fileKey: string | undefined;
+    
+    if (imageFile) {
+      try {
+        toast.info("Subiendo archivo...");
+        
+        // Convert file to base64
+        const reader = new FileReader();
+        const fileData = await new Promise<string>((resolve, reject) => {
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(imageFile);
+        });
+        
+        // Upload to S3
+        const uploadResult = await uploadFile.mutateAsync({
+          fileData,
+          fileName: imageFile.name,
+          contentType: imageFile.type,
+        });
+        
+        fileUrl = uploadResult.url;
+        fileKey = uploadResult.key;
+        console.log("[Frontend] File uploaded:", fileUrl);
+      } catch (error) {
+        console.error("[Frontend] Error uploading file:", error);
+        toast.error("Error al subir el archivo");
+        return;
+      }
+    }
+    
     createInvoice.mutate({
       businessId: currentBusinessId,
       supplier: finalSupplier || undefined,
@@ -183,6 +220,8 @@ export default function Facturas() {
       totalAmount: total || undefined,
       paymentMethod: paymentMethod || undefined,
       notes: notes.trim() || undefined,
+      imageUrl: fileUrl,
+      imageKey: fileKey,
     });
   };
 

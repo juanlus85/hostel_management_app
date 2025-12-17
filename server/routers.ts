@@ -450,6 +450,29 @@ export const appRouter = router({
       await db.deleteInvoice(input.id);
       return { success: true };
     }),
+    uploadFile: protectedProcedure.input(z.object({
+      fileData: z.string(), // base64 encoded file
+      fileName: z.string(),
+      contentType: z.string(),
+    })).mutation(async ({ input }) => {
+      const { storagePut } = await import("./storage");
+      
+      // Decode base64 to buffer
+      const base64Data = input.fileData.split(',')[1] || input.fileData;
+      const buffer = Buffer.from(base64Data, 'base64');
+      
+      // Generate unique file key
+      const timestamp = Date.now();
+      const randomSuffix = Math.random().toString(36).substring(2, 8);
+      const extension = input.fileName.split('.').pop() || 'pdf';
+      const fileKey = `invoices/${timestamp}-${randomSuffix}.${extension}`;
+      
+      // Upload to S3
+      const { url, key } = await storagePut(fileKey, buffer, input.contentType);
+      
+      console.log(`[Upload] File uploaded to S3: ${url}`);
+      return { url, key };
+    }),
   }),
 
   // ==================== INVENTORY ====================
