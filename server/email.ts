@@ -160,23 +160,43 @@ export async function sendEmailWithAttachment(
 
     // Add attachment if URL provided
     if (attachmentUrl) {
-      console.log(`[Email] Downloading attachment from: ${attachmentUrl}`);
+      console.log(`[Email] Processing attachment: ${attachmentUrl}`);
       try {
-        // Download file from URL
-        const response = await fetch(attachmentUrl);
-        if (!response.ok) {
-          console.error(`[Email] Failed to download attachment: ${response.statusText}`);
-          throw new Error(`Failed to download attachment: ${response.statusText}`);
+        let buffer: Buffer;
+        
+        // Check if it's a local file path or external URL
+        if (attachmentUrl.startsWith('/uploads/') || attachmentUrl.startsWith('uploads/')) {
+          // Local file - read from disk
+          const fs = await import('fs');
+          const path = await import('path');
+          const filePath = path.join(process.cwd(), attachmentUrl.replace(/^\//, ''));
+          console.log(`[Email] Reading local file: ${filePath}`);
+          
+          if (fs.existsSync(filePath)) {
+            buffer = fs.readFileSync(filePath);
+            console.log(`[Email] Read local file: ${buffer.length} bytes`);
+          } else {
+            console.error(`[Email] Local file not found: ${filePath}`);
+            throw new Error(`File not found: ${filePath}`);
+          }
+        } else {
+          // External URL - download from internet
+          console.log(`[Email] Downloading from URL: ${attachmentUrl}`);
+          const response = await fetch(attachmentUrl);
+          if (!response.ok) {
+            console.error(`[Email] Failed to download attachment: ${response.statusText}`);
+            throw new Error(`Failed to download attachment: ${response.statusText}`);
+          }
+          buffer = Buffer.from(await response.arrayBuffer());
+          console.log(`[Email] Downloaded attachment: ${buffer.length} bytes`);
         }
-        const buffer = Buffer.from(await response.arrayBuffer());
-        console.log(`[Email] Downloaded attachment: ${buffer.length} bytes`);
         
         mailOptions.attachments = [{
           filename: attachmentName || "factura.pdf",
           content: buffer,
         }];
       } catch (downloadError: any) {
-        console.error(`[Email] Error downloading attachment:`, downloadError.message);
+        console.error(`[Email] Error processing attachment:`, downloadError.message);
         // Continue sending email without attachment
       }
     }

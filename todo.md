@@ -377,3 +377,27 @@
   - [x] Modificado frontend para subir archivo a S3 antes de crear factura
   - [x] Factura ahora se crea con imageUrl válida
   - [x] Email se envía correctamente con adjunto descargado desde S3
+
+
+## Bug Reportado en Producción (v27)
+- [x] Adjuntos en emails siguen sin llegar en servidor de producción después de desplegar v26
+- [x] Investigar si el problema es con la subida a S3 o con la descarga en el email
+- [x] Revisar logs del servidor de producción
+- [x] Verificar que las variables de entorno de S3 estén configuradas correctamente
+
+**CAUSA RAÍZ IDENTIFICADA:**
+Las variables de entorno BUILT_IN_FORGE_API_URL y BUILT_IN_FORGE_API_KEY no están disponibles en el servidor Plesk.
+Estas variables son específicas del entorno de Manus y no se pueden usar en producción externa.
+
+**SOLUCIÓN:**
+- [x] Implementar almacenamiento local de archivos en el servidor
+- [x] Guardar archivos en /httpdocs/uploads/invoices/
+- [x] Servir archivos estáticamente desde esa carpeta
+- [x] Adjuntar archivos directamente desde disco local al email
+- [x] No depender de S3 ni servicios externos
+
+**CAMBIOS IMPLEMENTADOS:**
+- [x] Modificado server/routers.ts uploadFile para guardar archivos localmente
+- [x] Modificado server/email.ts para leer archivos desde disco local
+- [x] Modificado server/_core/vite.ts para servir /uploads como archivos estáticos
+- [x] Probado en desarrollo: archivo guardado correctamente en uploads/invoices/

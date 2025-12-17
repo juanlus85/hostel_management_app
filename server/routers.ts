@@ -455,22 +455,35 @@ export const appRouter = router({
       fileName: z.string(),
       contentType: z.string(),
     })).mutation(async ({ input }) => {
-      const { storagePut } = await import("./storage");
+      const fs = await import('fs');
+      const path = await import('path');
       
       // Decode base64 to buffer
       const base64Data = input.fileData.split(',')[1] || input.fileData;
       const buffer = Buffer.from(base64Data, 'base64');
       
-      // Generate unique file key
+      // Generate unique file name
       const timestamp = Date.now();
       const randomSuffix = Math.random().toString(36).substring(2, 8);
       const extension = input.fileName.split('.').pop() || 'pdf';
-      const fileKey = `invoices/${timestamp}-${randomSuffix}.${extension}`;
+      const fileName = `${timestamp}-${randomSuffix}.${extension}`;
       
-      // Upload to S3
-      const { url, key } = await storagePut(fileKey, buffer, input.contentType);
+      // Create uploads directory if it doesn't exist
+      const uploadsDir = path.join(process.cwd(), 'uploads', 'invoices');
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
       
-      console.log(`[Upload] File uploaded to S3: ${url}`);
+      // Save file to disk
+      const filePath = path.join(uploadsDir, fileName);
+      fs.writeFileSync(filePath, buffer);
+      
+      // Generate URL (relative to server root)
+      const url = `/uploads/invoices/${fileName}`;
+      const key = `invoices/${fileName}`;
+      
+      console.log(`[Upload] File saved locally: ${filePath}`);
+      console.log(`[Upload] File URL: ${url}`);
       return { url, key };
     }),
   }),
