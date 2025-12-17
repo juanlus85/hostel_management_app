@@ -1,11 +1,13 @@
 import { useState } from "react";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Bed, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { Bed, CheckCircle2, XCircle, Clock, Sparkles } from "lucide-react";
 
 const ROOMS = ["4", "7", "8", "15", "35", "51", "23", "42", "16", "18"];
 
@@ -119,7 +121,7 @@ export default function Housekeeping() {
                   <Label>Estado</Label>
                   <Select
                     value={status?.status || ""}
-                    onValueChange={(value) => handleStatusChange(roomNumber, value as "checkout" | "continues" | "empty")}
+                    onValueChange={(value) => handleStatusChange(roomNumber, value as "checkout" | "continues" | "empty" | "ready")}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccionar estado" />
@@ -128,6 +130,7 @@ export default function Housekeeping() {
                       <SelectItem value="checkout">Checkout (Hacer Habitación)</SelectItem>
                       <SelectItem value="continues">Continúa Reserva (Repaso)</SelectItem>
                       <SelectItem value="empty">Habitación Vacía</SelectItem>
+                      <SelectItem value="ready">Habitación Lista</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -160,6 +163,16 @@ export default function Housekeeping() {
                     rows={2}
                   />
                 </div>
+
+                {status?.status && status.status !== "ready" && (
+                  <Button
+                    onClick={() => handleStatusChange(roomNumber, "ready")}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Marcar como Lista
+                  </Button>
+                )}
               </CardContent>
             </Card>
           );

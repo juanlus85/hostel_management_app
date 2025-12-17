@@ -465,3 +465,14 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Error al crear facturas (persiste después de ejecutar SQL)
 - [x] Necesita diagnóstico del error exacto
 - [x] SOLUCIÓN: Agregar columnas faltantes a tabla invoices (script SQL_COMPLETO_INVOICES.sql)
+
+
+## Mejoras Solicitadas (v34)
+
+### Housekeeping
+- [x] Agregar "Housekeeping" al menú principal para administradores y empleados
+- [x] Actualmente solo aparece para rol housekeeping
+- [x] Agregar botón "Marcar como Lista" en vista Housekeeping para cambiar estado a "ready"
+- [x] SOLUCIÓN: Agregado item Housekeeping con icono Sparkles al menuItems en DashboardLayout
+- [x] SOLUCIÓN: Agregado botón verde "Marcar como Lista" que aparece cuando estado != "ready"
+- [x] SOLUCIÓN: Agregada opción "Habitación Lista" al selector de estado

@@ -37,7 +37,8 @@ import {
   Store,
   Truck,
   FileArchive,
-  Settings
+  Settings,
+  Sparkles
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -58,6 +59,7 @@ const menuItems = [
   { icon: Package, label: "Inventario", path: "/inventario" },
   { icon: AlertTriangle, label: "Incidencias", path: "/incidencias" },
   { icon: CheckSquare, label: "Tareas", path: "/tareas" },
+  { icon: Sparkles, label: "Housekeeping", path: "/housekeeping" },
 ];
 
 const housekeepingMenuItems = [
