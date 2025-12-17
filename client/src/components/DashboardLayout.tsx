@@ -238,8 +238,6 @@ function DashboardLayoutContent({
   // User ve menú completo sin opciones admin
   const currentMenuItems = isHousekeeping 
     ? housekeepingMenuItems 
-    : isAdmin 
-    ? [...menuItems, ...adminMenuItems] 
     : menuItems;
 
   useEffect(() => {

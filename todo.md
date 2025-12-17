@@ -447,3 +447,21 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Error al crear facturas: updatedBy ya estaba en el código, solo necesita recompilación
 - [x] Duplicado Turnos/Horarios: corregida lógica de currentMenuItems (housekeeping ve solo su menú, admin ve menú+admin, user ve solo menú)
 - [x] Rol housekeeping: agregado texto "Housekeeping" en lugar de "Empleado"
+
+
+## Bugs Reportados (v33)
+
+### Menú Duplicado
+- [x] Empleados, Proveedores, Cierre Trimestral y Configuración aparecen duplicados en el menú
+- [x] Deben aparecer solo una vez en la sección de ADMINISTRACIÓN
+- [x] SOLUCIÓN: Eliminado adminMenuItems de currentMenuItems en DashboardLayout.tsx
+
+### Dashboard
+- [x] No muestra ingresos ni gastos (muestra 0)
+- [x] En Cierre Trimestral sí aparecen los datos correctamente
+- [x] SOLUCIÓN: Crear tabla cash_closings en producción (script SQL_CASH_CLOSINGS.sql)
+
+### Facturas
+- [x] Error al crear facturas (persiste después de ejecutar SQL)
+- [x] Necesita diagnóstico del error exacto
+- [x] SOLUCIÓN: Agregar columnas faltantes a tabla invoices (script SQL_COMPLETO_INVOICES.sql)
