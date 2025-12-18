@@ -1079,6 +1079,7 @@ export const appRouter = router({
     })).mutation(async ({ input, ctx }) => {
       return db.createOtroGasto({
         ...input,
+        categoriaOtros: input.categoriaOtros || null,
         importe: input.importe.toString(),
         fecha: input.fecha as any,
         createdBy: ctx.user.id,
@@ -1104,6 +1105,7 @@ export const appRouter = router({
       const { id, importe, fecha, ...data } = input;
       return db.updateOtroGasto(id, {
         ...data,
+        categoriaOtros: data.categoriaOtros || null,
         importe: importe?.toString(),
         fecha: fecha as any,
         updatedBy: ctx.user.id,

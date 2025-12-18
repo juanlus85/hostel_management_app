@@ -539,3 +539,19 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 ### Permisos
 - [ ] Solo administradores pueden ver y gestionar otros gastos
 - [ ] Verificar rol admin en procedimientos tRPC
+
+
+## Bug Otros Gastos (v37)
+
+- [x] Error al registrar gasto cuando categoría != "Otros"
+- [x] Campo categoriaOtros debe ser null cuando categoría != "Otros"
+- [x] Actualmente envía valor por defecto causando error de inserción
+- [x] SOLUCIÓN: Agregado conversión explícita `categoriaOtros || null` en create y update
+
+
+## Bug Dashboard (v37)
+
+- [x] Dashboard no suma facturas a los gastos
+- [x] Hay facturas registradas en diciembre pero no aparecen en total de gastos
+- [x] Verificar query de invoices en getDashboardStats
+- [x] SOLUCIÓN: El código local ya tiene la integración correcta, necesita desplegar v37 a producción
