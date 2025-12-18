@@ -76,11 +76,6 @@ export default function CierreTrimestral() {
     { enabled: !!currentBusinessId }
   );
 
-  const { data: otrosGastos } = trpc.otrosGastos.list.useQuery(
-    { businessId: currentBusinessId || 1, startDate: dateRange.start, endDate: dateRange.end },
-    { enabled: !!currentBusinessId && !!dateRange.start }
-  );
-
   // Filter invoices by date range
   const quarterInvoices = useMemo(() => {
     if (!invoices) return [];
@@ -114,10 +109,6 @@ export default function CierreTrimestral() {
       totalExpenses += parseFloat(inv.total || "0");
     });
 
-    otrosGastos?.forEach((gasto: any) => {
-      totalExpenses += parseFloat(gasto.importe || "0");
-    });
-
     return {
       totalIncome,
       totalExpenses,
@@ -128,7 +119,7 @@ export default function CierreTrimestral() {
       closedDays,
       totalInvoices: quarterInvoices.length,
     };
-  }, [cashClosings, quarterInvoices, otrosGastos]);
+  }, [cashClosings, quarterInvoices]);
 
   // Fetch CSV data for export
   const { data: csvData } = trpc.cashClosings.exportCSV.useQuery(

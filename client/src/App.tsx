@@ -19,7 +19,6 @@ import Proveedores from "./pages/Proveedores";
 import CierreTrimestral from "./pages/CierreTrimestral";
 import Configuracion from "./pages/Configuracion";
 import Housekeeping from "./pages/Housekeeping";
-import OtrosGastos from "./pages/OtrosGastos";
 
 function Router() {
   return (
@@ -37,7 +36,6 @@ function Router() {
         <Route path="/cierre-trimestral" component={CierreTrimestral} />
         <Route path="/configuracion" component={Configuracion} />
         <Route path="/housekeeping" component={Housekeeping} />
-        <Route path="/otros-gastos" component={OtrosGastos} />
         <Route path="/404" component={NotFound} />
         <Route component={NotFound} />
       </Switch>
@@ -47,7 +45,7 @@ function Router() {
 
 function App() {
   return (
-    <ErrorBoundary data-version="v40-rebuild-20251218">
+    <ErrorBoundary>
       <ThemeProvider defaultTheme="light">
         <TooltipProvider>
           <Toaster />
