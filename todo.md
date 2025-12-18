@@ -567,3 +567,13 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Verificación: Otros Gastos funciona (€1500 registrados)
 - [x] Verificación: Dashboard muestra €4781.96 ingresos, €3721.78 gastos
 - [x] Verificación: Cierre Trimestral muestra €1500 en otros_gastos
+
+
+## Corrección Final v38 - Otros Gastos Funcionando
+
+- [x] SOLUCION: Excluir updatedAt y updatedBy de la insercion en createOtroGasto
+- [x] Verificacion: Seguro responsabilidad civil €250 creado exitosamente
+- [x] Dashboard actualizado: €3971.78 gastos (incluye €250 nuevo seguro)
+- [x] Cierre Trimestral actualizado: €1750.00 gastos totales
+- [x] Balance recalculado: €810.18 en dashboard, €2826.96 en trimestral
+- [x] Todos los bugs resueltos y verificados en desarrollo

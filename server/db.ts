@@ -1045,7 +1045,9 @@ export async function updateRoomStatus(data: {
 export async function createOtroGasto(data: InsertOtroGasto) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.insert(otrosGastos).values(data);
+  // Excluir updatedAt y updatedBy de la inserción (solo para UPDATE)
+  const { updatedAt, updatedBy, ...insertData } = data as any;
+  const result = await db.insert(otrosGastos).values(insertData);
   return result;
 }
 
