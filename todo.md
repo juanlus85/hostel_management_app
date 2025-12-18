@@ -577,3 +577,11 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Cierre Trimestral actualizado: €1750.00 gastos totales
 - [x] Balance recalculado: €810.18 en dashboard, €2826.96 en trimestral
 - [x] Todos los bugs resueltos y verificados en desarrollo
+
+
+## v40 - Inserción Manual (18 Dic 2025 14:37)
+
+- [x] Modificar createOtroGasto para construir objeto insertData manualmente
+- [x] Excluir completamente createdAt, updatedAt, updatedBy de la inserción
+- [x] Probar creación de gasto: "Prueba inserción manual" €75 (Sueldos)
+- [x] Total Gastos actualizado a €2075.00 (5 gastos registrados)
