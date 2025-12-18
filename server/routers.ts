@@ -1078,10 +1078,13 @@ export const appRouter = router({
       notas: z.string().optional(),
     })).mutation(async ({ input, ctx }) => {
       return db.createOtroGasto({
-        ...input,
+        businessId: input.businessId,
+        concepto: input.concepto,
+        categoria: input.categoria,
         categoriaOtros: input.categoriaOtros || null,
         importe: input.importe.toString(),
         fecha: input.fecha as any,
+        notas: input.notas || null,
         createdBy: ctx.user.id,
       });
     }),

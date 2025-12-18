@@ -555,3 +555,15 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Hay facturas registradas en diciembre pero no aparecen en total de gastos
 - [x] Verificar query de invoices en getDashboardStats
 - [x] SOLUCIÓN: El código local ya tiene la integración correcta, necesita desplegar v37 a producción
+
+
+## Bugs Corregidos (v38)
+
+- [x] Error al crear otros_gastos: updatedBy no debe enviarse en INSERT, solo en UPDATE
+- [x] Dashboard mostrando €0.00: Tabla cash_closings no existía, ahora funciona correctamente
+- [x] Cierre Trimestral mostrando €0.00 en gastos: Ahora suma otros_gastos correctamente
+- [x] Archivo de migración 0011 faltante: Creado como placeholder
+- [x] Sincronización de migraciones: Resuelto, BD ya tenía todas las tablas
+- [x] Verificación: Otros Gastos funciona (€1500 registrados)
+- [x] Verificación: Dashboard muestra €4781.96 ingresos, €3721.78 gastos
+- [x] Verificación: Cierre Trimestral muestra €1500 en otros_gastos
