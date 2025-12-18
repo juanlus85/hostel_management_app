@@ -416,4 +416,4 @@ export const otrosGastos = mysqlTable("otros_gastos", {
 });
 
 export type OtroGasto = typeof otrosGastos.$inferSelect;
-export type InsertOtroGasto = typeof otrosGastos.$inferInsert;
+export type InsertOtroGasto = Omit<typeof otrosGastos.$inferInsert, 'createdAt' | 'updatedAt'>;
