@@ -30,10 +30,15 @@ export default function CierreTrimestral() {
 
   const { data: businesses } = trpc.businesses.list.useQuery();
   
-  const currentBusinessId = useMemo(() => {
-    if (selectedBusiness === "all") return businesses?.[0]?.id;
-    return businesses?.find(b => b.code === selectedBusiness)?.id;
+  const businessIds = useMemo(() => {
+    if (selectedBusiness === "all") {
+      return businesses?.map(b => b.id) || [];
+    }
+    const business = businesses?.find(b => b.code === selectedBusiness);
+    return business ? [business.id] : [];
   }, [businesses, selectedBusiness]);
+
+  const currentBusinessId = businessIds[0];
 
   // Calculate date range for selected quarter
   const dateRange = useMemo(() => {
@@ -65,20 +70,48 @@ export default function CierreTrimestral() {
     return new Date() > quarterEndDate;
   }, [selectedYear, selectedQuarter]);
 
-  // Fetch data for the quarter
-  const { data: cashClosings } = trpc.cashClosings.list.useQuery(
-    { businessId: currentBusinessId || 1, startDate: dateRange.start, endDate: dateRange.end },
-    { enabled: !!currentBusinessId && !!dateRange.start }
+  // Fetch data for the quarter - handle multiple businesses
+  const hostelId = businesses?.find(b => b.code === "hostel")?.id;
+  const tiendaId = businesses?.find(b => b.code === "tienda")?.id;
+
+  const { data: hostelClosings } = trpc.cashClosings.list.useQuery(
+    { businessId: hostelId || 1, startDate: dateRange.start, endDate: dateRange.end },
+    { enabled: !!hostelId && !!dateRange.start && (selectedBusiness === "all" || selectedBusiness === "hostel") }
   );
 
-  const { data: invoices } = trpc.invoices.list.useQuery(
-    { 
-      businessId: currentBusinessId || 1,
-      startDate: dateRange.start,
-      endDate: dateRange.end
-    },
-    { enabled: !!currentBusinessId && !!dateRange.start }
+  const { data: tiendaClosings } = trpc.cashClosings.list.useQuery(
+    { businessId: tiendaId || 2, startDate: dateRange.start, endDate: dateRange.end },
+    { enabled: !!tiendaId && !!dateRange.start && (selectedBusiness === "all" || selectedBusiness === "tienda") }
   );
+
+  const { data: hostelInvoices } = trpc.invoices.list.useQuery(
+    { businessId: hostelId || 1, startDate: dateRange.start, endDate: dateRange.end },
+    { enabled: !!hostelId && !!dateRange.start && (selectedBusiness === "all" || selectedBusiness === "hostel") }
+  );
+
+  const { data: tiendaInvoices } = trpc.invoices.list.useQuery(
+    { businessId: tiendaId || 2, startDate: dateRange.start, endDate: dateRange.end },
+    { enabled: !!tiendaId && !!dateRange.start && (selectedBusiness === "all" || selectedBusiness === "tienda") }
+  );
+
+  // Combine data based on selection
+  const cashClosings = useMemo(() => {
+    if (selectedBusiness === "all") {
+      return [...(hostelClosings || []), ...(tiendaClosings || [])];
+    }
+    if (selectedBusiness === "hostel") return hostelClosings || [];
+    if (selectedBusiness === "tienda") return tiendaClosings || [];
+    return [];
+  }, [selectedBusiness, hostelClosings, tiendaClosings]);
+
+  const invoices = useMemo(() => {
+    if (selectedBusiness === "all") {
+      return [...(hostelInvoices || []), ...(tiendaInvoices || [])];
+    }
+    if (selectedBusiness === "hostel") return hostelInvoices || [];
+    if (selectedBusiness === "tienda") return tiendaInvoices || [];
+    return [];
+  }, [selectedBusiness, hostelInvoices, tiendaInvoices]);
 
   // Invoices are already filtered by backend
   const quarterInvoices = invoices || [];

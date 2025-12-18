@@ -499,3 +499,5 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 ## Bugs Reportados v35 (Rollback)
 
 - [x] Cierre Trimestral muestra Total Gastos €0.00 - No filtra facturas correctamente por rango de fechas (corregido: pasar startDate/endDate al backend)
+
+- [x] Cierre Trimestral opción "Ambos" no suma ingresos/gastos de Hostel + Tienda (corregido: queries separadas para cada negocio y combinación de resultados)
