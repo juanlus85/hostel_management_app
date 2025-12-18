@@ -494,3 +494,48 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Los menús de admin (Empleados, Proveedores, Cierre Trimestral, Configuración) deben aparecer después de Housekeeping
 - [x] SOLUCIÓN: Fusionado adminMenuItems con menuItems en currentMenuItems para admins
 - [x] SOLUCIÓN: Eliminado bloque completo de sección ADMINISTRACIÓN con separador
+
+
+## Módulo Otros Gastos (v36)
+
+### Base de Datos
+- [x] Crear tabla otros_gastos: concepto, categoría, categoriaOtros (cuando categoría="otros"), importe, fecha, notas, createdBy, updatedBy
+- [x] Categorías: sueldos, seguridad_social, impuestos, seguros, otros
+- [x] Campo categoriaOtros para especificar tipo cuando categoría="otros"
+
+### Backend
+- [x] Crear procedimientos tRPC admin-only: create, list, update, delete
+- [x] Modificar getDashboardStats para incluir otros_gastos
+- [x] Modificar CierreTrimestral para incluir otros_gastos
+
+### Frontend
+- [x] Crear OtrosGastos.tsx con formulario y lista
+- [x] Campo categoriaOtros se muestra solo cuando categoría="otros"
+- [x] Agregar menú "Otros Gastos" solo para admin (después de Facturas)
+- [x] SOLUCIÓN: Tabla creada con enum de categorías y campo opcional categoriaOtros
+- [x] SOLUCIÓN: Procedimientos tRPC con adminProcedure, integrado en Dashboard y Cierre Trimestral
+- [x] SOLUCIÓN: Página completa con formulario dinámico, lista, edición y eliminación
+
+
+## Módulo Otros Gastos (v36)
+
+### Base de Datos
+- [ ] Crear tabla otros_gastos con campos: concepto, categoría, importe, fecha, notas, createdBy, updatedBy
+- [ ] Categorías: sueldos, seguridad_social, impuestos, seguros, otros
+- [ ] Ejecutar migración con pnpm db:push
+
+### Backend
+- [ ] Crear procedimientos tRPC protectedProcedure para admin: create, list, update, delete
+- [ ] Agregar helpers en db.ts para queries de otros_gastos
+- [ ] Modificar getDashboardStats para incluir otros_gastos en cálculo de gastos
+- [ ] Modificar getQuarterlyClosing para incluir otros_gastos en totales
+
+### Frontend
+- [ ] Crear página OtrosGastos.tsx con formulario y lista
+- [ ] Formulario: concepto, categoría (select), importe, fecha, notas
+- [ ] Lista con filtros por categoría y rango de fechas
+- [ ] Agregar menú "Otros Gastos" solo visible para admin (después de Facturas)
+
+### Permisos
+- [ ] Solo administradores pueden ver y gestionar otros gastos
+- [ ] Verificar rol admin en procedimientos tRPC
