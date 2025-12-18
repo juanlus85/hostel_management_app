@@ -20,8 +20,7 @@ import {
   cashMovements, InsertCashMovement, CashMovement,
   notifications, InsertNotification, Notification,
   systemSettings, InsertSystemSetting, SystemSetting,
-  roomStatus, InsertRoomStatus, RoomStatus,
-  otrosGastos, InsertOtroGasto, OtroGasto
+  roomStatus, InsertRoomStatus, RoomStatus
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -546,17 +545,6 @@ export async function getDashboardStats(businessId: number, startDate: string, e
     totalExpenses += parseFloat(inv.totalAmount || "0");
   });
   
-  // Sumar otros gastos (sueldos, impuestos, etc.)
-  const otrosGastosData = await db.select().from(otrosGastos)
-    .where(and(
-      eq(otrosGastos.businessId, businessId),
-      sql`${otrosGastos.fecha} >= ${startDate}`,
-      sql`${otrosGastos.fecha} <= ${endDate}`
-    ));
-  otrosGastosData.forEach(og => {
-    totalExpenses += parseFloat(og.importe || "0");
-  });
-  
   // También sumar transacciones antiguas si existen
   txns.forEach(t => {
     if (t.type === "income") totalIncome += parseFloat(t.amount || "0");
@@ -1038,73 +1026,4 @@ export async function updateRoomStatus(data: {
       .limit(1);
     return inserted[0] || null;
   }
-}
-
-
-// ==================== OTROS GASTOS ====================
-export async function createOtroGasto(data: InsertOtroGasto) {
-  const db = await getDb();
-  if (!db) return null;
-  // Excluir updatedAt y updatedBy de la inserción (solo para UPDATE)
-  const { updatedAt, updatedBy, ...insertData } = data as any;
-  const result = await db.insert(otrosGastos).values(insertData);
-  return result;
-}
-
-export async function getOtrosGastos(filters?: {
-  businessId?: number;
-  categoria?: string;
-  startDate?: string;
-  endDate?: string;
-}) {
-  const db = await getDb();
-  if (!db) return [];
-  
-  let query = db.select().from(otrosGastos);
-  
-  const conditions = [];
-  if (filters?.businessId) {
-    conditions.push(eq(otrosGastos.businessId, filters.businessId));
-  }
-  if (filters?.categoria) {
-    conditions.push(eq(otrosGastos.categoria, filters.categoria as any));
-  }
-  if (filters?.startDate) {
-    conditions.push(sql`${otrosGastos.fecha} >= ${filters.startDate}`);
-  }
-  if (filters?.endDate) {
-    conditions.push(sql`${otrosGastos.fecha} <= ${filters.endDate}`);
-  }
-  
-  if (conditions.length > 0) {
-    query = query.where(and(...conditions)) as any;
-  }
-  
-  return query.orderBy(desc(otrosGastos.fecha));
-}
-
-export async function updateOtroGasto(id: number, data: Partial<InsertOtroGasto>) {
-  const db = await getDb();
-  if (!db) return null;
-  await db.update(otrosGastos).set(data).where(eq(otrosGastos.id, id));
-  return { id, ...data };
-}
-
-export async function deleteOtroGasto(id: number) {
-  const db = await getDb();
-  if (!db) return null;
-  await db.delete(otrosGastos).where(eq(otrosGastos.id, id));
-  return { id };
-}
-
-export async function getOtrosGastosByDateRange(businessId: number, startDate: string, endDate: string) {
-  const db = await getDb();
-  if (!db) return [];
-  return db.select()
-    .from(otrosGastos)
-    .where(and(
-      eq(otrosGastos.businessId, businessId),
-      sql`${otrosGastos.fecha} >= ${startDate}`,
-      sql`${otrosGastos.fecha} <= ${endDate}`
-    ));
 }

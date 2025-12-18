@@ -1,9 +1,0 @@
-{
-  "query": "CREATE TABLE IF NOT EXISTS `otros_gastos` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`businessId` int NOT NULL,\n\t`concepto` varchar(255) NOT NULL,\n\t`categoria` enum('sueldos','seguridad_social','impuestos','seguros','otros') NOT NULL,\n\t`categoriaOtros` varchar(100),\n\t`importe` decimal(10,2) NOT NULL,\n\t`fecha` date NOT NULL,\n\t`notas` text,\n\t`createdBy` int NOT NULL,\n\t`updatedBy` int,\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\t`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n\tCONSTRAINT `otros_gastos_id` PRIMARY KEY(`id`)\n);",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user uN1yFnMXg2uz2sS.48d4e14bb92a --database nKwKaPpEnuCPRfjQgd5Gdt --execute CREATE TABLE IF NOT EXISTS `otros_gastos` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`businessId` int NOT NULL,\n\t`concepto` varchar(255) NOT NULL,\n\t`categoria` enum('sueldos','seguridad_social','impuestos','seguros','otros') NOT NULL,\n\t`categoriaOtros` varchar(100),\n\t`importe` decimal(10,2) NOT NULL,\n\t`fecha` date NOT NULL,\n\t`notas` text,\n\t`createdBy` int NOT NULL,\n\t`updatedBy` int,\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\t`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n\tCONSTRAINT `otros_gastos_id` PRIMARY KEY(`id`)\n);",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 441
-}
