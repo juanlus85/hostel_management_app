@@ -38,7 +38,8 @@ import {
   Truck,
   FileArchive,
   Settings,
-  Sparkles
+  Sparkles,
+  DollarSign
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -71,6 +72,7 @@ const housekeepingMenuItems = [
 ];
 
 const adminMenuItems = [
+  { icon: DollarSign, label: "Otros Gastos", path: "/otros-gastos" },
   { icon: Users, label: "Empleados", path: "/empleados" },
   { icon: Truck, label: "Proveedores", path: "/proveedores" },
   { icon: FileArchive, label: "Cierre Trimestral", path: "/cierre-trimestral" },

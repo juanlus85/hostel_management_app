@@ -20,7 +20,8 @@ import {
   cashMovements, InsertCashMovement, CashMovement,
   notifications, InsertNotification, Notification,
   systemSettings, InsertSystemSetting, SystemSetting,
-  roomStatus, InsertRoomStatus, RoomStatus
+  roomStatus, InsertRoomStatus, RoomStatus,
+  otrosGastos, InsertOtroGasto, OtroGasto
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -545,6 +546,10 @@ export async function getDashboardStats(businessId: number, startDate: string, e
     totalExpenses += parseFloat(inv.totalAmount || "0");
   });
   
+  // Sumar otros gastos (sueldos, seguros, impuestos, etc.)
+  const otrosGastosTotal = await getTotalOtrosGastos(businessId, startDate, endDate);
+  totalExpenses += otrosGastosTotal;
+  
   // También sumar transacciones antiguas si existen
   txns.forEach(t => {
     if (t.type === "income") totalIncome += parseFloat(t.amount || "0");
@@ -1026,4 +1031,90 @@ export async function updateRoomStatus(data: {
       .limit(1);
     return inserted[0] || null;
   }
+}
+
+
+// ==================== OTROS GASTOS ====================
+export async function createOtroGasto(data: {
+  businessId: number;
+  concepto: string;
+  categoria: "sueldos" | "seguridad_social" | "impuestos" | "seguros" | "otros";
+  categoriaOtros?: string;
+  importe: string;
+  fecha: string;
+  notas?: string;
+  createdBy: number;
+}) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  // Construir objeto de inserción manualmente para evitar problemas con campos auto-generados
+  const insertData = {
+    businessId: data.businessId,
+    concepto: data.concepto,
+    categoria: data.categoria,
+    categoriaOtros: data.categoriaOtros || null,
+    importe: data.importe,
+    fecha: data.fecha,
+    notas: data.notas || null,
+    createdBy: data.createdBy,
+  };
+  
+  const result = await db.insert(otrosGastos).values(insertData);
+  return result[0].insertId;
+}
+
+export async function listOtrosGastos(businessId: number, startDate?: string, endDate?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  if (startDate && endDate) {
+    return db.select().from(otrosGastos)
+      .where(
+        and(
+          eq(otrosGastos.businessId, businessId),
+          gte(otrosGastos.fecha, startDate),
+          lte(otrosGastos.fecha, endDate)
+        )
+      )
+      .orderBy(desc(otrosGastos.fecha));
+  }
+  
+  return db.select().from(otrosGastos)
+    .where(eq(otrosGastos.businessId, businessId))
+    .orderBy(desc(otrosGastos.fecha));
+}
+
+export async function updateOtroGasto(id: number, data: Partial<InsertOtroGasto>) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(otrosGastos).set(data).where(eq(otrosGastos.id, id));
+}
+
+export async function deleteOtroGasto(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(otrosGastos).where(eq(otrosGastos.id, id));
+}
+
+export async function getTotalOtrosGastos(businessId: number, startDate?: string, endDate?: string) {
+  const db = await getDb();
+  if (!db) return 0;
+  
+  let conditions = eq(otrosGastos.businessId, businessId);
+  
+  if (startDate && endDate) {
+    conditions = and(
+      eq(otrosGastos.businessId, businessId),
+      gte(otrosGastos.fecha, startDate),
+      lte(otrosGastos.fecha, endDate)
+    ) as any;
+  }
+  
+  const result = await db
+    .select({ total: sql<string>`COALESCE(SUM(CAST(${otrosGastos.importe} AS DECIMAL(10,2))), 0)` })
+    .from(otrosGastos)
+    .where(conditions);
+  
+  return parseFloat(result[0]?.total || "0");
 }

@@ -94,6 +94,16 @@ export default function CierreTrimestral() {
     { enabled: !!tiendaId && !!dateRange.start && (selectedBusiness === "all" || selectedBusiness === "tienda") }
   );
 
+  const { data: hostelOtrosGastos } = trpc.otrosGastos.list.useQuery(
+    { businessId: hostelId || 1, startDate: dateRange.start, endDate: dateRange.end },
+    { enabled: !!hostelId && !!dateRange.start && (selectedBusiness === "all" || selectedBusiness === "hostel") }
+  );
+
+  const { data: tiendaOtrosGastos } = trpc.otrosGastos.list.useQuery(
+    { businessId: tiendaId || 2, startDate: dateRange.start, endDate: dateRange.end },
+    { enabled: !!tiendaId && !!dateRange.start && (selectedBusiness === "all" || selectedBusiness === "tienda") }
+  );
+
   // Combine data based on selection
   const cashClosings = useMemo(() => {
     if (selectedBusiness === "all") {
@@ -112,6 +122,15 @@ export default function CierreTrimestral() {
     if (selectedBusiness === "tienda") return tiendaInvoices || [];
     return [];
   }, [selectedBusiness, hostelInvoices, tiendaInvoices]);
+
+  const otrosGastos = useMemo(() => {
+    if (selectedBusiness === "all") {
+      return [...(hostelOtrosGastos || []), ...(tiendaOtrosGastos || [])];
+    }
+    if (selectedBusiness === "hostel") return hostelOtrosGastos || [];
+    if (selectedBusiness === "tienda") return tiendaOtrosGastos || [];
+    return [];
+  }, [selectedBusiness, hostelOtrosGastos, tiendaOtrosGastos]);
 
   // Invoices are already filtered by backend
   const quarterInvoices = invoices || [];
@@ -140,6 +159,10 @@ export default function CierreTrimestral() {
       totalExpenses += parseFloat(inv.totalAmount || "0");
     });
 
+    otrosGastos.forEach((gasto: any) => {
+      totalExpenses += parseFloat(gasto.importe || "0");
+    });
+
     return {
       totalIncome,
       totalExpenses,
@@ -150,7 +173,7 @@ export default function CierreTrimestral() {
       closedDays,
       totalInvoices: quarterInvoices.length,
     };
-  }, [cashClosings, quarterInvoices]);
+  }, [cashClosings, quarterInvoices, otrosGastos]);
 
   // Fetch CSV data for export
   const { data: csvData } = trpc.cashClosings.exportCSV.useQuery(
@@ -180,6 +203,17 @@ export default function CierreTrimestral() {
         )
       ].join("\n");
 
+      // Create CSV content for otros gastos
+      const otrosGastosCsv = [
+        "Fecha,Concepto,Categoría,Importe,Notas",
+        ...otrosGastos.map((gasto: any) => {
+          const categoria = gasto.categoria === "otros" && gasto.categoriaOtros 
+            ? gasto.categoriaOtros 
+            : gasto.categoria;
+          return `${gasto.fecha},${gasto.concepto},${categoria},${gasto.importe},${gasto.notas || ""}`;
+        })
+      ].join("\n");
+
       // Create summary CSV
       const summaryCsv = [
         "Resumen Trimestral",
@@ -188,7 +222,7 @@ export default function CierreTrimestral() {
         "",
         "Concepto,Importe",
         `Total Ingresos,${summary.totalIncome.toFixed(2)}`,
-        `Total Gastos (Facturas),${summary.totalExpenses.toFixed(2)}`,
+        `Total Gastos (Facturas + Otros),${summary.totalExpenses.toFixed(2)}`,
         `Balance,${summary.balance.toFixed(2)}`,
         "",
         `Total Efectivo,${summary.withdrawnCash.toFixed(2)}`,
@@ -218,7 +252,8 @@ export default function CierreTrimestral() {
 
       downloadCsv(csvData, `${prefix}_Cierres_Caja.csv`);
       setTimeout(() => downloadCsv(invoicesCsv, `${prefix}_Facturas.csv`), 500);
-      setTimeout(() => downloadCsv(summaryCsv, `${prefix}_Resumen.csv`), 1000);
+      setTimeout(() => downloadCsv(otrosGastosCsv, `${prefix}_Otros_Gastos.csv`), 1000);
+      setTimeout(() => downloadCsv(summaryCsv, `${prefix}_Resumen.csv`), 1500);
 
       toast.success("Archivos exportados correctamente");
     } catch (error) {

@@ -501,3 +501,19 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Cierre Trimestral muestra Total Gastos €0.00 - No filtra facturas correctamente por rango de fechas (corregido: pasar startDate/endDate al backend)
 
 - [x] Cierre Trimestral opción "Ambos" no suma ingresos/gastos de Hostel + Tienda (corregido: queries separadas para cada negocio y combinación de resultados)
+
+
+## v41 - Módulo Otros Gastos (Implementación desde cero)
+
+- [x] 1. Crear tabla otros_gastos en drizzle/schema.ts
+- [x] 2. Ejecutar migración SQL para crear tabla en base de datos
+- [x] 3. Crear funciones en server/db.ts (createOtroGasto, listOtrosGastos, updateOtroGasto, deleteOtroGasto)
+- [x] 4. Crear procedimientos tRPC en server/routers.ts (otrosGastos.create, list, update, delete)
+- [x] 5. Crear página client/src/pages/OtrosGastos.tsx
+- [x] 6. Agregar ruta /otros-gastos en App.tsx
+- [x] 7. Agregar menú "Otros Gastos" en DashboardLayout (solo admin)
+- [x] 8. Integrar en Dashboard: sumar otros_gastos a total gastos
+- [x] 9. Integrar en Cierre Trimestral: incluir otros_gastos en exportación CSV
+- [x] 10. Probar creación de gastos en desarrollo
+- [ ] 11. Compilar y desplegar v41 por FTP
+- [ ] 12. Verificar funcionamiento en producción

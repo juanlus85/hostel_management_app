@@ -1065,6 +1065,53 @@ export const appRouter = router({
       });
     }),
   }),
+
+  // ==================== OTROS GASTOS ====================
+  otrosGastos: router({
+    list: adminProcedure.input(z.object({
+      businessId: z.number(),
+      startDate: z.string().optional(),
+      endDate: z.string().optional(),
+    })).query(async ({ input }) => {
+      return db.listOtrosGastos(input.businessId, input.startDate, input.endDate);
+    }),
+    create: adminProcedure.input(z.object({
+      businessId: z.number(),
+      concepto: z.string(),
+      categoria: z.enum(["sueldos", "seguridad_social", "impuestos", "seguros", "otros"]),
+      categoriaOtros: z.string().optional(),
+      importe: z.string(),
+      fecha: z.string(),
+      notas: z.string().optional(),
+    })).mutation(async ({ input, ctx }) => {
+      const id = await db.createOtroGasto({ ...input, createdBy: ctx.user.id });
+      return { success: true, id };
+    }),
+    update: adminProcedure.input(z.object({
+      id: z.number(),
+      concepto: z.string().optional(),
+      categoria: z.enum(["sueldos", "seguridad_social", "impuestos", "seguros", "otros"]).optional(),
+      categoriaOtros: z.string().optional(),
+      importe: z.string().optional(),
+      fecha: z.string().optional(),
+      notas: z.string().optional(),
+    })).mutation(async ({ input }) => {
+      const { id, ...data } = input;
+      await db.updateOtroGasto(id, data);
+      return { success: true };
+    }),
+    delete: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
+      await db.deleteOtroGasto(input.id);
+      return { success: true };
+    }),
+    getTotal: adminProcedure.input(z.object({
+      businessId: z.number(),
+      startDate: z.string().optional(),
+      endDate: z.string().optional(),
+    })).query(async ({ input }) => {
+      return db.getTotalOtrosGastos(input.businessId, input.startDate, input.endDate);
+    }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

@@ -397,3 +397,21 @@ export const roomStatus = mysqlTable("room_status", {
 
 export type RoomStatus = typeof roomStatus.$inferSelect;
 export type InsertRoomStatus = typeof roomStatus.$inferInsert;
+
+
+// ==================== OTROS GASTOS (Gastos No Facturados) ====================
+export const otrosGastos = mysqlTable("otros_gastos", {
+  id: int("id").autoincrement().primaryKey(),
+  businessId: int("businessId").notNull(),
+  concepto: varchar("concepto", { length: 255 }).notNull(),
+  categoria: mysqlEnum("categoria", ["sueldos", "seguridad_social", "impuestos", "seguros", "otros"]).notNull().default("otros"),
+  categoriaOtros: varchar("categoriaOtros", { length: 255 }), // Solo si categoria = "otros"
+  importe: decimal("importe", { precision: 10, scale: 2 }).notNull(),
+  fecha: varchar("fecha", { length: 10 }).notNull(), // YYYY-MM-DD format
+  notas: text("notas"),
+  createdBy: int("createdBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type OtroGasto = typeof otrosGastos.$inferSelect;
+export type InsertOtroGasto = typeof otrosGastos.$inferInsert;
