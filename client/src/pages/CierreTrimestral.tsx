@@ -72,18 +72,16 @@ export default function CierreTrimestral() {
   );
 
   const { data: invoices } = trpc.invoices.list.useQuery(
-    { businessId: currentBusinessId || 1 },
-    { enabled: !!currentBusinessId }
+    { 
+      businessId: currentBusinessId || 1,
+      startDate: dateRange.start,
+      endDate: dateRange.end
+    },
+    { enabled: !!currentBusinessId && !!dateRange.start }
   );
 
-  // Filter invoices by date range
-  const quarterInvoices = useMemo(() => {
-    if (!invoices) return [];
-    return invoices.filter((inv: any) => {
-      const invDate = inv.date;
-      return invDate >= dateRange.start && invDate <= dateRange.end;
-    });
-  }, [invoices, dateRange]);
+  // Invoices are already filtered by backend
+  const quarterInvoices = invoices || [];
 
   // Calculate summary
   const summary = useMemo(() => {
@@ -106,7 +104,7 @@ export default function CierreTrimestral() {
     });
 
     quarterInvoices.forEach((inv: any) => {
-      totalExpenses += parseFloat(inv.total || "0");
+      totalExpenses += parseFloat(inv.totalAmount || "0");
     });
 
     return {
@@ -145,7 +143,7 @@ export default function CierreTrimestral() {
       const invoicesCsv = [
         "Fecha,Proveedor,Nº Factura,Total,Forma de Pago,Notas",
         ...quarterInvoices.map((inv: any) => 
-          `${inv.date},${inv.supplier},${inv.invoiceNumber},${inv.total},${inv.paymentMethod || ""},${inv.notes || ""}`
+          `${inv.invoiceDate},${inv.supplier},${inv.invoiceNumber},${inv.totalAmount},${inv.paymentMethod || ""},${inv.notes || ""}`
         )
       ].join("\n");
 

@@ -494,3 +494,8 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Los menús de admin (Empleados, Proveedores, Cierre Trimestral, Configuración) deben aparecer después de Housekeeping
 - [x] SOLUCIÓN: Fusionado adminMenuItems con menuItems en currentMenuItems para admins
 - [x] SOLUCIÓN: Eliminado bloque completo de sección ADMINISTRACIÓN con separador
+
+
+## Bugs Reportados v35 (Rollback)
+
+- [x] Cierre Trimestral muestra Total Gastos €0.00 - No filtra facturas correctamente por rango de fechas (corregido: pasar startDate/endDate al backend)

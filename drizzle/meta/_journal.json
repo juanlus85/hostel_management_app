@@ -99,6 +99,34 @@
       "when": 1765992046421,
       "tag": "0013_fair_omega_sentinel",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "5",
+      "when": 1766063801937,
+      "tag": "0014_fantastic_mad_thinker",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "5",
+      "when": 1766082891123,
+      "tag": "0015_flimsy_tomas",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "5",
+      "when": 1766083621983,
+      "tag": "0016_far_scarecrow",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "5",
+      "when": 1766087942885,
+      "tag": "0017_light_mercury",
+      "breakpoints": true
     }
   ]
 }
