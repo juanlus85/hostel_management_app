@@ -1065,6 +1065,61 @@ export const appRouter = router({
       });
     }),
   }),
+
+  // ==================== OTROS GASTOS ====================
+  otrosGastos: router({
+    create: adminProcedure.input(z.object({
+      businessId: z.number(),
+      concepto: z.string(),
+      categoria: z.enum(["sueldos", "seguridad_social", "impuestos", "seguros", "otros"]),
+      categoriaOtros: z.string().optional(),
+      importe: z.number(),
+      fecha: z.string(), // YYYY-MM-DD
+      notas: z.string().optional(),
+    })).mutation(async ({ input, ctx }) => {
+      return db.createOtroGasto({
+        businessId: input.businessId,
+        concepto: input.concepto,
+        categoria: input.categoria,
+        categoriaOtros: input.categoriaOtros || null,
+        importe: input.importe.toString(),
+        fecha: input.fecha as any,
+        notas: input.notas || null,
+        createdBy: ctx.user.id,
+      });
+    }),
+    list: adminProcedure.input(z.object({
+      businessId: z.number().optional(),
+      categoria: z.string().optional(),
+      startDate: z.string().optional(),
+      endDate: z.string().optional(),
+    })).query(async ({ input }) => {
+      return db.getOtrosGastos(input);
+    }),
+    update: adminProcedure.input(z.object({
+      id: z.number(),
+      concepto: z.string().optional(),
+      categoria: z.enum(["sueldos", "seguridad_social", "impuestos", "seguros", "otros"]).optional(),
+      categoriaOtros: z.string().optional(),
+      importe: z.number().optional(),
+      fecha: z.string().optional(),
+      notas: z.string().optional(),
+    })).mutation(async ({ input, ctx }) => {
+      const { id, importe, fecha, ...data } = input;
+      return db.updateOtroGasto(id, {
+        ...data,
+        categoriaOtros: data.categoriaOtros || null,
+        importe: importe?.toString(),
+        fecha: fecha as any,
+        updatedBy: ctx.user.id,
+      });
+    }),
+    delete: adminProcedure.input(z.object({
+      id: z.number(),
+    })).mutation(async ({ input }) => {
+      return db.deleteOtroGasto(input.id);
+    }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

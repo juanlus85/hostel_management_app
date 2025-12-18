@@ -38,7 +38,8 @@ import {
   Truck,
   FileArchive,
   Settings,
-  Sparkles
+  Sparkles,
+  DollarSign
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -56,6 +57,7 @@ const menuItems = [
   { icon: Calendar, label: "Turnos", path: "/turnos" },
   { icon: Wallet, label: "Caja", path: "/caja" },
   { icon: Receipt, label: "Facturas", path: "/facturas" },
+  { icon: DollarSign, label: "Otros Gastos", path: "/otros-gastos", adminOnly: true },
   { icon: Package, label: "Inventario", path: "/inventario" },
   { icon: AlertTriangle, label: "Incidencias", path: "/incidencias" },
   { icon: CheckSquare, label: "Tareas", path: "/tareas" },
@@ -343,7 +345,7 @@ function DashboardLayoutContent({
 
           <SidebarContent className="gap-0 py-2">
             <SidebarMenu className="px-2">
-              {currentMenuItems.map(item => {
+              {currentMenuItems.filter((item: any) => !item.adminOnly || isAdmin).map(item => {
                 const isActive = location === item.path;
                 return (
                   <SidebarMenuItem key={item.path}>

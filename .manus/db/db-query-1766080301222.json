@@ -1,0 +1,20 @@
+{
+  "query": "SELECT \n  'invoices' as tabla,\n  COUNT(*) as registros,\n  SUM(CAST(totalAmount AS DECIMAL(10,2))) as total\nFROM invoices\nWHERE DATE(invoiceDate) >= '2025-12-01' AND DATE(invoiceDate) <= '2025-12-31'\nUNION ALL\nSELECT \n  'otros_gastos' as tabla,\n  COUNT(*) as registros,\n  SUM(CAST(importe AS DECIMAL(10,2))) as total\nFROM otros_gastos\nWHERE DATE(fecha) >= '2025-12-01' AND DATE(fecha) <= '2025-12-31';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user uN1yFnMXg2uz2sS.48d4e14bb92a --database nKwKaPpEnuCPRfjQgd5Gdt --execute SELECT \n  'invoices' as tabla,\n  COUNT(*) as registros,\n  SUM(CAST(totalAmount AS DECIMAL(10,2))) as total\nFROM invoices\nWHERE DATE(invoiceDate) >= '2025-12-01' AND DATE(invoiceDate) <= '2025-12-31'\nUNION ALL\nSELECT \n  'otros_gastos' as tabla,\n  COUNT(*) as registros,\n  SUM(CAST(importe AS DECIMAL(10,2))) as total\nFROM otros_gastos\nWHERE DATE(fecha) >= '2025-12-01' AND DATE(fecha) <= '2025-12-31';",
+  "rows": [
+    {
+      "tabla": "otros_gastos",
+      "registros": "1",
+      "total": "1500.00"
+    },
+    {
+      "tabla": "invoices",
+      "registros": "26",
+      "total": "3099.23"
+    }
+  ],
+  "messages": [],
+  "stdout": "tabla\tregistros\ttotal\notros_gastos\t1\t1500.00\ninvoices\t26\t3099.23\n",
+  "stderr": "",
+  "execution_time_ms": 56
+}

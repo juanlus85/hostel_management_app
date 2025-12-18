@@ -1,0 +1,2 @@
+-- Placeholder migration (no changes needed)
+-- This migration was skipped in the schema generation
