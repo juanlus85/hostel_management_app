@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Settings, Mail, Server, CheckCircle, XCircle, Loader2, Save, TestTube } from "lucide-react";
+import { Settings, Mail, Server, CheckCircle, XCircle, Loader2, Save, TestTube, Brain, Key } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Configuracion() {
@@ -246,6 +246,173 @@ export default function Configuracion() {
           </div>
         </CardContent>
       </Card>
+
+      {/* OpenAI API Configuration */}
+      <OpenAIConfig />
     </div>
+  );
+}
+
+// Componente separado para OpenAI Config
+function OpenAIConfig() {
+  const [apiKey, setApiKey] = useState("");
+  const [showKey, setShowKey] = useState(false);
+
+  const { data: savedKey, isLoading } = trpc.settings.get.useQuery({ key: "openai_api_key" });
+  const saveMutation = trpc.settings.upsert.useMutation({
+    onSuccess: () => {
+      toast.success("API Key de OpenAI guardada correctamente");
+    },
+    onError: (error) => {
+      toast.error(`Error al guardar: ${error.message}`);
+    },
+  });
+  const deleteMutation = trpc.settings.delete.useMutation({
+    onSuccess: () => {
+      setApiKey("");
+      toast.success("API Key eliminada correctamente");
+    },
+    onError: (error) => {
+      toast.error(`Error al eliminar: ${error.message}`);
+    },
+  });
+
+  useEffect(() => {
+    if (savedKey?.settingValue) {
+      setApiKey(savedKey.settingValue);
+    }
+  }, [savedKey]);
+
+  const handleSave = () => {
+    if (!apiKey.trim()) {
+      toast.error("Por favor ingresa una API Key válida");
+      return;
+    }
+    saveMutation.mutate({
+      key: "openai_api_key",
+      value: apiKey,
+      description: "OpenAI API Key para OCR y procesamiento de facturas"
+    });
+  };
+
+  const handleDelete = () => {
+    if (confirm("¿Estás seguro de eliminar la API Key de OpenAI?")) {
+      deleteMutation.mutate({ key: "openai_api_key" });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center h-32">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          <Brain className="h-5 w-5 text-primary" />
+          <div>
+            <CardTitle>Configuración de OpenAI</CardTitle>
+            <CardDescription>
+              API Key para OCR automático de facturas y procesamiento de imágenes
+            </CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* API Key Input */}
+        <div className="space-y-2">
+          <Label htmlFor="openai-key" className="flex items-center gap-2">
+            <Key className="h-4 w-4" />
+            OpenAI API Key
+          </Label>
+          <div className="flex gap-2">
+            <Input
+              id="openai-key"
+              type={showKey ? "text" : "password"}
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder="sk-proj-..."
+              className="font-mono text-sm"
+            />
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setShowKey(!showKey)}
+              type="button"
+            >
+              {showKey ? "👁️" : "👁️‍🗨️"}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Obtén tu API Key en{" "}
+            <a
+              href="https://platform.openai.com/api-keys"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              platform.openai.com/api-keys
+            </a>
+          </p>
+        </div>
+
+        {/* Status */}
+        {savedKey?.settingValue && (
+          <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 dark:bg-green-950/20 p-3 rounded-lg">
+            <CheckCircle className="h-4 w-4" />
+            <span>API Key configurada correctamente</span>
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex gap-3 pt-4 border-t">
+          <Button
+            onClick={handleSave}
+            disabled={saveMutation.isPending || !apiKey.trim()}
+          >
+            {saveMutation.isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4 mr-2" />
+            )}
+            Guardar API Key
+          </Button>
+          {savedKey?.settingValue && (
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <XCircle className="h-4 w-4 mr-2" />
+              )}
+              Eliminar
+            </Button>
+          )}
+        </div>
+
+        {/* Help Text */}
+        <div className="text-sm text-muted-foreground bg-muted/50 p-4 rounded-lg">
+          <p className="font-medium mb-2">¿Para qué se usa?</p>
+          <ul className="list-disc list-inside space-y-1">
+            <li>Extracción automática de datos de facturas (OCR)</li>
+            <li>Procesamiento de imágenes y documentos</li>
+            <li>Análisis inteligente de contenido</li>
+          </ul>
+          <p className="mt-3 text-xs">
+            <strong>Nota:</strong> La API Key se almacena de forma segura en tu base de datos.
+            Solo los administradores pueden ver y modificar esta configuración.
+          </p>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

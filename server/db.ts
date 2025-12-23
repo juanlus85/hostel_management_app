@@ -26,7 +26,8 @@ import {
   accessCodes, InsertAccessCode, AccessCode,
   weeklyCashEnvelopes, InsertWeeklyCashEnvelope, WeeklyCashEnvelope,
   weeklyAvailabilitySources, InsertWeeklyAvailabilitySource, WeeklyAvailabilitySource,
-  weeklyAvailabilityRecords, InsertWeeklyAvailabilityRecord, WeeklyAvailabilityRecord
+  weeklyAvailabilityRecords, InsertWeeklyAvailabilityRecord, WeeklyAvailabilityRecord,
+  appSettings, InsertAppSetting, AppSetting
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -1444,4 +1445,48 @@ export async function getAllWeeklyAvailabilityRecords() {
   const db = await getDb();
   if (!db) return [];
   return await db.select().from(weeklyAvailabilityRecords).orderBy(desc(weeklyAvailabilityRecords.weekStart));
+}
+
+
+// ==================== APP SETTINGS ====================
+export async function getSetting(key: string): Promise<AppSetting | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  const result = await db.select().from(appSettings).where(eq(appSettings.settingKey, key)).limit(1);
+  return result[0];
+}
+
+export async function upsertSetting(key: string, value: string, description?: string): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const existing = await getSetting(key);
+  
+  if (existing) {
+    await db.update(appSettings)
+      .set({ settingValue: value, updatedAt: new Date() })
+      .where(eq(appSettings.settingKey, key));
+  } else {
+    await db.insert(appSettings).values({
+      settingKey: key,
+      settingValue: value,
+      description: description || null,
+      isEncrypted: false
+    });
+  }
+}
+
+export async function deleteSetting(key: string): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.delete(appSettings).where(eq(appSettings.settingKey, key));
+}
+
+export async function getAllSettings(): Promise<AppSetting[]> {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db.select().from(appSettings);
 }

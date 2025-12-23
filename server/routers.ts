@@ -719,57 +719,79 @@ export const appRouter = router({
     processInvoice: protectedProcedure.input(z.object({
       imageUrl: z.string(),
     })).mutation(async ({ input }) => {
-      const { invokeLLM } = await import("./_core/llm");
+      // Get OpenAI API key from database
+      const apiKeySetting = await db.getSetting("openai_api_key");
+      if (!apiKeySetting?.settingValue) {
+        throw new Error("OpenAI API key not configured. Please add it in Settings.");
+      }
       
-      const response = await invokeLLM({
-        messages: [
-          {
-            role: "system",
-            content: `Eres un asistente especializado en extraer datos de facturas y tickets. 
-            Extrae la siguiente información de la imagen:
-            - supplier: nombre del proveedor/empresa
-            - invoiceNumber: número de factura (si existe)
-            - invoiceDate: fecha de la factura (formato YYYY-MM-DD)
-            - baseAmount: importe base sin IVA
-            - vatRate: porcentaje de IVA
-            - vatAmount: importe del IVA
-            - totalAmount: importe total
-            
-            Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún campo, usa null.`
-          },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: "Extrae los datos de esta factura:" },
-              { type: "image_url", image_url: { url: input.imageUrl } }
-            ]
-          }
-        ],
-        response_format: {
-          type: "json_schema",
-          json_schema: {
-            name: "invoice_data",
-            strict: true,
-            schema: {
-              type: "object",
-              properties: {
-                supplier: { type: ["string", "null"], description: "Nombre del proveedor" },
-                invoiceNumber: { type: ["string", "null"], description: "Número de factura" },
-                invoiceDate: { type: ["string", "null"], description: "Fecha en formato YYYY-MM-DD" },
-                baseAmount: { type: ["string", "null"], description: "Importe base sin IVA" },
-                vatRate: { type: ["string", "null"], description: "Porcentaje de IVA" },
-                vatAmount: { type: ["string", "null"], description: "Importe del IVA" },
-                totalAmount: { type: ["string", "null"], description: "Importe total" },
+      const apiKey = apiKeySetting.settingValue;
+      
+      // Call OpenAI API directly
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: "gpt-4o",
+          messages: [
+            {
+              role: "system",
+              content: `Eres un asistente especializado en extraer datos de facturas y tickets. 
+Extrae la siguiente información de la imagen:
+- supplier: nombre del proveedor/empresa
+- invoiceNumber: número de factura (si existe)
+- invoiceDate: fecha de la factura (formato YYYY-MM-DD)
+- baseAmount: importe base sin IVA
+- vatRate: porcentaje de IVA
+- vatAmount: importe del IVA
+- totalAmount: importe total
+
+Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún campo, usa null.`
+            },
+            {
+              role: "user",
+              content: [
+                { type: "text", text: "Extrae los datos de esta factura:" },
+                { type: "image_url", image_url: { url: input.imageUrl } }
+              ]
+            }
+          ],
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "invoice_data",
+              strict: true,
+              schema: {
+                type: "object",
+                properties: {
+                  supplier: { type: ["string", "null"], description: "Nombre del proveedor" },
+                  invoiceNumber: { type: ["string", "null"], description: "Número de factura" },
+                  invoiceDate: { type: ["string", "null"], description: "Fecha en formato YYYY-MM-DD" },
+                  baseAmount: { type: ["string", "null"], description: "Importe base sin IVA" },
+                  vatRate: { type: ["string", "null"], description: "Porcentaje de IVA" },
+                  vatAmount: { type: ["string", "null"], description: "Importe del IVA" },
+                  totalAmount: { type: ["string", "null"], description: "Importe total" },
+                },
+                required: ["supplier", "invoiceNumber", "invoiceDate", "baseAmount", "vatRate", "vatAmount", "totalAmount"],
+                additionalProperties: false,
               },
-              required: ["supplier", "invoiceNumber", "invoiceDate", "baseAmount", "vatRate", "vatAmount", "totalAmount"],
-              additionalProperties: false,
             },
           },
-        },
+        }),
       });
       
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`OpenAI API error: ${error}`);
+      }
+      
+      const data = await response.json();
+      
       try {
-        const content = response.choices[0]?.message?.content;
+        const content = data.choices[0]?.message?.content;
         if (content && typeof content === 'string') {
           return JSON.parse(content);
         }
@@ -1075,6 +1097,26 @@ export const appRouter = router({
       }
       return testSMTPConnection(input);
     }),
+
+    // App Settings (OpenAI, etc.)
+    get: protectedProcedure.input(z.object({ key: z.string() })).query(async ({ input }) => {
+      return db.getSetting(input.key);
+    }),
+    getAll: adminProcedure.query(async () => {
+      return db.getAllSettings();
+    }),
+    upsert: adminProcedure.input(z.object({
+      key: z.string(),
+      value: z.string(),
+      description: z.string().optional(),
+    })).mutation(async ({ input }) => {
+      await db.upsertSetting(input.key, input.value, input.description);
+      return { success: true };
+    }),
+    delete: adminProcedure.input(z.object({ key: z.string() })).mutation(async ({ input }) => {
+      await db.deleteSetting(input.key);
+      return { success: true };
+    }),
   }),
 
   // ==================== ROOM STATUS ====================
@@ -1318,6 +1360,8 @@ export const appRouter = router({
       return db.getAllWeeklyAvailabilityRecords();
     }),
   }),
+
+
 });
 
 export type AppRouter = typeof appRouter;

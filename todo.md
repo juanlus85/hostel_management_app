@@ -643,3 +643,9 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Título "Disponibilidad Semanal" debe mostrar fecha del lunes siguiente (ej: "Disponibilidad Semanal a Lunes 22")
 - [x] Columna "Debería Haber" en Efectivo en Sobres debe auto-calcularse desde retiros diarios (no editable)
 - [x] Gráfico histórico con Chart.js (cada año una línea, empieza con puntos)
+
+## Mejora v57 - Configuración OpenAI API
+- [x] Crear tabla app_settings para almacenar configuración global
+- [x] Agregar procedimientos tRPC para guardar/obtener OpenAI API key
+- [x] Agregar sección en página Configuración para ingresar OpenAI API key
+- [x] Actualizar sistema OCR para usar la clave configurada en lugar de variable de entorno

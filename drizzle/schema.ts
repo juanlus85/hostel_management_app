@@ -507,3 +507,17 @@ export const weeklyAvailabilityRecords = mysqlTable("weekly_availability_records
 
 export type WeeklyAvailabilityRecord = typeof weeklyAvailabilityRecords.$inferSelect;
 export type InsertWeeklyAvailabilityRecord = typeof weeklyAvailabilityRecords.$inferInsert;
+
+// ==================== APP SETTINGS ====================
+export const appSettings = mysqlTable("app_settings", {
+  id: int("id").autoincrement().primaryKey(),
+  settingKey: varchar("settingKey", { length: 100 }).notNull().unique(), // Clave única del setting (ej: "openai_api_key", "smtp_host")
+  settingValue: text("settingValue"), // Valor del setting (puede ser largo)
+  isEncrypted: boolean("isEncrypted").default(false).notNull(), // Indica si el valor está encriptado
+  description: text("description"), // Descripción del setting
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type AppSetting = typeof appSettings.$inferSelect;
+export type InsertAppSetting = typeof appSettings.$inferInsert;

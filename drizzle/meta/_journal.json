@@ -176,6 +176,13 @@
       "when": 1766510361875,
       "tag": "0024_overrated_doctor_strange",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "5",
+      "when": 1766513481835,
+      "tag": "0025_zippy_the_hand",
+      "breakpoints": true
     }
   ]
 }
