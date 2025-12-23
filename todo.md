@@ -578,4 +578,7 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Retiros Diarios en Resumen Semanal no suma Hostel + Tienda (solo muestra un negocio)
 
 ## Correcciones v47
-- [ ] getDailyWithdrawals no filtra por status='closed' - muestra datos incorrectos
+- [x] getDailyWithdrawals no filtra por status='closed' - muestra datos incorrectos
+
+## Correcciones v48
+- [ ] Retiros Diarios desfasados 1 día: muestra Domingo como Lunes, Lunes como Martes

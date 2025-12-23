@@ -21,9 +21,17 @@ export default function ResumenSemanal() {
     sunday.setDate(monday.getDate() + 6);
     sunday.setHours(23, 59, 59, 999);
     
+    // Formatear fechas en formato YYYY-MM-DD sin conversión a UTC
+    const formatDate = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+    
     return {
-      startDate: monday.toISOString().split('T')[0],
-      endDate: sunday.toISOString().split('T')[0],
+      startDate: formatDate(monday),
+      endDate: formatDate(sunday),
       label: `${monday.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })} - ${sunday.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}`
     };
   }, [selectedWeek]);
@@ -251,7 +259,11 @@ export default function ResumenSemanal() {
                   const monday = new Date(weekRange.startDate);
                   const currentDate = new Date(monday);
                   currentDate.setDate(monday.getDate() + dayIndex);
-                  const dateStr = currentDate.toISOString().split('T')[0];
+                  // Formatear sin conversión a UTC
+                  const year = currentDate.getFullYear();
+                  const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+                  const day = String(currentDate.getDate()).padStart(2, '0');
+                  const dateStr = `${year}-${month}-${day}`;
                   
                   // Buscar retiros de Hostel para esta fecha
                   const hostelDay = hostelDailyWithdrawals?.find(d => d.date === dateStr);
