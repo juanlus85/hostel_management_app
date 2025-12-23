@@ -572,4 +572,7 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Resumen Semanal: agregar desglose diario de efectivo/tarjeta retirado (Lunes, Martes, etc.)
 
 ## Correcciones v45
-- [ ] Dashboard suma cierres con status='draft' cuando solo debería sumar status='closed' (diferencia €662.45)
+- [x] Dashboard suma cierres con status='draft' cuando solo debería sumar status='closed' (diferencia €662.45)
+
+## Correcciones v46
+- [ ] Retiros Diarios en Resumen Semanal no suma Hostel + Tienda (solo muestra un negocio)
