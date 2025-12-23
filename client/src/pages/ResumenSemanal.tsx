@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,6 +10,111 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Loader2, TrendingUp, Wallet, CreditCard, AlertTriangle, Package, CheckSquare, Calendar, ChevronLeft, ChevronRight, Plus, Pencil, Trash2, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
+
+// Componente para fila de efectivo en sobres
+function CashEnvelopeRow({ dayName, dayOfWeek, envelope, isAdmin, onSave }: {
+  dayName: string;
+  dayOfWeek: number;
+  envelope: any;
+  isAdmin: boolean;
+  onSave: (dayOfWeek: number, expectedCash: string, actualCash: string) => void;
+}) {
+  const [expectedCash, setExpectedCash] = useState(envelope?.expectedCash || "0.00");
+  const [actualCash, setActualCash] = useState(envelope?.actualCash || "0.00");
+  
+  useEffect(() => {
+    setExpectedCash(envelope?.expectedCash || "0.00");
+    setActualCash(envelope?.actualCash || "0.00");
+  }, [envelope]);
+  
+  const difference = parseFloat(actualCash) - parseFloat(expectedCash);
+
+  return (
+    <tr className="border-b hover:bg-muted/50">
+      <td className="p-2 font-medium">{dayName}</td>
+      <td className="p-2 text-right">
+        {isAdmin ? (
+          <Input
+            type="number"
+            step="0.01"
+            value={expectedCash}
+            onChange={(e) => setExpectedCash(e.target.value)}
+            onBlur={() => onSave(dayOfWeek, expectedCash, actualCash)}
+            className="w-24 text-right"
+          />
+        ) : (
+          `€${parseFloat(expectedCash).toFixed(2)}`
+        )}
+      </td>
+      <td className="p-2 text-right">
+        {isAdmin ? (
+          <Input
+            type="number"
+            step="0.01"
+            value={actualCash}
+            onChange={(e) => setActualCash(e.target.value)}
+            onBlur={() => onSave(dayOfWeek, expectedCash, actualCash)}
+            className="w-24 text-right"
+          />
+        ) : (
+          `€${parseFloat(actualCash).toFixed(2)}`
+        )}
+      </td>
+      <td className={`p-2 text-right font-bold ${difference >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+        €{difference.toFixed(2)}
+      </td>
+      {isAdmin && <td className="p-2"></td>}
+    </tr>
+  );
+}
+
+// Componente para fila de fuente de disponibilidad
+function AvailabilitySourceRow({ source, record, isAdmin, onSave, onDelete }: {
+  source: any;
+  record: any;
+  isAdmin: boolean;
+  onSave: (sourceId: number, amount: string) => void;
+  onDelete: (id: number) => void;
+}) {
+  const [amount, setAmount] = useState(record?.amount || "0.00");
+  
+  useEffect(() => {
+    setAmount(record?.amount || "0.00");
+  }, [record]);
+
+  return (
+    <div className="flex items-center justify-between p-3 border rounded-lg">
+      <div className="flex-1">
+        <p className="font-medium">{source.name}</p>
+        <p className="text-xs text-muted-foreground capitalize">{source.type.replace('_', ' ')}</p>
+      </div>
+      <div className="flex items-center gap-2">
+        {isAdmin ? (
+          <Input
+            type="number"
+            step="0.01"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            onBlur={() => onSave(source.id, amount)}
+            className="w-32 text-right"
+            placeholder="0.00"
+          />
+        ) : (
+          <span className="text-lg font-semibold">€{parseFloat(amount).toFixed(2)}</span>
+        )}
+        {isAdmin && source.displayOrder > 8 && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onDelete(source.id)}
+          >
+            <Trash2 className="h-4 w-4 text-red-600" />
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function ResumenSemanal() {
   const { user } = useAuth();
@@ -520,51 +625,16 @@ export default function ResumenSemanal() {
                       </tr>
                     </thead>
                     <tbody>
-                      {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map((dayName, dayIndex) => {
-                        const dayOfWeek = dayIndex + 1;
-                        const envelope = cashEnvelopes?.find(e => e.dayOfWeek === dayOfWeek);
-                        const [expectedCash, setExpectedCash] = useState(envelope?.expectedCash || "0.00");
-                        const [actualCash, setActualCash] = useState(envelope?.actualCash || "0.00");
-                        const difference = parseFloat(actualCash) - parseFloat(expectedCash);
-
-                        return (
-                          <tr key={dayName} className="border-b hover:bg-muted/50">
-                            <td className="p-2 font-medium">{dayName}</td>
-                            <td className="p-2 text-right">
-                              {isAdmin ? (
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  value={expectedCash}
-                                  onChange={(e) => setExpectedCash(e.target.value)}
-                                  onBlur={() => handleSaveCashEnvelope(dayOfWeek, expectedCash, actualCash)}
-                                  className="w-24 text-right"
-                                />
-                              ) : (
-                                `€${parseFloat(expectedCash).toFixed(2)}`
-                              )}
-                            </td>
-                            <td className="p-2 text-right">
-                              {isAdmin ? (
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  value={actualCash}
-                                  onChange={(e) => setActualCash(e.target.value)}
-                                  onBlur={() => handleSaveCashEnvelope(dayOfWeek, expectedCash, actualCash)}
-                                  className="w-24 text-right"
-                                />
-                              ) : (
-                                `€${parseFloat(actualCash).toFixed(2)}`
-                              )}
-                            </td>
-                            <td className={`p-2 text-right font-bold ${difference >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                              €{difference.toFixed(2)}
-                            </td>
-                            {isAdmin && <td className="p-2"></td>}
-                          </tr>
-                        );
-                      })}
+                      {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map((dayName, dayIndex) => (
+                        <CashEnvelopeRow
+                          key={dayName}
+                          dayName={dayName}
+                          dayOfWeek={dayIndex + 1}
+                          envelope={cashEnvelopes?.find(e => e.dayOfWeek === dayIndex + 1)}
+                          isAdmin={isAdmin}
+                          onSave={handleSaveCashEnvelope}
+                        />
+                      ))}
                     </tbody>
                   </table>
                 </div>
@@ -596,43 +666,16 @@ export default function ResumenSemanal() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {availabilitySources?.map((source) => {
-                    const record = availabilityRecords?.find(r => r.sourceId === source.id);
-                    const [amount, setAmount] = useState(record?.amount || "0.00");
-
-                    return (
-                      <div key={source.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div className="flex-1">
-                          <p className="font-medium">{source.name}</p>
-                          <p className="text-xs text-muted-foreground capitalize">{source.type.replace('_', ' ')}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {isAdmin ? (
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={amount}
-                              onChange={(e) => setAmount(e.target.value)}
-                              onBlur={() => handleSaveAvailability(source.id, amount)}
-                              className="w-32 text-right"
-                              placeholder="0.00"
-                            />
-                          ) : (
-                            <span className="text-lg font-semibold">€{parseFloat(amount).toFixed(2)}</span>
-                          )}
-                          {isAdmin && source.displayOrder > 8 && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDeleteSource(source.id)}
-                            >
-                              <Trash2 className="h-4 w-4 text-red-600" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+                  {availabilitySources?.map((source) => (
+                    <AvailabilitySourceRow
+                      key={source.id}
+                      source={source}
+                      record={availabilityRecords?.find(r => r.sourceId === source.id)}
+                      isAdmin={isAdmin}
+                      onSave={handleSaveAvailability}
+                      onDelete={handleDeleteSource}
+                    />
+                  ))}
                 </div>
               </CardContent>
             </Card>

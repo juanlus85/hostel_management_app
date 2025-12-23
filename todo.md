@@ -635,3 +635,6 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 
 ## Bug v55
 - [x] Rol housekeeping no puede ver menú Códigos de Acceso (debería poder verlo en modo lectura)
+
+## Bug v55 - React Hooks
+- [x] Error "Rendered fewer hooks than expected" en ResumenSemanal.tsx (useState dentro de .map())
