@@ -464,3 +464,46 @@ export const accessCodes = mysqlTable("access_codes", {
 
 export type AccessCode = typeof accessCodes.$inferSelect;
 export type InsertAccessCode = typeof accessCodes.$inferInsert;
+
+
+// ==================== WEEKLY SUMMARY - CASH ENVELOPES ====================
+export const weeklyCashEnvelopes = mysqlTable("weekly_cash_envelopes", {
+  id: int("id").autoincrement().primaryKey(),
+  weekStart: varchar("weekStart", { length: 10 }).notNull(), // YYYY-MM-DD (lunes de la semana)
+  dayOfWeek: int("dayOfWeek").notNull(), // 1=Lunes, 2=Martes, ..., 7=Domingo
+  expectedCash: decimal("expectedCash", { precision: 10, scale: 2 }).notNull().default("0"), // Lo que debería haber
+  actualCash: decimal("actualCash", { precision: 10, scale: 2 }).notNull().default("0"), // Lo que había
+  difference: decimal("difference", { precision: 10, scale: 2 }).notNull().default("0"), // Desfase (actualCash - expectedCash)
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type WeeklyCashEnvelope = typeof weeklyCashEnvelopes.$inferSelect;
+export type InsertWeeklyCashEnvelope = typeof weeklyCashEnvelopes.$inferInsert;
+
+// ==================== WEEKLY SUMMARY - AVAILABILITY SOURCES ====================
+export const weeklyAvailabilitySources = mysqlTable("weekly_availability_sources", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(), // Nombre de la fuente (BBVA, Santander, C.F. Hostel, etc.)
+  type: mysqlEnum("type", ["bank", "cash_register", "safe"]).notNull(), // Tipo de fuente
+  isActive: boolean("isActive").default(true).notNull(), // Permitir desactivar fuentes
+  displayOrder: int("displayOrder").default(0).notNull(), // Orden de visualización
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type WeeklyAvailabilitySource = typeof weeklyAvailabilitySources.$inferSelect;
+export type InsertWeeklyAvailabilitySource = typeof weeklyAvailabilitySources.$inferInsert;
+
+// ==================== WEEKLY SUMMARY - AVAILABILITY RECORDS ====================
+export const weeklyAvailabilityRecords = mysqlTable("weekly_availability_records", {
+  id: int("id").autoincrement().primaryKey(),
+  weekStart: varchar("weekStart", { length: 10 }).notNull(), // YYYY-MM-DD (lunes de la semana)
+  sourceId: int("sourceId").notNull(), // Referencia a weekly_availability_sources
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull().default("0"), // Cantidad disponible
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type WeeklyAvailabilityRecord = typeof weeklyAvailabilityRecords.$inferSelect;
+export type InsertWeeklyAvailabilityRecord = typeof weeklyAvailabilityRecords.$inferInsert;

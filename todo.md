@@ -623,3 +623,15 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Crear procedimientos tRPC para CRUD de códigos
 - [x] Crear página CodigosAcceso.tsx con tabla de habitaciones
 - [x] Agregar menú Códigos de Acceso (visible para todos, editable solo admin)
+
+## Mejora v55 - Resumen Semanal
+- [x] Crear tabla weekly_cash_envelopes (efectivo esperado vs real por día)
+- [x] Crear tabla weekly_availability_sources (fuentes de disponibilidad: cuentas, cajas)
+- [x] Crear tabla weekly_availability_records (registros de disponibilidad por semana)
+- [x] Actualizar página ResumenSemanal.tsx con control de efectivo en sobres
+- [x] Agregar sección de disponibilidad en cuentas/cajas (cada lunes)
+- [x] Implementar navegación entre semanas
+- [ ] Agregar gráfico histórico de disponibilidad total (pendiente)
+
+## Bug v55
+- [x] Rol housekeeping no puede ver menú Códigos de Acceso (debería poder verlo en modo lectura)

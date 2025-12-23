@@ -1253,6 +1253,71 @@ export const appRouter = router({
       return { success: true };
     }),
   }),
+
+  // ==================== WEEKLY SUMMARY (Resumen Semanal) ====================
+  weeklySummary: router({
+    // Cash Envelopes
+    getCashEnvelopes: protectedProcedure.input(z.object({
+      weekStart: z.string(), // YYYY-MM-DD
+    })).query(async ({ input }) => {
+      return db.getWeeklyCashEnvelopes(input.weekStart);
+    }),
+    upsertCashEnvelope: adminProcedure.input(z.object({
+      weekStart: z.string(),
+      dayOfWeek: z.number().min(1).max(7),
+      expectedCash: z.string(),
+      actualCash: z.string(),
+      difference: z.string(),
+    })).mutation(async ({ input }) => {
+      const id = await db.upsertWeeklyCashEnvelope(input);
+      return { success: true, id };
+    }),
+
+    // Availability Sources
+    listSources: protectedProcedure.query(async () => {
+      return db.getAllAvailabilitySources();
+    }),
+    createSource: adminProcedure.input(z.object({
+      name: z.string(),
+      type: z.enum(["bank", "cash_register", "safe"]),
+      displayOrder: z.number().optional(),
+    })).mutation(async ({ input }) => {
+      const id = await db.createAvailabilitySource(input);
+      return { success: true, id };
+    }),
+    updateSource: adminProcedure.input(z.object({
+      id: z.number(),
+      name: z.string().optional(),
+      type: z.enum(["bank", "cash_register", "safe"]).optional(),
+      displayOrder: z.number().optional(),
+    })).mutation(async ({ input }) => {
+      const { id, ...data } = input;
+      await db.updateAvailabilitySource(id, data);
+      return { success: true };
+    }),
+    deleteSource: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
+      await db.deleteAvailabilitySource(input.id);
+      return { success: true };
+    }),
+
+    // Availability Records
+    getAvailabilityRecords: protectedProcedure.input(z.object({
+      weekStart: z.string(), // YYYY-MM-DD
+    })).query(async ({ input }) => {
+      return db.getWeeklyAvailabilityRecords(input.weekStart);
+    }),
+    upsertAvailabilityRecord: adminProcedure.input(z.object({
+      weekStart: z.string(),
+      sourceId: z.number(),
+      amount: z.string(),
+    })).mutation(async ({ input }) => {
+      const id = await db.upsertWeeklyAvailabilityRecord(input);
+      return { success: true, id };
+    }),
+    getAllAvailabilityRecords: protectedProcedure.query(async () => {
+      return db.getAllWeeklyAvailabilityRecords();
+    }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

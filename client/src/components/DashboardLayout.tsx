@@ -74,6 +74,7 @@ const housekeepingMenuItems = [
   { icon: AlertTriangle, label: "Incidencias", path: "/incidencias" },
   { icon: Package, label: "Inventario", path: "/inventario" },
   { icon: LayoutDashboard, label: "Housekeeping", path: "/housekeeping" },
+  { icon: Key, label: "Códigos Acceso", path: "/codigos-acceso" },
 ];
 
 const adminMenuItems = [

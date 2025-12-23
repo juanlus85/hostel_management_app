@@ -23,7 +23,10 @@ import {
   roomStatus, InsertRoomStatus, RoomStatus,
   otrosGastos, InsertOtroGasto, OtroGasto,
   safeBoxes, InsertSafeBox, SafeBox,
-  accessCodes, InsertAccessCode, AccessCode
+  accessCodes, InsertAccessCode, AccessCode,
+  weeklyCashEnvelopes, InsertWeeklyCashEnvelope, WeeklyCashEnvelope,
+  weeklyAvailabilitySources, InsertWeeklyAvailabilitySource, WeeklyAvailabilitySource,
+  weeklyAvailabilityRecords, InsertWeeklyAvailabilityRecord, WeeklyAvailabilityRecord
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -1342,4 +1345,103 @@ export async function updateEntranceCode(entranceCode: string) {
       floorLevel: 'N/A',
     });
   }
+}
+
+
+// ==================== WEEKLY CASH ENVELOPES ====================
+
+export async function getWeeklyCashEnvelopes(weekStart: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(weeklyCashEnvelopes).where(eq(weeklyCashEnvelopes.weekStart, weekStart)).orderBy(asc(weeklyCashEnvelopes.dayOfWeek));
+}
+
+export async function upsertWeeklyCashEnvelope(data: InsertWeeklyCashEnvelope) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Buscar si ya existe
+  const [existing] = await db.select().from(weeklyCashEnvelopes)
+    .where(and(
+      eq(weeklyCashEnvelopes.weekStart, data.weekStart),
+      eq(weeklyCashEnvelopes.dayOfWeek, data.dayOfWeek)
+    ));
+  
+  if (existing) {
+    // Actualizar
+    await db.update(weeklyCashEnvelopes)
+      .set(data)
+      .where(eq(weeklyCashEnvelopes.id, existing.id));
+    return existing.id;
+  } else {
+    // Crear
+    const [result] = await db.insert(weeklyCashEnvelopes).values(data).$returningId();
+    return result.id;
+  }
+}
+
+// ==================== WEEKLY AVAILABILITY SOURCES ====================
+
+export async function getAllAvailabilitySources() {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(weeklyAvailabilitySources).where(eq(weeklyAvailabilitySources.isActive, true)).orderBy(asc(weeklyAvailabilitySources.displayOrder));
+}
+
+export async function createAvailabilitySource(data: InsertWeeklyAvailabilitySource) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [source] = await db.insert(weeklyAvailabilitySources).values(data).$returningId();
+  return source.id;
+}
+
+export async function updateAvailabilitySource(id: number, data: Partial<InsertWeeklyAvailabilitySource>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(weeklyAvailabilitySources).set(data).where(eq(weeklyAvailabilitySources.id, id));
+}
+
+export async function deleteAvailabilitySource(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  // Soft delete
+  await db.update(weeklyAvailabilitySources).set({ isActive: false }).where(eq(weeklyAvailabilitySources.id, id));
+}
+
+// ==================== WEEKLY AVAILABILITY RECORDS ====================
+
+export async function getWeeklyAvailabilityRecords(weekStart: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(weeklyAvailabilityRecords).where(eq(weeklyAvailabilityRecords.weekStart, weekStart));
+}
+
+export async function upsertWeeklyAvailabilityRecord(data: InsertWeeklyAvailabilityRecord) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Buscar si ya existe
+  const [existing] = await db.select().from(weeklyAvailabilityRecords)
+    .where(and(
+      eq(weeklyAvailabilityRecords.weekStart, data.weekStart),
+      eq(weeklyAvailabilityRecords.sourceId, data.sourceId)
+    ));
+  
+  if (existing) {
+    // Actualizar
+    await db.update(weeklyAvailabilityRecords)
+      .set({ amount: data.amount })
+      .where(eq(weeklyAvailabilityRecords.id, existing.id));
+    return existing.id;
+  } else {
+    // Crear
+    const [result] = await db.insert(weeklyAvailabilityRecords).values(data).$returningId();
+    return result.id;
+  }
+}
+
+export async function getAllWeeklyAvailabilityRecords() {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(weeklyAvailabilityRecords).orderBy(desc(weeklyAvailabilityRecords.weekStart));
 }
