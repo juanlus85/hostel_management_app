@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
-import { Receipt, Plus, Camera, Upload, Check, AlertCircle, Search, Building2, Store, Loader2, Sparkles, Edit2, FileText, CheckCircle2 } from "lucide-react";
+import { Receipt, Plus, Camera, Upload, Check, AlertCircle, Search, Building2, Store, Loader2, Sparkles, Edit2, FileText, CheckCircle2, Trash2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useMemo, useState, useRef } from "react";
 import { toast } from "sonner";
@@ -109,6 +109,15 @@ export default function Facturas() {
       setSelectedInvoice(null);
     },
     onError: (error) => toast.error("Error: " + error.message),
+  });
+
+  const deleteMutation = trpc.invoices.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Factura eliminada correctamente");
+      utils.invoices.list.invalidate();
+      utils.dashboard.stats.invalidate();
+    },
+    onError: (error) => toast.error("Error al eliminar: " + error.message),
   });
 
   const uploadFile = trpc.invoices.uploadFile.useMutation({
@@ -583,9 +592,77 @@ export default function Facturas() {
                     <div className="text-right ml-auto">
                       <p className="font-bold">€{parseFloat(invoice.totalAmount || "0").toFixed(2)}</p>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={() => openEditDialog(invoice)}>
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex gap-1">
+                      {!invoice.imageUrl && (
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => {
+                            const input = document.createElement('input');
+                            input.type = 'file';
+                            input.accept = 'image/*,application/pdf';
+                            input.onchange = async (e) => {
+                              const file = (e.target as HTMLInputElement).files?.[0];
+                              if (!file) return;
+                              
+                              const reader = new FileReader();
+                              reader.onload = async () => {
+                                const base64 = reader.result as string;
+                                const fileData = base64.split(',')[1];
+                                const fileExtension = file.name.split('.').pop();
+                                
+                                try {
+                                  // Generar nombre de archivo con formato
+                                  const invoiceDate = invoice.invoiceDate || new Date().toISOString().split('T')[0];
+                                  const date = new Date(invoiceDate + 'T00:00:00');
+                                  const quarter = Math.ceil((date.getMonth() + 1) / 3);
+                                  const year = date.getFullYear();
+                                  const dateStr = invoiceDate.replace(/-/g, '').slice(2);
+                                  const supplierName = invoice.supplier || 'Sin_Proveedor';
+                                  const formattedFileName = `${supplierName} - ${quarter}T ${year} - ${dateStr}.${fileExtension}`;
+                                  
+                                  const uploadResult = await uploadFile.mutateAsync({
+                                    fileData,
+                                    fileName: formattedFileName,
+                                    contentType: file.type,
+                                  });
+                                  
+                                  await updateInvoice.mutateAsync({ 
+                                    id: invoice.id, 
+                                    imageUrl: uploadResult.url, 
+                                    imageKey: uploadResult.key,
+                                    resendEmail: true 
+                                  });
+                                  toast.success('Documento subido y email reenviado');
+                                } catch (error) {
+                                  console.error('Error al subir documento:', error);
+                                  toast.error('Error al subir documento');
+                                }
+                              };
+                              reader.readAsDataURL(file);
+                            };
+                            input.click();
+                          }}
+                          title="Subir documento"
+                        >
+                          <Upload className="h-4 w-4 text-blue-600" />
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="icon" onClick={() => openEditDialog(invoice)}>
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => {
+                          if (confirm('¿Estás seguro de que quieres eliminar esta factura?')) {
+                            deleteMutation.mutate({ id: invoice.id });
+                          }
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))}

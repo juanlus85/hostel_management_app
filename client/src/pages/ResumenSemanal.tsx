@@ -76,6 +76,17 @@ export default function ResumenSemanal() {
     { enabled: !!tiendaId }
   );
 
+  // Obtener retiros diarios
+  const { data: hostelDailyWithdrawals } = trpc.dashboard.dailyWithdrawals.useQuery(
+    { businessId: hostelId!, startDate: weekRange.startDate, endDate: weekRange.endDate },
+    { enabled: !!hostelId }
+  );
+
+  const { data: tiendaDailyWithdrawals } = trpc.dashboard.dailyWithdrawals.useQuery(
+    { businessId: tiendaId!, startDate: weekRange.startDate, endDate: weekRange.endDate },
+    { enabled: !!tiendaId }
+  );
+
   const isLoading = hostelLoading || tiendaLoading;
 
   // Calcular totales combinados

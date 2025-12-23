@@ -445,15 +445,40 @@ export const appRouter = router({
       vatAmount: z.string().optional(),
       totalAmount: z.string().optional(),
       paymentMethod: z.enum(["cuenta_bancaria", "tarjeta", "ana", "juanlu", "caja_hostel", "caja_tienda", "caja_fuerte", "caja_fuerte_cambio", "otros"]).optional(),
+      imageUrl: z.string().optional(),
+      imageKey: z.string().optional(),
       ocrData: z.string().optional(),
       ocrStatus: z.enum(["pending", "processing", "completed", "failed"]).optional(),
       isVerified: z.boolean().optional(),
       isScanned: z.boolean().optional(),
       hasVAT: z.boolean().optional(),
       notes: z.string().optional(),
-    })).mutation(async ({ input }) => {
-      const { id, ...data } = input;
+      resendEmail: z.boolean().optional(), // Flag para reenviar email
+    })).mutation(async ({ input, ctx }) => {
+      const { id, resendEmail, ...data } = input;
       await db.updateInvoice(id, data);
+      
+      // Si se solicita reenviar email y hay imagen
+      if (resendEmail && data.imageUrl) {
+        try {
+          const invoice = await db.getInvoiceById(id);
+          if (invoice) {
+            const { sendInvoiceNotificationEmail } = await import("./email");
+            await sendInvoiceNotificationEmail(
+              invoice.invoiceNumber || "Sin número",
+              invoice.supplier || "Sin proveedor",
+              parseFloat(invoice.totalAmount || "0"),
+              invoice.invoiceDate || new Date().toISOString().split('T')[0],
+              invoice.paymentMethod || "otros",
+              invoice.notes || null,
+              data.imageUrl
+            );
+          }
+        } catch (error) {
+          console.error("[Invoices] Failed to resend email:", error);
+        }
+      }
+      
       return { success: true };
     }),
     delete: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
@@ -878,6 +903,13 @@ export const appRouter = router({
     })).query(async ({ input }) => {
       return db.getHoursWorkedByUser(input.userId, input.startDate, input.endDate);
     }),
+    dailyWithdrawals: protectedProcedure.input(z.object({
+      businessId: z.number(),
+      startDate: z.string(),
+      endDate: z.string(),
+    })).query(async ({ input }) => {
+      return db.getDailyWithdrawals(input.businessId, input.startDate, input.endDate);
+    }),
   }),
 
   // ==================== CASH CLOSINGS (Cierres de Caja Detallados) ====================
@@ -1091,10 +1123,12 @@ export const appRouter = router({
     }),
     update: adminProcedure.input(z.object({
       id: z.number(),
+      type: z.enum(["gasto", "ingreso"]).optional(),
       concepto: z.string().optional(),
       categoria: z.enum(["sueldos", "seguridad_social", "impuestos", "seguros", "otros"]).optional(),
       categoriaOtros: z.string().optional(),
       importe: z.string().optional(),
+      paymentMethod: z.enum(["cuenta_bancaria", "tarjeta", "ana", "juanlu", "caja_hostel", "caja_tienda", "caja_fuerte", "caja_fuerte_cambio", "otros"]).optional(),
       fecha: z.string().optional(),
       notas: z.string().optional(),
     })).mutation(async ({ input }) => {

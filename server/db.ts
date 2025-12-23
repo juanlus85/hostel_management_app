@@ -323,6 +323,13 @@ export async function getInvoicesByBusiness(businessId: number, startDate?: stri
   return db.select().from(invoices).where(and(...conditions)).orderBy(desc(invoices.invoiceDate));
 }
 
+export async function getInvoiceById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(invoices).where(eq(invoices.id, id)).limit(1);
+  return result[0] || null;
+}
+
 export async function createInvoice(data: InsertInvoice) {
   const db = await getDb();
   if (!db) return;
@@ -1155,4 +1162,28 @@ export async function getTotalOtrosIngresos(businessId: number, startDate?: stri
     .where(conditions);
   
   return parseFloat(result[0]?.total || "0");
+}
+
+
+export async function getDailyWithdrawals(businessId: number, startDate: string, endDate: string) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const result = await db
+    .select({
+      date: cashClosings.date,
+      cashWithdrawn: cashClosings.withdrawnCash,
+      cardWithdrawn: cashClosings.withdrawnCards,
+    })
+    .from(cashClosings)
+    .where(
+      and(
+        eq(cashClosings.businessId, businessId),
+        gte(cashClosings.date, startDate),
+        lte(cashClosings.date, endDate)
+      )
+    )
+    .orderBy(cashClosings.date);
+  
+  return result;
 }
