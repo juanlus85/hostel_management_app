@@ -21,7 +21,8 @@ import {
   notifications, InsertNotification, Notification,
   systemSettings, InsertSystemSetting, SystemSetting,
   roomStatus, InsertRoomStatus, RoomStatus,
-  otrosGastos, InsertOtroGasto, OtroGasto
+  otrosGastos, InsertOtroGasto, OtroGasto,
+  safeBoxes, InsertSafeBox, SafeBox
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -1193,4 +1194,96 @@ export async function getDailyWithdrawals(businessId: number, startDate: string,
     .orderBy(cashClosings.date);
   
   return result;
+}
+
+
+// ==================== SAFE BOXES (Cajas Fuertes) ====================
+export async function getSafeBoxMovements(businessId: number, limit: number = 30) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return db.select().from(safeBoxes)
+    .where(eq(safeBoxes.businessId, businessId))
+    .orderBy(desc(safeBoxes.date), desc(safeBoxes.id))
+    .limit(limit);
+}
+
+export async function createSafeBoxMovement(data: InsertSafeBox) {
+  const db = await getDb();
+  if (!db) return;
+  
+  // Calculate accumulated based on previous movements
+  const previousMovements = await db.select().from(safeBoxes)
+    .where(eq(safeBoxes.businessId, data.businessId))
+    .orderBy(desc(safeBoxes.date), desc(safeBoxes.id))
+    .limit(1);
+  
+  const previousAccumulated = previousMovements.length > 0 
+    ? parseFloat(previousMovements[0].accumulated) 
+    : 0;
+  
+  const newAccumulated = previousAccumulated + parseFloat(data.amount);
+  
+  const result = await db.insert(safeBoxes).values({
+    ...data,
+    accumulated: newAccumulated.toFixed(2)
+  });
+  
+  return result;
+}
+
+export async function updateSafeBoxMovement(id: number, data: Partial<InsertSafeBox>) {
+  const db = await getDb();
+  if (!db) return;
+  
+  await db.update(safeBoxes).set(data).where(eq(safeBoxes.id, id));
+  
+  // Recalculate accumulated for all subsequent movements
+  await recalculateSafeBoxAccumulated(id);
+}
+
+export async function deleteSafeBoxMovement(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  
+  const movement = await db.select().from(safeBoxes).where(eq(safeBoxes.id, id)).limit(1);
+  if (movement.length === 0) return;
+  
+  await db.delete(safeBoxes).where(eq(safeBoxes.id, id));
+  
+  // Recalculate accumulated for all subsequent movements
+  await recalculateSafeBoxAccumulated(id, movement[0].businessId);
+}
+
+async function recalculateSafeBoxAccumulated(fromId: number, businessId?: number) {
+  const db = await getDb();
+  if (!db) return;
+  
+  // Get the movement to find its businessId if not provided
+  if (!businessId) {
+    const movement = await db.select().from(safeBoxes).where(eq(safeBoxes.id, fromId)).limit(1);
+    if (movement.length === 0) return;
+    businessId = movement[0].businessId;
+  }
+  
+  // Get all movements for this business ordered by date and id
+  const allMovements = await db.select().from(safeBoxes)
+    .where(eq(safeBoxes.businessId, businessId))
+    .orderBy(safeBoxes.date, safeBoxes.id);
+  
+  // Recalculate accumulated for each movement
+  let accumulated = 0;
+  for (const movement of allMovements) {
+    accumulated += parseFloat(movement.amount);
+    await db.update(safeBoxes)
+      .set({ accumulated: accumulated.toFixed(2) })
+      .where(eq(safeBoxes.id, movement.id));
+  }
+}
+
+export async function updateSafeBoxCheckStatus(id: number, checkStatus: "unchecked" | "correct" | "incorrect") {
+  const db = await getDb();
+  if (!db) return;
+  
+  await db.update(safeBoxes).set({ checkStatus }).where(eq(safeBoxes.id, id));
 }

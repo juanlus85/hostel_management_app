@@ -1148,6 +1148,70 @@ export const appRouter = router({
       return db.getTotalOtrosGastos(input.businessId, input.startDate, input.endDate);
     }),
   }),
+
+  // ==================== SAFE BOXES (Cajas Fuertes) ====================
+  safeBoxes: router({
+    list: adminProcedure.input(z.object({
+      businessId: z.number(),
+      limit: z.number().optional(),
+    })).query(async ({ input }) => {
+      return db.getSafeBoxMovements(input.businessId, input.limit);
+    }),
+    create: adminProcedure.input(z.object({
+      businessId: z.number(),
+      date: z.string(),
+      type: z.enum([
+        "entrada_efectivo_caja",
+        "salida_efectivo_cambio",
+        "entrada_salida_bbva",
+        "descuadres",
+        "sueldos",
+        "pago_proveedor",
+        "ajuste",
+        "caja_semana",
+        "es_efectivo_cf_hostel",
+        "es_efectivo_cf_tienda"
+      ]),
+      concept: z.string().optional(),
+      amount: z.string(),
+    })).mutation(async ({ input, ctx }) => {
+      await db.createSafeBoxMovement({ ...input, createdBy: ctx.user.id });
+      return { success: true };
+    }),
+    update: adminProcedure.input(z.object({
+      id: z.number(),
+      date: z.string().optional(),
+      type: z.enum([
+        "entrada_efectivo_caja",
+        "salida_efectivo_cambio",
+        "entrada_salida_bbva",
+        "descuadres",
+        "sueldos",
+        "pago_proveedor",
+        "ajuste",
+        "caja_semana",
+        "es_efectivo_cf_hostel",
+        "es_efectivo_cf_tienda"
+      ]).optional(),
+      concept: z.string().optional(),
+      amount: z.string().optional(),
+    })).mutation(async ({ input }) => {
+      const { id, ...data } = input;
+      await db.updateSafeBoxMovement(id, data);
+      return { success: true };
+    }),
+    delete: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
+      await db.deleteSafeBoxMovement(input.id);
+      return { success: true };
+    }),
+    updateCheckStatus: adminProcedure.input(z.object({
+      id: z.number(),
+      checkStatus: z.enum(["unchecked", "correct", "incorrect"]),
+    })).mutation(async ({ input }) => {
+      await db.updateSafeBoxCheckStatus(input.id, input.checkStatus);
+      return { success: true };
+    }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

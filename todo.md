@@ -589,3 +589,24 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 
 ## Correcciones v50
 - [x] Cambiar descripción "Devoluciones, etc." a "Otros ingresos" en Dashboard y Cierre Trimestral
+
+## Nueva Feature v51 - Cajas F
+- [ ] Crear tabla safe_boxes en schema (fecha, tipología, concepto, cantidad, acumulado, chequeo, businessId)
+- [ ] Crear procedimientos tRPC para listar, crear, actualizar y eliminar movimientos
+- [ ] Crear página CajasF.tsx con tabs (C.F. Hostel, C.F. Tienda)
+- [ ] Implementar formulario para agregar movimientos
+- [ ] Mostrar tabla con últimas 30 entradas
+- [ ] Agregar menú "Cajas F" solo visible para admin
+
+
+## Nueva Feature v51 - Cajas F
+- [x] Crear tabla safe_boxes en schema
+- [x] Crear procedimientos tRPC para CRUD de movimientos
+- [x] Crear página CajasF.tsx con tabs Hostel/Tienda
+- [x] Agregar menú Cajas F (solo admin)
+
+## Nueva Feature v52 - Códigos de Acceso
+- [ ] Crear tabla access_codes en schema
+- [ ] Crear procedimientos tRPC para CRUD de códigos
+- [ ] Crear página CodigosAcceso.tsx con tabla de habitaciones
+- [ ] Agregar menú Códigos de Acceso (visible para todos, editable solo admin)

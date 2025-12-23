@@ -21,6 +21,7 @@ import Configuracion from "./pages/Configuracion";
 import Housekeeping from "./pages/Housekeeping";
 import OtrosGastos from "./pages/OtrosGastos";
 import ResumenSemanal from "./pages/ResumenSemanal";
+import CajasF from "./pages/CajasF";
 
 function Router() {
   return (
@@ -40,6 +41,7 @@ function Router() {
         <Route path="/housekeeping" component={Housekeeping} />
         <Route path="/otros-gastos" component={OtrosGastos} />
         <Route path="/resumen-semanal" component={ResumenSemanal} />
+        <Route path="/cajas-f" component={CajasF} />
         <Route path="/404" component={NotFound} />
         <Route component={NotFound} />
       </Switch>

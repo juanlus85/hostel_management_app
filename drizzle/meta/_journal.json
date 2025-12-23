@@ -148,6 +148,20 @@
       "when": 1766478390668,
       "tag": "0020_blue_justin_hammer",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "5",
+      "when": 1766506249365,
+      "tag": "0021_secret_shinobi_shaw",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "5",
+      "when": 1766506495190,
+      "tag": "0022_broad_omega_flight",
+      "breakpoints": true
     }
   ]
 }

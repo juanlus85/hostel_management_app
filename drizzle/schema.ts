@@ -417,3 +417,33 @@ export const otrosGastos = mysqlTable("otros_gastos", {
 
 export type OtroGasto = typeof otrosGastos.$inferSelect;
 export type InsertOtroGasto = typeof otrosGastos.$inferInsert;
+
+
+// ==================== SAFE BOXES (Cajas Fuertes) ====================
+export const safeBoxes = mysqlTable("safe_boxes", {
+  id: int("id").autoincrement().primaryKey(),
+  businessId: int("businessId").notNull(), // 1 = Hostel, 2 = Tienda (Cambio)
+  date: varchar("date", { length: 10 }).notNull(), // YYYY-MM-DD format
+  type: mysqlEnum("type", [
+    "entrada_efectivo_caja",
+    "salida_efectivo_cambio",
+    "entrada_salida_bbva",
+    "descuadres",
+    "sueldos",
+    "pago_proveedor",
+    "ajuste",
+    "caja_semana",
+    "es_efectivo_cf_hostel",
+    "es_efectivo_cf_tienda"
+  ]).notNull(),
+  concept: varchar("concept", { length: 255 }), // Texto libre
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(), // Puede ser positivo o negativo
+  accumulated: decimal("accumulated", { precision: 10, scale: 2 }).notNull().default("0"), // Total acumulado después de este movimiento
+  checkStatus: mysqlEnum("checkStatus", ["unchecked", "correct", "incorrect"]).default("unchecked").notNull(),
+  createdBy: int("createdBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type SafeBox = typeof safeBoxes.$inferSelect;
+export type InsertSafeBox = typeof safeBoxes.$inferInsert;
