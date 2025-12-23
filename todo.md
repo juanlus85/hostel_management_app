@@ -649,3 +649,6 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Agregar procedimientos tRPC para guardar/obtener OpenAI API key
 - [x] Agregar sección en página Configuración para ingresar OpenAI API key
 - [x] Actualizar sistema OCR para usar la clave configurada en lugar de variable de entorno
+
+## Bug v58 - Horarios
+- [x] Cuando la semana cruza entre meses (ej: 29 dic - 4 ene), solo muestra hasta el último día del mes actual (31 dic). Debe mostrar todos los días de la semana incluyendo los del mes siguiente (1-4 ene).

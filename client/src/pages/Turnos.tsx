@@ -110,11 +110,13 @@ export default function Turnos() {
 
   const { data: users } = trpc.users.list.useQuery();
   
-  // Always load shifts for the entire month to ensure both views have complete data
-  // This prevents discrepancies between weekly and monthly views
+  // Load shifts based on current view mode
+  // Weekly view: load only the current week (including days from next/prev month)
+  // Monthly view: load the entire month
+  const queryRange = viewMode === "week" ? weekRange : monthRange;
   const { data: shifts, isLoading } = trpc.shifts.list.useQuery({
-    startDate: monthRange.startDate,
-    endDate: monthRange.endDate,
+    startDate: queryRange.startDate,
+    endDate: queryRange.endDate,
   });
 
   const createShift = trpc.shifts.create.useMutation({
