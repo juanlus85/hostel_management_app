@@ -575,4 +575,7 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Dashboard suma cierres con status='draft' cuando solo debería sumar status='closed' (diferencia €662.45)
 
 ## Correcciones v46
-- [ ] Retiros Diarios en Resumen Semanal no suma Hostel + Tienda (solo muestra un negocio)
+- [x] Retiros Diarios en Resumen Semanal no suma Hostel + Tienda (solo muestra un negocio)
+
+## Correcciones v47
+- [ ] getDailyWithdrawals no filtra por status='closed' - muestra datos incorrectos

@@ -1182,6 +1182,7 @@ export async function getDailyWithdrawals(businessId: number, startDate: string,
     .where(
       and(
         eq(cashClosings.businessId, businessId),
+        eq(cashClosings.status, 'closed'),
         gte(cashClosings.date, startDate),
         lte(cashClosings.date, endDate)
       )
