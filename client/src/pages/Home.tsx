@@ -100,6 +100,8 @@ export default function Home() {
     if (selectedBusiness === "tienda") return tiendaStats;
     if (hostelStats && tiendaStats) {
       return {
+        totalIncomeZ: (hostelStats.totalIncomeZ || 0) + (tiendaStats.totalIncomeZ || 0),
+        otherIncome: (hostelStats.otherIncome || 0) + (tiendaStats.otherIncome || 0),
         totalIncome: hostelStats.totalIncome + tiendaStats.totalIncome,
         totalExpenses: hostelStats.totalExpenses + tiendaStats.totalExpenses,
         netResult: hostelStats.netResult + tiendaStats.netResult,
@@ -170,7 +172,7 @@ export default function Home() {
 
       {/* Stats Grid - Solo visible para admin */}
       {isAdmin && (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Ingresos (Z)</CardTitle>
@@ -178,11 +180,24 @@ export default function Home() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                €{stats?.totalIncome?.toFixed(2) || "0.00"}
+                €{stats?.totalIncomeZ?.toFixed(2) || "0.00"}
               </div>
               <p className="text-xs text-muted-foreground">
                 Efectivo: €{stats?.withdrawnCash?.toFixed(2) || "0.00"} | Tarjetas: €{stats?.withdrawnCards?.toFixed(2) || "0.00"}
               </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Otros Ingresos</CardTitle>
+              <TrendingUp className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">
+                €{stats?.otherIncome?.toFixed(2) || "0.00"}
+              </div>
+              <p className="text-xs text-muted-foreground">Devoluciones, etc.</p>
             </CardContent>
           </Card>
 
@@ -195,7 +210,7 @@ export default function Home() {
             <div className="text-2xl font-bold text-red-600">
               €{stats?.totalExpenses?.toFixed(2) || "0.00"}
             </div>
-            <p className="text-xs text-muted-foreground">Esta semana</p>
+            <p className="text-xs text-muted-foreground">Facturas + otros</p>
           </CardContent>
         </Card>
 

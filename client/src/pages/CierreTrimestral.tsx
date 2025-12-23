@@ -145,7 +145,8 @@ export default function CierreTrimestral() {
 
   // Calculate summary
   const summary = useMemo(() => {
-    let totalIncome = 0;
+    let totalIncomeZ = 0; // Ingresos de caja (zReading)
+    let otherIncome = 0; // Otros ingresos (type='ingreso')
     let totalExpenses = 0;
     let withdrawnCash = 0;
     let withdrawnCards = 0;
@@ -156,7 +157,7 @@ export default function CierreTrimestral() {
       if (closing.status === "closed") {
         closedDays++;
         // Usar zReading como ingresos (la Z de caja)
-        totalIncome += parseFloat(closing.zReading || "0");
+        totalIncomeZ += parseFloat(closing.zReading || "0");
         withdrawnCash += parseFloat(closing.withdrawnCash || "0");
         withdrawnCards += parseFloat(closing.withdrawnCards || "0");
         totalDifference += parseFloat(closing.difference || "0");
@@ -171,11 +172,15 @@ export default function CierreTrimestral() {
       if (item.type === 'gasto') {
         totalExpenses += parseFloat(item.importe || "0");
       } else if (item.type === 'ingreso') {
-        totalIncome += parseFloat(item.importe || "0");
+        otherIncome += parseFloat(item.importe || "0");
       }
     });
 
+    const totalIncome = totalIncomeZ + otherIncome;
+
     return {
+      totalIncomeZ,
+      otherIncome,
       totalIncome,
       totalExpenses,
       balance: totalIncome - totalExpenses,
@@ -340,19 +345,32 @@ export default function CierreTrimestral() {
       </Card>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-green-600" />
-              Total Ingresos
+              Ingresos (Z)
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-green-600">€{summary.totalIncome.toFixed(2)}</p>
+            <p className="text-2xl font-bold text-green-600">€{summary.totalIncomeZ.toFixed(2)}</p>
             <p className="text-xs text-muted-foreground">
               Efectivo: €{summary.withdrawnCash.toFixed(2)} | Tarjetas: €{summary.withdrawnCards.toFixed(2)}
             </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-green-600" />
+              Otros Ingresos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-green-600">€{summary.otherIncome.toFixed(2)}</p>
+            <p className="text-xs text-muted-foreground">Devoluciones, etc.</p>
           </CardContent>
         </Card>
 
@@ -365,7 +383,7 @@ export default function CierreTrimestral() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold text-red-600">€{summary.totalExpenses.toFixed(2)}</p>
-            <p className="text-xs text-muted-foreground">{summary.totalInvoices} facturas registradas</p>
+            <p className="text-xs text-muted-foreground">{summary.totalInvoices} facturas</p>
           </CardContent>
         </Card>
 
@@ -380,7 +398,7 @@ export default function CierreTrimestral() {
             <p className={`text-2xl font-bold ${summary.balance >= 0 ? "text-green-600" : "text-red-600"}`}>
               €{summary.balance.toFixed(2)}
             </p>
-            <p className="text-xs text-muted-foreground">Ingresos - Gastos</p>
+            <p className="text-xs text-muted-foreground">Resultado neto</p>
           </CardContent>
         </Card>
 
@@ -388,14 +406,14 @@ export default function CierreTrimestral() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-amber-600" />
-              Descuadre Acumulado
+              Descuadre
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className={`text-2xl font-bold ${summary.totalDifference === 0 ? "text-green-600" : summary.totalDifference > 0 ? "text-blue-600" : "text-red-600"}`}>
               €{summary.totalDifference.toFixed(2)}
             </p>
-            <p className="text-xs text-muted-foreground">{summary.closedDays} días cerrados</p>
+            <p className="text-xs text-muted-foreground">{summary.closedDays} días</p>
           </CardContent>
         </Card>
       </div>

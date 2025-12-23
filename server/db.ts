@@ -528,7 +528,8 @@ export async function getDashboardStats(businessId: number, startDate: string, e
       lte(transactions.date, endDate)
     ));
   
-  let totalIncome = 0;
+  let totalIncomeZ = 0; // Ingresos de caja (zReading)
+  let otherIncome = 0; // Otros ingresos (type='ingreso')
   let totalExpenses = 0;
   let totalDifference = 0;
   let withdrawnCash = 0;
@@ -538,7 +539,7 @@ export async function getDashboardStats(businessId: number, startDate: string, e
   // Solo contar cierres con status='closed' para consistencia con Cierre Trimestral
   closings.forEach(c => {
     if (c.status === 'closed') {
-      totalIncome += parseFloat(c.zReading || "0");
+      totalIncomeZ += parseFloat(c.zReading || "0");
       totalDifference += parseFloat(c.difference || "0");
       withdrawnCash += parseFloat(c.withdrawnCash || "0");
       withdrawnCards += parseFloat(c.withdrawnCards || "0");
@@ -560,13 +561,13 @@ export async function getDashboardStats(businessId: number, startDate: string, e
   const otrosGastosTotal = await getTotalOtrosGastos(businessId, startDate, endDate);
   totalExpenses += otrosGastosTotal;
   
-  // Sumar otros ingresos
-  const otrosIngresosTotal = await getTotalOtrosIngresos(businessId, startDate, endDate);
-  totalIncome += otrosIngresosTotal;
+  // Sumar otros ingresos (separado de ingresos Z)
+  otherIncome = await getTotalOtrosIngresos(businessId, startDate, endDate);
   
   // También sumar transacciones antiguas si existen
+  let oldTxnsIncome = 0;
   txns.forEach(t => {
-    if (t.type === "income") totalIncome += parseFloat(t.amount || "0");
+    if (t.type === "income") oldTxnsIncome += parseFloat(t.amount || "0");
     else totalExpenses += parseFloat(t.amount || "0");
   });
   
@@ -575,9 +576,11 @@ export async function getDashboardStats(businessId: number, startDate: string, e
   const pendingOrders = await getOrdersByBusiness(businessId, "pending");
   
   return {
-    totalIncome,
+    totalIncomeZ, // Ingresos de caja (zReading)
+    otherIncome, // Otros ingresos (type='ingreso')
+    totalIncome: totalIncomeZ + otherIncome + oldTxnsIncome, // Total para balance
     totalExpenses,
-    netResult: totalIncome - totalExpenses,
+    netResult: (totalIncomeZ + otherIncome + oldTxnsIncome) - totalExpenses,
     totalDifference,
     withdrawnCash,
     withdrawnCards,

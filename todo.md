@@ -581,4 +581,8 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] getDailyWithdrawals no filtra por status='closed' - muestra datos incorrectos
 
 ## Correcciones v48
-- [ ] Retiros Diarios desfasados 1 día: muestra Domingo como Lunes, Lunes como Martes
+- [x] Retiros Diarios desfasados 1 día: muestra Domingo como Lunes, Lunes como Martes
+
+## Mejoras v49
+- [x] Separar Ingresos (Z) de Otros Ingresos en Dashboard y Cierre Trimestral
+- [x] Mostrar desglose de efectivo/tarjeta en Ingresos (Z) en texto pequeño
