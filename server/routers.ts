@@ -1246,6 +1246,12 @@ export const appRouter = router({
       await db.deleteAccessCode(input.id);
       return { success: true };
     }),
+    updateEntrance: adminProcedure.input(z.object({
+      entranceCode: z.string(),
+    })).mutation(async ({ input }) => {
+      await db.updateEntranceCode(input.entranceCode);
+      return { success: true };
+    }),
   }),
 });
 

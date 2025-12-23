@@ -31,10 +31,9 @@ export default function CodigosAcceso() {
         roomType: "",
         floor: "",
         floorLevel: "",
-        entranceCode: "1469",
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`Error al crear código: ${error.message}`);
     },
   });
@@ -45,8 +44,19 @@ export default function CodigosAcceso() {
       refetch();
       setEditingCode(null);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`Error al actualizar código: ${error.message}`);
+    },
+  });
+
+  const updateEntranceMutation = trpc.accessCodes.updateEntrance.useMutation({
+    onSuccess: () => {
+      toast.success("Código de entrada actualizado correctamente");
+      refetch();
+      setIsEditingEntrance(false);
+    },
+    onError: (error: any) => {
+      toast.error(`Error al actualizar código de entrada: ${error.message}`);
     },
   });
 
@@ -55,20 +65,21 @@ export default function CodigosAcceso() {
       toast.success("Código eliminado correctamente");
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`Error al eliminar código: ${error.message}`);
     },
   });
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingCode, setEditingCode] = useState<any>(null);
+  const [isEditingEntrance, setIsEditingEntrance] = useState(false);
+  const [entranceCodeValue, setEntranceCodeValue] = useState("");
   const [newCode, setNewCode] = useState({
     roomNumber: "",
     roomCode: "",
     roomType: "",
     floor: "",
     floorLevel: "",
-    entranceCode: "1469",
   });
 
   const handleCreate = () => {
@@ -88,8 +99,15 @@ export default function CodigosAcceso() {
       roomType: editingCode.roomType,
       floor: editingCode.floor,
       floorLevel: editingCode.floorLevel,
-      entranceCode: editingCode.entranceCode,
     });
+  };
+
+  const handleUpdateEntrance = () => {
+    if (!entranceCodeValue) {
+      toast.error("El código de entrada no puede estar vacío");
+      return;
+    }
+    updateEntranceMutation.mutate({ entranceCode: entranceCodeValue });
   };
 
   const handleDelete = (id: number) => {
@@ -98,8 +116,10 @@ export default function CodigosAcceso() {
     }
   };
 
-  // Código de entrada del hostel (único)
-  const entranceCode = codes?.find(c => c.entranceCode)?.entranceCode || "1469";
+  // Separar código de entrada del resto
+  const entranceCodeData = codes?.find(c => c.roomNumber === "ENTRADA");
+  const roomCodes = codes?.filter(c => c.roomNumber !== "ENTRADA") || [];
+  const entranceCode = entranceCodeData?.roomCode || "1469";
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -166,14 +186,6 @@ export default function CodigosAcceso() {
                     placeholder="Ground Floor"
                   />
                 </div>
-                <div className="col-span-2">
-                  <Label>Código Entrada Hostel</Label>
-                  <Input
-                    value={newCode.entranceCode}
-                    onChange={(e) => setNewCode({ ...newCode, entranceCode: e.target.value })}
-                    placeholder="1469"
-                  />
-                </div>
               </div>
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
@@ -191,9 +203,23 @@ export default function CodigosAcceso() {
       {/* Código de Entrada */}
       <Card className="bg-primary/5 border-primary">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Key className="h-5 w-5" />
-            Código Entrada Hostel
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Key className="h-5 w-5" />
+              Código Entrada Hostel
+            </div>
+            {isAdmin && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setEntranceCodeValue(entranceCode);
+                  setIsEditingEntrance(true);
+                }}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -207,55 +233,61 @@ export default function CodigosAcceso() {
           <CardTitle>Habitaciones</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-2">Número</th>
-                  <th className="text-left p-2">Código</th>
-                  <th className="text-left p-2">Tipo de Habitación</th>
-                  <th className="text-left p-2">Planta</th>
-                  <th className="text-left p-2">Floor</th>
-                  {isAdmin && <th className="text-right p-2">Acciones</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {codes?.map((code) => (
-                  <tr key={code.id} className="border-b hover:bg-muted/50">
-                    <td className="p-2 font-medium">{code.roomNumber}</td>
-                    <td className="p-2">{code.roomCode}</td>
-                    <td className="p-2">{code.roomType}</td>
-                    <td className="p-2">{code.floor}</td>
-                    <td className="p-2">{code.floorLevel}</td>
-                    {isAdmin && (
-                      <td className="p-2 text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setEditingCode(code)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(code.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    )}
+          {roomCodes.length === 0 ? (
+            <p className="text-muted-foreground text-center py-8">
+              No hay códigos de habitaciones registrados
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-2">Número</th>
+                    <th className="text-left p-2">Código</th>
+                    <th className="text-left p-2">Tipo de Habitación</th>
+                    <th className="text-left p-2">Planta</th>
+                    <th className="text-left p-2">Floor</th>
+                    {isAdmin && <th className="text-right p-2">Acciones</th>}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {roomCodes.map((code) => (
+                    <tr key={code.id} className="border-b hover:bg-muted/50">
+                      <td className="p-2 font-medium">{code.roomNumber}</td>
+                      <td className="p-2">{code.roomCode}</td>
+                      <td className="p-2">{code.roomType}</td>
+                      <td className="p-2">{code.floor}</td>
+                      <td className="p-2">{code.floorLevel}</td>
+                      {isAdmin && (
+                        <td className="p-2 text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setEditingCode(code)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDelete(code.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Dialog de Edición */}
+      {/* Dialog de Edición de Habitación */}
       {editingCode && (
         <Dialog open={!!editingCode} onOpenChange={() => setEditingCode(null)}>
           <DialogContent className="max-w-2xl">
@@ -298,13 +330,6 @@ export default function CodigosAcceso() {
                   onChange={(e) => setEditingCode({ ...editingCode, floorLevel: e.target.value })}
                 />
               </div>
-              <div className="col-span-2">
-                <Label>Código Entrada Hostel</Label>
-                <Input
-                  value={editingCode.entranceCode || ""}
-                  onChange={(e) => setEditingCode({ ...editingCode, entranceCode: e.target.value })}
-                />
-              </div>
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setEditingCode(null)}>
@@ -312,6 +337,33 @@ export default function CodigosAcceso() {
               </Button>
               <Button onClick={handleUpdate} disabled={updateMutation.isPending}>
                 {updateMutation.isPending ? "Guardando..." : "Guardar"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Dialog de Edición de Código de Entrada */}
+      {isEditingEntrance && (
+        <Dialog open={isEditingEntrance} onOpenChange={setIsEditingEntrance}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Código de Entrada</DialogTitle>
+            </DialogHeader>
+            <div>
+              <Label>Código de Entrada al Hostel</Label>
+              <Input
+                value={entranceCodeValue}
+                onChange={(e) => setEntranceCodeValue(e.target.value)}
+                placeholder="1469"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsEditingEntrance(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleUpdateEntrance} disabled={updateEntranceMutation.isPending}>
+                {updateEntranceMutation.isPending ? "Guardando..." : "Guardar"}
               </Button>
             </div>
           </DialogContent>

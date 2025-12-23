@@ -1323,3 +1323,23 @@ export async function deleteAccessCode(id: number) {
   if (!db) throw new Error("Database not available");
   await db.delete(accessCodes).where(eq(accessCodes.id, id));
 }
+
+export async function updateEntranceCode(entranceCode: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  // Buscar el registro ENTRADA
+  const [entrance] = await db.select().from(accessCodes).where(eq(accessCodes.roomNumber, 'ENTRADA'));
+  if (entrance) {
+    // Actualizar si existe
+    await db.update(accessCodes).set({ roomCode: entranceCode }).where(eq(accessCodes.roomNumber, 'ENTRADA'));
+  } else {
+    // Crear si no existe
+    await db.insert(accessCodes).values({
+      roomNumber: 'ENTRADA',
+      roomCode: entranceCode,
+      roomType: 'Código de Entrada al Hostel',
+      floor: 'N/A',
+      floorLevel: 'N/A',
+    });
+  }
+}
