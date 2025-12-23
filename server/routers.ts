@@ -14,10 +14,10 @@ const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
   return next({ ctx });
 });
 
-// Housekeeping procedure (housekeeping role or admin)
+// Housekeeping procedure (admin, user, or housekeeping role)
 const housekeepingProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== 'housekeeping' && ctx.user.role !== 'admin') {
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'Solo housekeeping puede realizar esta acción' });
+  if (ctx.user.role !== 'housekeeping' && ctx.user.role !== 'admin' && ctx.user.role !== 'user') {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'No tienes permisos para acceder a esta sección' });
   }
   return next({ ctx });
 });

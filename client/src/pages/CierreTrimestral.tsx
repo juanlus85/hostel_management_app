@@ -167,8 +167,12 @@ export default function CierreTrimestral() {
       totalExpenses += parseFloat(inv.totalAmount || "0");
     });
 
-    otrosGastos.forEach((gasto: any) => {
-      totalExpenses += parseFloat(gasto.importe || "0");
+    otrosGastos.forEach((item: any) => {
+      if (item.type === 'gasto') {
+        totalExpenses += parseFloat(item.importe || "0");
+      } else if (item.type === 'ingreso') {
+        totalIncome += parseFloat(item.importe || "0");
+      }
     });
 
     return {

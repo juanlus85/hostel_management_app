@@ -239,6 +239,33 @@ export default function ResumenSemanal() {
             </CardContent>
           </Card>
 
+          {/* Desglose Diario de Retiros */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Retiros Diarios</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map((day, index) => {
+                  const hostelDay = hostelDailyWithdrawals?.[index];
+                  const tiendaDay = tiendaDailyWithdrawals?.[index];
+                  const totalCash = (parseFloat(hostelDay?.cashWithdrawn || '0') + parseFloat(tiendaDay?.cashWithdrawn || '0'));
+                  const totalCards = (parseFloat(hostelDay?.cardWithdrawn || '0') + parseFloat(tiendaDay?.cardWithdrawn || '0'));
+                  
+                  return (
+                    <div key={day} className="flex justify-between items-center py-2 border-b last:border-0">
+                      <span className="text-sm font-medium">{day}</span>
+                      <div className="flex gap-4 text-sm">
+                        <span className="text-green-600">Efectivo: €{totalCash.toFixed(2)}</span>
+                        <span className="text-blue-600">Tarjeta: €{totalCards.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Alertas y Pendientes */}
           <div className="grid gap-4 md:grid-cols-3">
             <Card>

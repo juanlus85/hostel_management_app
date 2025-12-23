@@ -564,3 +564,9 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 ## Nuevas funcionalidades v43
 - [x] Facturas: agregar opción de eliminar factura
 - [x] Facturas: permitir subir documento después de crear factura (y reenviar email)
+
+
+## Correcciones v44
+- [ ] Dashboard y cierre trimestral: ingresos de otros_gastos se suman incorrectamente a gastos
+- [ ] Menú Housekeeping no funciona para empleados (solo funciona para admin)
+- [ ] Resumen Semanal: agregar desglose diario de efectivo/tarjeta retirado (Lunes, Martes, etc.)
