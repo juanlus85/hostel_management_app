@@ -638,3 +638,8 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 
 ## Bug v55 - React Hooks
 - [x] Error "Rendered fewer hooks than expected" en ResumenSemanal.tsx (useState dentro de .map())
+
+## Mejora v56 - Resumen Semanal
+- [x] Título "Disponibilidad Semanal" debe mostrar fecha del lunes siguiente (ej: "Disponibilidad Semanal a Lunes 22")
+- [x] Columna "Debería Haber" en Efectivo en Sobres debe auto-calcularse desde retiros diarios (no editable)
+- [x] Gráfico histórico con Chart.js (cada año una línea, empieza con puntos)

@@ -10,41 +10,61 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Loader2, TrendingUp, Wallet, CreditCard, AlertTriangle, Package, CheckSquare, Calendar, ChevronLeft, ChevronRight, Plus, Pencil, Trash2, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { Line } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  ChartOptions
+} from 'chart.js';
+
+// Registrar componentes de Chart.js
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 // Componente para fila de efectivo en sobres
-function CashEnvelopeRow({ dayName, dayOfWeek, envelope, isAdmin, onSave }: {
+function CashEnvelopeRow({ dayName, dayOfWeek, envelope, dailyWithdrawal, isAdmin, onSave }: {
   dayName: string;
   dayOfWeek: number;
   envelope: any;
+  dailyWithdrawal: number;
   isAdmin: boolean;
   onSave: (dayOfWeek: number, expectedCash: string, actualCash: string) => void;
 }) {
-  const [expectedCash, setExpectedCash] = useState(envelope?.expectedCash || "0.00");
+  // expectedCash se calcula automáticamente desde dailyWithdrawal
+  const expectedCash = dailyWithdrawal.toFixed(2);
   const [actualCash, setActualCash] = useState(envelope?.actualCash || "0.00");
   
   useEffect(() => {
-    setExpectedCash(envelope?.expectedCash || "0.00");
     setActualCash(envelope?.actualCash || "0.00");
   }, [envelope]);
+  
+  // Auto-guardar expectedCash cuando cambie dailyWithdrawal
+  useEffect(() => {
+    if (envelope && parseFloat(envelope.expectedCash) !== dailyWithdrawal) {
+      onSave(dayOfWeek, expectedCash, actualCash);
+    }
+  }, [dailyWithdrawal]);
   
   const difference = parseFloat(actualCash) - parseFloat(expectedCash);
 
   return (
     <tr className="border-b hover:bg-muted/50">
       <td className="p-2 font-medium">{dayName}</td>
-      <td className="p-2 text-right">
-        {isAdmin ? (
-          <Input
-            type="number"
-            step="0.01"
-            value={expectedCash}
-            onChange={(e) => setExpectedCash(e.target.value)}
-            onBlur={() => onSave(dayOfWeek, expectedCash, actualCash)}
-            className="w-24 text-right"
-          />
-        ) : (
-          `€${parseFloat(expectedCash).toFixed(2)}`
-        )}
+      <td className="p-2 text-right text-muted-foreground">
+        €{parseFloat(expectedCash).toFixed(2)}
       </td>
       <td className="p-2 text-right">
         {isAdmin ? (
@@ -136,6 +156,10 @@ export default function ResumenSemanal() {
     sunday.setDate(monday.getDate() + 6);
     sunday.setHours(23, 59, 59, 999);
     
+    // Calcular lunes siguiente (para título de Disponibilidad)
+    const nextMonday = new Date(monday);
+    nextMonday.setDate(monday.getDate() + 7);
+    
     // Formatear fechas en formato YYYY-MM-DD sin conversión a UTC
     const formatDate = (date: Date) => {
       const year = date.getFullYear();
@@ -147,7 +171,8 @@ export default function ResumenSemanal() {
     return {
       startDate: formatDate(monday),
       endDate: formatDate(sunday),
-      label: `${monday.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })} - ${sunday.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}`
+      label: `${monday.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })} - ${sunday.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}`,
+      nextMondayLabel: `Lunes ${nextMonday.getDate()}`
     };
   }, [selectedWeek]);
 
@@ -625,16 +650,33 @@ export default function ResumenSemanal() {
                       </tr>
                     </thead>
                     <tbody>
-                      {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map((dayName, dayIndex) => (
-                        <CashEnvelopeRow
-                          key={dayName}
-                          dayName={dayName}
-                          dayOfWeek={dayIndex + 1}
-                          envelope={cashEnvelopes?.find(e => e.dayOfWeek === dayIndex + 1)}
-                          isAdmin={isAdmin}
-                          onSave={handleSaveCashEnvelope}
-                        />
-                      ))}
+                      {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map((dayName, dayIndex) => {
+                        // Calcular fecha del día
+                        const monday = new Date(weekRange.startDate);
+                        const currentDate = new Date(monday);
+                        currentDate.setDate(monday.getDate() + dayIndex);
+                        const year = currentDate.getFullYear();
+                        const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+                        const day = String(currentDate.getDate()).padStart(2, '0');
+                        const dateStr = `${year}-${month}-${day}`;
+                        
+                        // Obtener retiros del día
+                        const hostelDay = hostelDailyWithdrawals?.find(d => d.date === dateStr);
+                        const tiendaDay = tiendaDailyWithdrawals?.find(d => d.date === dateStr);
+                        const dailyWithdrawal = (parseFloat(hostelDay?.cashWithdrawn || '0') + parseFloat(tiendaDay?.cashWithdrawn || '0'));
+                        
+                        return (
+                          <CashEnvelopeRow
+                            key={dayName}
+                            dayName={dayName}
+                            dayOfWeek={dayIndex + 1}
+                            envelope={cashEnvelopes?.find(e => e.dayOfWeek === dayIndex + 1)}
+                            dailyWithdrawal={dailyWithdrawal}
+                            isAdmin={isAdmin}
+                            onSave={handleSaveCashEnvelope}
+                          />
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -648,7 +690,7 @@ export default function ResumenSemanal() {
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <div>
-                    <CardTitle>Disponibilidad Semanal</CardTitle>
+                    <CardTitle>Disponibilidad Semanal a {weekRange.nextMondayLabel}</CardTitle>
                     <p className="text-sm text-muted-foreground mt-1">
                       Total disponible: 
                       <span className="ml-2 font-bold text-primary text-lg">
@@ -687,14 +729,128 @@ export default function ResumenSemanal() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <BarChart3 className="h-5 w-5" />
-                  Histórico de Disponibilidad
+                  Histórico de Disponibilidad Total
                 </CardTitle>
-                <p className="text-sm text-muted-foreground">Gráfico en desarrollo - próximamente</p>
+                <p className="text-sm text-muted-foreground">Evolución de la disponibilidad total por semana</p>
               </CardHeader>
               <CardContent>
-                <div className="h-64 flex items-center justify-center border-2 border-dashed rounded-lg">
-                  <p className="text-muted-foreground">Gráfico de disponibilidad total por semana</p>
-                </div>
+                {(() => {
+                  // Agrupar datos por año y semana
+                  const dataByYear: Record<number, { week: string; total: number }[]> = {};
+                  
+                  allAvailabilityRecords?.forEach(record => {
+                    const weekDate = new Date(record.weekStart);
+                    const year = weekDate.getFullYear();
+                    const weekNumber = Math.ceil((weekDate.getDate() + 6 - weekDate.getDay()) / 7);
+                    const weekLabel = `S${weekNumber}`;
+                    
+                    if (!dataByYear[year]) {
+                      dataByYear[year] = [];
+                    }
+                    
+                    // Buscar si ya existe esta semana
+                    const existingWeek = dataByYear[year].find(w => w.week === weekLabel);
+                    if (existingWeek) {
+                      existingWeek.total += parseFloat(record.amount);
+                    } else {
+                      dataByYear[year].push({
+                        week: weekLabel,
+                        total: parseFloat(record.amount)
+                      });
+                    }
+                  });
+                  
+                  // Obtener todas las semanas únicas
+                  const allWeeks = Array.from(
+                    new Set(
+                      Object.values(dataByYear).flatMap(weeks => weeks.map(w => w.week))
+                    )
+                  ).sort((a, b) => {
+                    const numA = parseInt(a.replace('S', ''));
+                    const numB = parseInt(b.replace('S', ''));
+                    return numA - numB;
+                  });
+                  
+                  // Colores para cada año
+                  const colors = [
+                    { border: 'rgb(59, 130, 246)', bg: 'rgba(59, 130, 246, 0.1)' }, // Azul
+                    { border: 'rgb(34, 197, 94)', bg: 'rgba(34, 197, 94, 0.1)' }, // Verde
+                    { border: 'rgb(249, 115, 22)', bg: 'rgba(249, 115, 22, 0.1)' }, // Naranja
+                    { border: 'rgb(168, 85, 247)', bg: 'rgba(168, 85, 247, 0.1)' }, // Púrpura
+                    { border: 'rgb(236, 72, 153)', bg: 'rgba(236, 72, 153, 0.1)' }, // Rosa
+                  ];
+                  
+                  // Crear datasets por año
+                  const datasets = Object.keys(dataByYear).sort().map((year, index) => {
+                    const yearData = dataByYear[parseInt(year)];
+                    const color = colors[index % colors.length];
+                    
+                    return {
+                      label: year,
+                      data: allWeeks.map(week => {
+                        const weekData = yearData.find(w => w.week === week);
+                        return weekData ? weekData.total : null;
+                      }),
+                      borderColor: color.border,
+                      backgroundColor: color.bg,
+                      pointRadius: 6,
+                      pointHoverRadius: 8,
+                      tension: 0.3,
+                      fill: false
+                    };
+                  });
+                  
+                  const chartData = {
+                    labels: allWeeks,
+                    datasets
+                  };
+                  
+                  const options: ChartOptions<'line'> = {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: {
+                        position: 'top' as const,
+                      },
+                      tooltip: {
+                        callbacks: {
+                          label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                              label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                              label += '€' + context.parsed.y.toFixed(2);
+                            }
+                            return label;
+                          }
+                        }
+                      }
+                    },
+                    scales: {
+                      y: {
+                        beginAtZero: true,
+                        ticks: {
+                          callback: function(value) {
+                            return '€' + value;
+                          }
+                        }
+                      }
+                    }
+                  };
+                  
+                  return (
+                    <div className="h-[400px]">
+                      {datasets.length > 0 ? (
+                        <Line data={chartData} options={options} />
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-muted-foreground">
+                          <p>No hay datos históricos disponibles. Registra la disponibilidad semanal para ver el gráfico.</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </CardContent>
             </Card>
           </TabsContent>
@@ -705,27 +861,29 @@ export default function ResumenSemanal() {
       <Dialog open={isAddingSource} onOpenChange={setIsAddingSource}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Agregar Nueva Fuente</DialogTitle>
+            <DialogTitle>Nueva Fuente de Disponibilidad</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>Nombre</Label>
+              <Label htmlFor="sourceName">Nombre</Label>
               <Input
+                id="sourceName"
                 value={newSourceName}
                 onChange={(e) => setNewSourceName(e.target.value)}
-                placeholder="Ej: Revolut, Wise, etc."
+                placeholder="Ej: Cuenta Revolut"
               />
             </div>
             <div>
-              <Label>Tipo</Label>
-              <Select value={newSourceType} onValueChange={(v: any) => setNewSourceType(v)}>
-                <SelectTrigger>
+              <Label htmlFor="sourceType">Tipo</Label>
+              <Select value={newSourceType} onValueChange={(value: any) => setNewSourceType(value)}>
+                <SelectTrigger id="sourceType">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="bank">Cuenta Bancaria</SelectItem>
+                  <SelectItem value="bank">Banco</SelectItem>
                   <SelectItem value="safe">Caja Fuerte</SelectItem>
                   <SelectItem value="cash_register">Caja Registradora</SelectItem>
+                  <SelectItem value="other">Otro</SelectItem>
                 </SelectContent>
               </Select>
             </div>
