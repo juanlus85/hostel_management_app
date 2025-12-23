@@ -535,11 +535,14 @@ export async function getDashboardStats(businessId: number, startDate: string, e
   let withdrawnCards = 0;
   
   // Sumar ingresos de cashClosings usando zReading (la Z de caja = ingresos reales)
+  // Solo contar cierres con status='closed' para consistencia con Cierre Trimestral
   closings.forEach(c => {
-    totalIncome += parseFloat(c.zReading || "0");
-    totalDifference += parseFloat(c.difference || "0");
-    withdrawnCash += parseFloat(c.withdrawnCash || "0");
-    withdrawnCards += parseFloat(c.withdrawnCards || "0");
+    if (c.status === 'closed') {
+      totalIncome += parseFloat(c.zReading || "0");
+      totalDifference += parseFloat(c.difference || "0");
+      withdrawnCash += parseFloat(c.withdrawnCash || "0");
+      withdrawnCards += parseFloat(c.withdrawnCards || "0");
+    }
   });
   
   // Sumar gastos de facturas

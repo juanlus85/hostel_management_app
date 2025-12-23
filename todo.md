@@ -567,6 +567,9 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 
 
 ## Correcciones v44
-- [ ] Dashboard y cierre trimestral: ingresos de otros_gastos se suman incorrectamente a gastos
-- [ ] Menú Housekeeping no funciona para empleados (solo funciona para admin)
-- [ ] Resumen Semanal: agregar desglose diario de efectivo/tarjeta retirado (Lunes, Martes, etc.)
+- [x] Dashboard y cierre trimestral: ingresos de otros_gastos se suman incorrectamente a gastos
+- [x] Menú Housekeeping no funciona para empleados (solo funciona para admin)
+- [x] Resumen Semanal: agregar desglose diario de efectivo/tarjeta retirado (Lunes, Martes, etc.)
+
+## Correcciones v45
+- [ ] Dashboard suma cierres con status='draft' cuando solo debería sumar status='closed' (diferencia €662.45)
