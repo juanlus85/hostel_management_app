@@ -197,7 +197,7 @@ export default function Home() {
               <div className="text-2xl font-bold text-green-600">
                 €{stats?.otherIncome?.toFixed(2) || "0.00"}
               </div>
-              <p className="text-xs text-muted-foreground">Devoluciones, etc.</p>
+              <p className="text-xs text-muted-foreground">Otros ingresos</p>
             </CardContent>
           </Card>
 

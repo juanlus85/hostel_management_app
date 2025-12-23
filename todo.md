@@ -586,3 +586,6 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 ## Mejoras v49
 - [x] Separar Ingresos (Z) de Otros Ingresos en Dashboard y Cierre Trimestral
 - [x] Mostrar desglose de efectivo/tarjeta en Ingresos (Z) en texto pequeño
+
+## Correcciones v50
+- [x] Cambiar descripción "Devoluciones, etc." a "Otros ingresos" en Dashboard y Cierre Trimestral

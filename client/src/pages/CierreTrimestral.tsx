@@ -370,7 +370,7 @@ export default function CierreTrimestral() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold text-green-600">€{summary.otherIncome.toFixed(2)}</p>
-            <p className="text-xs text-muted-foreground">Devoluciones, etc.</p>
+            <p className="text-xs text-muted-foreground">Otros ingresos</p>
           </CardContent>
         </Card>
 
