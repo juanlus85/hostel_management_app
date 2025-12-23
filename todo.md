@@ -610,3 +610,16 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [ ] Crear procedimientos tRPC para CRUD de códigos
 - [ ] Crear página CodigosAcceso.tsx con tabla de habitaciones
 - [ ] Agregar menú Códigos de Acceso (visible para todos, editable solo admin)
+
+
+## Nueva Feature v51 - Cajas F
+- [x] Crear tabla safe_boxes en schema
+- [x] Crear procedimientos tRPC para CRUD de movimientos
+- [x] Crear página CajasF.tsx con tabs Hostel/Tienda
+- [x] Agregar menú Cajas F (solo admin)
+
+## Nueva Feature v52 - Códigos de Acceso
+- [x] Crear tabla access_codes en schema
+- [x] Crear procedimientos tRPC para CRUD de códigos
+- [x] Crear página CodigosAcceso.tsx con tabla de habitaciones
+- [x] Agregar menú Códigos de Acceso (visible para todos, editable solo admin)

@@ -1212,6 +1212,41 @@ export const appRouter = router({
       return { success: true };
     }),
   }),
+
+  // ==================== ACCESS CODES (Códigos de Acceso) ====================
+  accessCodes: router({
+    list: protectedProcedure.query(async () => {
+      return db.getAllAccessCodes();
+    }),
+    create: adminProcedure.input(z.object({
+      roomNumber: z.string(),
+      roomCode: z.string(),
+      roomType: z.string(),
+      floor: z.string(),
+      floorLevel: z.string(),
+      entranceCode: z.string().optional(),
+    })).mutation(async ({ input }) => {
+      const id = await db.createAccessCode(input);
+      return { success: true, id };
+    }),
+    update: adminProcedure.input(z.object({
+      id: z.number(),
+      roomNumber: z.string().optional(),
+      roomCode: z.string().optional(),
+      roomType: z.string().optional(),
+      floor: z.string().optional(),
+      floorLevel: z.string().optional(),
+      entranceCode: z.string().optional(),
+    })).mutation(async ({ input }) => {
+      const { id, ...data } = input;
+      await db.updateAccessCode(id, data);
+      return { success: true };
+    }),
+    delete: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
+      await db.deleteAccessCode(input.id);
+      return { success: true };
+    }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

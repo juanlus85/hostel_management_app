@@ -22,7 +22,8 @@ import {
   systemSettings, InsertSystemSetting, SystemSetting,
   roomStatus, InsertRoomStatus, RoomStatus,
   otrosGastos, InsertOtroGasto, OtroGasto,
-  safeBoxes, InsertSafeBox, SafeBox
+  safeBoxes, InsertSafeBox, SafeBox,
+  accessCodes, InsertAccessCode, AccessCode
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -1286,4 +1287,39 @@ export async function updateSafeBoxCheckStatus(id: number, checkStatus: "uncheck
   if (!db) return;
   
   await db.update(safeBoxes).set({ checkStatus }).where(eq(safeBoxes.id, id));
+}
+
+
+// ==================== ACCESS CODES (Códigos de Acceso) ====================
+
+export async function getAllAccessCodes() {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(accessCodes).orderBy(asc(accessCodes.roomNumber));
+}
+
+export async function getAccessCodeById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const [code] = await db.select().from(accessCodes).where(eq(accessCodes.id, id));
+  return code;
+}
+
+export async function createAccessCode(data: InsertAccessCode) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [code] = await db.insert(accessCodes).values(data).$returningId();
+  return code.id;
+}
+
+export async function updateAccessCode(id: number, data: Partial<InsertAccessCode>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(accessCodes).set(data).where(eq(accessCodes.id, id));
+}
+
+export async function deleteAccessCode(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(accessCodes).where(eq(accessCodes.id, id));
 }

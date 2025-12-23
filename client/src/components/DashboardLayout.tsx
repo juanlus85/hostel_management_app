@@ -41,7 +41,8 @@ import {
   Sparkles,
   DollarSign,
   BarChart3,
-  Vault
+  Vault,
+  Key
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState, createContext, useContext } from "react";
 import { useLocation } from "wouter";
@@ -64,6 +65,7 @@ const menuItems = [
   { icon: AlertTriangle, label: "Incidencias", path: "/incidencias" },
   { icon: CheckSquare, label: "Tareas", path: "/tareas" },
   { icon: Sparkles, label: "Housekeeping", path: "/housekeeping" },
+  { icon: Key, label: "Códigos Acceso", path: "/codigos-acceso" },
 ];
 
 const housekeepingMenuItems = [

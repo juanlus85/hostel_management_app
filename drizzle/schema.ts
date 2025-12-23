@@ -447,3 +447,20 @@ export const safeBoxes = mysqlTable("safe_boxes", {
 
 export type SafeBox = typeof safeBoxes.$inferSelect;
 export type InsertSafeBox = typeof safeBoxes.$inferInsert;
+
+
+// ==================== ACCESS CODES (Códigos de Acceso) ====================
+export const accessCodes = mysqlTable("access_codes", {
+  id: int("id").autoincrement().primaryKey(),
+  roomNumber: varchar("roomNumber", { length: 10 }).notNull().unique(), // Número de habitación (4, 7, 8, 15, 16, 18, 23, 35, 42, 51)
+  roomCode: varchar("roomCode", { length: 10 }).notNull(), // Código de la habitación (1215, 1118, 2119, etc.)
+  roomType: varchar("roomType", { length: 255 }).notNull(), // Tipo de habitación en español
+  floor: varchar("floor", { length: 50 }).notNull(), // Planta (Planta Baja, Primera Planta, Segunda Planta)
+  floorLevel: varchar("floorLevel", { length: 50 }).notNull(), // Piso (Ground Floor, First Floor, Second Floor)
+  entranceCode: varchar("entranceCode", { length: 10 }), // Código de entrada al hostel (1469)
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type AccessCode = typeof accessCodes.$inferSelect;
+export type InsertAccessCode = typeof accessCodes.$inferInsert;
