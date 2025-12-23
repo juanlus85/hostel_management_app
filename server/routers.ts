@@ -1077,10 +1077,12 @@ export const appRouter = router({
     }),
     create: adminProcedure.input(z.object({
       businessId: z.number(),
+      type: z.enum(["gasto", "ingreso"]),
       concepto: z.string(),
       categoria: z.enum(["sueldos", "seguridad_social", "impuestos", "seguros", "otros"]),
       categoriaOtros: z.string().optional(),
       importe: z.string(),
+      paymentMethod: z.enum(["cuenta_bancaria", "tarjeta", "ana", "juanlu", "caja_hostel", "caja_tienda", "caja_fuerte", "caja_fuerte_cambio", "otros"]).optional(),
       fecha: z.string(),
       notas: z.string().optional(),
     })).mutation(async ({ input, ctx }) => {

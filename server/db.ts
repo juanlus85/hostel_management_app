@@ -550,6 +550,10 @@ export async function getDashboardStats(businessId: number, startDate: string, e
   const otrosGastosTotal = await getTotalOtrosGastos(businessId, startDate, endDate);
   totalExpenses += otrosGastosTotal;
   
+  // Sumar otros ingresos
+  const otrosIngresosTotal = await getTotalOtrosIngresos(businessId, startDate, endDate);
+  totalIncome += otrosIngresosTotal;
+  
   // También sumar transacciones antiguas si existen
   txns.forEach(t => {
     if (t.type === "income") totalIncome += parseFloat(t.amount || "0");
@@ -1037,10 +1041,12 @@ export async function updateRoomStatus(data: {
 // ==================== OTROS GASTOS ====================
 export async function createOtroGasto(data: {
   businessId: number;
+  type: "gasto" | "ingreso";
   concepto: string;
   categoria: "sueldos" | "seguridad_social" | "impuestos" | "seguros" | "otros";
   categoriaOtros?: string;
   importe: string;
+  paymentMethod?: "cuenta_bancaria" | "tarjeta" | "ana" | "juanlu" | "caja_hostel" | "caja_tienda" | "caja_fuerte" | "caja_fuerte_cambio" | "otros";
   fecha: string;
   notas?: string;
   createdBy: number;
@@ -1051,10 +1057,12 @@ export async function createOtroGasto(data: {
   // Construir objeto de inserción manualmente para evitar problemas con campos auto-generados
   const insertData = {
     businessId: data.businessId,
+    type: data.type,
     concepto: data.concepto,
     categoria: data.categoria,
     categoriaOtros: data.categoriaOtros || null,
     importe: data.importe,
+    paymentMethod: data.paymentMethod || null,
     fecha: data.fecha,
     notas: data.notas || null,
     createdBy: data.createdBy,
@@ -1101,11 +1109,41 @@ export async function getTotalOtrosGastos(businessId: number, startDate?: string
   const db = await getDb();
   if (!db) return 0;
   
-  let conditions = eq(otrosGastos.businessId, businessId);
+  let conditions = and(
+    eq(otrosGastos.businessId, businessId),
+    eq(otrosGastos.type, "gasto")
+  ) as any;
   
   if (startDate && endDate) {
     conditions = and(
       eq(otrosGastos.businessId, businessId),
+      eq(otrosGastos.type, "gasto"),
+      gte(otrosGastos.fecha, startDate),
+      lte(otrosGastos.fecha, endDate)
+    ) as any;
+  }
+  
+  const result = await db
+    .select({ total: sql<string>`COALESCE(SUM(CAST(${otrosGastos.importe} AS DECIMAL(10,2))), 0)` })
+    .from(otrosGastos)
+    .where(conditions);
+  
+  return parseFloat(result[0]?.total || "0");
+}
+
+export async function getTotalOtrosIngresos(businessId: number, startDate?: string, endDate?: string) {
+  const db = await getDb();
+  if (!db) return 0;
+  
+  let conditions = and(
+    eq(otrosGastos.businessId, businessId),
+    eq(otrosGastos.type, "ingreso")
+  ) as any;
+  
+  if (startDate && endDate) {
+    conditions = and(
+      eq(otrosGastos.businessId, businessId),
+      eq(otrosGastos.type, "ingreso"),
       gte(otrosGastos.fecha, startDate),
       lte(otrosGastos.fecha, endDate)
     ) as any;

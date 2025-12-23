@@ -517,3 +517,42 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] 10. Probar creación de gastos en desarrollo
 - [ ] 11. Compilar y desplegar v41 por FTP
 - [ ] 12. Verificar funcionamiento en producción
+
+## Ajuste de menú
+- [x] Mover "Otros Gastos" justo debajo de "Facturas" en el menú
+
+## Selector "Ambos" - Mostrar datos combinados
+- [x] Modificar Facturas para mostrar datos de ambos negocios cuando se selecciona "Ambos"
+- [x] Modificar Otros Gastos para mostrar datos de ambos negocios cuando se selecciona "Ambos"
+- [ ] Modificar Incidencias para mostrar datos de ambos negocios cuando se selecciona "Ambos"
+- [ ] Modificar Tareas para mostrar datos de ambos negocios cuando se selecciona "Ambos"
+- [ ] Modificar Inventario para mostrar datos de ambos negocios cuando se selecciona "Ambos"
+- [ ] Verificar que todas las páginas muestren correctamente datos combinados
+
+## Método de pago en Otros Gastos
+- [x] Agregar campo paymentMethod a tabla otros_gastos en schema
+- [ ] Ejecutar migración SQL en producción (pendiente usuario)
+- [x] Agregar campo paymentMethod al formulario de Otros Gastos
+- [x] Mostrar método de pago en la lista de gastos
+
+## Correcciones finales
+- [x] Cierre Trimestral: incluir último día del trimestre en el rango de fechas
+- [x] Otros Gastos: eliminar selector hostel/tienda redundante
+- [x] Incidencias: implementar selector "Ambos" para mostrar datos combinados
+- [x] Inventario: implementar selector "Ambos" para mostrar datos combinados
+
+## Bug Caja
+- [x] Corregir bug: valores de caja se resetean a 0 al cambiar de pestaña del navegador
+
+## Mejoras adicionales v42
+- [x] 1. Renombrar archivos de facturas: [Proveedor] - [Trimestre]T - [Fecha].pdf
+- [x] 2. Verificar que cierre trimestral incluye último día del trimestre (ya corregido)
+- [x] 3. Dashboard: agregar selector de fechas personalizado (rango custom)
+- [x] 4. Otros Gastos/Ingresos: agregar tipo (gasto/ingreso) y actualizar dashboard/cierre (falta SQL producción)
+- [x] 5. Crear nuevo menú "Resumen Semanal" con:
+  - [x] 5.1. Dinero retirado efectivo/tarjeta por día de la semana
+  - [x] 5.2. Ingresos y gastos por negocio
+  - [x] 5.3. Balance semanal
+  - [x] 5.4. Resumen de incidencias pendientes
+  - [x] 5.5. Productos con stock bajo
+  - [x] 5.6. Tareas pendientes

@@ -18,12 +18,14 @@ import {
 import { useMemo, useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-type PeriodType = "week" | "month" | "quarter" | "year";
+type PeriodType = "week" | "month" | "quarter" | "year" | "custom";
 
 export default function Home() {
   const { user } = useAuth();
   const { selectedBusiness } = useBusinessContext();
   const [period, setPeriod] = useState<PeriodType>("month");
+  const [customStartDate, setCustomStartDate] = useState("");
+  const [customEndDate, setCustomEndDate] = useState("");
   
   // Get date range based on selected period
   const dateRange = useMemo(() => {
@@ -50,19 +52,32 @@ export default function Home() {
         start = new Date(now.getFullYear(), 0, 1);
         end = new Date(now.getFullYear(), 11, 31);
         break;
+      case "custom":
+        if (!customStartDate || !customEndDate) {
+          // Default to current month if custom dates not set
+          start = new Date(now.getFullYear(), now.getMonth(), 1);
+          end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        } else {
+          return {
+            startDate: customStartDate,
+            endDate: customEndDate,
+          };
+        }
+        break;
     }
     
     return {
       startDate: start.toISOString().split('T')[0],
       endDate: end.toISOString().split('T')[0],
     };
-  }, [period]);
+  }, [period, customStartDate, customEndDate]);
   
   const periodLabel = {
     week: "esta semana",
     month: "este mes",
     quarter: "este trimestre",
     year: "este año",
+    custom: "rango personalizado",
   }[period];
 
   const { data: businesses } = trpc.businesses.list.useQuery();
@@ -119,10 +134,10 @@ export default function Home() {
             Bienvenido, {user?.name}. Resumen de {businessLabel} {periodLabel}.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <CalendarDays className="h-4 w-4 text-muted-foreground" />
           <Select value={period} onValueChange={(v: PeriodType) => setPeriod(v)}>
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className="w-[180px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -130,8 +145,26 @@ export default function Home() {
               <SelectItem value="month">Este mes</SelectItem>
               <SelectItem value="quarter">Este trimestre</SelectItem>
               <SelectItem value="year">Este año</SelectItem>
+              <SelectItem value="custom">Rango personalizado</SelectItem>
             </SelectContent>
           </Select>
+          {period === "custom" && (
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={customStartDate}
+                onChange={(e) => setCustomStartDate(e.target.value)}
+                className="px-3 py-1.5 border rounded-md text-sm"
+              />
+              <span className="text-sm text-muted-foreground">-</span>
+              <input
+                type="date"
+                value={customEndDate}
+                onChange={(e) => setCustomEndDate(e.target.value)}
+                className="px-3 py-1.5 border rounded-md text-sm"
+              />
+            </div>
+          )}
         </div>
       </div>
 

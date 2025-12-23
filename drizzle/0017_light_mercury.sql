@@ -1,1 +1,0 @@
-DROP TABLE `otros_gastos`;

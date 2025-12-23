@@ -40,6 +40,8 @@ export default function Caja() {
   const [movementDescription, setMovementDescription] = useState("");
   const [movementAmount, setMovementAmount] = useState("");
   const [showHistoryDialog, setShowHistoryDialog] = useState(false);
+  const [hasUserEdited, setHasUserEdited] = useState(false);
+  const [loadedClosingId, setLoadedClosingId] = useState<number | null>(null);
 
   // Form state for cash counting
   const [coins010, setCoins010] = useState(0);
@@ -89,6 +91,7 @@ export default function Caja() {
   const updateClosing = trpc.cashClosings.update.useMutation({
     onSuccess: () => {
       refetchClosing();
+      setHasUserEdited(false);
       toast.success("Caja guardada");
     },
   });
@@ -96,6 +99,7 @@ export default function Caja() {
   const closeClosing = trpc.cashClosings.close.useMutation({
     onSuccess: () => {
       refetchClosing();
+      setHasUserEdited(false);
       toast.success("Caja cerrada correctamente");
     },
   });
@@ -131,9 +135,9 @@ export default function Caja() {
     }
   }, [currentBusinessId, currentDate]);
 
-  // Load data from closing
+  // Load data from closing (solo si no ha editado o si cambió el closing)
   useEffect(() => {
-    if (cashClosing) {
+    if (cashClosing && (!hasUserEdited || loadedClosingId !== cashClosing.id)) {
       setCoins010(cashClosing.coins010 || 0);
       setCoins020(cashClosing.coins020 || 0);
       setCoins050(cashClosing.coins050 || 0);
@@ -148,11 +152,12 @@ export default function Caja() {
       setPrepaidBooking(cashClosing.prepaidBooking || "");
       setWithdrawnCash(cashClosing.withdrawnCash || "");
       setWithdrawnCards(cashClosing.withdrawnCards || "");
-      // Solo cargar changeForNextDay si ya tiene valor guardado, sino se calcula automáticamente
       setChangeForNextDay(cashClosing.changeForNextDay || "");
       setNotes(cashClosing.notes || "");
+      setLoadedClosingId(cashClosing.id);
+      setHasUserEdited(false);
     }
-  }, [cashClosing]);
+  }, [cashClosing, hasUserEdited, loadedClosingId]);
 
   // Calculate totals
   const totalCashCalc = useMemo(() => {
@@ -363,7 +368,7 @@ export default function Caja() {
                     type="number"
                     min="0"
                     value={coins010}
-                    onChange={(e) => setCoins010(parseInt(e.target.value) || 0)}
+                    onChange={(e) => { setCoins010(parseInt(e.target.value) || 0); setHasUserEdited(true); }}
                     disabled={isClosed}
                     className="text-center"
                   />
@@ -377,7 +382,7 @@ export default function Caja() {
                     type="number"
                     min="0"
                     value={coins020}
-                    onChange={(e) => setCoins020(parseInt(e.target.value) || 0)}
+                    onChange={(e) => { setCoins020(parseInt(e.target.value) || 0); setHasUserEdited(true); }}
                     disabled={isClosed}
                     className="text-center"
                   />
@@ -391,7 +396,7 @@ export default function Caja() {
                     type="number"
                     min="0"
                     value={coins050}
-                    onChange={(e) => setCoins050(parseInt(e.target.value) || 0)}
+                    onChange={(e) => { setCoins050(parseInt(e.target.value) || 0); setHasUserEdited(true); }}
                     disabled={isClosed}
                     className="text-center"
                   />
@@ -405,7 +410,7 @@ export default function Caja() {
                     type="number"
                     min="0"
                     value={coins100}
-                    onChange={(e) => setCoins100(parseInt(e.target.value) || 0)}
+                    onChange={(e) => { setCoins100(parseInt(e.target.value) || 0); setHasUserEdited(true); }}
                     disabled={isClosed}
                     className="text-center"
                   />
@@ -419,7 +424,7 @@ export default function Caja() {
                     type="number"
                     min="0"
                     value={coins200}
-                    onChange={(e) => setCoins200(parseInt(e.target.value) || 0)}
+                    onChange={(e) => { setCoins200(parseInt(e.target.value) || 0); setHasUserEdited(true); }}
                     disabled={isClosed}
                     className="text-center"
                   />
@@ -434,7 +439,7 @@ export default function Caja() {
                     type="number"
                     min="0"
                     value={bills5}
-                    onChange={(e) => setBills5(parseInt(e.target.value) || 0)}
+                    onChange={(e) => { setBills5(parseInt(e.target.value) || 0); setHasUserEdited(true); }}
                     disabled={isClosed}
                     className="text-center"
                   />
@@ -448,7 +453,7 @@ export default function Caja() {
                     type="number"
                     min="0"
                     value={bills10}
-                    onChange={(e) => setBills10(parseInt(e.target.value) || 0)}
+                    onChange={(e) => { setBills10(parseInt(e.target.value) || 0); setHasUserEdited(true); }}
                     disabled={isClosed}
                     className="text-center"
                   />
@@ -462,7 +467,7 @@ export default function Caja() {
                     type="number"
                     min="0"
                     value={bills20}
-                    onChange={(e) => setBills20(parseInt(e.target.value) || 0)}
+                    onChange={(e) => { setBills20(parseInt(e.target.value) || 0); setHasUserEdited(true); }}
                     disabled={isClosed}
                     className="text-center"
                   />
@@ -476,7 +481,7 @@ export default function Caja() {
                     type="number"
                     min="0"
                     value={bills50}
-                    onChange={(e) => setBills50(parseInt(e.target.value) || 0)}
+                    onChange={(e) => { setBills50(parseInt(e.target.value) || 0); setHasUserEdited(true); }}
                     disabled={isClosed}
                     className="text-center"
                   />
@@ -492,7 +497,7 @@ export default function Caja() {
                     type="number"
                     step="0.01"
                     value={totalCards}
-                    onChange={(e) => setTotalCards(e.target.value)}
+                    onChange={(e) => { setTotalCards(e.target.value); setHasUserEdited(true); }}
                     disabled={isClosed}
                     className="text-center"
                     placeholder="0.00"
@@ -628,7 +633,7 @@ export default function Caja() {
                   type="number"
                   step="0.01"
                   value={zReading}
-                  onChange={(e) => setZReading(e.target.value)}
+                  onChange={(e) => { setZReading(e.target.value); setHasUserEdited(true); }}
                   disabled={isClosed}
                   placeholder="0.00"
                 />
@@ -649,7 +654,7 @@ export default function Caja() {
                   type="number"
                   step="0.01"
                   value={prepaidBooking}
-                  onChange={(e) => setPrepaidBooking(e.target.value)}
+                  onChange={(e) => { setPrepaidBooking(e.target.value); setHasUserEdited(true); }}
                   disabled={selectedBusiness === "tienda" || isClosed}
                   placeholder="0.00"
                 />
@@ -660,7 +665,7 @@ export default function Caja() {
                   type="number"
                   step="0.01"
                   value={withdrawnCash}
-                  onChange={(e) => setWithdrawnCash(e.target.value)}
+                  onChange={(e) => { setWithdrawnCash(e.target.value); setHasUserEdited(true); }}
                   disabled={isClosed}
                   placeholder="0.00"
                 />
@@ -671,7 +676,7 @@ export default function Caja() {
                   type="number"
                   step="0.01"
                   value={withdrawnCards}
-                  onChange={(e) => setWithdrawnCards(e.target.value)}
+                  onChange={(e) => { setWithdrawnCards(e.target.value); setHasUserEdited(true); }}
                   disabled={isClosed}
                   placeholder="0.00"
                 />
@@ -683,7 +688,7 @@ export default function Caja() {
                   type="number"
                   step="0.01"
                   value={changeNext.toFixed(2)}
-                  onChange={(e) => setChangeForNextDay(e.target.value)}
+                  onChange={(e) => { setChangeForNextDay(e.target.value); setHasUserEdited(true); }}
                   disabled={isClosed}
                   placeholder={totalCashCalc.toFixed(2)}
                 />

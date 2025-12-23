@@ -39,9 +39,10 @@ import {
   FileArchive,
   Settings,
   Sparkles,
-  DollarSign
+  DollarSign,
+  BarChart3
 } from "lucide-react";
-import { CSSProperties, useEffect, useRef, useState } from "react";
+import { CSSProperties, useEffect, useRef, useState, createContext, useContext } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
@@ -57,6 +58,7 @@ const menuItems = [
   { icon: Calendar, label: "Turnos", path: "/turnos" },
   { icon: Wallet, label: "Caja", path: "/caja" },
   { icon: Receipt, label: "Facturas", path: "/facturas" },
+  { icon: DollarSign, label: "Gastos/Ingresos", path: "/otros-gastos", adminOnly: true },
   { icon: Package, label: "Inventario", path: "/inventario" },
   { icon: AlertTriangle, label: "Incidencias", path: "/incidencias" },
   { icon: CheckSquare, label: "Tareas", path: "/tareas" },
@@ -72,11 +74,11 @@ const housekeepingMenuItems = [
 ];
 
 const adminMenuItems = [
-  { icon: DollarSign, label: "Otros Gastos", path: "/otros-gastos" },
+  { icon: BarChart3, label: "Resumen Semanal", path: "/resumen-semanal" },
   { icon: Users, label: "Empleados", path: "/empleados" },
   { icon: Truck, label: "Proveedores", path: "/proveedores" },
   { icon: FileArchive, label: "Cierre Trimestral", path: "/cierre-trimestral" },
-  { icon: Settings, label: "Configuración", path: "/configuracion" },
+  { icon: Settings, label: "Configuracion", path: "/configuracion" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -85,7 +87,6 @@ const MIN_WIDTH = 200;
 const MAX_WIDTH = 400;
 
 // Business selector context
-import { createContext, useContext } from "react";
 
 type BusinessContextType = {
   selectedBusiness: "hostel" | "tienda" | "all";
@@ -244,7 +245,7 @@ function DashboardLayoutContent({
     ? housekeepingMenuItems 
     : isAdmin
     ? [...menuItems, ...adminMenuItems]
-    : menuItems;
+    : menuItems.filter(item => !item.adminOnly);
 
   useEffect(() => {
     if (isCollapsed) {

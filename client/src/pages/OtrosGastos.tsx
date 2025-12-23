@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
+import { useBusinessContext } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,33 +14,61 @@ export default function OtrosGastos() {
 
   const utils = trpc.useUtils();
 
-  // Business selection
+  // Business selection from global context
+  const { selectedBusiness } = useBusinessContext();
   const { data: businesses } = trpc.businesses.list.useQuery();
   const [currentBusinessId, setCurrentBusinessId] = useState<number | null>(null);
 
   // Form state
+  const [type, setType] = useState<"gasto" | "ingreso">("gasto");
   const [concepto, setConcepto] = useState("");
   const [categoria, setCategoria] = useState<"sueldos" | "seguridad_social" | "impuestos" | "seguros" | "otros">("sueldos");
   const [categoriaOtros, setCategoriaOtros] = useState("");
   const [importe, setImporte] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<"cuenta_bancaria" | "tarjeta" | "ana" | "juanlu" | "caja_hostel" | "caja_tienda" | "caja_fuerte" | "caja_fuerte_cambio" | "otros" | "">("cuenta_bancaria");
   const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0]);
   const [notas, setNotas] = useState("");
 
   // Edit state
   const [editingId, setEditingId] = useState<number | null>(null);
 
-  // Set default business
-  useEffect(() => {
-    if (businesses && businesses.length > 0 && !currentBusinessId) {
-      setCurrentBusinessId(businesses[0].id);
-    }
-  }, [businesses, currentBusinessId]);
+  // Get businesses
+  const hostelBusiness = businesses?.find(b => b.name.includes("Hostel"));
+  const tiendaBusiness = businesses?.find(b => b.name.includes("Tienda"));
 
-  // Queries
-  const { data: gastos, isLoading } = trpc.otrosGastos.list.useQuery(
-    { businessId: currentBusinessId! },
-    { enabled: !!currentBusinessId }
+  // Set currentBusinessId based on selectedBusiness
+  useEffect(() => {
+    if (!businesses) return;
+    if (selectedBusiness === "hostel") {
+      setCurrentBusinessId(hostelBusiness?.id || null);
+    } else if (selectedBusiness === "tienda") {
+      setCurrentBusinessId(tiendaBusiness?.id || null);
+    } else {
+      // Para "all", usar hostel por defecto para crear nuevos gastos
+      setCurrentBusinessId(hostelBusiness?.id || null);
+    }
+  }, [selectedBusiness, businesses, hostelBusiness, tiendaBusiness]);
+
+  // Queries - obtener datos según selección global
+  
+  const { data: gastosHostel } = trpc.otrosGastos.list.useQuery(
+    { businessId: hostelBusiness?.id! },
+    { enabled: !!hostelBusiness && (selectedBusiness === "hostel" || selectedBusiness === "all") }
   );
+  
+  const { data: gastosTienda } = trpc.otrosGastos.list.useQuery(
+    { businessId: tiendaBusiness?.id! },
+    { enabled: !!tiendaBusiness && (selectedBusiness === "tienda" || selectedBusiness === "all") }
+  );
+  
+  // Combinar datos según selección
+  const gastos = selectedBusiness === "all" 
+    ? [...(gastosHostel || []), ...(gastosTienda || [])].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
+    : selectedBusiness === "hostel" 
+    ? gastosHostel || []
+    : gastosTienda || [];
+  
+  const isLoading = !businesses;
 
   // Mutations
   const createMutation = trpc.otrosGastos.create.useMutation({
@@ -78,10 +107,12 @@ export default function OtrosGastos() {
   });
 
   const resetForm = () => {
+    setType("gasto");
     setConcepto("");
     setCategoria("sueldos");
     setCategoriaOtros("");
     setImporte("");
+    setPaymentMethod("cuenta_bancaria");
     setFecha(new Date().toISOString().split('T')[0]);
     setNotas("");
     setEditingId(null);
@@ -100,10 +131,12 @@ export default function OtrosGastos() {
 
     const data = {
       businessId: currentBusinessId,
+      type,
       concepto,
       categoria,
       categoriaOtros: categoria === "otros" ? categoriaOtros : undefined,
       importe,
+      paymentMethod: paymentMethod || undefined,
       fecha,
       notas: notas || undefined,
     };
@@ -117,10 +150,12 @@ export default function OtrosGastos() {
 
   const handleEdit = (gasto: any) => {
     setEditingId(gasto.id);
+    setType(gasto.type || "gasto");
     setConcepto(gasto.concepto);
     setCategoria(gasto.categoria);
     setCategoriaOtros(gasto.categoriaOtros || "");
     setImporte(gasto.importe);
+    setPaymentMethod(gasto.paymentMethod || "cuenta_bancaria");
     setFecha(gasto.fecha);
     setNotas(gasto.notas || "");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -143,6 +178,21 @@ export default function OtrosGastos() {
     return labels[cat] || cat;
   };
 
+  const getPaymentMethodLabel = (method: string) => {
+    const labels: Record<string, string> = {
+      cuenta_bancaria: "Cuenta Bancaria",
+      tarjeta: "Tarjeta",
+      ana: "Ana",
+      juanlu: "Juanlu",
+      caja_hostel: "Caja Hostel",
+      caja_tienda: "Caja Tienda",
+      caja_fuerte: "Caja Fuerte",
+      caja_fuerte_cambio: "Caja Fuerte Cambio",
+      otros: "Otros",
+    };
+    return labels[method] || method;
+  };
+
   if (!businesses || businesses.length === 0) {
     return (
       <div className="container mx-auto p-6">
@@ -161,21 +211,9 @@ export default function OtrosGastos() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Otros Gastos</h1>
-          <p className="text-muted-foreground">Gestiona gastos no facturados (sueldos, seguros, impuestos, etc.)</p>
-        </div>
-        <Select value={currentBusinessId?.toString()} onValueChange={(v) => setCurrentBusinessId(parseInt(v))}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Seleccionar negocio" />
-          </SelectTrigger>
-          <SelectContent>
-            {businesses.map((b) => (
-              <SelectItem key={b.id} value={b.id.toString()}>{b.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div>
+        <h1 className="text-3xl font-bold">Otros Gastos/Ingresos</h1>
+        <p className="text-muted-foreground">Gestiona gastos e ingresos no facturados (sueldos, seguros, impuestos, etc.)</p>
       </div>
 
       {/* Form */}
@@ -189,6 +227,18 @@ export default function OtrosGastos() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="type">Tipo *</Label>
+                <Select value={type} onValueChange={(v: any) => setType(v)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="gasto">Gasto</SelectItem>
+                    <SelectItem value="ingreso">Ingreso</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div>
                 <Label htmlFor="concepto">Concepto *</Label>
                 <Input
@@ -242,15 +292,35 @@ export default function OtrosGastos() {
                 />
               </div>
               <div>
-                <Label htmlFor="fecha">Fecha *</Label>
-                <Input
-                  id="fecha"
-                  type="date"
-                  value={fecha}
-                  onChange={(e) => setFecha(e.target.value)}
-                  required
-                />
+                <Label htmlFor="paymentMethod">Método de Pago</Label>
+                <Select value={paymentMethod} onValueChange={(value: any) => setPaymentMethod(value)}>
+                  <SelectTrigger id="paymentMethod">
+                    <SelectValue placeholder="Selecciona método" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cuenta_bancaria">Cuenta Bancaria</SelectItem>
+                    <SelectItem value="tarjeta">Tarjeta</SelectItem>
+                    <SelectItem value="ana">Ana</SelectItem>
+                    <SelectItem value="juanlu">Juanlu</SelectItem>
+                    <SelectItem value="caja_hostel">Caja Hostel</SelectItem>
+                    <SelectItem value="caja_tienda">Caja Tienda</SelectItem>
+                    <SelectItem value="caja_fuerte">Caja Fuerte</SelectItem>
+                    <SelectItem value="caja_fuerte_cambio">Caja Fuerte Cambio</SelectItem>
+                    <SelectItem value="otros">Otros</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+            </div>
+
+            <div>
+              <Label htmlFor="fecha">Fecha *</Label>
+              <Input
+                id="fecha"
+                type="date"
+                value={fecha}
+                onChange={(e) => setFecha(e.target.value)}
+                required
+              />
             </div>
 
             <div>
@@ -301,17 +371,27 @@ export default function OtrosGastos() {
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center gap-2">
                       <h3 className="font-semibold">{gasto.concepto}</h3>
+                      <span className={`text-xs px-2 py-1 rounded ${gasto.type === 'ingreso' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                        {gasto.type === 'ingreso' ? 'Ingreso' : 'Gasto'}
+                      </span>
                       <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded">
                         {getCategoriaLabel(gasto.categoria, gasto.categoriaOtros || undefined)}
                       </span>
                     </div>
                     <p className="text-sm text-muted-foreground">
                       {new Date(gasto.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })}
+                      {gasto.paymentMethod && (
+                        <span className="ml-2 text-xs px-2 py-0.5 bg-secondary/50 rounded">
+                          {getPaymentMethodLabel(gasto.paymentMethod)}
+                        </span>
+                      )}
                     </p>
                     {gasto.notas && <p className="text-sm text-muted-foreground italic">{gasto.notas}</p>}
                   </div>
                   <div className="flex items-center gap-4 mt-2 md:mt-0">
-                    <span className="text-xl font-bold text-destructive">-€{parseFloat(gasto.importe).toFixed(2)}</span>
+                    <span className={`text-xl font-bold ${gasto.type === 'ingreso' ? 'text-green-600' : 'text-destructive'}`}>
+                      {gasto.type === 'ingreso' ? '+' : '-'}€{parseFloat(gasto.importe).toFixed(2)}
+                    </span>
                     <div className="flex gap-2">
                       <Button variant="outline" size="sm" onClick={() => handleEdit(gasto)}>
                         <Edit className="h-4 w-4" />

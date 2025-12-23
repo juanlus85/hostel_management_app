@@ -1,1 +1,0 @@
-ALTER TABLE `users` ADD `color` varchar(7) DEFAULT '#3b82f6';

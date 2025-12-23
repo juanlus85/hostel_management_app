@@ -1,1 +1,0 @@
-ALTER TABLE `invoices` ADD `isScanned` boolean DEFAULT false NOT NULL;

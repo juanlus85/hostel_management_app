@@ -47,15 +47,33 @@ export default function Incidencias() {
   const utils = trpc.useUtils();
 
   const { data: businesses } = trpc.businesses.list.useQuery();
+  const hostelBusiness = businesses?.find(b => b.code === "hostel");
+  const tiendaBusiness = businesses?.find(b => b.code === "tienda");
+  
   const currentBusinessId = useMemo(() => {
-    if (selectedBusiness === "all") return businesses?.[0]?.id;
+    if (selectedBusiness === "all") return hostelBusiness?.id;
     return businesses?.find(b => b.code === selectedBusiness)?.id;
-  }, [businesses, selectedBusiness]);
+  }, [businesses, selectedBusiness, hostelBusiness]);
 
-  const { data: incidents, isLoading } = trpc.incidents.list.useQuery(
-    { businessId: currentBusinessId! },
-    { enabled: !!currentBusinessId }
+  // Queries - obtener datos según selección global
+  const { data: incidentsHostel } = trpc.incidents.list.useQuery(
+    { businessId: hostelBusiness?.id! },
+    { enabled: !!hostelBusiness && (selectedBusiness === "hostel" || selectedBusiness === "all") }
   );
+  
+  const { data: incidentsTienda } = trpc.incidents.list.useQuery(
+    { businessId: tiendaBusiness?.id! },
+    { enabled: !!tiendaBusiness && (selectedBusiness === "tienda" || selectedBusiness === "all") }
+  );
+  
+  // Combinar datos según selección
+  const incidents = selectedBusiness === "all" 
+    ? [...(incidentsHostel || []), ...(incidentsTienda || [])].sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+    : selectedBusiness === "hostel" 
+    ? incidentsHostel || []
+    : incidentsTienda || [];
+  
+  const isLoading = !businesses;
 
   const createIncident = trpc.incidents.create.useMutation({
     onSuccess: () => {

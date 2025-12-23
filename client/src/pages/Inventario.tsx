@@ -36,15 +36,33 @@ export default function Inventario() {
   const utils = trpc.useUtils();
 
   const { data: businesses } = trpc.businesses.list.useQuery();
+  const hostelBusiness = businesses?.find(b => b.code === "hostel");
+  const tiendaBusiness = businesses?.find(b => b.code === "tienda");
+  
   const currentBusinessId = useMemo(() => {
-    if (selectedBusiness === "all") return businesses?.[0]?.id;
+    if (selectedBusiness === "all") return hostelBusiness?.id;
     return businesses?.find(b => b.code === selectedBusiness)?.id;
-  }, [businesses, selectedBusiness]);
+  }, [businesses, selectedBusiness, hostelBusiness]);
 
-  const { data: inventory, isLoading } = trpc.inventory.list.useQuery(
-    { businessId: currentBusinessId! },
-    { enabled: !!currentBusinessId }
+  // Queries - obtener datos según selección global
+  const { data: inventoryHostel } = trpc.inventory.list.useQuery(
+    { businessId: hostelBusiness?.id! },
+    { enabled: !!hostelBusiness && (selectedBusiness === "hostel" || selectedBusiness === "all") }
   );
+  
+  const { data: inventoryTienda } = trpc.inventory.list.useQuery(
+    { businessId: tiendaBusiness?.id! },
+    { enabled: !!tiendaBusiness && (selectedBusiness === "tienda" || selectedBusiness === "all") }
+  );
+  
+  // Combinar datos según selección
+  const inventory = selectedBusiness === "all" 
+    ? [...(inventoryHostel || []), ...(inventoryTienda || [])].sort((a, b) => a.name.localeCompare(b.name))
+    : selectedBusiness === "hostel" 
+    ? inventoryHostel || []
+    : inventoryTienda || [];
+  
+  const isLoading = !businesses;
 
   // Get suppliers from database
   const { data: suppliers } = trpc.suppliers.list.useQuery();

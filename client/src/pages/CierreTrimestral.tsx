@@ -52,9 +52,17 @@ export default function CierreTrimestral() {
     const startDate = new Date(year, startMonth, 1);
     const endDate = new Date(year, endMonth + 1, 0); // Last day of end month
     
+    // Format dates as YYYY-MM-DD in local timezone to avoid UTC offset issues
+    const formatDate = (date: Date) => {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    };
+    
     return {
-      start: startDate.toISOString().split("T")[0],
-      end: endDate.toISOString().split("T")[0],
+      start: formatDate(startDate),
+      end: formatDate(endDate),
     };
   }, [selectedYear, selectedQuarter]);
 

@@ -403,10 +403,12 @@ export type InsertRoomStatus = typeof roomStatus.$inferInsert;
 export const otrosGastos = mysqlTable("otros_gastos", {
   id: int("id").autoincrement().primaryKey(),
   businessId: int("businessId").notNull(),
+  type: mysqlEnum("type", ["gasto", "ingreso"]).notNull().default("gasto"),
   concepto: varchar("concepto", { length: 255 }).notNull(),
   categoria: mysqlEnum("categoria", ["sueldos", "seguridad_social", "impuestos", "seguros", "otros"]).notNull().default("otros"),
   categoriaOtros: varchar("categoriaOtros", { length: 255 }), // Solo si categoria = "otros"
   importe: decimal("importe", { precision: 10, scale: 2 }).notNull(),
+  paymentMethod: mysqlEnum("paymentMethod", ["cuenta_bancaria", "tarjeta", "ana", "juanlu", "caja_hostel", "caja_tienda", "caja_fuerte", "caja_fuerte_cambio", "otros"]),
   fecha: varchar("fecha", { length: 10 }).notNull(), // YYYY-MM-DD format
   notas: text("notas"),
   createdBy: int("createdBy"),

@@ -56,15 +56,37 @@ export default function Facturas() {
   const utils = trpc.useUtils();
 
   const { data: businesses } = trpc.businesses.list.useQuery();
+  const hostelBusiness = businesses?.find(b => b.code === "hostel");
+  const tiendaBusiness = businesses?.find(b => b.code === "tienda");
+  
   const currentBusinessId = useMemo(() => {
-    if (selectedBusiness === "all") return businesses?.[0]?.id;
+    if (selectedBusiness === "all") return hostelBusiness?.id;
     return businesses?.find(b => b.code === selectedBusiness)?.id;
-  }, [businesses, selectedBusiness]);
+  }, [businesses, selectedBusiness, hostelBusiness]);
 
-  const { data: invoices, isLoading } = trpc.invoices.list.useQuery(
-    { businessId: currentBusinessId! },
-    { enabled: !!currentBusinessId }
+  // Queries - obtener datos según selección global
+  const { data: invoicesHostel } = trpc.invoices.list.useQuery(
+    { businessId: hostelBusiness?.id! },
+    { enabled: !!hostelBusiness && (selectedBusiness === "hostel" || selectedBusiness === "all") }
   );
+  
+  const { data: invoicesTienda } = trpc.invoices.list.useQuery(
+    { businessId: tiendaBusiness?.id! },
+    { enabled: !!tiendaBusiness && (selectedBusiness === "tienda" || selectedBusiness === "all") }
+  );
+  
+  // Combinar datos según selección
+  const invoices = selectedBusiness === "all" 
+    ? [...(invoicesHostel || []), ...(invoicesTienda || [])].sort((a, b) => {
+        const dateA = a.invoiceDate ? new Date(a.invoiceDate).getTime() : 0;
+        const dateB = b.invoiceDate ? new Date(b.invoiceDate).getTime() : 0;
+        return dateB - dateA;
+      })
+    : selectedBusiness === "hostel" 
+    ? invoicesHostel || []
+    : invoicesTienda || [];
+  
+  const isLoading = !businesses;
 
   // Get suppliers from database
   const { data: suppliers } = trpc.suppliers.list.useQuery();
@@ -198,9 +220,17 @@ export default function Facturas() {
         });
         
         // Upload to S3
+        // Generate formatted filename: [Proveedor] - [Trimestre]T - [Fecha].pdf
+        const fileExtension = imageFile.name.split('.').pop();
+        const quarter = invoiceDate ? Math.ceil((new Date(invoiceDate).getMonth() + 1) / 3) : Math.ceil((new Date().getMonth() + 1) / 3);
+        const year = invoiceDate ? new Date(invoiceDate).getFullYear() : new Date().getFullYear();
+        const dateStr = invoiceDate ? invoiceDate.replace(/-/g, '').slice(2) : new Date().toISOString().split('T')[0].replace(/-/g, '').slice(2);
+        const supplierName = finalSupplier || supplier || 'Sin_Proveedor';
+        const formattedFileName = `${supplierName} - ${quarter}T ${year} - ${dateStr}.${fileExtension}`;
+        
         const uploadResult = await uploadFile.mutateAsync({
           fileData,
-          fileName: imageFile.name,
+          fileName: formattedFileName,
           contentType: imageFile.type,
         });
         
