@@ -652,3 +652,6 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 
 ## Bug v58 - Horarios
 - [x] Cuando la semana cruza entre meses (ej: 29 dic - 4 ene), solo muestra hasta el último día del mes actual (31 dic). Debe mostrar todos los días de la semana incluyendo los del mes siguiente (1-4 ene).
+
+## Bug v59 - Turnos vista semanal
+- [x] Los turnos aparecen desplazados un día hacia adelante en vista semanal (turno del 24 se muestra el 25, del 25 en el 26, etc.). Vista mensual funciona correctamente.

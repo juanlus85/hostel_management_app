@@ -514,7 +514,8 @@ export default function Turnos() {
                           </span>
                         </div>
                         {weekDays.map((day, i) => {
-                          const dateStr = day.toISOString().split('T')[0];
+                          // Usar formato local para evitar desplazamiento de días por UTC
+                          const dateStr = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
                           const dayShifts = userShifts.filter((s: any) => s.scheduledDate === dateStr);
                           return (
                             <div 
