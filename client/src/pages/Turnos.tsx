@@ -66,11 +66,14 @@ export default function Turnos() {
     start.setDate(currentDate.getDate() - currentDate.getDay() + 1);
     const end = new Date(start);
     end.setDate(start.getDate() + 6);
+    // Usar formato local para evitar desplazamiento de días por UTC
+    const startDate = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`;
+    const endDate = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
     return {
       start,
       end,
-      startDate: start.toISOString().split('T')[0],
-      endDate: end.toISOString().split('T')[0],
+      startDate,
+      endDate,
     };
   }, [currentDate]);
 

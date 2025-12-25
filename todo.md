@@ -655,3 +655,6 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 
 ## Bug v59 - Turnos vista semanal
 - [x] Los turnos aparecen desplazados un día hacia adelante en vista semanal (turno del 24 se muestra el 25, del 25 en el 26, etc.). Vista mensual funciona correctamente.
+
+## Bug v60 - Turnos vista semanal
+- [x] No se muestra el último día de cada semana (domingo) en la vista semanal de Turnos.
