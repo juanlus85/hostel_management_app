@@ -409,8 +409,8 @@ export default function ResumenSemanal() {
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : (
-        <Tabs key={selectedWeek} defaultValue="resumen" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-1">
+        <Tabs defaultValue="resumen" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="resumen">Resumen</TabsTrigger>
             <TabsTrigger value="sobres">Efectivo en Sobres</TabsTrigger>
             <TabsTrigger value="disponibilidad">Disponibilidad</TabsTrigger>
