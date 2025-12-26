@@ -662,3 +662,7 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 ## Bug v61 - Resumen Semanal
 - [x] Las pestañas no aparecen al cargar la página, solo después de hacer F5 (problema de hidratación) - Agregado key={selectedWeek} para forzar re-render
 - [x] En móvil las pestañas se sobreponen (problema de diseño responsive) - Cambiado a grid-cols-2 sm:grid-cols-4
+
+## Bug CRÍTICO v62 - Resumen Semanal
+- [x] Las pestañas no cargan al entrar en Resumen Semanal - Eliminado key={selectedWeek} que causaba desmontaje
+- [x] Al hacer F5 muestra "not found" (página en blanco) - Mismo problema
