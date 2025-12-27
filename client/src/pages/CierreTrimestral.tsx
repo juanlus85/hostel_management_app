@@ -11,8 +11,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { 
   Calendar, Download, FileArchive, FileText, Receipt, 
-  TrendingUp, TrendingDown, DollarSign, AlertTriangle
+  TrendingUp, TrendingDown, DollarSign, AlertTriangle, Filter, ArrowUpDown
 } from "lucide-react";
+import { Pie } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  ArcElement,
+  Tooltip,
+  Legend,
+  CategoryScale,
+  LinearScale
+} from 'chart.js';
+
+ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale);
 
 const QUARTERS = [
   { value: "Q1", label: "1er Trimestre (Ene-Mar)", months: [0, 1, 2] },
@@ -29,6 +40,8 @@ export default function CierreTrimestral() {
   const [selectedQuarter, setSelectedQuarter] = useState("Q4");
   const [isExporting, setIsExporting] = useState(false);
   const [selectedExpenses, setSelectedExpenses] = useState<Set<string>>(new Set());
+  const [businessFilter, setBusinessFilter] = useState<'all' | 'hostel' | 'tienda'>('all');
+  const [sortBy, setSortBy] = useState<'amount' | 'name'>('amount');
 
   const { data: businesses } = trpc.businesses.list.useQuery();
   
@@ -182,15 +195,15 @@ export default function CierreTrimestral() {
       }
     });
 
-    // Convertir a array y ordenar por total descendente
+    // Convertir a array
     return Array.from(groups.values())
       .map(g => ({
         supplier: g.supplier,
         total: g.total,
         count: g.count,
-        businesses: Array.from(g.businesses).join(', ')
-      }))
-      .sort((a, b) => b.total - a.total);
+        businesses: Array.from(g.businesses).join(', '),
+        businessSet: g.businesses
+      }));
   }, [quarterInvoices, otrosGastos, hostelId]);
 
   // Inicializar todos los checkboxes como seleccionados
@@ -206,6 +219,28 @@ export default function CierreTrimestral() {
       .filter(e => selectedExpenses.has(e.supplier))
       .reduce((sum, e) => sum + e.total, 0);
   }, [groupedExpenses, selectedExpenses]);
+
+  // Filtrar y ordenar gastos
+  const filteredAndSortedExpenses = useMemo(() => {
+    let filtered = groupedExpenses;
+    
+    // Filtrar por negocio
+    if (businessFilter !== 'all') {
+      const filterName = businessFilter === 'hostel' ? 'Hostel' : 'Tienda';
+      filtered = filtered.filter(e => e.businessSet.has(filterName));
+    }
+    
+    // Ordenar
+    const sorted = [...filtered].sort((a, b) => {
+      if (sortBy === 'amount') {
+        return b.total - a.total;
+      } else {
+        return a.supplier.localeCompare(b.supplier);
+      }
+    });
+    
+    return sorted;
+  }, [groupedExpenses, businessFilter, sortBy]);
 
   // Toggle checkbox
   const toggleExpense = (supplier: string) => {
@@ -356,6 +391,30 @@ export default function CierreTrimestral() {
     } finally {
       setIsExporting(false);
     }
+  };
+
+  // Exportar gastos agrupados a CSV
+  const exportGroupedExpensesCSV = () => {
+    const csvContent = [
+      "Proveedor/Concepto,Total,Registros,Negocios",
+      ...filteredAndSortedExpenses.map(e => 
+        `${e.supplier},${e.total.toFixed(2)},${e.count},${e.businesses}`
+      ),
+      "",
+      `Total,${filteredAndSortedExpenses.reduce((sum, e) => sum + e.total, 0).toFixed(2)}`
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    const businessName = businessFilter === 'all' ? 'Todos' : businessFilter === 'hostel' ? 'Hostel' : 'Tienda';
+    link.download = `${selectedYear}_${selectedQuarter}_Gastos_Agrupados_${businessName}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success("CSV exportado correctamente");
   };
 
   const years = Array.from({ length: 5 }, (_, i) => (currentYear - i).toString());
@@ -592,12 +651,50 @@ export default function CierreTrimestral() {
                 </div>
               </div>
 
+              {/* Filtros y ordenamiento */}
+              <div className="flex flex-wrap gap-3 mb-4">
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-muted-foreground" />
+                  <Select value={businessFilter} onValueChange={(v: any) => setBusinessFilter(v)}>
+                    <SelectTrigger className="w-[150px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="hostel">Hostel</SelectItem>
+                      <SelectItem value="tienda">Tienda</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                  <Select value={sortBy} onValueChange={(v: any) => setSortBy(v)}>
+                    <SelectTrigger className="w-[150px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="amount">Por monto</SelectItem>
+                      <SelectItem value="name">Por nombre</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={exportGroupedExpensesCSV}
+                  className="ml-auto"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Exportar CSV
+                </Button>
+              </div>
+
               <div className="space-y-2">
-                {groupedExpenses.length === 0 ? (
+                {filteredAndSortedExpenses.length === 0 ? (
                   <p className="text-center text-muted-foreground py-8">No hay gastos registrados en este trimestre</p>
                 ) : (
                   <div className="space-y-2">
-                    {groupedExpenses.map((expense, index) => (
+                    {filteredAndSortedExpenses.map((expense, index) => (
                       <div key={index} className="flex items-center gap-3 p-4 border rounded-lg hover:bg-accent/50 transition-colors">
                         <input
                           type="checkbox"
@@ -630,13 +727,83 @@ export default function CierreTrimestral() {
         <TabsContent value="graficos" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Gráficos y Estadísticas</CardTitle>
+              <CardTitle>Distribución de Gastos por Proveedor</CardTitle>
               <CardDescription>
-                Visualizaciones del trimestre (próximamente)
+                Visualización de los gastos del trimestre agrupados por proveedor/concepto
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-center text-muted-foreground py-8">Gráficos en desarrollo</p>
+              {groupedExpenses.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">No hay gastos registrados en este trimestre</p>
+              ) : (
+                <div className="max-w-2xl mx-auto">
+                  <Pie
+                    data={{
+                      labels: groupedExpenses.slice(0, 10).map(e => e.supplier),
+                      datasets: [
+                        {
+                          label: 'Gastos',
+                          data: groupedExpenses.slice(0, 10).map(e => e.total),
+                          backgroundColor: [
+                            'rgba(255, 99, 132, 0.8)',
+                            'rgba(54, 162, 235, 0.8)',
+                            'rgba(255, 206, 86, 0.8)',
+                            'rgba(75, 192, 192, 0.8)',
+                            'rgba(153, 102, 255, 0.8)',
+                            'rgba(255, 159, 64, 0.8)',
+                            'rgba(199, 199, 199, 0.8)',
+                            'rgba(83, 102, 255, 0.8)',
+                            'rgba(255, 99, 255, 0.8)',
+                            'rgba(99, 255, 132, 0.8)',
+                          ],
+                          borderColor: [
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 206, 86, 1)',
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(153, 102, 255, 1)',
+                            'rgba(255, 159, 64, 1)',
+                            'rgba(199, 199, 199, 1)',
+                            'rgba(83, 102, 255, 1)',
+                            'rgba(255, 99, 255, 1)',
+                            'rgba(99, 255, 132, 1)',
+                          ],
+                          borderWidth: 1,
+                        },
+                      ],
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: true,
+                      plugins: {
+                        legend: {
+                          position: 'bottom',
+                          labels: {
+                            boxWidth: 15,
+                            padding: 10,
+                          },
+                        },
+                        tooltip: {
+                          callbacks: {
+                            label: function(context) {
+                              const label = context.label || '';
+                              const value = context.parsed || 0;
+                              const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
+                              const percentage = ((value / total) * 100).toFixed(1);
+                              return `${label}: €${value.toFixed(2)} (${percentage}%)`;
+                            }
+                          }
+                        }
+                      },
+                    }}
+                  />
+                  {groupedExpenses.length > 10 && (
+                    <p className="text-sm text-muted-foreground text-center mt-4">
+                      Mostrando los 10 proveedores con mayor gasto. Total: {groupedExpenses.length} proveedores.
+                    </p>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
