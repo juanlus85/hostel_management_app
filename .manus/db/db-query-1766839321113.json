@@ -1,0 +1,80 @@
+{
+  "query": "SELECT * FROM otros_gastos WHERE businessId = 1 LIMIT 5",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user uN1yFnMXg2uz2sS.48d4e14bb92a --database nKwKaPpEnuCPRfjQgd5Gdt --execute SELECT * FROM otros_gastos WHERE businessId = 1 LIMIT 5",
+  "rows": [
+    {
+      "id": "1",
+      "businessId": "1",
+      "concepto": "Nómina diciembre",
+      "categoria": "sueldos",
+      "categoriaOtros": "NULL",
+      "importe": "1500.00",
+      "fecha": "2025-12-18",
+      "notas": "NULL",
+      "createdBy": "1",
+      "updatedBy": "NULL",
+      "createdAt": "2025-12-18 17:48:50",
+      "updatedAt": "2025-12-18 17:48:50"
+    },
+    {
+      "id": "30001",
+      "businessId": "1",
+      "concepto": "Seguro responsabilidad civil",
+      "categoria": "seguros",
+      "categoriaOtros": "NULL",
+      "importe": "250.00",
+      "fecha": "2025-12-18",
+      "notas": "NULL",
+      "createdBy": "1",
+      "updatedBy": "NULL",
+      "createdAt": "2025-12-18 18:03:33",
+      "updatedAt": "2025-12-18 18:03:33"
+    },
+    {
+      "id": "60001",
+      "businessId": "1",
+      "concepto": "Prueba corrección final",
+      "categoria": "impuestos",
+      "categoriaOtros": "NULL",
+      "importe": "100.00",
+      "fecha": "2025-12-18",
+      "notas": "NULL",
+      "createdBy": "1",
+      "updatedBy": "NULL",
+      "createdAt": "2025-12-18 18:28:08",
+      "updatedAt": "2025-12-18 18:28:08"
+    },
+    {
+      "id": "90001",
+      "businessId": "1",
+      "concepto": "Prueba corrección schema",
+      "categoria": "otros",
+      "categoriaOtros": "Prueba schema fix",
+      "importe": "150.00",
+      "fecha": "2025-12-18",
+      "notas": "NULL",
+      "createdBy": "1",
+      "updatedBy": "NULL",
+      "createdAt": "2025-12-18 19:28:55",
+      "updatedAt": "2025-12-18 19:28:55"
+    },
+    {
+      "id": "120001",
+      "businessId": "1",
+      "concepto": "Prueba inserción manual",
+      "categoria": "sueldos",
+      "categoriaOtros": "NULL",
+      "importe": "75.00",
+      "fecha": "2025-12-18",
+      "notas": "NULL",
+      "createdBy": "1",
+      "updatedBy": "NULL",
+      "createdAt": "2025-12-18 19:37:17",
+      "updatedAt": "2025-12-18 19:37:17"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tbusinessId\tconcepto\tcategoria\tcategoriaOtros\timporte\tfecha\tnotas\tcreatedBy\tupdatedBy\tcreatedAt\tupdatedAt\n1\t1\tNómina diciembre\tsueldos\tNULL\t1500.00\t2025-12-18\tNULL\t1\tNULL\t2025-12-18 17:48:50\t2025-12-18 17:48:50\n30001\t1\tSeguro responsabilidad civil\tseguros\tNULL\t250.00\t2025-12-18\tNULL\t1\tNULL\t2025-12-18 18:03:33\t2025-12-18 18:03:33\n60001\t1\tPrueba corrección final\timpuestos\tNULL\t100.00\t2025-12-18\tNULL\t1\tNULL\t2025-12-18 18:28:08\t2025-12-18 18:28:08\n90001\t1\tPrueba corrección schema\totros\tPrueba schema fix\t150.00\t2025-12-18\tNULL\t1\tNULL\t2025-12-18 19:28:55\t2025-12-18 19:28:55\n120001\t1\tPrueba inserción manual\tsueldos\tNULL\t75.00\t2025-12-18\tNULL\t1\tNULL\t2025-12-18 19:37:17\t2025-12-18 19:37:17\n",
+  "stderr": "",
+  "execution_time_ms": 51
+}

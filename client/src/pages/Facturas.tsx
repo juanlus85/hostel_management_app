@@ -553,18 +553,18 @@ export default function Facturas() {
             <SelectContent>
               <SelectItem value="last30">Últimas 30 facturas</SelectItem>
               <SelectItem value="all">Todas las facturas</SelectItem>
-              <SelectItem value="0">Enero</SelectItem>
-              <SelectItem value="1">Febrero</SelectItem>
-              <SelectItem value="2">Marzo</SelectItem>
-              <SelectItem value="3">Abril</SelectItem>
-              <SelectItem value="4">Mayo</SelectItem>
-              <SelectItem value="5">Junio</SelectItem>
-              <SelectItem value="6">Julio</SelectItem>
-              <SelectItem value="7">Agosto</SelectItem>
-              <SelectItem value="8">Septiembre</SelectItem>
-              <SelectItem value="9">Octubre</SelectItem>
-              <SelectItem value="10">Noviembre</SelectItem>
-              <SelectItem value="11">Diciembre</SelectItem>
+              <SelectItem value="0">Enero {selectedYear}</SelectItem>
+              <SelectItem value="1">Febrero {selectedYear}</SelectItem>
+              <SelectItem value="2">Marzo {selectedYear}</SelectItem>
+              <SelectItem value="3">Abril {selectedYear}</SelectItem>
+              <SelectItem value="4">Mayo {selectedYear}</SelectItem>
+              <SelectItem value="5">Junio {selectedYear}</SelectItem>
+              <SelectItem value="6">Julio {selectedYear}</SelectItem>
+              <SelectItem value="7">Agosto {selectedYear}</SelectItem>
+              <SelectItem value="8">Septiembre {selectedYear}</SelectItem>
+              <SelectItem value="9">Octubre {selectedYear}</SelectItem>
+              <SelectItem value="10">Noviembre {selectedYear}</SelectItem>
+              <SelectItem value="11">Diciembre {selectedYear}</SelectItem>
             </SelectContent>
           </Select>
         </div>

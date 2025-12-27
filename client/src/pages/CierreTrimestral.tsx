@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useBusinessContext } from "@/components/DashboardLayout";
 import { trpc } from "@/lib/trpc";
@@ -28,6 +28,7 @@ export default function CierreTrimestral() {
   const [selectedYear, setSelectedYear] = useState(currentYear.toString());
   const [selectedQuarter, setSelectedQuarter] = useState("Q4");
   const [isExporting, setIsExporting] = useState(false);
+  const [selectedExpenses, setSelectedExpenses] = useState<Set<string>>(new Set());
 
   const { data: businesses } = trpc.businesses.list.useQuery();
   
@@ -191,6 +192,33 @@ export default function CierreTrimestral() {
       }))
       .sort((a, b) => b.total - a.total);
   }, [quarterInvoices, otrosGastos, hostelId]);
+
+  // Inicializar todos los checkboxes como seleccionados
+  useEffect(() => {
+    if (groupedExpenses.length > 0) {
+      setSelectedExpenses(new Set(groupedExpenses.map(e => e.supplier)));
+    }
+  }, [groupedExpenses]);
+
+  // Calcular total de gastos seleccionados
+  const totalSelectedExpenses = useMemo(() => {
+    return groupedExpenses
+      .filter(e => selectedExpenses.has(e.supplier))
+      .reduce((sum, e) => sum + e.total, 0);
+  }, [groupedExpenses, selectedExpenses]);
+
+  // Toggle checkbox
+  const toggleExpense = (supplier: string) => {
+    setSelectedExpenses(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(supplier)) {
+        newSet.delete(supplier);
+      } else {
+        newSet.add(supplier);
+      }
+      return newSet;
+    });
+  };
 
   // Calculate summary
   const summary = useMemo(() => {
@@ -547,17 +575,36 @@ export default function CierreTrimestral() {
             <CardHeader>
               <CardTitle>Gastos del Trimestre</CardTitle>
               <CardDescription>
-                Listado completo de facturas y otros gastos ordenados por monto
+                Selecciona los gastos a incluir en el total declarable
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {/* Total de gastos seleccionados */}
+              <div className="mb-6 p-4 bg-muted/50 rounded-lg border-2 border-primary/20">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Declarable</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {selectedExpenses.size} de {groupedExpenses.length} conceptos seleccionados
+                    </p>
+                  </div>
+                  <p className="text-3xl font-bold text-primary">€{totalSelectedExpenses.toFixed(2)}</p>
+                </div>
+              </div>
+
               <div className="space-y-2">
                 {groupedExpenses.length === 0 ? (
                   <p className="text-center text-muted-foreground py-8">No hay gastos registrados en este trimestre</p>
                 ) : (
                   <div className="space-y-2">
                     {groupedExpenses.map((expense, index) => (
-                      <div key={index} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors">
+                      <div key={index} className="flex items-center gap-3 p-4 border rounded-lg hover:bg-accent/50 transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={selectedExpenses.has(expense.supplier)}
+                          onChange={() => toggleExpense(expense.supplier)}
+                          className="h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                        />
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <span className="text-lg font-semibold">{expense.supplier}</span>

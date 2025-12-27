@@ -674,3 +674,9 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Mostrar suma total de cada proveedor/concepto en el trimestre
 - [x] Ordenar de mayor a menor por monto total
 - [x] Mostrar número de registros y negocios asociados
+
+
+## Mejoras v68 (Completadas)
+- [x] Cierre Trimestral - Gastos Detallados: Agregar total de gastos arriba (Total Declarable)
+- [x] Cierre Trimestral - Gastos Detallados: Checkboxes para incluir/excluir gastos del total
+- [x] Facturas: Cambiar selector de mes a mes+año (muestra "Enero 2025", "Febrero 2025", etc.)

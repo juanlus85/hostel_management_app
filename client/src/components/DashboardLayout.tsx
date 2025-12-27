@@ -403,7 +403,7 @@ function DashboardLayoutContent({
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                  Versión v67 · 27/12/2025
+                  Versión v68 · 27/12/2025
                 </div>
               </DropdownMenuContent>
             </DropdownMenu>
