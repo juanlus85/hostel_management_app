@@ -44,6 +44,11 @@ export default function Facturas() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isProcessingOCR, setIsProcessingOCR] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Filtro de mes/año
+  const currentDate = new Date();
+  const [selectedMonth, setSelectedMonth] = useState<string>("last30");
+  const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear().toString());
 
   // Edit form states
   const [editSupplier, setEditSupplier] = useState("");
@@ -64,14 +69,38 @@ export default function Facturas() {
     return businesses?.find(b => b.code === selectedBusiness)?.id;
   }, [businesses, selectedBusiness, hostelBusiness]);
 
+  // Calcular rango de fechas según filtro
+  const dateRange = useMemo(() => {
+    if (selectedMonth === "last30") {
+      const end = new Date();
+      const start = new Date();
+      start.setDate(start.getDate() - 30);
+      return {
+        startDate: start.toISOString().split('T')[0],
+        endDate: end.toISOString().split('T')[0]
+      };
+    } else if (selectedMonth === "all") {
+      return { startDate: undefined, endDate: undefined };
+    } else {
+      const year = parseInt(selectedYear);
+      const month = parseInt(selectedMonth);
+      const start = new Date(year, month, 1);
+      const end = new Date(year, month + 1, 0);
+      return {
+        startDate: start.toISOString().split('T')[0],
+        endDate: end.toISOString().split('T')[0]
+      };
+    }
+  }, [selectedMonth, selectedYear]);
+
   // Queries - obtener datos según selección global
   const { data: invoicesHostel } = trpc.invoices.list.useQuery(
-    { businessId: hostelBusiness?.id! },
+    { businessId: hostelBusiness?.id!, startDate: dateRange.startDate, endDate: dateRange.endDate },
     { enabled: !!hostelBusiness && (selectedBusiness === "hostel" || selectedBusiness === "all") }
   );
   
   const { data: invoicesTienda } = trpc.invoices.list.useQuery(
-    { businessId: tiendaBusiness?.id! },
+    { businessId: tiendaBusiness?.id!, startDate: dateRange.startDate, endDate: dateRange.endDate },
     { enabled: !!tiendaBusiness && (selectedBusiness === "tienda" || selectedBusiness === "all") }
   );
   
@@ -512,6 +541,52 @@ export default function Facturas() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+      </div>
+
+      {/* Filtros */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex-1">
+          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+            <SelectTrigger>
+              <SelectValue placeholder="Seleccionar período" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="last30">Últimas 30 facturas</SelectItem>
+              <SelectItem value="all">Todas las facturas</SelectItem>
+              <SelectItem value="0">Enero</SelectItem>
+              <SelectItem value="1">Febrero</SelectItem>
+              <SelectItem value="2">Marzo</SelectItem>
+              <SelectItem value="3">Abril</SelectItem>
+              <SelectItem value="4">Mayo</SelectItem>
+              <SelectItem value="5">Junio</SelectItem>
+              <SelectItem value="6">Julio</SelectItem>
+              <SelectItem value="7">Agosto</SelectItem>
+              <SelectItem value="8">Septiembre</SelectItem>
+              <SelectItem value="9">Octubre</SelectItem>
+              <SelectItem value="10">Noviembre</SelectItem>
+              <SelectItem value="11">Diciembre</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {selectedMonth !== "last30" && selectedMonth !== "all" && (
+          <div className="w-full sm:w-32">
+            <Select value={selectedYear} onValueChange={setSelectedYear}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: 5 }, (_, i) => {
+                  const year = currentDate.getFullYear() - i;
+                  return (
+                    <SelectItem key={year} value={year.toString()}>
+                      {year}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
       {/* Search */}

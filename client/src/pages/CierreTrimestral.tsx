@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { 
   Calendar, Download, FileArchive, FileText, Receipt, 
@@ -142,6 +143,46 @@ export default function CierreTrimestral() {
 
   // Invoices are already filtered by backend
   const quarterInvoices = invoices || [];
+
+  // Combinar todos los gastos y ordenarlos por monto
+  const allExpenses = useMemo(() => {
+    const expenses: Array<{
+      type: 'factura' | 'otro_gasto';
+      supplier: string;
+      amount: number;
+      date: string;
+      description?: string;
+      business: string;
+    }> = [];
+
+    // Agregar facturas
+    quarterInvoices.forEach((inv: any) => {
+      expenses.push({
+        type: 'factura',
+        supplier: inv.supplier || 'Sin proveedor',
+        amount: parseFloat(inv.totalAmount || '0'),
+        date: inv.invoiceDate || '',
+        business: inv.businessId === hostelId ? 'Hostel' : 'Tienda'
+      });
+    });
+
+    // Agregar otros gastos
+    otrosGastos.forEach((item: any) => {
+      if (item.type === 'gasto') {
+        expenses.push({
+          type: 'otro_gasto',
+          supplier: item.concepto || 'Sin concepto',
+          amount: parseFloat(item.importe || '0'),
+          date: item.fecha || '',
+          description: item.descripcion,
+          business: item.businessId === hostelId ? 'Hostel' : 'Tienda'
+        });
+      }
+    });
+
+    // Ordenar por monto descendente
+    return expenses.sort((a, b) => b.amount - a.amount);
+  }, [quarterInvoices, otrosGastos, hostelId]);
 
   // Calculate summary
   const summary = useMemo(() => {
@@ -344,8 +385,18 @@ export default function CierreTrimestral() {
         </CardContent>
       </Card>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      {/* Tabs */}
+      <Tabs key={`${selectedYear}-${selectedQuarter}`} defaultValue="resumen" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-3">
+          <TabsTrigger value="resumen">Resumen</TabsTrigger>
+          <TabsTrigger value="gastos">Gastos Detallados</TabsTrigger>
+          <TabsTrigger value="graficos">Gráficos</TabsTrigger>
+        </TabsList>
+
+        {/* Pestaña Resumen */}
+        <TabsContent value="resumen" className="space-y-4">
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -480,6 +531,67 @@ export default function CierreTrimestral() {
           </div>
         </CardContent>
       </Card>
+        </TabsContent>
+
+        {/* Pestaña Gastos Detallados */}
+        <TabsContent value="gastos" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Gastos del Trimestre</CardTitle>
+              <CardDescription>
+                Listado completo de facturas y otros gastos ordenados por monto
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {allExpenses.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">No hay gastos registrados en este trimestre</p>
+                ) : (
+                  <div className="space-y-2">
+                    {allExpenses.map((expense, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <Badge variant={expense.type === 'factura' ? 'default' : 'secondary'}>
+                              {expense.type === 'factura' ? 'Factura' : 'Otro Gasto'}
+                            </Badge>
+                            <span className="font-medium">{expense.supplier}</span>
+                            <span className="text-sm text-muted-foreground">({expense.business})</span>
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs text-muted-foreground">{expense.date}</span>
+                            {expense.description && (
+                              <span className="text-xs text-muted-foreground">• {expense.description}</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-bold text-red-600">€{expense.amount.toFixed(2)}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Pestaña Gráficos */}
+        <TabsContent value="graficos" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Gráficos y Estadísticas</CardTitle>
+              <CardDescription>
+                Visualizaciones del trimestre (próximamente)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-center text-muted-foreground py-8">Gráficos en desarrollo</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

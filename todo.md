@@ -658,3 +658,12 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 
 ## Bug v60 - Turnos vista semanal
 - [x] No se muestra el último día de cada semana (domingo) en la vista semanal de Turnos.
+
+
+## Mejoras v66 (Completadas)
+- [x] Facturas: Mostrar solo 30 últimas por defecto
+- [x] Facturas: Agregar selector de mes/año para filtrar
+- [x] Cierre Trimestral: Agregar listado de gastos ordenados (facturas + otros gastos)
+- [x] Cierre Trimestral: Crear sistema de pestañas (Resumen, Gastos Detallados, Gráficos)
+- [x] Recuperar correcciones de v65 (pestañas Resumen Semanal + responsive)
+- [x] Agregar número de versión en menú de usuario

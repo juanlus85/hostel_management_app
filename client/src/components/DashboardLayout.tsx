@@ -401,6 +401,10 @@ function DashboardLayoutContent({
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Cerrar sesión</span>
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                  Versión v66 · 27/12/2025
+                </div>
               </DropdownMenuContent>
             </DropdownMenu>
           </SidebarFooter>
