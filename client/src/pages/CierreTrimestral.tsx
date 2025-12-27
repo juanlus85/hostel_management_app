@@ -145,43 +145,51 @@ export default function CierreTrimestral() {
   const quarterInvoices = invoices || [];
 
   // Combinar todos los gastos y ordenarlos por monto
-  const allExpenses = useMemo(() => {
-    const expenses: Array<{
-      type: 'factura' | 'otro_gasto';
-      supplier: string;
-      amount: number;
-      date: string;
-      description?: string;
-      business: string;
-    }> = [];
+  // Agrupar gastos por proveedor/concepto
+  const groupedExpenses = useMemo(() => {
+    const groups = new Map<string, { supplier: string; total: number; count: number; businesses: Set<string> }>();
 
     // Agregar facturas
     quarterInvoices.forEach((inv: any) => {
-      expenses.push({
-        type: 'factura',
-        supplier: inv.supplier || 'Sin proveedor',
-        amount: parseFloat(inv.totalAmount || '0'),
-        date: inv.invoiceDate || '',
-        business: inv.businessId === hostelId ? 'Hostel' : 'Tienda'
-      });
+      const supplier = inv.supplier || 'Sin proveedor';
+      const amount = parseFloat(inv.totalAmount || '0');
+      const business = inv.businessId === hostelId ? 'Hostel' : 'Tienda';
+      
+      if (!groups.has(supplier)) {
+        groups.set(supplier, { supplier, total: 0, count: 0, businesses: new Set() });
+      }
+      const group = groups.get(supplier)!;
+      group.total += amount;
+      group.count += 1;
+      group.businesses.add(business);
     });
 
     // Agregar otros gastos
     otrosGastos.forEach((item: any) => {
       if (item.type === 'gasto') {
-        expenses.push({
-          type: 'otro_gasto',
-          supplier: item.concepto || 'Sin concepto',
-          amount: parseFloat(item.importe || '0'),
-          date: item.fecha || '',
-          description: item.descripcion,
-          business: item.businessId === hostelId ? 'Hostel' : 'Tienda'
-        });
+        const supplier = item.concepto || 'Sin concepto';
+        const amount = parseFloat(item.importe || '0');
+        const business = item.businessId === hostelId ? 'Hostel' : 'Tienda';
+        
+        if (!groups.has(supplier)) {
+          groups.set(supplier, { supplier, total: 0, count: 0, businesses: new Set() });
+        }
+        const group = groups.get(supplier)!;
+        group.total += amount;
+        group.count += 1;
+        group.businesses.add(business);
       }
     });
 
-    // Ordenar por monto descendente
-    return expenses.sort((a, b) => b.amount - a.amount);
+    // Convertir a array y ordenar por total descendente
+    return Array.from(groups.values())
+      .map(g => ({
+        supplier: g.supplier,
+        total: g.total,
+        count: g.count,
+        businesses: Array.from(g.businesses).join(', ')
+      }))
+      .sort((a, b) => b.total - a.total);
   }, [quarterInvoices, otrosGastos, hostelId]);
 
   // Calculate summary
@@ -544,29 +552,23 @@ export default function CierreTrimestral() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {allExpenses.length === 0 ? (
+                {groupedExpenses.length === 0 ? (
                   <p className="text-center text-muted-foreground py-8">No hay gastos registrados en este trimestre</p>
                 ) : (
                   <div className="space-y-2">
-                    {allExpenses.map((expense, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors">
+                    {groupedExpenses.map((expense, index) => (
+                      <div key={index} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors">
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
-                            <Badge variant={expense.type === 'factura' ? 'default' : 'secondary'}>
-                              {expense.type === 'factura' ? 'Factura' : 'Otro Gasto'}
-                            </Badge>
-                            <span className="font-medium">{expense.supplier}</span>
-                            <span className="text-sm text-muted-foreground">({expense.business})</span>
+                            <span className="text-lg font-semibold">{expense.supplier}</span>
                           </div>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-xs text-muted-foreground">{expense.date}</span>
-                            {expense.description && (
-                              <span className="text-xs text-muted-foreground">• {expense.description}</span>
-                            )}
+                          <div className="flex items-center gap-3 mt-1">
+                            <span className="text-sm text-muted-foreground">{expense.count} {expense.count === 1 ? 'registro' : 'registros'}</span>
+                            <span className="text-sm text-muted-foreground">• {expense.businesses}</span>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-lg font-bold text-red-600">€{expense.amount.toFixed(2)}</p>
+                          <p className="text-2xl font-bold text-red-600">€{expense.total.toFixed(2)}</p>
                         </div>
                       </div>
                     ))}

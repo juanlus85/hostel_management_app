@@ -667,3 +667,10 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Cierre Trimestral: Crear sistema de pestañas (Resumen, Gastos Detallados, Gráficos)
 - [x] Recuperar correcciones de v65 (pestañas Resumen Semanal + responsive)
 - [x] Agregar número de versión en menú de usuario
+
+
+## Mejoras v67 (Completadas)
+- [x] Cierre Trimestral - Gastos Detallados: Agrupar por proveedor/concepto con totales acumulados
+- [x] Mostrar suma total de cada proveedor/concepto en el trimestre
+- [x] Ordenar de mayor a menor por monto total
+- [x] Mostrar número de registros y negocios asociados
