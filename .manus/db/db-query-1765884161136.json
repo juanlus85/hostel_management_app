@@ -1,0 +1,55 @@
+{
+  "query": "SELECT id, businessId, date, previousChange, totalCash, changeForNextDay, status FROM cash_closings WHERE businessId = 1 ORDER BY date DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user uN1yFnMXg2uz2sS.48d4e14bb92a --database nKwKaPpEnuCPRfjQgd5Gdt --execute SELECT id, businessId, date, previousChange, totalCash, changeForNextDay, status FROM cash_closings WHERE businessId = 1 ORDER BY date DESC LIMIT 5;",
+  "rows": [
+    {
+      "id": "2",
+      "businessId": "1",
+      "date": "2025-12-17",
+      "previousChange": "0.00",
+      "totalCash": "0.00",
+      "changeForNextDay": "0.00",
+      "status": "draft"
+    },
+    {
+      "id": "1",
+      "businessId": "1",
+      "date": "2025-12-16",
+      "previousChange": "0.00",
+      "totalCash": "0.00",
+      "changeForNextDay": "0.00",
+      "status": "draft"
+    },
+    {
+      "id": "3",
+      "businessId": "1",
+      "date": "2025-12-15",
+      "previousChange": "0.00",
+      "totalCash": "5.00",
+      "changeForNextDay": "5.00",
+      "status": "closed"
+    },
+    {
+      "id": "4",
+      "businessId": "1",
+      "date": "2025-12-14",
+      "previousChange": "0.00",
+      "totalCash": "0.00",
+      "changeForNextDay": "0.00",
+      "status": "closed"
+    },
+    {
+      "id": "5",
+      "businessId": "1",
+      "date": "2025-12-13",
+      "previousChange": "0.00",
+      "totalCash": "0.00",
+      "changeForNextDay": "0.00",
+      "status": "closed"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tbusinessId\tdate\tpreviousChange\ttotalCash\tchangeForNextDay\tstatus\n2\t1\t2025-12-17\t0.00\t0.00\t0.00\tdraft\n1\t1\t2025-12-16\t0.00\t0.00\t0.00\tdraft\n3\t1\t2025-12-15\t0.00\t5.00\t5.00\tclosed\n4\t1\t2025-12-14\t0.00\t0.00\t0.00\tclosed\n5\t1\t2025-12-13\t0.00\t0.00\t0.00\tclosed\n",
+  "stderr": "",
+  "execution_time_ms": 65
+}

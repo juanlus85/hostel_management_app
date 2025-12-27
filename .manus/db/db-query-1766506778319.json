@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE `access_codes` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`roomNumber` varchar(10) NOT NULL,\n\t`roomCode` varchar(10) NOT NULL,\n\t`roomType` varchar(255) NOT NULL,\n\t`floor` varchar(50) NOT NULL,\n\t`floorLevel` varchar(50) NOT NULL,\n\t`entranceCode` varchar(10),\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\t`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n\tCONSTRAINT `access_codes_id` PRIMARY KEY(`id`),\n\tCONSTRAINT `access_codes_roomNumber_unique` UNIQUE(`roomNumber`)\n)",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user uN1yFnMXg2uz2sS.48d4e14bb92a --database nKwKaPpEnuCPRfjQgd5Gdt --execute CREATE TABLE `access_codes` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`roomNumber` varchar(10) NOT NULL,\n\t`roomCode` varchar(10) NOT NULL,\n\t`roomType` varchar(255) NOT NULL,\n\t`floor` varchar(50) NOT NULL,\n\t`floorLevel` varchar(50) NOT NULL,\n\t`entranceCode` varchar(10),\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\t`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n\tCONSTRAINT `access_codes_id` PRIMARY KEY(`id`),\n\tCONSTRAINT `access_codes_roomNumber_unique` UNIQUE(`roomNumber`)\n)",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 262
+}

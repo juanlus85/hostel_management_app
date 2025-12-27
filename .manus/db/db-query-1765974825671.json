@@ -1,0 +1,35 @@
+{
+  "query": "SELECT id, name, color FROM users LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user uN1yFnMXg2uz2sS.48d4e14bb92a --database nKwKaPpEnuCPRfjQgd5Gdt --execute SELECT id, name, color FROM users LIMIT 5;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "Juan Luis Blanco Guzmán",
+      "color": "NULL"
+    },
+    {
+      "id": "90022",
+      "name": "Maylin",
+      "color": "NULL"
+    },
+    {
+      "id": "150080",
+      "name": "Regis",
+      "color": "NULL"
+    },
+    {
+      "id": "270065",
+      "name": "Fran",
+      "color": "NULL"
+    },
+    {
+      "id": "270072",
+      "name": "Estefany",
+      "color": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tcolor\n1\tJuan Luis Blanco Guzmán\tNULL\n90022\tMaylin\tNULL\n150080\tRegis\tNULL\n270065\tFran\tNULL\n270072\tEstefany\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 57
+}
