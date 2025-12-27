@@ -4,57 +4,32 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import DashboardLayout from "./components/DashboardLayout";
-
-// Pages
 import Home from "./pages/Home";
-import Turnos from "./pages/Turnos";
-import Caja from "./pages/Caja";
-import Facturas from "./pages/Facturas";
-import Inventario from "./pages/Inventario";
-import Incidencias from "./pages/Incidencias";
-import Tareas from "./pages/Tareas";
-import Empleados from "./pages/Empleados";
-import Proveedores from "./pages/Proveedores";
-import CierreTrimestral from "./pages/CierreTrimestral";
-import Configuracion from "./pages/Configuracion";
-import Housekeeping from "./pages/Housekeeping";
-import OtrosGastos from "./pages/OtrosGastos";
-import ResumenSemanal from "./pages/ResumenSemanal";
-import CajasF from "./pages/CajasF";
-import CodigosAcceso from "./pages/CodigosAcceso";
 
 function Router() {
+  // make sure to consider if you need authentication for certain routes
   return (
-    <DashboardLayout>
-      <Switch>
-        <Route path="/" component={Home} />
-        <Route path="/turnos" component={Turnos} />
-        <Route path="/caja" component={Caja} />
-        <Route path="/facturas" component={Facturas} />
-        <Route path="/inventario" component={Inventario} />
-        <Route path="/incidencias" component={Incidencias} />
-        <Route path="/tareas" component={Tareas} />
-        <Route path="/empleados" component={Empleados} />
-        <Route path="/proveedores" component={Proveedores} />
-        <Route path="/cierre-trimestral" component={CierreTrimestral} />
-        <Route path="/configuracion" component={Configuracion} />
-        <Route path="/housekeeping" component={Housekeeping} />
-        <Route path="/otros-gastos" component={OtrosGastos} />
-        <Route path="/resumen-semanal" component={ResumenSemanal} />
-        <Route path="/cajas-f" component={CajasF} />
-        <Route path="/codigos-acceso" component={CodigosAcceso} />
-        <Route path="/404" component={NotFound} />
-        <Route component={NotFound} />
-      </Switch>
-    </DashboardLayout>
+    <Switch>
+      <Route path={"/"} component={Home} />
+      <Route path={"/404"} component={NotFound} />
+      {/* Final fallback route */}
+      <Route component={NotFound} />
+    </Switch>
   );
 }
+
+// NOTE: About Theme
+// - First choose a default theme according to your design style (dark or light bg), than change color palette in index.css
+//   to keep consistent foreground/background color across components
+// - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
 
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider defaultTheme="light">
+      <ThemeProvider
+        defaultTheme="light"
+        // switchable
+      >
         <TooltipProvider>
           <Toaster />
           <Router />

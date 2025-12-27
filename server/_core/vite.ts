@@ -48,14 +48,6 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
-  // Serve uploaded files
-  const uploadsPath = path.resolve(process.cwd(), "uploads");
-  if (!fs.existsSync(uploadsPath)) {
-    fs.mkdirSync(uploadsPath, { recursive: true });
-  }
-  app.use("/uploads", express.static(uploadsPath));
-  console.log(`[Server] Serving uploads from: ${uploadsPath}`);
-  
   const distPath =
     process.env.NODE_ENV === "development"
       ? path.resolve(import.meta.dirname, "../..", "dist", "public")
