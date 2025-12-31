@@ -44,6 +44,7 @@ export default function Facturas() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isProcessingOCR, setIsProcessingOCR] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [formBusinessId, setFormBusinessId] = useState<number | null>(null);
   
   // Filtro de mes/año
   const currentDate = new Date();
@@ -227,8 +228,13 @@ export default function Facturas() {
   };
 
   const handleCreateInvoice = async () => {
-    if (!currentBusinessId) {
-      toast.error("Selecciona un negocio");
+    // Si estamos en modo "Ambos", usar el negocio seleccionado en el formulario
+    const businessIdToUse = selectedBusiness === "all" ? formBusinessId : currentBusinessId;
+    
+    if (!businessIdToUse) {
+      toast.error(selectedBusiness === "all" 
+        ? "Selecciona para qué negocio es esta factura" 
+        : "Selecciona un negocio");
       return;
     }
     
@@ -283,7 +289,7 @@ export default function Facturas() {
     }
     
     createInvoice.mutate({
-      businessId: currentBusinessId,
+      businessId: businessIdToUse,
       supplier: finalSupplier || undefined,
       invoiceNumber: invoiceNumber.trim() || undefined,
       invoiceDate: invoiceDate || undefined,
@@ -376,6 +382,38 @@ export default function Facturas() {
               <DialogDescription>Añade una nueva factura o ticket de gasto</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
+              {/* Selector de negocio (solo cuando está en modo "Ambos") */}
+              {selectedBusiness === "all" && (
+                <div className="grid gap-2 p-4 border-2 border-primary/30 rounded-lg bg-primary/5">
+                  <Label className="text-base font-semibold">Negocio *</Label>
+                  <Select 
+                    value={formBusinessId?.toString() || ""} 
+                    onValueChange={(v) => setFormBusinessId(parseInt(v))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona el negocio" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={hostelBusiness?.id.toString() || ""}>
+                        <div className="flex items-center gap-2">
+                          <Building2 className="h-4 w-4" />
+                          Hostel
+                        </div>
+                      </SelectItem>
+                      <SelectItem value={tiendaBusiness?.id.toString() || ""}>
+                        <div className="flex items-center gap-2">
+                          <Store className="h-4 w-4" />
+                          Tienda
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Selecciona para qué negocio es esta factura. No se puede crear para ambos a la vez.
+                  </p>
+                </div>
+              )}
+
               {/* Image/PDF Upload */}
               <div className="grid gap-2">
                 <Label>Foto del ticket/factura o PDF</Label>

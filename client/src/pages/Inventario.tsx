@@ -18,6 +18,7 @@ export default function Inventario() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditDialog, setIsEditDialog] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [formBusinessId, setFormBusinessId] = useState<number | null>(null);
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
   const [supplier, setSupplier] = useState("");
@@ -109,8 +110,13 @@ export default function Inventario() {
 
   const handleCreateItem = () => {
     const itemName = name.trim();
-    if (!currentBusinessId) {
-      toast.error("Selecciona un negocio");
+    // Si estamos en modo "Ambos", usar el negocio seleccionado en el formulario
+    const businessIdToUse = selectedBusiness === "all" ? formBusinessId : currentBusinessId;
+    
+    if (!businessIdToUse) {
+      toast.error(selectedBusiness === "all" 
+        ? "Selecciona para qué negocio es este producto" 
+        : "Selecciona un negocio");
       return;
     }
     if (!itemName) {
@@ -119,7 +125,7 @@ export default function Inventario() {
     }
     const finalSupplier = supplier === "_custom" ? customSupplier : supplier;
     createItem.mutate({
-      businessId: currentBusinessId,
+      businessId: businessIdToUse,
       name: itemName,
       category,
       supplier: finalSupplier,
@@ -208,6 +214,28 @@ export default function Inventario() {
               <DialogDescription>Registra un producto que falta o hay que pedir</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
+              {/* Selector de negocio (solo cuando está en modo "Ambos") */}
+              {selectedBusiness === "all" && (
+                <div className="p-4 border-2 border-primary/30 rounded-lg bg-primary/5">
+                  <Label className="text-base font-semibold">Negocio *</Label>
+                  <Select 
+                    value={formBusinessId?.toString() || ""} 
+                    onValueChange={(v) => setFormBusinessId(parseInt(v))}
+                  >
+                    <SelectTrigger className="mt-2">
+                      <SelectValue placeholder="Selecciona el negocio" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={hostelBusiness?.id.toString() || ""}>Hostel</SelectItem>
+                      <SelectItem value={tiendaBusiness?.id.toString() || ""}>Tienda</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Selecciona para qué negocio es este producto. No se puede crear para ambos a la vez.
+                  </p>
+                </div>
+              )}
+
               <div className="grid gap-2">
                 <Label>Nombre del producto *</Label>
                 <Input value={name} onChange={e => setName(e.target.value)} placeholder="Ej: Agua Grande 1.5L" />

@@ -680,3 +680,17 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Cierre Trimestral - Gastos Detallados: Agregar total de gastos arriba (Total Declarable)
 - [x] Cierre Trimestral - Gastos Detallados: Checkboxes para incluir/excluir gastos del total
 - [x] Facturas: Cambiar selector de mes a mes+año (muestra "Enero 2025", "Febrero 2025", etc.)
+
+## Bug Reportado v70
+- [x] Dashboard y Cierre Trimestral muestran gastos diferentes para el mismo trimestre
+  - Dashboard (4to Trimestre): €74,350.51
+  - Cierre Trimestral (4to Trimestre): €77,352.41
+  - Diferencia: €3,001.90
+  - CAUSA: Facturas creadas en modo "Ambos" se guardaban duplicadas (una para Hostel, otra para Tienda)
+  - SOLUCIÓN: Obligar a seleccionar negocio específico en formularios cuando está en modo "Ambos"
+
+## Mejoras v70
+- [x] Agregar selector obligatorio de negocio en formulario de Facturas cuando selectedBusiness = "all"
+- [x] Agregar selector obligatorio de negocio en formulario de Gastos/Ingresos cuando selectedBusiness = "all"
+- [x] Agregar selector obligatorio de negocio en formulario de Incidencias cuando selectedBusiness = "all"
+- [x] Agregar selector obligatorio de negocio en formulario de Inventario cuando selectedBusiness = "all"

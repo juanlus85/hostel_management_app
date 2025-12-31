@@ -31,6 +31,7 @@ export default function Incidencias() {
   const { user } = useAuth();
   const { selectedBusiness } = useBusinessContext();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [formBusinessId, setFormBusinessId] = useState<number | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<"low" | "medium" | "high" | "urgent">("medium");
@@ -110,8 +111,13 @@ export default function Incidencias() {
   };
 
   const handleCreateIncident = () => {
-    if (!currentBusinessId) {
-      toast.error("Selecciona un negocio");
+    // Si estamos en modo "Ambos", usar el negocio seleccionado en el formulario
+    const businessIdToUse = selectedBusiness === "all" ? formBusinessId : currentBusinessId;
+    
+    if (!businessIdToUse) {
+      toast.error(selectedBusiness === "all" 
+        ? "Selecciona para qué negocio es esta incidencia" 
+        : "Selecciona un negocio");
       return;
     }
     if (!title.trim()) {
@@ -119,7 +125,7 @@ export default function Incidencias() {
       return;
     }
     createIncident.mutate({
-      businessId: currentBusinessId,
+      businessId: businessIdToUse,
       title: title.trim(),
       description,
       priority,
@@ -217,6 +223,38 @@ export default function Incidencias() {
               <DialogDescription>Describe el problema encontrado</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
+              {/* Selector de negocio (solo cuando está en modo "Ambos") */}
+              {selectedBusiness === "all" && (
+                <div className="p-4 border-2 border-primary/30 rounded-lg bg-primary/5">
+                  <Label className="text-base font-semibold">Negocio *</Label>
+                  <Select 
+                    value={formBusinessId?.toString() || ""} 
+                    onValueChange={(v) => setFormBusinessId(parseInt(v))}
+                  >
+                    <SelectTrigger className="mt-2">
+                      <SelectValue placeholder="Selecciona el negocio" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={hostelBusiness?.id.toString() || ""}>
+                        <div className="flex items-center gap-2">
+                          <Building2 className="h-4 w-4" />
+                          Hostel
+                        </div>
+                      </SelectItem>
+                      <SelectItem value={tiendaBusiness?.id.toString() || ""}>
+                        <div className="flex items-center gap-2">
+                          <Store className="h-4 w-4" />
+                          Tienda
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Selecciona para qué negocio es esta incidencia. No se puede crear para ambos a la vez.
+                  </p>
+                </div>
+              )}
+
               <div className="grid gap-2">
                 <Label>Título *</Label>
                 <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Resumen breve del problema" />

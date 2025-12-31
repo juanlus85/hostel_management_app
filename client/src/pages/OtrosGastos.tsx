@@ -20,6 +20,7 @@ export default function OtrosGastos() {
   const [currentBusinessId, setCurrentBusinessId] = useState<number | null>(null);
 
   // Form state
+  const [formBusinessId, setFormBusinessId] = useState<number | null>(null);
   const [type, setType] = useState<"gasto" | "ingreso">("gasto");
   const [concepto, setConcepto] = useState("");
   const [categoria, setCategoria] = useState<"sueldos" | "seguridad_social" | "impuestos" | "seguros" | "otros">("sueldos");
@@ -120,8 +121,13 @@ export default function OtrosGastos() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentBusinessId) {
-      toast.error("Selecciona un negocio");
+    // Si estamos en modo "Ambos", usar el negocio seleccionado en el formulario
+    const businessIdToUse = selectedBusiness === "all" ? formBusinessId : currentBusinessId;
+    
+    if (!businessIdToUse) {
+      toast.error(selectedBusiness === "all" 
+        ? "Selecciona para qué negocio es este gasto/ingreso" 
+        : "Selecciona un negocio");
       return;
     }
     if (!concepto || !importe || !fecha) {
@@ -130,7 +136,7 @@ export default function OtrosGastos() {
     }
 
     const data = {
-      businessId: currentBusinessId,
+      businessId: businessIdToUse,
       type,
       concepto,
       categoria,
@@ -226,6 +232,28 @@ export default function OtrosGastos() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Selector de negocio (solo cuando está en modo "Ambos") */}
+            {selectedBusiness === "all" && (
+              <div className="p-4 border-2 border-primary/30 rounded-lg bg-primary/5">
+                <Label className="text-base font-semibold">Negocio *</Label>
+                <Select 
+                  value={formBusinessId?.toString() || ""} 
+                  onValueChange={(v) => setFormBusinessId(parseInt(v))}
+                >
+                  <SelectTrigger className="mt-2">
+                    <SelectValue placeholder="Selecciona el negocio" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={hostelBusiness?.id.toString() || ""}>Hostel</SelectItem>
+                    <SelectItem value={tiendaBusiness?.id.toString() || ""}>Tienda</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Selecciona para qué negocio es este gasto/ingreso. No se puede crear para ambos a la vez.
+                </p>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="type">Tipo *</Label>
