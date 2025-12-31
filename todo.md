@@ -701,3 +701,8 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
   - `new Date(2025, 3*3+3, 0)` daba 30 noviembre en lugar de 31 diciembre
   - Dashboard solo contaba hasta 30 nov, perdiendo todo diciembre (€3,001.90)
 - [x] SOLUCIÓN: Cambiar `currentQuarter * 3 + 3` por `(currentQuarter + 1) * 3`
+
+## Bug Corregido v72
+- [x] Selector de año en Facturas solo mostraba años pasados (2025, 2024, 2023...)
+- [x] No incluía año siguiente (2026), impidiendo preparar facturas del próximo año
+- [x] SOLUCIÓN: Cambiar lógica para mostrar: año siguiente + año actual + 3 años anteriores

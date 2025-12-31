@@ -613,14 +613,15 @@ export default function Facturas() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {Array.from({ length: 5 }, (_, i) => {
-                  const year = currentDate.getFullYear() - i;
-                  return (
-                    <SelectItem key={year} value={year.toString()}>
-                      {year}
-                    </SelectItem>
-                  );
-                })}
+                {/* Mostrar desde 2025 (inicio del negocio) hasta año siguiente */}
+                {Array.from(
+                  { length: currentDate.getFullYear() + 1 - 2025 + 1 },
+                  (_, i) => currentDate.getFullYear() + 1 - i
+                ).map(year => (
+                  <SelectItem key={year} value={year.toString()}>
+                    {year}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
