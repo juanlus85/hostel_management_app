@@ -712,3 +712,10 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Fix de cálculo de trimestre en Dashboard (v71) incluido
 - [x] Selector de año acumulativo (v72) incluido
 - [x] Nuevo flujo: Período → Año → Mes (más intuitivo)
+
+## Bug Crítico Resuelto v74
+- [x] Dashboard perdía un día al calcular rangos de fechas por problema de timezone
+  - `new Date(2025, 12, 0).toISOString()` daba "2025-12-30" en lugar de "2025-12-31"
+  - Causa: toISOString() convierte a UTC, restando horas y cambiando el día
+  - Solución: Crear función formatDateLocal() que formatea YYYY-MM-DD sin conversión UTC
+  - Ahora Dashboard y Cierre Trimestral muestran exactamente los mismos totales

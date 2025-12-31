@@ -20,6 +20,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 type PeriodType = "week" | "month" | "quarter" | "year" | "custom";
 
+// Helper para formatear fecha como YYYY-MM-DD sin conversión de timezone
+function formatDateLocal(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export default function Home() {
   const { user } = useAuth();
   const { selectedBusiness } = useBusinessContext();
@@ -67,8 +75,8 @@ export default function Home() {
     }
     
     return {
-      startDate: start.toISOString().split('T')[0],
-      endDate: end.toISOString().split('T')[0],
+      startDate: formatDateLocal(start),
+      endDate: formatDateLocal(end),
     };
   }, [period, customStartDate, customEndDate]);
   
