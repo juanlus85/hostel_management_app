@@ -270,7 +270,17 @@ export default function Facturas() {
         const fileExtension = imageFile.name.split('.').pop();
         const quarter = invoiceDate ? Math.ceil((new Date(invoiceDate).getMonth() + 1) / 3) : Math.ceil((new Date().getMonth() + 1) / 3);
         const year = invoiceDate ? new Date(invoiceDate).getFullYear() : new Date().getFullYear();
-        const dateStr = invoiceDate ? invoiceDate.replace(/-/g, '').slice(2) : new Date().toISOString().split('T')[0].replace(/-/g, '').slice(2);
+        // Formato DDMMAA (día-mes-año)
+        const dateStr = invoiceDate ? (() => {
+          const [year, month, day] = invoiceDate.split('-');
+          return `${day}${month}${year.slice(2)}`;
+        })() : (() => {
+          const now = new Date();
+          const day = String(now.getDate()).padStart(2, '0');
+          const month = String(now.getMonth() + 1).padStart(2, '0');
+          const year = String(now.getFullYear()).slice(2);
+          return `${day}${month}${year}`;
+        })();
         const supplierName = finalSupplier || supplier || 'Sin_Proveedor';
         const formattedFileName = `${supplierName} - ${quarter}T ${year} - ${dateStr}.${fileExtension}`;
         
@@ -763,7 +773,9 @@ export default function Facturas() {
                                   const date = new Date(invoiceDate + 'T00:00:00');
                                   const quarter = Math.ceil((date.getMonth() + 1) / 3);
                                   const year = date.getFullYear();
-                                  const dateStr = invoiceDate.replace(/-/g, '').slice(2);
+                                  // Formato DDMMAA (día-mes-año)
+                                  const [yearStr, month, day] = invoiceDate.split('-');
+                                  const dateStr = `${day}${month}${yearStr.slice(2)}`;
                                   const supplierName = invoice.supplier || 'Sin_Proveedor';
                                   const formattedFileName = `${supplierName} - ${quarter}T ${year} - ${dateStr}.${fileExtension}`;
                                   
@@ -910,7 +922,9 @@ export default function Facturas() {
                             const date = new Date(invoiceDate + 'T00:00:00');
                             const quarter = Math.ceil((date.getMonth() + 1) / 3);
                             const year = date.getFullYear();
-                            const dateStr = invoiceDate.replace(/-/g, '').slice(2);
+                            // Formato DDMMAA (día-mes-año)
+                            const [yearStr, month, day] = invoiceDate.split('-');
+                            const dateStr = `${day}${month}${yearStr.slice(2)}`;
                             const supplierName = selectedInvoice.supplier || 'Sin_Proveedor';
                             const formattedFileName = `${supplierName} - ${quarter}T ${year} - ${dateStr}.${fileExtension}`;
                             

@@ -738,3 +738,19 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
   - Numeración automática: (3), (4), etc.
   - Aplicado tanto en subida inicial como en reemplazo de archivo
   - El nombre del archivo se mantiene igual en servidor y en adjunto de correo
+
+## Bug v78
+- [ ] Formato de fecha en nombre de archivo incorrecto
+  - Actual: AAMMDD (251231)
+  - Correcto: DDMMAA (311225)
+  - Corregir en subida inicial y reemplazo de archivo
+
+## v78: Corrección de formato de fecha en nombres de archivo
+- [x] Cambiar formato de fecha de AAMMDD a DDMMAA en nombres de archivo de facturas
+  - Antes: "Coca Cola - 4T 2025 - 251231.pdf" (año-mes-día)
+  - Ahora: "Coca Cola - 4T 2025 - 311225.pdf" (día-mes-año)
+- [x] Corregido en 3 ubicaciones del código:
+  - Subida inicial de archivo (línea 273-283)
+  - Ver archivo desde lista (línea 776-778)
+  - Reemplazo de archivo en edición (línea 925-927)
+- [x] Verificado funcionando correctamente: archivo guardado como "Coca Cola - 4T 2025 - 311225.pdf"
