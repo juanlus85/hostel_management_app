@@ -724,3 +724,17 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Agregar icono de archivo clickeable en lista de facturas
   - Mostrar icono al lado del nombre del proveedor si la factura tiene archivo subido
   - Al hacer clic, abrir archivo en nueva pestaña
+
+## Feature v76
+- [x] Agregar opción de reemplazar archivo en diálogo de edición de factura
+  - Mostrar botón "Reemplazar archivo" cuando la factura ya tiene archivo subido
+  - Permitir seleccionar nuevo archivo que reemplazará el anterior
+  - Incluye link para ver archivo actual antes de reemplazarlo
+
+## Mejora v77
+- [x] Agregar numeración automática a archivos duplicados de facturas
+  - Mantener formato actual: Proveedor - 4T 2025 - 251231.pdf
+  - Si existe duplicado: Proveedor - 4T 2025 - 251231 (2).pdf
+  - Numeración automática: (3), (4), etc.
+  - Aplicado tanto en subida inicial como en reemplazo de archivo
+  - El nombre del archivo se mantiene igual en servidor y en adjunto de correo

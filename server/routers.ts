@@ -497,16 +497,23 @@ export const appRouter = router({
       const base64Data = input.fileData.split(',')[1] || input.fileData;
       const buffer = Buffer.from(base64Data, 'base64');
       
-      // Generate unique file name
-      const timestamp = Date.now();
-      const randomSuffix = Math.random().toString(36).substring(2, 8);
-      const extension = input.fileName.split('.').pop() || 'pdf';
-      const fileName = `${timestamp}-${randomSuffix}.${extension}`;
-      
       // Create uploads directory if it doesn't exist
       const uploadsDir = path.join(process.cwd(), 'uploads', 'invoices');
       if (!fs.existsSync(uploadsDir)) {
         fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+      
+      // Use provided fileName and add numbering if file exists
+      const extension = input.fileName.split('.').pop() || 'pdf';
+      const baseNameWithoutExt = input.fileName.substring(0, input.fileName.lastIndexOf('.'));
+      
+      let fileName = input.fileName;
+      let counter = 2;
+      
+      // Check if file exists and increment counter
+      while (fs.existsSync(path.join(uploadsDir, fileName))) {
+        fileName = `${baseNameWithoutExt} (${counter}).${extension}`;
+        counter++;
       }
       
       // Save file to disk

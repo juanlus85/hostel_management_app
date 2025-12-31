@@ -874,6 +874,76 @@ export default function Facturas() {
               <Label>Notas</Label>
               <Textarea value={editNotes} onChange={e => setEditNotes(e.target.value)} placeholder="Notas" />
             </div>
+            {selectedInvoice?.imageUrl && (
+              <div className="grid gap-2">
+                <Label>Archivo adjunto</Label>
+                <div className="flex items-center gap-2">
+                  <a 
+                    href={selectedInvoice.imageUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-sm text-primary hover:underline flex items-center gap-1"
+                  >
+                    <FileDown className="h-4 w-4" />
+                    Ver archivo actual
+                  </a>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      const input = document.createElement('input');
+                      input.type = 'file';
+                      input.accept = 'image/*,application/pdf';
+                      input.onchange = async (e) => {
+                        const file = (e.target as HTMLInputElement).files?.[0];
+                        if (!file) return;
+                        
+                        const reader = new FileReader();
+                        reader.onload = async () => {
+                          const base64 = reader.result as string;
+                          const fileData = base64.split(',')[1];
+                          const fileExtension = file.name.split('.').pop();
+                          
+                          try {
+                            // Generar nombre de archivo con formato
+                            const invoiceDate = selectedInvoice.invoiceDate || new Date().toISOString().split('T')[0];
+                            const date = new Date(invoiceDate + 'T00:00:00');
+                            const quarter = Math.ceil((date.getMonth() + 1) / 3);
+                            const year = date.getFullYear();
+                            const dateStr = invoiceDate.replace(/-/g, '').slice(2);
+                            const supplierName = selectedInvoice.supplier || 'Sin_Proveedor';
+                            const formattedFileName = `${supplierName} - ${quarter}T ${year} - ${dateStr}.${fileExtension}`;
+                            
+                            const uploadResult = await uploadFile.mutateAsync({
+                              fileData,
+                              fileName: formattedFileName,
+                              contentType: file.type,
+                            });
+                            
+                            await updateInvoice.mutateAsync({ 
+                              id: selectedInvoice.id, 
+                              imageUrl: uploadResult.url, 
+                              imageKey: uploadResult.key,
+                              resendEmail: true 
+                            });
+                            
+                            toast.success('Archivo reemplazado y email reenviado');
+                          } catch (error) {
+                            console.error('Error al reemplazar archivo:', error);
+                            toast.error('Error al reemplazar el archivo');
+                          }
+                        };
+                        reader.readAsDataURL(file);
+                      };
+                      input.click();
+                    }}
+                  >
+                    <Upload className="h-4 w-4 mr-1" />
+                    Reemplazar archivo
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancelar</Button>
