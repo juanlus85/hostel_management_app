@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
-import { Receipt, Plus, Camera, Upload, Check, AlertCircle, Search, Building2, Store, Loader2, Sparkles, Edit2, FileText, CheckCircle2, Trash2 } from "lucide-react";
+import { Receipt, Plus, Camera, Upload, Check, AlertCircle, Search, Building2, Store, Loader2, Sparkles, Edit2, FileText, CheckCircle2, Trash2, FileDown } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useMemo, useState, useRef } from "react";
 import { toast } from "sonner";
@@ -690,7 +690,20 @@ export default function Facturas() {
                       <Receipt className="h-4 w-4 text-primary" />
                     </div>
                     <div>
-                      <p className="font-medium">{invoice.supplier || "Sin proveedor"}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">{invoice.supplier || "Sin proveedor"}</p>
+                        {invoice.imageUrl && (
+                          <a 
+                            href={invoice.imageUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-primary hover:text-primary/80 transition-colors"
+                            title="Ver archivo de factura"
+                          >
+                            <FileDown className="h-4 w-4" />
+                          </a>
+                        )}
+                      </div>
                       <div className="flex gap-2 text-xs text-muted-foreground">
                         {invoice.invoiceNumber && <span>#{invoice.invoiceNumber}</span>}
                         {invoice.invoiceDate && <span>{new Date(invoice.invoiceDate + 'T00:00:00').toLocaleDateString('es-ES')}</span>}

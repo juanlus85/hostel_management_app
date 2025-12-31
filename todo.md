@@ -719,3 +719,8 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
   - Causa: toISOString() convierte a UTC, restando horas y cambiando el día
   - Solución: Crear función formatDateLocal() que formatea YYYY-MM-DD sin conversión UTC
   - Ahora Dashboard y Cierre Trimestral muestran exactamente los mismos totales
+
+## Feature v75
+- [x] Agregar icono de archivo clickeable en lista de facturas
+  - Mostrar icono al lado del nombre del proveedor si la factura tiene archivo subido
+  - Al hacer clic, abrir archivo en nueva pestaña
