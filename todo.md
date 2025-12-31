@@ -694,3 +694,10 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Agregar selector obligatorio de negocio en formulario de Gastos/Ingresos cuando selectedBusiness = "all"
 - [x] Agregar selector obligatorio de negocio en formulario de Incidencias cuando selectedBusiness = "all"
 - [x] Agregar selector obligatorio de negocio en formulario de Inventario cuando selectedBusiness = "all"
+
+## Bug Corregido v71
+- [x] Dashboard y Cierre Trimestral mostraban gastos diferentes (€74,350.51 vs €77,352.41)
+- [x] CAUSA: Cálculo incorrecto de fecha fin de trimestre en Dashboard
+  - `new Date(2025, 3*3+3, 0)` daba 30 noviembre en lugar de 31 diciembre
+  - Dashboard solo contaba hasta 30 nov, perdiendo todo diciembre (€3,001.90)
+- [x] SOLUCIÓN: Cambiar `currentQuarter * 3 + 3` por `(currentQuarter + 1) * 3`
