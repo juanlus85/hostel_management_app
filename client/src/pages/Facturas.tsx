@@ -48,7 +48,8 @@ export default function Facturas() {
   
   // Filtro de mes/año
   const currentDate = new Date();
-  const [selectedMonth, setSelectedMonth] = useState<string>("last30");
+  const [filterType, setFilterType] = useState<string>("last30"); // "last30" | "all" | "by_month"
+  const [selectedMonth, setSelectedMonth] = useState<string>("0"); // 0-11
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear().toString());
 
   // Edit form states
@@ -72,7 +73,7 @@ export default function Facturas() {
 
   // Calcular rango de fechas según filtro
   const dateRange = useMemo(() => {
-    if (selectedMonth === "last30") {
+    if (filterType === "last30") {
       const end = new Date();
       const start = new Date();
       start.setDate(start.getDate() - 30);
@@ -80,9 +81,9 @@ export default function Facturas() {
         startDate: start.toISOString().split('T')[0],
         endDate: end.toISOString().split('T')[0]
       };
-    } else if (selectedMonth === "all") {
+    } else if (filterType === "all") {
       return { startDate: undefined, endDate: undefined };
-    } else {
+    } else if (filterType === "by_month") {
       const year = parseInt(selectedYear);
       const month = parseInt(selectedMonth);
       const start = new Date(year, month, 1);
@@ -92,7 +93,8 @@ export default function Facturas() {
         endDate: end.toISOString().split('T')[0]
       };
     }
-  }, [selectedMonth, selectedYear]);
+    return { startDate: undefined, endDate: undefined };
+  }, [filterType, selectedMonth, selectedYear]);
 
   // Queries - obtener datos según selección global
   const { data: invoicesHostel } = trpc.invoices.list.useQuery(
@@ -583,37 +585,29 @@ export default function Facturas() {
 
       {/* Filtros */}
       <div className="flex flex-col sm:flex-row gap-4">
+        {/* Selector de tipo de filtro */}
         <div className="flex-1">
-          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+          <Select value={filterType} onValueChange={setFilterType}>
             <SelectTrigger>
               <SelectValue placeholder="Seleccionar período" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="last30">Últimas 30 facturas</SelectItem>
               <SelectItem value="all">Todas las facturas</SelectItem>
-              <SelectItem value="0">Enero {selectedYear}</SelectItem>
-              <SelectItem value="1">Febrero {selectedYear}</SelectItem>
-              <SelectItem value="2">Marzo {selectedYear}</SelectItem>
-              <SelectItem value="3">Abril {selectedYear}</SelectItem>
-              <SelectItem value="4">Mayo {selectedYear}</SelectItem>
-              <SelectItem value="5">Junio {selectedYear}</SelectItem>
-              <SelectItem value="6">Julio {selectedYear}</SelectItem>
-              <SelectItem value="7">Agosto {selectedYear}</SelectItem>
-              <SelectItem value="8">Septiembre {selectedYear}</SelectItem>
-              <SelectItem value="9">Octubre {selectedYear}</SelectItem>
-              <SelectItem value="10">Noviembre {selectedYear}</SelectItem>
-              <SelectItem value="11">Diciembre {selectedYear}</SelectItem>
+              <SelectItem value="by_month">Por mes específico</SelectItem>
             </SelectContent>
           </Select>
         </div>
-        {selectedMonth !== "last30" && selectedMonth !== "all" && (
+
+        {/* Selector de año (solo si es por mes) */}
+        {filterType === "by_month" && (
           <div className="w-full sm:w-32">
             <Select value={selectedYear} onValueChange={setSelectedYear}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {/* Mostrar desde 2025 (inicio del negocio) hasta año siguiente */}
+                {/* Mostrar desde 2025 hasta año siguiente */}
                 {Array.from(
                   { length: currentDate.getFullYear() + 1 - 2025 + 1 },
                   (_, i) => currentDate.getFullYear() + 1 - i
@@ -622,6 +616,31 @@ export default function Facturas() {
                     {year}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {/* Selector de mes (solo si es por mes) */}
+        {filterType === "by_month" && (
+          <div className="flex-1">
+            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0">Enero</SelectItem>
+                <SelectItem value="1">Febrero</SelectItem>
+                <SelectItem value="2">Marzo</SelectItem>
+                <SelectItem value="3">Abril</SelectItem>
+                <SelectItem value="4">Mayo</SelectItem>
+                <SelectItem value="5">Junio</SelectItem>
+                <SelectItem value="6">Julio</SelectItem>
+                <SelectItem value="7">Agosto</SelectItem>
+                <SelectItem value="8">Septiembre</SelectItem>
+                <SelectItem value="9">Octubre</SelectItem>
+                <SelectItem value="10">Noviembre</SelectItem>
+                <SelectItem value="11">Diciembre</SelectItem>
               </SelectContent>
             </Select>
           </div>

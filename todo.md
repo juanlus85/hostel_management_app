@@ -706,3 +706,9 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Selector de año en Facturas solo mostraba años pasados (2025, 2024, 2023...)
 - [x] No incluía año siguiente (2026), impidiendo preparar facturas del próximo año
 - [x] SOLUCIÓN: Cambiar lógica para mostrar: año siguiente + año actual + 3 años anteriores
+
+## Fixes Completos v73
+- [x] Selector de meses rediseñado: ahora con 3 selectores separados (Período, Año, Mes)
+- [x] Fix de cálculo de trimestre en Dashboard (v71) incluido
+- [x] Selector de año acumulativo (v72) incluido
+- [x] Nuevo flujo: Período → Año → Mes (más intuitivo)
