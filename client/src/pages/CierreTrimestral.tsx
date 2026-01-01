@@ -429,8 +429,8 @@ export default function CierreTrimestral() {
           
           // Only include data from selected year and quarter months
           if (year === parseInt(selectedYear.toString()) && quarter.months.includes(month)) {
-            const totalZ = parseFloat(closing.totalZ) || 0;
-            hostelByMonth[month] = (hostelByMonth[month] || 0) + totalZ;
+            const zReading = parseFloat(closing.zReading) || 0;
+            hostelByMonth[month] = (hostelByMonth[month] || 0) + zReading;
           }
         });
       }
@@ -444,8 +444,8 @@ export default function CierreTrimestral() {
           
           // Only include data from selected year and quarter months
           if (year === parseInt(selectedYear.toString()) && quarter.months.includes(month)) {
-            const totalZ = parseFloat(closing.totalZ) || 0;
-            tiendaByMonth[month] = (tiendaByMonth[month] || 0) + totalZ;
+            const zReading = parseFloat(closing.zReading) || 0;
+            tiendaByMonth[month] = (tiendaByMonth[month] || 0) + zReading;
           }
         });
       }

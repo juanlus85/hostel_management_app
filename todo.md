@@ -792,3 +792,9 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Agregar fórmula SUM en "Total Trimestre" que sume las 3 celdas de los meses
 - [x] Mostrar solo los meses correspondientes al trimestre seleccionado
 - [x] Incluir el año en el título del XLSX
+
+
+## v82.2: Corrección businessId en exportación XLSX
+- [x] Corregir handleExportXLSX para usar zReading en lugar de totalZ inexistente
+- [x] Los cierres de caja ya vienen filtrados por businessId en hostelClosings y tiendaClosings
+- [x] Verificar que Q4 2025 muestra valores correctos en el XLSX exportado
