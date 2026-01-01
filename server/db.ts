@@ -1683,12 +1683,20 @@ export async function getAvailableYears(): Promise<number[]> {
       return [new Date().getFullYear()];
     }
 
-    // Add next year if not already present
+    // Always include current year if not already present
     const currentYear = new Date().getFullYear();
+    if (!years.includes(currentYear)) {
+      years.push(currentYear);
+    }
+    
+    // Add next year if not already present
     const nextYear = currentYear + 1;
     if (!years.includes(nextYear)) {
       years.push(nextYear);
     }
+
+    // Sort years again after adding current/next year
+    years.sort((a, b) => a - b);
 
     return years;
   } catch (error) {

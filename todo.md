@@ -859,3 +859,8 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Quitar restricción period === "month"
 - [x] Mostrar en semana, mes, trimestre, año, personalizado
 - [x] Mantener restricción solo Hostel (no Tienda ni Ambos)
+
+## v82.10: Incluir año actual en Histórico de Cajas
+- [x] Modificar lógica de años disponibles para incluir siempre el año actual
+- [x] Aunque no haya datos de 2026, debe aparecer en el selector
+- [x] Cuando llegue 2027, debe aparecer automáticamente
