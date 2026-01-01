@@ -286,12 +286,8 @@ export default function HistoricoCajas() {
         </div>
       </div>
 
-      <Tabs defaultValue="anual" className="space-y-4">
+      <Tabs defaultValue="graficas" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="anual">
-            <Calendar className="w-4 h-4 mr-2" />
-            Vista Anual
-          </TabsTrigger>
           <TabsTrigger value="graficas">
             <TrendingUp className="w-4 h-4 mr-2" />
             Vista Gráficas
@@ -299,6 +295,10 @@ export default function HistoricoCajas() {
           <TabsTrigger value="acumulados">
             <TrendingUp className="w-4 h-4 mr-2" />
             Acumulados
+          </TabsTrigger>
+          <TabsTrigger value="anual">
+            <Calendar className="w-4 h-4 mr-2" />
+            Vista Anual
           </TabsTrigger>
         </TabsList>
 

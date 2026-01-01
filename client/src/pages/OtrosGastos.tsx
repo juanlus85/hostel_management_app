@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { useBusinessContext } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Loader2, Plus, Trash2, Edit, DollarSign } from "lucide-react";
+import { Loader2, Plus, Trash2, Edit, DollarSign, Calendar } from "lucide-react";
+
+// Helper para formatear fecha como YYYY-MM-DD sin conversión de timezone
+function formatDateLocal(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 
 export default function OtrosGastos() {
 
@@ -16,6 +24,12 @@ export default function OtrosGastos() {
 
   // Business selection from global context
   const { selectedBusiness } = useBusinessContext();
+  
+  // Filtro de fecha
+  const currentDate = new Date();
+  const [filterType, setFilterType] = useState<string>("last30"); // "last30" | "all" | "by_month"
+  const [selectedMonth, setSelectedMonth] = useState<string>("0"); // 0-11
+  const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear().toString());
   const { data: businesses } = trpc.businesses.list.useQuery();
   const [currentBusinessId, setCurrentBusinessId] = useState<number | null>(null);
 
@@ -33,9 +47,38 @@ export default function OtrosGastos() {
   // Edit state
   const [editingId, setEditingId] = useState<number | null>(null);
 
+  // Get available years dynamically from database
+  const { data: availableYears } = trpc.utils.getAvailableYears.useQuery();
+  const yearOptions = availableYears || [currentDate.getFullYear()];
+  
   // Get businesses
   const hostelBusiness = businesses?.find(b => b.name.includes("Hostel"));
   const tiendaBusiness = businesses?.find(b => b.name.includes("Tienda"));
+  
+  // Calcular rango de fechas según filtro
+  const dateRange = useMemo(() => {
+    if (filterType === "last30") {
+      const end = new Date();
+      const start = new Date();
+      start.setDate(start.getDate() - 30);
+      return {
+        startDate: formatDateLocal(start),
+        endDate: formatDateLocal(end)
+      };
+    } else if (filterType === "all") {
+      return { startDate: undefined, endDate: undefined };
+    } else if (filterType === "by_month") {
+      const year = parseInt(selectedYear);
+      const month = parseInt(selectedMonth);
+      const start = new Date(year, month, 1);
+      const end = new Date(year, month + 1, 0);
+      return {
+        startDate: formatDateLocal(start),
+        endDate: formatDateLocal(end)
+      };
+    }
+    return { startDate: undefined, endDate: undefined };
+  }, [filterType, selectedMonth, selectedYear]);
 
   // Set currentBusinessId based on selectedBusiness
   useEffect(() => {
@@ -53,12 +96,12 @@ export default function OtrosGastos() {
   // Queries - obtener datos según selección global
   
   const { data: gastosHostel } = trpc.otrosGastos.list.useQuery(
-    { businessId: hostelBusiness?.id! },
+    { businessId: hostelBusiness?.id!, startDate: dateRange.startDate, endDate: dateRange.endDate },
     { enabled: !!hostelBusiness && (selectedBusiness === "hostel" || selectedBusiness === "all") }
   );
   
   const { data: gastosTienda } = trpc.otrosGastos.list.useQuery(
-    { businessId: tiendaBusiness?.id! },
+    { businessId: tiendaBusiness?.id!, startDate: dateRange.startDate, endDate: dateRange.endDate },
     { enabled: !!tiendaBusiness && (selectedBusiness === "tienda" || selectedBusiness === "all") }
   );
   
@@ -374,6 +417,73 @@ export default function OtrosGastos() {
               )}
             </div>
           </form>
+        </CardContent>
+      </Card>
+
+      {/* Filtros de fecha */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Filtros
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col md:flex-row gap-4 items-end">
+            <div className="flex-1">
+              <Label>Mostrar</Label>
+              <Select value={filterType} onValueChange={setFilterType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="last30">Últimos 30 días</SelectItem>
+                  <SelectItem value="all">Mostrar todos</SelectItem>
+                  <SelectItem value="by_month">Por mes específico</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {filterType === "by_month" && (
+              <>
+                <div className="flex-1">
+                  <Label>Año</Label>
+                  <Select value={selectedYear} onValueChange={setSelectedYear}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {yearOptions.map(year => (
+                        <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex-1">
+                  <Label>Mes</Label>
+                  <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">Enero</SelectItem>
+                      <SelectItem value="1">Febrero</SelectItem>
+                      <SelectItem value="2">Marzo</SelectItem>
+                      <SelectItem value="3">Abril</SelectItem>
+                      <SelectItem value="4">Mayo</SelectItem>
+                      <SelectItem value="5">Junio</SelectItem>
+                      <SelectItem value="6">Julio</SelectItem>
+                      <SelectItem value="7">Agosto</SelectItem>
+                      <SelectItem value="8">Septiembre</SelectItem>
+                      <SelectItem value="9">Octubre</SelectItem>
+                      <SelectItem value="10">Noviembre</SelectItem>
+                      <SelectItem value="11">Diciembre</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
+          </div>
         </CardContent>
       </Card>
 

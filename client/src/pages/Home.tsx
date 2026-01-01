@@ -116,6 +116,7 @@ export default function Home() {
         totalDifference: hostelStats.totalDifference + tiendaStats.totalDifference,
         withdrawnCash: (hostelStats.withdrawnCash || 0) + (tiendaStats.withdrawnCash || 0),
         withdrawnCards: (hostelStats.withdrawnCards || 0) + (tiendaStats.withdrawnCards || 0),
+        prepaidBooking: (hostelStats.prepaidBooking || 0) + (tiendaStats.prepaidBooking || 0),
         lowStockCount: hostelStats.lowStockCount + tiendaStats.lowStockCount,
         openIncidentsCount: hostelStats.openIncidentsCount + tiendaStats.openIncidentsCount,
         pendingOrdersCount: hostelStats.pendingOrdersCount + tiendaStats.pendingOrdersCount,
@@ -195,6 +196,22 @@ export default function Home() {
               </p>
             </CardContent>
           </Card>
+
+          {/* Prepago Booking - Solo para Hostel y solo en vista de mes */}
+          {selectedBusiness === "hostel" && period === "month" && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Prepago Booking</CardTitle>
+                <TrendingDown className="h-4 w-4 text-blue-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-blue-600">
+                  €{stats?.prepaidBooking?.toFixed(2) || "0.00"}
+                </div>
+                <p className="text-xs text-muted-foreground">Retirado este mes</p>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

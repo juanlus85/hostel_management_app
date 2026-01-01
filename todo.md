@@ -828,3 +828,19 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Al filtrar por diciembre 2025, no muestra facturas del 31/12
 - [x] Al filtrar por enero 2026, muestra facturas del 31/12/2025 (incorrecto)
 - [x] Aplicar mismo fix de formatDateLocal que usamos en Dashboard
+
+## v82.6: Filtros de fecha en Otros Gastos/Ingresos
+- [x] Agregar filtros de fecha como en Facturas
+- [x] Por defecto: mostrar últimos 30 días
+- [x] Opción: mostrar todos
+- [x] Opción: filtrar por mes específico (selector año + mes)
+- [x] Usar formatDateLocal para evitar bugs de timezone
+
+## v82.6: Agregar prepago Booking en Dashboard
+- [x] Mostrar campo "Retirado Prepago Booking" en Dashboard
+- [x] Solo en vista Hostel y solo visible para rol admin (no Tienda ni Ambos)
+- [x] Mostrar total del mes en curso (no semana)
+- [x] Obtener datos de tabla cashClosings campo prepaidBooking donde paymentMethod = 'prepago_booking'
+
+## v82.6: Reordenar pestañas en Histórico de Cajas
+- [x] Cambiar orden de pestañas: Gráficos (por defecto), Acumulados, Vista Anual

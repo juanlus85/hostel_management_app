@@ -549,6 +549,7 @@ export async function getDashboardStats(businessId: number, startDate: string, e
   let totalDifference = 0;
   let withdrawnCash = 0;
   let withdrawnCards = 0;
+  let prepaidBooking = 0;
   
   // Sumar ingresos de cashClosings usando zReading (la Z de caja = ingresos reales)
   // Solo contar cierres con status='closed' para consistencia con Cierre Trimestral
@@ -558,6 +559,7 @@ export async function getDashboardStats(businessId: number, startDate: string, e
       totalDifference += parseFloat(c.difference || "0");
       withdrawnCash += parseFloat(c.withdrawnCash || "0");
       withdrawnCards += parseFloat(c.withdrawnCards || "0");
+      prepaidBooking += parseFloat(c.prepaidBooking || "0");
     }
   });
   
@@ -599,6 +601,7 @@ export async function getDashboardStats(businessId: number, startDate: string, e
     totalDifference,
     withdrawnCash,
     withdrawnCards,
+    prepaidBooking,
     lowStockCount: lowStock.length,
     openIncidentsCount: openIncidents.length,
     pendingOrdersCount: pendingOrders.length
