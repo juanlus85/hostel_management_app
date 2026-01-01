@@ -783,3 +783,12 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Agregar botón de exportación a XLSX en Cierre Trimestral
 - [x] Generar estructura con título, secciones por negocio (HOSTEL, SWEET & SALTY), meses y totales
 - [x] Formato similar a la imagen de referencia del usuario
+
+
+## v82.1: Correcciones exportación XLSX Cierre Trimestral
+- [x] Cambiar texto del botón a "Exportar Ingresos Trimestre en XLSX"
+- [x] Corregir cálculo de datos (Q4 2025 muestra 0 cuando debería tener valores)
+- [x] Agregar valores individuales en celdas de meses (no solo "Total")
+- [x] Agregar fórmula SUM en "Total Trimestre" que sume las 3 celdas de los meses
+- [x] Mostrar solo los meses correspondientes al trimestre seleccionado
+- [x] Incluir el año en el título del XLSX

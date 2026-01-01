@@ -401,8 +401,8 @@ export default function CierreTrimestral() {
   // Exportar gastos agrupados  };
 
   const handleExportXLSX = () => {
-    if (!csvData || !quarterInvoices) {
-      toast.error("Cargando datos...");
+    if (!hostelClosings && !tiendaClosings) {
+      toast.error("No hay datos de cierres de caja para exportar");
       return;
     }
 
@@ -416,64 +416,114 @@ export default function CierreTrimestral() {
       const monthNames = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", 
                           "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"];
       
-      // Calculate totals per month and business
+      // Calculate totals per month and business from closings data
       const hostelByMonth: Record<number, number> = {};
       const tiendaByMonth: Record<number, number> = {};
       
-      csvData.split('\n').slice(1).forEach(line => {
-        if (!line.trim()) return;
-        const parts = line.split(',');
-        if (parts.length < 4) return;
-        
-        const date = new Date(parts[0]);
-        const month = date.getMonth();
-        const business = parts[1];
-        const totalZ = parseFloat(parts[3]) || 0;
-        
-        if (quarter.months.includes(month)) {
-          if (business === 'hostel') {
+      // Process hostel closings
+      if (hostelClosings) {
+        hostelClosings.forEach((closing: any) => {
+          const date = new Date(closing.date);
+          const month = date.getMonth();
+          const year = date.getFullYear();
+          
+          // Only include data from selected year and quarter months
+          if (year === parseInt(selectedYear.toString()) && quarter.months.includes(month)) {
+            const totalZ = parseFloat(closing.totalZ) || 0;
             hostelByMonth[month] = (hostelByMonth[month] || 0) + totalZ;
-          } else if (business === 'tienda') {
+          }
+        });
+      }
+      
+      // Process tienda closings
+      if (tiendaClosings) {
+        tiendaClosings.forEach((closing: any) => {
+          const date = new Date(closing.date);
+          const month = date.getMonth();
+          const year = date.getFullYear();
+          
+          // Only include data from selected year and quarter months
+          if (year === parseInt(selectedYear.toString()) && quarter.months.includes(month)) {
+            const totalZ = parseFloat(closing.totalZ) || 0;
             tiendaByMonth[month] = (tiendaByMonth[month] || 0) + totalZ;
           }
-        }
-      });
+        });
+      }
       
-      // Build worksheet data
+      // Build worksheet data with formulas
       const data: any[][] = [];
+      let currentRow = 1;
       
       // Title
       data.push([`INGRESOS ${selectedQuarter} ${selectedYear}`]);
+      currentRow++;
       data.push([]);
+      currentRow++;
       
       // HOSTEL section
       data.push(["HOSTEL"]);
+      currentRow++;
+      
+      const hostelValueRows: number[] = [];
       quarter.months.forEach(monthIdx => {
         const monthName = monthNames[monthIdx];
         data.push([monthName]);
-        data.push(["Total", "", hostelByMonth[monthIdx] ? `${hostelByMonth[monthIdx].toFixed(2)}€` : "0.00€"]);
+        currentRow++;
+        
+        const value = hostelByMonth[monthIdx] || 0;
+        data.push(["Total", "", value]);
+        hostelValueRows.push(currentRow);
+        currentRow++;
+        
         data.push([]);
+        currentRow++;
       });
       
-      const hostelTotal = Object.values(hostelByMonth).reduce((sum, val) => sum + val, 0);
-      data.push(["Total Trimestre", "", `${hostelTotal.toFixed(2)}€`]);
+      // Total Trimestre with SUM formula
+      const hostelFormula = hostelValueRows.map(row => `C${row}`).join('+');
+      data.push(["Total Trimestre", "", { f: hostelFormula }]);
+      currentRow++;
+      
       data.push([]);
+      currentRow++;
       data.push([]);
+      currentRow++;
       
       // SWEET & SALTY section
       data.push(["SWEET & SALTY"]);
+      currentRow++;
+      
+      const tiendaValueRows: number[] = [];
       quarter.months.forEach(monthIdx => {
         const monthName = monthNames[monthIdx];
         data.push([monthName]);
-        data.push(["Total", "", tiendaByMonth[monthIdx] ? `${tiendaByMonth[monthIdx].toFixed(2)}€` : "0.00€"]);
+        currentRow++;
+        
+        const value = tiendaByMonth[monthIdx] || 0;
+        data.push(["Total", "", value]);
+        tiendaValueRows.push(currentRow);
+        currentRow++;
+        
         data.push([]);
+        currentRow++;
       });
       
-      const tiendaTotal = Object.values(tiendaByMonth).reduce((sum, val) => sum + val, 0);
-      data.push(["Total Trimestre", "", `${tiendaTotal.toFixed(2)}€`]);
+      // Total Trimestre with SUM formula
+      const tiendaFormula = tiendaValueRows.map(row => `C${row}`).join('+');
+      data.push(["Total Trimestre", "", { f: tiendaFormula }]);
       
       // Create worksheet
       const worksheet = XLSX.utils.aoa_to_sheet(data);
+      
+      // Format currency cells
+      const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+      for (let R = range.s.r; R <= range.e.r; ++R) {
+        const cellAddress = XLSX.utils.encode_cell({ r: R, c: 2 }); // Column C
+        const cell = worksheet[cellAddress];
+        if (cell && (typeof cell.v === 'number' || cell.f)) {
+          cell.z = '#,##0.00"€"';
+        }
+      }
       
       // Set column widths
       worksheet['!cols'] = [
@@ -725,7 +775,7 @@ export default function CierreTrimestral() {
                   className="w-full sm:w-auto"
                 >
                   <FileText className="h-4 w-4 mr-2" />
-                  Exportar XLSX
+                  Exportar Ingresos Trimestre en XLSX
                 </Button>
               </div>
             </div>
