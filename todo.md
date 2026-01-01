@@ -848,3 +848,9 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 ## v82.7: Cierre Trimestral muestra 4T por defecto
 - [x] Cambiar lógica para mostrar trimestre actual (1T en enero, 2T en abril, etc.)
 - [x] Calcular trimestre actual basado en mes actual: Math.floor(mes / 3)
+
+## v82.8: Mover Prepago Booking dentro de Ingresos (Z)
+- [x] Eliminar card separada de Prepago Booking
+- [x] Agregar prepago booking en texto pequeño dentro de card Ingresos (Z)
+- [x] Formato: "Efectivo: €X | Tarjetas: €X | Prepago Booking: €X"
+- [x] Solo visible en vista Hostel (no Tienda ni Ambos)
