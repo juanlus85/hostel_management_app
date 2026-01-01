@@ -1634,3 +1634,55 @@ export async function getCurrentYearCashData(year: number): Promise<{
   
   return { hostel, tienda };
 }
+
+
+// ==================== GLOBAL UTILITIES ====================
+/**
+ * Get available years from all tables in the database
+ * Returns an array of years sorted from oldest to newest + next year
+ * Used by all modules to populate year selectors dynamically
+ */
+export async function getAvailableYears(): Promise<number[]> {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const { sql } = await import('drizzle-orm');
+
+  try {
+    // Use raw SQL to get distinct years from all tables
+    const result: any = await db.execute(sql`
+      SELECT DISTINCT year FROM (
+        SELECT YEAR(date) as year FROM cash_closings WHERE date IS NOT NULL
+        UNION
+        SELECT YEAR(STR_TO_DATE(invoiceDate, '%d/%m/%Y')) as year FROM invoices WHERE invoiceDate IS NOT NULL
+        UNION
+        SELECT YEAR(fecha) as year FROM otros_gastos WHERE fecha IS NOT NULL
+        UNION
+        SELECT year FROM historical_cash_data WHERE year IS NOT NULL
+      ) AS all_years
+      WHERE year IS NOT NULL
+      ORDER BY year ASC
+    `);
+    
+    const resultArray = Array.isArray(result[0]) ? result[0] : (Array.isArray(result) ? result : []);
+    const years = resultArray.map((row: any) => row.year);
+
+    // If no years found, return current year
+    if (years.length === 0) {
+      return [new Date().getFullYear()];
+    }
+
+    // Add next year if not already present
+    const currentYear = new Date().getFullYear();
+    const nextYear = currentYear + 1;
+    if (!years.includes(nextYear)) {
+      years.push(nextYear);
+    }
+
+    return years;
+  } catch (error) {
+    console.error('[getAvailableYears] Error:', error);
+    // Fallback: return current year
+    return [new Date().getFullYear()];
+  }
+}

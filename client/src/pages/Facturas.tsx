@@ -61,6 +61,10 @@ export default function Facturas() {
   const [editNotes, setEditNotes] = useState("");
 
   const utils = trpc.useUtils();
+  
+  // Get available years dynamically from database
+  const { data: availableYears } = trpc.utils.getAvailableYears.useQuery();
+  const yearOptions = availableYears || [currentDate.getFullYear()];
 
   const { data: businesses } = trpc.businesses.list.useQuery();
   const hostelBusiness = businesses?.find(b => b.code === "hostel");
@@ -617,11 +621,7 @@ export default function Facturas() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {/* Mostrar desde 2025 hasta año siguiente */}
-                {Array.from(
-                  { length: currentDate.getFullYear() + 1 - 2025 + 1 },
-                  (_, i) => currentDate.getFullYear() + 1 - i
-                ).map(year => (
+                {yearOptions.slice().reverse().map(year => (
                   <SelectItem key={year} value={year.toString()}>
                     {year}
                   </SelectItem>

@@ -6,12 +6,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Download, TrendingUp, Calendar } from "lucide-react";
-import { Bar } from "react-chartjs-2";
+import { Bar, Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
   BarElement,
+  LineElement,
+  PointElement,
   Title,
   Tooltip,
   Legend,
@@ -21,6 +23,8 @@ ChartJS.register(
   CategoryScale,
   LinearScale,
   BarElement,
+  LineElement,
+  PointElement,
   Title,
   Tooltip,
   Legend
@@ -50,11 +54,20 @@ export default function HistoricoCajas() {
     { enabled: selectedYear >= 2026 }
   );
 
-  // Generate year options (2014 to current year)
-  const yearOptions = Array.from(
-    { length: currentYear - 2014 + 1 },
-    (_, i) => 2014 + i
-  );
+  // Get available years dynamically from database
+  const { data: availableYears, isLoading: isLoadingYears } = trpc.utils.getAvailableYears.useQuery();
+  const yearOptions = availableYears || [currentYear];
+  
+  // Show loading state while fetching years
+  if (isLoadingYears) {
+    return (
+      <div className="container mx-auto py-8">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-muted-foreground">Cargando...</div>
+        </div>
+      </div>
+    );
+  }
 
   // Filter data by selected year
   const yearData = historicalData?.filter(d => d.year === selectedYear) || [];
@@ -280,6 +293,10 @@ export default function HistoricoCajas() {
           <TabsTrigger value="graficas">
             <TrendingUp className="w-4 h-4 mr-2" />
             Vista Gráficas
+          </TabsTrigger>
+          <TabsTrigger value="acumulados">
+            <TrendingUp className="w-4 h-4 mr-2" />
+            Acumulados
           </TabsTrigger>
         </TabsList>
 
@@ -531,6 +548,101 @@ export default function HistoricoCajas() {
                     })}
                   </TableBody>
                 </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Vista Acumulados */}
+        <TabsContent value="acumulados" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Evolución Acumulada Mes a Mes</CardTitle>
+              <CardDescription>Gráfico de evolución acumulada de facturación por mes</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {/* Selector de año para acumulados */}
+                <div className="flex items-center gap-4">
+                  <Select value={selectedYear.toString()} onValueChange={(v) => setSelectedYear(parseInt(v))}>
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {yearOptions.map(year => (
+                        <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Gráfico de líneas acumulado */}
+                <div className="h-96">
+                  <Line
+                    data={{
+                      labels: MONTHS,
+                      datasets: [
+                        {
+                          label: 'Hostel Acumulado',
+                          data: annualData.reduce((acc: number[], row, idx) => {
+                            const prev = idx > 0 ? acc[idx - 1] : 0;
+                            acc.push(prev + parseFloat(row.hostelZ));
+                            return acc;
+                          }, []),
+                          borderColor: 'rgb(59, 130, 246)',
+                          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                          tension: 0.4,
+                        },
+                        {
+                          label: 'Tienda Acumulado',
+                          data: annualData.reduce((acc: number[], row, idx) => {
+                            const prev = idx > 0 ? acc[idx - 1] : 0;
+                            acc.push(prev + parseFloat(row.tiendaZ));
+                            return acc;
+                          }, []),
+                          borderColor: 'rgb(236, 72, 153)',
+                          backgroundColor: 'rgba(236, 72, 153, 0.1)',
+                          tension: 0.4,
+                        },
+                        {
+                          label: 'Total Acumulado',
+                          data: annualData.reduce((acc: number[], row, idx) => {
+                            const prev = idx > 0 ? acc[idx - 1] : 0;
+                            const total = parseFloat(row.hostelZ) + parseFloat(row.tiendaZ);
+                            acc.push(prev + total);
+                            return acc;
+                          }, []),
+                          borderColor: 'rgb(34, 197, 94)',
+                          backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                          tension: 0.4,
+                        },
+                      ],
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          position: 'top' as const,
+                        },
+                        title: {
+                          display: true,
+                          text: `Evolución Acumulada ${selectedYear}`,
+                        },
+                      },
+                      scales: {
+                        y: {
+                          beginAtZero: true,
+                          ticks: {
+                            callback: function(value) {
+                              return '€' + value.toLocaleString();
+                            }
+                          }
+                        }
+                      }
+                    }}
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>

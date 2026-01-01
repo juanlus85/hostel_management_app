@@ -45,6 +45,10 @@ export default function CierreTrimestral() {
 
   const { data: businesses } = trpc.businesses.list.useQuery();
   
+  // Get available years dynamically from database
+  const { data: availableYears } = trpc.utils.getAvailableYears.useQuery();
+  const yearOptions = availableYears || [currentYear];
+  
   const businessIds = useMemo(() => {
     if (selectedBusiness === "all") {
       return businesses?.map(b => b.id) || [];
@@ -417,7 +421,7 @@ export default function CierreTrimestral() {
     toast.success("CSV exportado correctamente");
   };
 
-  const years = Array.from({ length: 5 }, (_, i) => (currentYear - i).toString());
+  const years = yearOptions.slice().reverse().map(y => y.toString());
   const businessLabel = selectedBusiness === "hostel" ? "Hostel" : selectedBusiness === "tienda" ? "Tienda" : "Ambos";
 
   return (

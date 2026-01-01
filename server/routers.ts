@@ -25,6 +25,14 @@ const housekeepingProcedure = protectedProcedure.use(({ ctx, next }) => {
 export const appRouter = router({
   system: systemRouter,
   
+  // Global utility procedures
+  utils: router({
+    // Get available years from database (for all modules)
+    getAvailableYears: protectedProcedure.query(async () => {
+      return db.getAvailableYears();
+    }),
+  }),
+  
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {

@@ -761,3 +761,13 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Agregar selector para ver gráficos por meses específicos
 - [x] Permitir comparar un mes a lo largo de los años
 - [x] Agregar selector de datos (Hostel, Tienda, Total, Hostel+Tienda, Todos)
+
+
+## v80: Sistema global de años dinámicos + Pestaña Acumulados
+- [x] Crear sistema global de detección automática de años desde la base de datos
+- [x] Agregar pestaña "Acumulados" con gráfico de evolución acumulada mes a mes
+- [x] Aplicar detección de años a Histórico de Cajas
+- [x] Aplicar detección de años a Facturas
+- [x] Aplicar detección de años a Otros Gastos (no tiene selector de año)
+- [x] Aplicar detección de años a Resumen Semanal (no tiene selector de año)
+- [x] Aplicar detección de años a Cierre Trimestral
