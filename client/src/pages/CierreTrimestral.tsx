@@ -522,7 +522,7 @@ export default function CierreTrimestral() {
         const cellAddress = XLSX.utils.encode_cell({ r: R, c: 2 }); // Column C
         const cell = worksheet[cellAddress];
         if (cell && (typeof cell.v === 'number' || cell.f)) {
-          cell.z = '#,##0.00"€"';
+          cell.z = '0.00"€"';
         }
       }
       

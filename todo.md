@@ -805,3 +805,20 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Problema: enabled de hostelClosings solo se ejecutaba si selectedBusiness era "all" o "hostel"
 - [x] Solución: Siempre obtener datos de ambos negocios para XLSX, independiente del filtro de interfaz
 - [x] Ahora hostelClosings y tiendaClosings siempre tienen datos disponibles para exportar
+
+## v82.4: Bug Dashboard suma datos de diciembre en lugar de enero
+- [ ] Dashboard muestra ingresos del 31 de diciembre cuando debería mostrar €0.00 (no hay cierres de enero todavía)
+- [ ] Revisar función getDashboardStats - filtrado de fechas incorrecto
+- [ ] Debe mostrar solo datos del período seleccionado (enero), no del mes anterior
+
+## v82.3: Bugs Reportados en Producción
+- [x] Dashboard muestra ingresos del 31 de diciembre cuando debería mostrar €0.00 (no hay cierres de enero todavía)
+- [x] Menú "Histórico de Cajas" desaparece después de desplegar - CAUSA: Caché del navegador
+- [x] Solución: Limpiar caché del navegador con Ctrl+Shift+R después de desplegar
+- [x] Agregado logging a getDashboardStats para debug
+- [x] Creadas instrucciones detalladas de despliegue (INSTRUCCIONES_DESPLIEGUE_V82.3.md)
+
+## v82.4: Corregir formato XLSX
+- [x] Exportación XLSX usa separador de miles con punto (.) - debe eliminarse
+- [x] Solo usar punto (.) para separar decimales
+- [x] Formato moneda: 1234.56 € (no 1.234.56 €)

@@ -519,6 +519,8 @@ export async function getDashboardStats(businessId: number, startDate: string, e
   const db = await getDb();
   if (!db) return null;
   
+  console.log('[getDashboardStats] businessId:', businessId, 'startDate:', startDate, 'endDate:', endDate);
+  
   // Usar cashClosings para obtener los totales reales
   const closings = await db.select().from(cashClosings)
     .where(and(
@@ -526,6 +528,12 @@ export async function getDashboardStats(businessId: number, startDate: string, e
       gte(cashClosings.date, startDate),
       lte(cashClosings.date, endDate)
     ));
+  
+  console.log('[getDashboardStats] Found', closings.length, 'closings');
+  if (closings.length > 0) {
+    console.log('[getDashboardStats] First closing:', closings[0].date, 'zReading:', closings[0].zReading);
+    console.log('[getDashboardStats] Last closing:', closings[closings.length-1].date);
+  }
   
   // También obtener transacciones antiguas por compatibilidad
   const txns = await db.select().from(transactions)
