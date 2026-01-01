@@ -798,3 +798,10 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Corregir handleExportXLSX para usar zReading en lugar de totalZ inexistente
 - [x] Los cierres de caja ya vienen filtrados por businessId en hostelClosings y tiendaClosings
 - [x] Verificar que Q4 2025 muestra valores correctos en el XLSX exportado
+
+
+## v82.3: Bug exportación XLSX - Datos Hostel no aparecen
+- [x] Investigar por qué los datos del Hostel no se exportan correctamente en XLSX
+- [x] Problema: enabled de hostelClosings solo se ejecutaba si selectedBusiness era "all" o "hostel"
+- [x] Solución: Siempre obtener datos de ambos negocios para XLSX, independiente del filtro de interfaz
+- [x] Ahora hostelClosings y tiendaClosings siempre tienen datos disponibles para exportar

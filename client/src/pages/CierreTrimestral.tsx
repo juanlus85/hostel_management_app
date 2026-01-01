@@ -102,14 +102,15 @@ export default function CierreTrimestral() {
   const hostelId = businesses?.find(b => b.code === "hostel")?.id;
   const tiendaId = businesses?.find(b => b.code === "tienda")?.id;
 
+  // Always fetch both businesses for XLSX export, regardless of selected business filter
   const { data: hostelClosings } = trpc.cashClosings.list.useQuery(
     { businessId: hostelId || 1, startDate: dateRange.start, endDate: dateRange.end },
-    { enabled: !!hostelId && !!dateRange.start && (selectedBusiness === "all" || selectedBusiness === "hostel") }
+    { enabled: !!hostelId && !!dateRange.start }
   );
 
   const { data: tiendaClosings } = trpc.cashClosings.list.useQuery(
     { businessId: tiendaId || 2, startDate: dateRange.start, endDate: dateRange.end },
-    { enabled: !!tiendaId && !!dateRange.start && (selectedBusiness === "all" || selectedBusiness === "tienda") }
+    { enabled: !!tiendaId && !!dateRange.start }
   );
 
   const { data: hostelInvoices } = trpc.invoices.list.useQuery(
