@@ -13,6 +13,7 @@ import {
   Calendar, Download, FileArchive, FileText, Receipt, 
   TrendingUp, TrendingDown, DollarSign, AlertTriangle, Filter, ArrowUpDown
 } from "lucide-react";
+import * as XLSX from 'xlsx';
 import { Pie } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -397,7 +398,105 @@ export default function CierreTrimestral() {
     }
   };
 
-  // Exportar gastos agrupados a CSV
+  // Exportar gastos agrupados  };
+
+  const handleExportXLSX = () => {
+    if (!csvData || !quarterInvoices) {
+      toast.error("Cargando datos...");
+      return;
+    }
+
+    try {
+      const workbook = XLSX.utils.book_new();
+      
+      // Get quarter info
+      const quarter = QUARTERS.find(q => q.value === selectedQuarter);
+      if (!quarter) return;
+      
+      const monthNames = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", 
+                          "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"];
+      
+      // Calculate totals per month and business
+      const hostelByMonth: Record<number, number> = {};
+      const tiendaByMonth: Record<number, number> = {};
+      
+      csvData.split('\n').slice(1).forEach(line => {
+        if (!line.trim()) return;
+        const parts = line.split(',');
+        if (parts.length < 4) return;
+        
+        const date = new Date(parts[0]);
+        const month = date.getMonth();
+        const business = parts[1];
+        const totalZ = parseFloat(parts[3]) || 0;
+        
+        if (quarter.months.includes(month)) {
+          if (business === 'hostel') {
+            hostelByMonth[month] = (hostelByMonth[month] || 0) + totalZ;
+          } else if (business === 'tienda') {
+            tiendaByMonth[month] = (tiendaByMonth[month] || 0) + totalZ;
+          }
+        }
+      });
+      
+      // Build worksheet data
+      const data: any[][] = [];
+      
+      // Title
+      data.push([`INGRESOS ${selectedQuarter} ${selectedYear}`]);
+      data.push([]);
+      
+      // HOSTEL section
+      data.push(["HOSTEL"]);
+      quarter.months.forEach(monthIdx => {
+        const monthName = monthNames[monthIdx];
+        data.push([monthName]);
+        data.push(["Total", "", hostelByMonth[monthIdx] ? `${hostelByMonth[monthIdx].toFixed(2)}€` : "0.00€"]);
+        data.push([]);
+      });
+      
+      const hostelTotal = Object.values(hostelByMonth).reduce((sum, val) => sum + val, 0);
+      data.push(["Total Trimestre", "", `${hostelTotal.toFixed(2)}€`]);
+      data.push([]);
+      data.push([]);
+      
+      // SWEET & SALTY section
+      data.push(["SWEET & SALTY"]);
+      quarter.months.forEach(monthIdx => {
+        const monthName = monthNames[monthIdx];
+        data.push([monthName]);
+        data.push(["Total", "", tiendaByMonth[monthIdx] ? `${tiendaByMonth[monthIdx].toFixed(2)}€` : "0.00€"]);
+        data.push([]);
+      });
+      
+      const tiendaTotal = Object.values(tiendaByMonth).reduce((sum, val) => sum + val, 0);
+      data.push(["Total Trimestre", "", `${tiendaTotal.toFixed(2)}€`]);
+      
+      // Create worksheet
+      const worksheet = XLSX.utils.aoa_to_sheet(data);
+      
+      // Set column widths
+      worksheet['!cols'] = [
+        { wch: 20 }, // Column A
+        { wch: 15 }, // Column B
+        { wch: 15 }, // Column C
+        { wch: 15 }  // Column D
+      ];
+      
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Ingresos Trimestre");
+      
+      // Generate file and download
+      const filename = `INGRESOS_${selectedQuarter}_${selectedYear}.xlsx`;
+      XLSX.writeFile(workbook, filename);
+      
+      toast.success("Archivo XLSX exportado correctamente");
+    } catch (error) {
+      console.error("Export XLSX error:", error);
+      toast.error("Error al exportar el archivo XLSX");
+    }
+  };
+
   const exportGroupedExpensesCSV = () => {
     const csvContent = [
       "Proveedor/Concepto,Total,Registros,Negocios",
@@ -611,14 +710,24 @@ export default function CierreTrimestral() {
               <p className="text-sm text-muted-foreground">
                 Se descargarán 3 archivos CSV: Cierres de Caja, Facturas y Resumen del trimestre.
               </p>
-              <Button 
-                onClick={handleExportZip} 
-                disabled={isExporting}
-                className="w-full sm:w-auto"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                {isExporting ? "Exportando..." : "Exportar CSV"}
-              </Button>
+              <div className="flex flex-wrap gap-3">
+                <Button 
+                  onClick={handleExportZip} 
+                  disabled={isExporting}
+                  className="w-full sm:w-auto"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  {isExporting ? "Exportando..." : "Exportar CSV"}
+                </Button>
+                <Button 
+                  onClick={handleExportXLSX} 
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Exportar XLSX
+                </Button>
+              </div>
             </div>
 
             {!canCloseQuarter && (
