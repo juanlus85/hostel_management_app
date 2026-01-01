@@ -41,6 +41,8 @@ export default function HistoricoCajas() {
   const [chartView, setChartView] = useState<'annual' | 'monthly'>('annual');
   const [selectedMonth, setSelectedMonth] = useState(1); // 1 = Enero
   const [dataToShow, setDataToShow] = useState<'hostel' | 'tienda' | 'total' | 'hostel_tienda' | 'all'>('all');
+  const [acumuladosDataToShow, setAcumuladosDataToShow] = useState<'hostel' | 'tienda' | 'total' | 'all'>('all');
+  const [acumuladosView, setAcumuladosView] = useState<'single' | 'multi'>('single'); // single year or multi-year comparison
 
   // Fetch historical data (2014-2025)
   const { data: historicalData } = trpc.historicalCash.getHistoricalData.useQuery();
@@ -490,11 +492,16 @@ export default function HistoricoCajas() {
                         <TableHead key={month} className="text-right">{month.slice(0, 3)}</TableHead>
                       ))}
                       <TableHead className="text-right font-bold">Total</TableHead>
+                      <TableHead className="text-right font-bold">Variación Anual %</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {years.map(year => {
+                    {years.map((year, idx) => {
                       const yearTotal = Object.values(hostelMonthlyTable[year] || {}).reduce((sum, val) => sum + parseFloat(val), 0);
+                      const prevYear = years[idx - 1];
+                      const prevYearTotal = prevYear ? Object.values(hostelMonthlyTable[prevYear] || {}).reduce((sum, val) => sum + parseFloat(val), 0) : 0;
+                      const variation = prevYearTotal > 0 ? ((yearTotal - prevYearTotal) / prevYearTotal * 100) : null;
+                      
                       return (
                         <TableRow key={year}>
                           <TableCell className="font-medium">{year}</TableCell>
@@ -504,6 +511,11 @@ export default function HistoricoCajas() {
                             </TableCell>
                           ))}
                           <TableCell className="text-right font-bold">€{yearTotal.toFixed(2)}</TableCell>
+                          <TableCell className={`text-right font-bold ${
+                            variation === null ? '' : variation >= 0 ? 'text-green-600' : 'text-red-600'
+                          }`}>
+                            {variation === null ? '-' : `${variation >= 0 ? '+' : ''}${variation.toFixed(1)}%`}
+                          </TableCell>
                         </TableRow>
                       );
                     })}
@@ -529,11 +541,16 @@ export default function HistoricoCajas() {
                         <TableHead key={month} className="text-right">{month.slice(0, 3)}</TableHead>
                       ))}
                       <TableHead className="text-right font-bold">Total</TableHead>
+                      <TableHead className="text-right font-bold">Variación Anual %</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {years.map(year => {
+                    {years.map((year, idx) => {
                       const yearTotal = Object.values(tiendaMonthlyTable[year] || {}).reduce((sum, val) => sum + parseFloat(val), 0);
+                      const prevYear = years[idx - 1];
+                      const prevYearTotal = prevYear ? Object.values(tiendaMonthlyTable[prevYear] || {}).reduce((sum, val) => sum + parseFloat(val), 0) : 0;
+                      const variation = prevYearTotal > 0 ? ((yearTotal - prevYearTotal) / prevYearTotal * 100) : null;
+                      
                       return (
                         <TableRow key={year}>
                           <TableCell className="font-medium">{year}</TableCell>
@@ -543,6 +560,11 @@ export default function HistoricoCajas() {
                             </TableCell>
                           ))}
                           <TableCell className="text-right font-bold">€{yearTotal.toFixed(2)}</TableCell>
+                          <TableCell className={`text-right font-bold ${
+                            variation === null ? '' : variation >= 0 ? 'text-green-600' : 'text-red-600'
+                          }`}>
+                            {variation === null ? '-' : `${variation >= 0 ? '+' : ''}${variation.toFixed(1)}%`}
+                          </TableCell>
                         </TableRow>
                       );
                     })}
@@ -562,16 +584,43 @@ export default function HistoricoCajas() {
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                {/* Selector de año para acumulados */}
-                <div className="flex items-center gap-4">
-                  <Select value={selectedYear.toString()} onValueChange={(v) => setSelectedYear(parseInt(v))}>
-                    <SelectTrigger className="w-32">
+                {/* Selectores para acumulados */}
+                <div className="flex flex-wrap items-center gap-4">
+                  {/* Selector de vista (un año vs comparación multi-año) */}
+                  <Select value={acumuladosView} onValueChange={(v: 'single' | 'multi') => setAcumuladosView(v)}>
+                    <SelectTrigger className="w-48">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {yearOptions.map(year => (
-                        <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
-                      ))}
+                      <SelectItem value="single">Un Año</SelectItem>
+                      <SelectItem value="multi">Comparación Multi-Año</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
+                  {/* Selector de año (solo si vista es 'single') */}
+                  {acumuladosView === 'single' && (
+                    <Select value={selectedYear.toString()} onValueChange={(v) => setSelectedYear(parseInt(v))}>
+                      <SelectTrigger className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {yearOptions.map(year => (
+                          <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  
+                  {/* Selector de datos a mostrar */}
+                  <Select value={acumuladosDataToShow} onValueChange={(v: 'hostel' | 'tienda' | 'total' | 'all') => setAcumuladosDataToShow(v)}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="hostel">Solo Hostel</SelectItem>
+                      <SelectItem value="tienda">Solo Tienda</SelectItem>
+                      <SelectItem value="total">Solo Total</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -579,45 +628,139 @@ export default function HistoricoCajas() {
                 {/* Gráfico de líneas acumulado */}
                 <div className="h-96">
                   <Line
-                    data={{
-                      labels: MONTHS,
-                      datasets: [
-                        {
-                          label: 'Hostel Acumulado',
-                          data: annualData.reduce((acc: number[], row, idx) => {
-                            const prev = idx > 0 ? acc[idx - 1] : 0;
-                            acc.push(prev + parseFloat(row.hostelZ));
-                            return acc;
-                          }, []),
-                          borderColor: 'rgb(59, 130, 246)',
-                          backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                          tension: 0.4,
-                        },
-                        {
-                          label: 'Tienda Acumulado',
-                          data: annualData.reduce((acc: number[], row, idx) => {
-                            const prev = idx > 0 ? acc[idx - 1] : 0;
-                            acc.push(prev + parseFloat(row.tiendaZ));
-                            return acc;
-                          }, []),
-                          borderColor: 'rgb(236, 72, 153)',
-                          backgroundColor: 'rgba(236, 72, 153, 0.1)',
-                          tension: 0.4,
-                        },
-                        {
-                          label: 'Total Acumulado',
-                          data: annualData.reduce((acc: number[], row, idx) => {
-                            const prev = idx > 0 ? acc[idx - 1] : 0;
-                            const total = parseFloat(row.hostelZ) + parseFloat(row.tiendaZ);
-                            acc.push(prev + total);
-                            return acc;
-                          }, []),
-                          borderColor: 'rgb(34, 197, 94)',
-                          backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                          tension: 0.4,
-                        },
-                      ],
-                    }}
+                    data={(() => {
+                      if (acumuladosView === 'single') {
+                        // Vista de un solo año
+                        const baseDatasets = [
+                          {
+                            label: 'Hostel Acumulado',
+                            data: annualData.reduce((acc: number[], row, idx) => {
+                              const prev = idx > 0 ? acc[idx - 1] : 0;
+                              acc.push(prev + parseFloat(row.hostelZ));
+                              return acc;
+                            }, []),
+                            borderColor: 'rgb(59, 130, 246)',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            tension: 0.4,
+                          },
+                          {
+                            label: 'Tienda Acumulado',
+                            data: annualData.reduce((acc: number[], row, idx) => {
+                              const prev = idx > 0 ? acc[idx - 1] : 0;
+                              acc.push(prev + parseFloat(row.tiendaZ));
+                              return acc;
+                            }, []),
+                            borderColor: 'rgb(236, 72, 153)',
+                            backgroundColor: 'rgba(236, 72, 153, 0.1)',
+                            tension: 0.4,
+                          },
+                          {
+                            label: 'Total Acumulado',
+                            data: annualData.reduce((acc: number[], row, idx) => {
+                              const prev = idx > 0 ? acc[idx - 1] : 0;
+                              const total = parseFloat(row.hostelZ) + parseFloat(row.tiendaZ);
+                              acc.push(prev + total);
+                              return acc;
+                            }, []),
+                            borderColor: 'rgb(34, 197, 94)',
+                            backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                            tension: 0.4,
+                          },
+                        ];
+                        
+                        // Filtrar según acumuladosDataToShow
+                        const filteredDatasets = baseDatasets.filter(ds => {
+                          if (acumuladosDataToShow === 'all') return true;
+                          if (acumuladosDataToShow === 'hostel') return ds.label.includes('Hostel');
+                          if (acumuladosDataToShow === 'tienda') return ds.label.includes('Tienda');
+                          if (acumuladosDataToShow === 'total') return ds.label.includes('Total');
+                          return true;
+                        });
+                        
+                        return {
+                          labels: MONTHS,
+                          datasets: filteredDatasets,
+                        };
+                      } else {
+                        // Vista multi-año: mostrar todos los años superpuestos
+                        const colors = [
+                          'rgb(59, 130, 246)', 'rgb(236, 72, 153)', 'rgb(34, 197, 94)',
+                          'rgb(251, 146, 60)', 'rgb(168, 85, 247)', 'rgb(234, 179, 8)',
+                          'rgb(20, 184, 166)', 'rgb(244, 63, 94)', 'rgb(99, 102, 241)',
+                          'rgb(245, 158, 11)', 'rgb(139, 92, 246)', 'rgb(6, 182, 212)'
+                        ];
+                        
+                        const datasets: any[] = [];
+                        
+                        yearOptions.forEach((year, yearIdx) => {
+                          const yearData = historicalData?.filter(d => d.year === year) || [];
+                          const yearAnnualData = MONTHS.map((month, idx) => {
+                            const monthNum = idx + 1;
+                            const hostel = yearData.find(d => d.month === monthNum && d.businessType === 'hostel');
+                            const tienda = yearData.find(d => d.month === monthNum && d.businessType === 'tienda');
+                            return {
+                              hostelZ: hostel?.totalZ || "0.00",
+                              tiendaZ: tienda?.totalZ || "0.00",
+                            };
+                          });
+                          
+                          const color = colors[yearIdx % colors.length];
+                          
+                          // Agregar dataset según acumuladosDataToShow
+                          if (acumuladosDataToShow === 'all' || acumuladosDataToShow === 'hostel') {
+                            datasets.push({
+                              label: `Hostel ${year}`,
+                              data: yearAnnualData.reduce((acc: number[], row, idx) => {
+                                const prev = idx > 0 ? acc[idx - 1] : 0;
+                                acc.push(prev + parseFloat(row.hostelZ));
+                                return acc;
+                              }, []),
+                              borderColor: color,
+                              backgroundColor: color.replace('rgb', 'rgba').replace(')', ', 0.1)'),
+                              tension: 0.4,
+                              borderWidth: 2,
+                            });
+                          }
+                          
+                          if (acumuladosDataToShow === 'all' || acumuladosDataToShow === 'tienda') {
+                            datasets.push({
+                              label: `Tienda ${year}`,
+                              data: yearAnnualData.reduce((acc: number[], row, idx) => {
+                                const prev = idx > 0 ? acc[idx - 1] : 0;
+                                acc.push(prev + parseFloat(row.tiendaZ));
+                                return acc;
+                              }, []),
+                              borderColor: color,
+                              backgroundColor: color.replace('rgb', 'rgba').replace(')', ', 0.1)'),
+                              tension: 0.4,
+                              borderWidth: 1,
+                              borderDash: [5, 5],
+                            });
+                          }
+                          
+                          if (acumuladosDataToShow === 'all' || acumuladosDataToShow === 'total') {
+                            datasets.push({
+                              label: `Total ${year}`,
+                              data: yearAnnualData.reduce((acc: number[], row, idx) => {
+                                const prev = idx > 0 ? acc[idx - 1] : 0;
+                                const total = parseFloat(row.hostelZ) + parseFloat(row.tiendaZ);
+                                acc.push(prev + total);
+                                return acc;
+                              }, []),
+                              borderColor: color,
+                              backgroundColor: color.replace('rgb', 'rgba').replace(')', ', 0.1)'),
+                              tension: 0.4,
+                              borderWidth: 3,
+                            });
+                          }
+                        });
+                        
+                        return {
+                          labels: MONTHS,
+                          datasets,
+                        };
+                      }
+                    })()}
                     options={{
                       responsive: true,
                       maintainAspectRatio: false,
@@ -627,7 +770,9 @@ export default function HistoricoCajas() {
                         },
                         title: {
                           display: true,
-                          text: `Evolución Acumulada ${selectedYear}`,
+                          text: acumuladosView === 'single' 
+                            ? `Evolución Acumulada ${selectedYear}`
+                            : 'Comparación Multi-Año (Acumulado)',
                         },
                       },
                       scales: {

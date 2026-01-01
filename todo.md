@@ -771,3 +771,9 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Aplicar detección de años a Otros Gastos (no tiene selector de año)
 - [x] Aplicar detección de años a Resumen Semanal (no tiene selector de año)
 - [x] Aplicar detección de años a Cierre Trimestral
+
+
+## v81: Mejoras Histórico de Cajas - Acumulados y Variación Anual
+- [x] Agregar selector de datos (Hostel/Tienda/Total/Todos) en vista Acumulados
+- [x] Agregar vista de comparación multi-año superpuesta en Acumulados
+- [x] Agregar columna "Variación Anual %" en tablas de Vista Gráficas
