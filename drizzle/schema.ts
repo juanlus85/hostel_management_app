@@ -521,3 +521,20 @@ export const appSettings = mysqlTable("app_settings", {
 
 export type AppSetting = typeof appSettings.$inferSelect;
 export type InsertAppSetting = typeof appSettings.$inferInsert;
+
+// ==================== HISTORICAL CASH DATA ====================
+// Tabla para almacenar datos históricos de cajas (2014-2025) importados desde hoja de cálculo
+export const historicalCashData = mysqlTable("historical_cash_data", {
+  id: int("id").autoincrement().primaryKey(),
+  year: int("year").notNull(), // Año (2014-2025)
+  month: int("month").notNull(), // Mes (1-12)
+  businessType: mysqlEnum("businessType", ["hostel", "tienda"]).notNull(),
+  // Totales mensuales
+  totalZ: decimal("totalZ", { precision: 12, scale: 2 }).default("0").notNull(), // Total Z del mes
+  totalCash: decimal("totalCash", { precision: 12, scale: 2 }).default("0").notNull(), // Total efectivo del mes
+  totalCards: decimal("totalCards", { precision: 12, scale: 2 }).default("0").notNull(), // Total tarjetas del mes
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type HistoricalCashData = typeof historicalCashData.$inferSelect;
+export type InsertHistoricalCashData = typeof historicalCashData.$inferInsert;

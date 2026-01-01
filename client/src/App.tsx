@@ -23,6 +23,7 @@ import OtrosGastos from "./pages/OtrosGastos";
 import ResumenSemanal from "./pages/ResumenSemanal";
 import CajasF from "./pages/CajasF";
 import CodigosAcceso from "./pages/CodigosAcceso";
+import HistoricoCajas from "./pages/HistoricoCajas";
 
 function Router() {
   return (
@@ -44,6 +45,7 @@ function Router() {
         <Route path="/resumen-semanal" component={ResumenSemanal} />
         <Route path="/cajas-f" component={CajasF} />
         <Route path="/codigos-acceso" component={CodigosAcceso} />
+        <Route path="/historico-cajas" component={HistoricoCajas} />
         <Route path="/404" component={NotFound} />
         <Route component={NotFound} />
       </Switch>

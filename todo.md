@@ -754,3 +754,10 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
   - Ver archivo desde lista (línea 776-778)
   - Reemplazo de archivo en edición (línea 925-927)
 - [x] Verificado funcionando correctamente: archivo guardado como "Coca Cola - 4T 2025 - 311225.pdf"
+
+
+## v79: Módulo Histórico de Cajas - Mejoras de gráficos
+- [x] Agregar gráfico combinado (Hostel + Tienda + Total) por años
+- [x] Agregar selector para ver gráficos por meses específicos
+- [x] Permitir comparar un mes a lo largo de los años
+- [x] Agregar selector de datos (Hostel, Tienda, Total, Hostel+Tienda, Todos)

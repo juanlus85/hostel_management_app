@@ -1368,7 +1368,36 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
     }),
   }),
 
-
+  // ==================== HISTORICAL CASH DATA ====================
+  historicalCash: router({
+    // Get all historical data (2014-2025)
+    getHistoricalData: adminProcedure.query(async () => {
+      return db.getAllHistoricalCashData();
+    }),
+    // Get historical data by year
+    getByYear: adminProcedure.input(z.object({ year: z.number() })).query(async ({ input }) => {
+      return db.getHistoricalCashDataByYear(input.year);
+    }),
+    // Get aggregated data for graphics view
+    getAggregatedData: adminProcedure.query(async () => {
+      return db.getAggregatedHistoricalData();
+    }),
+    // Import historical data (for initial setup)
+    importData: adminProcedure.input(z.object({
+      year: z.number(),
+      month: z.number(),
+      businessType: z.enum(["hostel", "tienda"]),
+      totalZ: z.string(),
+      totalCash: z.string(),
+      totalCards: z.string(),
+    })).mutation(async ({ input }) => {
+      await db.insertHistoricalCashData(input);
+      return { success: true };
+    }),
+    // Get current year data from cash_closings (2026+)
+    getCurrentYearData: adminProcedure.input(z.object({ year: z.number() })).query(async ({ input }) => {
+      return db.getCurrentYearCashData(input.year);
+    }),
+  }),
 });
-
 export type AppRouter = typeof appRouter;

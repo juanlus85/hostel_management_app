@@ -1,0 +1,541 @@
+import { useState } from "react";
+import { trpc } from "@/lib/trpc";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Download, TrendingUp, Calendar } from "lucide-react";
+import { Bar } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from 'chart.js';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
+
+const MONTHS = [
+  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+];
+
+export default function HistoricoCajas() {
+  const currentYear = new Date().getFullYear();
+  const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [chartView, setChartView] = useState<'annual' | 'monthly'>('annual');
+  const [selectedMonth, setSelectedMonth] = useState(1); // 1 = Enero
+  const [dataToShow, setDataToShow] = useState<'hostel' | 'tienda' | 'total' | 'hostel_tienda' | 'all'>('all');
+
+  // Fetch historical data (2014-2025)
+  const { data: historicalData } = trpc.historicalCash.getHistoricalData.useQuery();
+  
+  // Fetch aggregated data for graphics
+  const { data: aggregatedData } = trpc.historicalCash.getAggregatedData.useQuery();
+  
+  // Fetch current year data (2026+)
+  const { data: currentYearData } = trpc.historicalCash.getCurrentYearData.useQuery(
+    { year: selectedYear },
+    { enabled: selectedYear >= 2026 }
+  );
+
+  // Generate year options (2014 to current year)
+  const yearOptions = Array.from(
+    { length: currentYear - 2014 + 1 },
+    (_, i) => 2014 + i
+  );
+
+  // Filter data by selected year
+  const yearData = historicalData?.filter(d => d.year === selectedYear) || [];
+
+  // Prepare data for annual view table
+  const prepareAnnualData = () => {
+    if (selectedYear >= 2026 && currentYearData) {
+      // Use current year data from database
+      const hostelData = currentYearData.hostel || [];
+      const tiendaData = currentYearData.tienda || [];
+      
+      return MONTHS.map((month, idx) => {
+        const monthNum = idx + 1;
+        const hostel = hostelData.find(d => d.month === monthNum);
+        const tienda = tiendaData.find(d => d.month === monthNum);
+        
+        return {
+          month,
+          hostelZ: hostel?.totalZ || "0.00",
+          tiendaZ: tienda?.totalZ || "0.00",
+        };
+      });
+    } else {
+      // Use historical data
+      return MONTHS.map((month, idx) => {
+        const monthNum = idx + 1;
+        const hostel = yearData.find(d => d.month === monthNum && d.businessType === 'hostel');
+        const tienda = yearData.find(d => d.month === monthNum && d.businessType === 'tienda');
+        
+        return {
+          month,
+          hostelZ: hostel?.totalZ || "0.00",
+          tiendaZ: tienda?.totalZ || "0.00",
+        };
+      });
+    }
+  };
+
+  const annualData = prepareAnnualData();
+
+  // Calculate totals for annual view
+  const totals = annualData.reduce((acc, row) => ({
+    hostelZ: acc.hostelZ + parseFloat(row.hostelZ),
+    tiendaZ: acc.tiendaZ + parseFloat(row.tiendaZ),
+  }), { hostelZ: 0, tiendaZ: 0 });
+
+  // Export to CSV
+  const exportToCSV = () => {
+    const headers = ["Mes", "Hostel Z", "Tienda Z"];
+    const rows = annualData.map(row => [
+      row.month,
+      row.hostelZ,
+      row.tiendaZ,
+    ]);
+    
+    const csv = [
+      headers.join(","),
+      ...rows.map(row => row.join(",")),
+      ["TOTAL", totals.hostelZ.toFixed(2), totals.tiendaZ.toFixed(2)],
+    ].join("\n");
+    
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `historico_cajas_${selectedYear}.csv`;
+    a.click();
+  };
+
+  // Prepare chart data for graphics view
+  const hostelAnualChartData = {
+    labels: aggregatedData?.hostelByYear.map(d => d.year.toString()) || [],
+    datasets: [{
+      label: 'Hostel',
+      data: aggregatedData?.hostelByYear.map(d => parseFloat(d.total)) || [],
+      backgroundColor: 'rgba(59, 130, 246, 0.5)',
+      borderColor: 'rgb(59, 130, 246)',
+      borderWidth: 1,
+    }],
+  };
+
+  const tiendaAnualChartData = {
+    labels: aggregatedData?.tiendaByYear.map(d => d.year.toString()) || [],
+    datasets: [{
+      label: 'Tienda',
+      data: aggregatedData?.tiendaByYear.map(d => parseFloat(d.total)) || [],
+      backgroundColor: 'rgba(236, 72, 153, 0.5)',
+      borderColor: 'rgb(236, 72, 153)',
+      borderWidth: 1,
+    }],
+  };
+
+  // Prepare monthly tables for graphics view
+  const hostelMonthlyTable = aggregatedData?.hostelByMonth.reduce((acc, d) => {
+    if (!acc[d.year]) acc[d.year] = {};
+    acc[d.year][d.month] = d.total;
+    return acc;
+  }, {} as { [year: number]: { [month: number]: string } }) || {};
+
+  const tiendaMonthlyTable = aggregatedData?.tiendaByMonth.reduce((acc, d) => {
+    if (!acc[d.year]) acc[d.year] = {};
+    acc[d.year][d.month] = d.total;
+    return acc;
+  }, {} as { [year: number]: { [month: number]: string } }) || {};
+
+  const years = Object.keys(hostelMonthlyTable).map(Number).sort();
+
+  // Combined chart data (Hostel + Tienda + Total)
+  const allAnualDatasets = [
+    {
+      label: 'Hostel',
+      data: aggregatedData?.hostelByYear.map(d => parseFloat(d.total)) || [],
+      backgroundColor: 'rgba(59, 130, 246, 0.5)',
+      borderColor: 'rgb(59, 130, 246)',
+      borderWidth: 1,
+    },
+    {
+      label: 'Tienda',
+      data: aggregatedData?.tiendaByYear.map(d => parseFloat(d.total)) || [],
+      backgroundColor: 'rgba(236, 72, 153, 0.5)',
+      borderColor: 'rgb(236, 72, 153)',
+      borderWidth: 1,
+    },
+    {
+      label: 'Total',
+      data: aggregatedData?.hostelByYear.map((d, idx) => {
+        const hostelTotal = parseFloat(d.total);
+        const tiendaTotal = parseFloat(aggregatedData?.tiendaByYear[idx]?.total || '0');
+        return hostelTotal + tiendaTotal;
+      }) || [],
+      backgroundColor: 'rgba(34, 197, 94, 0.5)',
+      borderColor: 'rgb(34, 197, 94)',
+      borderWidth: 1,
+    },
+  ];
+
+  const combinedAnualChartData = {
+    labels: aggregatedData?.hostelByYear.map(d => d.year.toString()) || [],
+    datasets: dataToShow === 'hostel' ? [allAnualDatasets[0]] :
+              dataToShow === 'tienda' ? [allAnualDatasets[1]] :
+              dataToShow === 'total' ? [allAnualDatasets[2]] :
+              dataToShow === 'hostel_tienda' ? [allAnualDatasets[0], allAnualDatasets[1]] :
+              allAnualDatasets,
+  };
+
+  // Monthly comparison chart data (compare same month across years)
+  const allMonthlyDatasets = [
+    {
+      label: 'Hostel',
+      data: years.map(year => parseFloat(hostelMonthlyTable[year]?.[selectedMonth] || '0')),
+      backgroundColor: 'rgba(59, 130, 246, 0.5)',
+      borderColor: 'rgb(59, 130, 246)',
+      borderWidth: 1,
+    },
+    {
+      label: 'Tienda',
+      data: years.map(year => parseFloat(tiendaMonthlyTable[year]?.[selectedMonth] || '0')),
+      backgroundColor: 'rgba(236, 72, 153, 0.5)',
+      borderColor: 'rgb(236, 72, 153)',
+      borderWidth: 1,
+    },
+    {
+      label: 'Total',
+      data: years.map(year => {
+        const hostel = parseFloat(hostelMonthlyTable[year]?.[selectedMonth] || '0');
+        const tienda = parseFloat(tiendaMonthlyTable[year]?.[selectedMonth] || '0');
+        return hostel + tienda;
+      }),
+      backgroundColor: 'rgba(34, 197, 94, 0.5)',
+      borderColor: 'rgb(34, 197, 94)',
+      borderWidth: 1,
+    },
+  ];
+
+  const monthlyComparisonChartData = {
+    labels: years.map(y => y.toString()),
+    datasets: dataToShow === 'hostel' ? [allMonthlyDatasets[0]] :
+              dataToShow === 'tienda' ? [allMonthlyDatasets[1]] :
+              dataToShow === 'total' ? [allMonthlyDatasets[2]] :
+              dataToShow === 'hostel_tienda' ? [allMonthlyDatasets[0], allMonthlyDatasets[1]] :
+              allMonthlyDatasets,
+  };
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: true,
+        position: 'top' as const,
+      },
+      title: {
+        display: false,
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          callback: function(value: any) {
+            return '€' + value.toLocaleString();
+          }
+        }
+      }
+    }
+  };
+
+  return (
+    <div className="container mx-auto py-6">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-3xl font-bold">Histórico de Cajas</h1>
+          <p className="text-muted-foreground">Análisis histórico de facturación (2014-{currentYear})</p>
+        </div>
+      </div>
+
+      <Tabs defaultValue="anual" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="anual">
+            <Calendar className="w-4 h-4 mr-2" />
+            Vista Anual
+          </TabsTrigger>
+          <TabsTrigger value="graficas">
+            <TrendingUp className="w-4 h-4 mr-2" />
+            Vista Gráficas
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Vista Anual */}
+        <TabsContent value="anual" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Cajas del Año {selectedYear}</CardTitle>
+                  <CardDescription>Detalle mensual de cajas por negocio</CardDescription>
+                </div>
+                <div className="flex items-center gap-4">
+                  <Select value={selectedYear.toString()} onValueChange={(v) => setSelectedYear(parseInt(v))}>
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {yearOptions.map(year => (
+                        <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button onClick={exportToCSV} variant="outline" size="sm">
+                    <Download className="w-4 h-4 mr-2" />
+                    Exportar CSV
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-32">Mes</TableHead>
+                      <TableHead className="text-right">Hostel Z</TableHead>
+                      <TableHead className="text-right">Tienda Z</TableHead>
+                      <TableHead className="text-right">Total</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {annualData.map((row, idx) => {
+                      const total = parseFloat(row.hostelZ) + parseFloat(row.tiendaZ);
+                      return (
+                        <TableRow key={idx}>
+                          <TableCell className="font-medium">{row.month}</TableCell>
+                          <TableCell className="text-right">€{parseFloat(row.hostelZ).toFixed(2)}</TableCell>
+                          <TableCell className="text-right">€{parseFloat(row.tiendaZ).toFixed(2)}</TableCell>
+                          <TableCell className="text-right font-medium">€{total.toFixed(2)}</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                    <TableRow className="bg-muted/50 font-bold">
+                      <TableCell>TOTAL</TableCell>
+                      <TableCell className="text-right">€{totals.hostelZ.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">€{totals.tiendaZ.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">€{(totals.hostelZ + totals.tiendaZ).toFixed(2)}</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Vista Gráficas */}
+        <TabsContent value="graficas" className="space-y-4">
+          {/* Selector de Vista y Mes */}
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium">Vista:</label>
+              <Select value={chartView} onValueChange={(v) => setChartView(v as 'annual' | 'monthly')}>
+                <SelectTrigger className="w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="annual">Por Años</SelectItem>
+                  <SelectItem value="monthly">Por Meses</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {chartView === 'monthly' && (
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium">Mes:</label>
+                <Select value={selectedMonth.toString()} onValueChange={(v) => setSelectedMonth(parseInt(v))}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MONTHS.map((month, idx) => (
+                      <SelectItem key={idx + 1} value={(idx + 1).toString()}>{month}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium">Mostrar:</label>
+              <Select value={dataToShow} onValueChange={(v) => setDataToShow(v as typeof dataToShow)}>
+                <SelectTrigger className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="hostel_tienda">Hostel + Tienda</SelectItem>
+                  <SelectItem value="hostel">Solo Hostel</SelectItem>
+                  <SelectItem value="tienda">Solo Tienda</SelectItem>
+                  <SelectItem value="total">Solo Total</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Gráficos */}
+          {chartView === 'annual' ? (
+            <div className="grid grid-cols-1 gap-4">
+              {/* Combined Chart */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Evolución Anual Combinada</CardTitle>
+                  <CardDescription>Comparación Hostel, Tienda y Total (2014-{currentYear})</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-96">
+                    <Bar data={combinedAnualChartData} options={chartOptions} />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Hostel Anual Chart */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Hostel Anual</CardTitle>
+                    <CardDescription>Evolución anual del hostel (2014-{currentYear})</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-64">
+                      <Bar data={hostelAnualChartData} options={chartOptions} />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Tienda Anual Chart */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Tienda Anual</CardTitle>
+                    <CardDescription>Evolución anual de la tienda (2014-{currentYear})</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-64">
+                      <Bar data={tiendaAnualChartData} options={chartOptions} />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4">
+              {/* Monthly Comparison Chart */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Comparación de {MONTHS[selectedMonth - 1]}</CardTitle>
+                  <CardDescription>Evolución de {MONTHS[selectedMonth - 1]} a lo largo de los años (2014-{currentYear})</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-96">
+                    <Bar data={monthlyComparisonChartData} options={chartOptions} />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Hostel Monthly Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Hostel Mensual</CardTitle>
+              <CardDescription>Histórico mensual del hostel</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Año</TableHead>
+                      {MONTHS.map(month => (
+                        <TableHead key={month} className="text-right">{month.slice(0, 3)}</TableHead>
+                      ))}
+                      <TableHead className="text-right font-bold">Total</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {years.map(year => {
+                      const yearTotal = Object.values(hostelMonthlyTable[year] || {}).reduce((sum, val) => sum + parseFloat(val), 0);
+                      return (
+                        <TableRow key={year}>
+                          <TableCell className="font-medium">{year}</TableCell>
+                          {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
+                            <TableCell key={month} className="text-right">
+                              {hostelMonthlyTable[year]?.[month] ? `€${parseFloat(hostelMonthlyTable[year][month]).toFixed(0)}` : '-'}
+                            </TableCell>
+                          ))}
+                          <TableCell className="text-right font-bold">€{yearTotal.toFixed(2)}</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Tienda Monthly Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Tienda Mensual</CardTitle>
+              <CardDescription>Histórico mensual de la tienda</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Año</TableHead>
+                      {MONTHS.map(month => (
+                        <TableHead key={month} className="text-right">{month.slice(0, 3)}</TableHead>
+                      ))}
+                      <TableHead className="text-right font-bold">Total</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {years.map(year => {
+                      const yearTotal = Object.values(tiendaMonthlyTable[year] || {}).reduce((sum, val) => sum + parseFloat(val), 0);
+                      return (
+                        <TableRow key={year}>
+                          <TableCell className="font-medium">{year}</TableCell>
+                          {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
+                            <TableCell key={month} className="text-right">
+                              {tiendaMonthlyTable[year]?.[month] ? `€${parseFloat(tiendaMonthlyTable[year][month]).toFixed(0)}` : '-'}
+                            </TableCell>
+                          ))}
+                          <TableCell className="text-right font-bold">€{yearTotal.toFixed(2)}</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}

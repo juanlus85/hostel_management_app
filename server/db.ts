@@ -27,7 +27,8 @@ import {
   weeklyCashEnvelopes, InsertWeeklyCashEnvelope, WeeklyCashEnvelope,
   weeklyAvailabilitySources, InsertWeeklyAvailabilitySource, WeeklyAvailabilitySource,
   weeklyAvailabilityRecords, InsertWeeklyAvailabilityRecord, WeeklyAvailabilityRecord,
-  appSettings, InsertAppSetting, AppSetting
+  appSettings, InsertAppSetting, AppSetting,
+  historicalCashData, InsertHistoricalCashData, HistoricalCashData
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -1489,4 +1490,147 @@ export async function getAllSettings(): Promise<AppSetting[]> {
   if (!db) return [];
   
   return await db.select().from(appSettings);
+}
+
+// ==================== HISTORICAL CASH DATA ====================
+export async function getAllHistoricalCashData(): Promise<HistoricalCashData[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(historicalCashData).orderBy(historicalCashData.year, historicalCashData.month);
+}
+
+export async function getHistoricalCashDataByYear(year: number): Promise<HistoricalCashData[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(historicalCashData).where(eq(historicalCashData.year, year)).orderBy(historicalCashData.month);
+}
+
+export async function insertHistoricalCashData(data: InsertHistoricalCashData): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(historicalCashData).values(data);
+}
+
+export async function getAggregatedHistoricalData(): Promise<{
+  hostelByYear: { year: number; total: string }[];
+  tiendaByYear: { year: number; total: string }[];
+  hostelByMonth: { year: number; month: number; total: string }[];
+  tiendaByMonth: { year: number; month: number; total: string }[];
+}> {
+  const db = await getDb();
+  if (!db) return { hostelByYear: [], tiendaByYear: [], hostelByMonth: [], tiendaByMonth: [] };
+  
+  // Get all historical data
+  const allData = await db.select().from(historicalCashData).orderBy(historicalCashData.year, historicalCashData.month);
+  
+  // Aggregate by year for each business type
+  const hostelByYear: { year: number; total: string }[] = [];
+  const tiendaByYear: { year: number; total: string }[] = [];
+  
+  const yearTotals: { [key: string]: { hostel: number; tienda: number } } = {};
+  
+  allData.forEach(row => {
+    const key = row.year.toString();
+    if (!yearTotals[key]) {
+      yearTotals[key] = { hostel: 0, tienda: 0 };
+    }
+    const z = parseFloat(row.totalZ);
+    if (row.businessType === 'hostel') {
+      yearTotals[key].hostel += z;
+    } else {
+      yearTotals[key].tienda += z;
+    }
+  });
+  
+  Object.keys(yearTotals).sort().forEach(year => {
+    hostelByYear.push({ year: parseInt(year), total: yearTotals[year].hostel.toFixed(2) });
+    tiendaByYear.push({ year: parseInt(year), total: yearTotals[year].tienda.toFixed(2) });
+  });
+  
+  // Get monthly data
+  const hostelByMonth = allData.filter(d => d.businessType === 'hostel').map(d => ({
+    year: d.year,
+    month: d.month,
+    total: d.totalZ
+  }));
+  
+  const tiendaByMonth = allData.filter(d => d.businessType === 'tienda').map(d => ({
+    year: d.year,
+    month: d.month,
+    total: d.totalZ
+  }));
+  
+  return { hostelByYear, tiendaByYear, hostelByMonth, tiendaByMonth };
+}
+
+export async function getCurrentYearCashData(year: number): Promise<{
+  hostel: { month: number; totalZ: string; totalCash: string; totalCards: string }[];
+  tienda: { month: number; totalZ: string; totalCash: string; totalCards: string }[];
+}> {
+  const db = await getDb();
+  if (!db) return { hostel: [], tienda: [] };
+  
+  // Get all cash closings for the year
+  const startDate = `${year}-01-01`;
+  const endDate = `${year}-12-31`;
+  
+  const closings = await db.select().from(cashClosings)
+    .where(and(
+      gte(cashClosings.date, startDate),
+      lte(cashClosings.date, endDate),
+      eq(cashClosings.status, 'closed')
+    ));
+  
+  // Get business IDs
+  const businessList = await db.select().from(businesses);
+  const hostelBusiness = businessList.find(b => b.code === 'hostel');
+  const tiendaBusiness = businessList.find(b => b.code === 'tienda');
+  
+  // Aggregate by month and business
+  const monthlyData: {
+    [key: string]: { totalZ: number; totalCash: number; totalCards: number };
+  } = {};
+  
+  closings.forEach(closing => {
+    const month = parseInt(closing.date.split('-')[1]);
+    const businessType = closing.businessId === hostelBusiness?.id ? 'hostel' : 'tienda';
+    const key = `${businessType}-${month}`;
+    
+    if (!monthlyData[key]) {
+      monthlyData[key] = { totalZ: 0, totalCash: 0, totalCards: 0 };
+    }
+    
+    monthlyData[key].totalZ += parseFloat(closing.zReading);
+    monthlyData[key].totalCash += parseFloat(closing.totalCash);
+    monthlyData[key].totalCards += parseFloat(closing.totalCards);
+  });
+  
+  // Format results
+  const hostel: { month: number; totalZ: string; totalCash: string; totalCards: string }[] = [];
+  const tienda: { month: number; totalZ: string; totalCash: string; totalCards: string }[] = [];
+  
+  for (let month = 1; month <= 12; month++) {
+    const hostelKey = `hostel-${month}`;
+    const tiendaKey = `tienda-${month}`;
+    
+    if (monthlyData[hostelKey]) {
+      hostel.push({
+        month,
+        totalZ: monthlyData[hostelKey].totalZ.toFixed(2),
+        totalCash: monthlyData[hostelKey].totalCash.toFixed(2),
+        totalCards: monthlyData[hostelKey].totalCards.toFixed(2),
+      });
+    }
+    
+    if (monthlyData[tiendaKey]) {
+      tienda.push({
+        month,
+        totalZ: monthlyData[tiendaKey].totalZ.toFixed(2),
+        totalCash: monthlyData[tiendaKey].totalCash.toFixed(2),
+        totalCards: monthlyData[tiendaKey].totalCards.toFixed(2),
+      });
+    }
+  }
+  
+  return { hostel, tienda };
 }

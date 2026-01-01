@@ -42,7 +42,8 @@ import {
   DollarSign,
   BarChart3,
   Vault,
-  Key
+  Key,
+  History
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState, createContext, useContext } from "react";
 import { useLocation } from "wouter";
@@ -79,6 +80,7 @@ const housekeepingMenuItems = [
 
 const adminMenuItems = [
   { icon: BarChart3, label: "Resumen Semanal", path: "/resumen-semanal" },
+  { icon: History, label: "Histórico de Cajas", path: "/historico-cajas" },
   { icon: Vault, label: "Cajas F", path: "/cajas-f" },
   { icon: Users, label: "Empleados", path: "/empleados" },
   { icon: Truck, label: "Proveedores", path: "/proveedores" },
