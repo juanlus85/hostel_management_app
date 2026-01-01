@@ -844,3 +844,7 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 
 ## v82.6: Reordenar pestañas en Histórico de Cajas
 - [x] Cambiar orden de pestañas: Gráficos (por defecto), Acumulados, Vista Anual
+
+## v82.7: Cierre Trimestral muestra 4T por defecto
+- [x] Cambiar lógica para mostrar trimestre actual (1T en enero, 2T en abril, etc.)
+- [x] Calcular trimestre actual basado en mes actual: Math.floor(mes / 3)

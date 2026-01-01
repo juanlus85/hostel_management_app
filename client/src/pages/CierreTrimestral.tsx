@@ -37,8 +37,10 @@ export default function CierreTrimestral() {
   const { user } = useAuth();
   const { selectedBusiness } = useBusinessContext();
   const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth(); // 0-11
+  const currentQuarter = Math.floor(currentMonth / 3); // 0=Q1, 1=Q2, 2=Q3, 3=Q4
   const [selectedYear, setSelectedYear] = useState(currentYear.toString());
-  const [selectedQuarter, setSelectedQuarter] = useState("Q4");
+  const [selectedQuarter, setSelectedQuarter] = useState(`Q${currentQuarter + 1}`);
   const [isExporting, setIsExporting] = useState(false);
   const [selectedExpenses, setSelectedExpenses] = useState<Set<string>>(new Set());
   const [businessFilter, setBusinessFilter] = useState<'all' | 'hostel' | 'tienda'>('all');
