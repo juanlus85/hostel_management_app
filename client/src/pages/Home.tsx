@@ -193,7 +193,7 @@ export default function Home() {
               </div>
               <p className="text-xs text-muted-foreground">
                 Efectivo: €{stats?.withdrawnCash?.toFixed(2) || "0.00"} | Tarjetas: €{stats?.withdrawnCards?.toFixed(2) || "0.00"}
-                {selectedBusiness === "hostel" && period === "month" && (
+                {selectedBusiness === "hostel" && (
                   <> | Prepago Booking: €{stats?.prepaidBooking?.toFixed(2) || "0.00"}</>
                 )}
               </p>

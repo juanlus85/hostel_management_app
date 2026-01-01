@@ -854,3 +854,8 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Agregar prepago booking en texto pequeño dentro de card Ingresos (Z)
 - [x] Formato: "Efectivo: €X | Tarjetas: €X | Prepago Booking: €X"
 - [x] Solo visible en vista Hostel (no Tienda ni Ambos)
+
+## v82.9: Mostrar Prepago Booking en todas las vistas
+- [x] Quitar restricción period === "month"
+- [x] Mostrar en semana, mes, trimestre, año, personalizado
+- [x] Mantener restricción solo Hostel (no Tienda ni Ambos)
