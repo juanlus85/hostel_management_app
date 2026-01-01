@@ -12,6 +12,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useMemo, useState, useRef } from "react";
 import { toast } from "sonner";
 
+// Helper para formatear fecha como YYYY-MM-DD sin conversión de timezone
+function formatDateLocal(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 const PAYMENT_METHODS = [
   { value: "cuenta_bancaria", label: "Cuenta Bancaria" },
   { value: "tarjeta", label: "Tarjeta" },
@@ -82,8 +90,8 @@ export default function Facturas() {
       const start = new Date();
       start.setDate(start.getDate() - 30);
       return {
-        startDate: start.toISOString().split('T')[0],
-        endDate: end.toISOString().split('T')[0]
+        startDate: formatDateLocal(start),
+        endDate: formatDateLocal(end)
       };
     } else if (filterType === "all") {
       return { startDate: undefined, endDate: undefined };
@@ -93,8 +101,8 @@ export default function Facturas() {
       const start = new Date(year, month, 1);
       const end = new Date(year, month + 1, 0);
       return {
-        startDate: start.toISOString().split('T')[0],
-        endDate: end.toISOString().split('T')[0]
+        startDate: formatDateLocal(start),
+        endDate: formatDateLocal(end)
       };
     }
     return { startDate: undefined, endDate: undefined };

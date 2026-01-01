@@ -822,3 +822,9 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Exportación XLSX usa separador de miles con punto (.) - debe eliminarse
 - [x] Solo usar punto (.) para separar decimales
 - [x] Formato moneda: 1234.56 € (no 1.234.56 €)
+
+## v82.5: Bug timezone en Facturas
+- [x] Facturas del 31 de diciembre aparecen en enero (bug de timezone)
+- [x] Al filtrar por diciembre 2025, no muestra facturas del 31/12
+- [x] Al filtrar por enero 2026, muestra facturas del 31/12/2025 (incorrecto)
+- [x] Aplicar mismo fix de formatDateLocal que usamos en Dashboard
