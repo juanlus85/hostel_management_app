@@ -47,8 +47,14 @@ export default function HistoricoCajas() {
   // Fetch historical data (2014-2025)
   const { data: historicalData } = trpc.historicalCash.getHistoricalData.useQuery();
   
-  // Fetch aggregated data for graphics (always fetch to show 2026+ in graphics tab)
+  // Fetch aggregated data for graphics
   const { data: aggregatedData } = trpc.historicalCash.getAggregatedData.useQuery();
+  
+  // Fetch current year data (2026+)
+  const { data: currentYearData } = trpc.historicalCash.getCurrentYearData.useQuery(
+    { year: selectedYear },
+    { enabled: selectedYear >= 2026 }
+  );
 
   // Get available years dynamically from database
   const { data: availableYears, isLoading: isLoadingYears } = trpc.utils.getAvailableYears.useQuery();
@@ -70,10 +76,10 @@ export default function HistoricoCajas() {
 
   // Prepare data for annual view table
   const prepareAnnualData = () => {
-    if (selectedYear >= 2026 && aggregatedData) {
-      // Use aggregated data from database for 2026+
-      const hostelData = aggregatedData.hostelByMonth.filter(d => d.year === selectedYear) || [];
-      const tiendaData = aggregatedData.tiendaByMonth.filter(d => d.year === selectedYear) || [];
+    if (selectedYear >= 2026 && currentYearData) {
+      // Use current year data from database
+      const hostelData = currentYearData.hostel || [];
+      const tiendaData = currentYearData.tienda || [];
       
       return MONTHS.map((month, idx) => {
         const monthNum = idx + 1;
@@ -82,8 +88,8 @@ export default function HistoricoCajas() {
         
         return {
           month,
-          hostelZ: hostel?.total || "0.00",
-          tiendaZ: tienda?.total || "0.00",
+          hostelZ: hostel?.totalZ || "0.00",
+          tiendaZ: tienda?.totalZ || "0.00",
         };
       });
     } else {

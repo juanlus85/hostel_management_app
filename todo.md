@@ -864,8 +864,3 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Modificar lógica de años disponibles para incluir siempre el año actual
 - [x] Aunque no haya datos de 2026, debe aparecer en el selector
 - [x] Cuando llegue 2027, debe aparecer automáticamente
-
-## v82.11: 2026 no aparece en pestaña Gráficas de Histórico de Cajas
-- [x] Investigar por qué el selector de años en Gráficas no muestra 2026
-- [x] Las otras pestañas (Vista Anual, Acumulados) sí funcionan correctamente
-- [x] Corregir selector de años en pestaña Gráficas
