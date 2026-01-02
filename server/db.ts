@@ -1534,15 +1534,16 @@ export async function getAggregatedHistoricalData(): Promise<{
   // Get historical data (2014-2025)
   const historicalData = await db.select().from(historicalCashData).orderBy(historicalCashData.year, historicalCashData.month);
   
-  // Get current year data from cashClosings (2026+)
+  // Get current year data from cashClosings (2026+) and aggregate by month
   const currentYearClosings = await db.select({
     year: sql<number>`YEAR(${cashClosings.date})`,
     month: sql<number>`MONTH(${cashClosings.date})`,
     businessType: businesses.code,
-    totalZ: cashClosings.zReading
+    totalZ: sql<string>`SUM(${cashClosings.zReading})`
   }).from(cashClosings)
     .innerJoin(businesses, eq(cashClosings.businessId, businesses.id))
-    .where(sql`YEAR(${cashClosings.date}) >= 2026`);
+    .where(sql`YEAR(${cashClosings.date}) >= 2026`)
+    .groupBy(sql`YEAR(${cashClosings.date})`, sql`MONTH(${cashClosings.date})`, businesses.code);
   
   // Combine both data sources
   const allData = [

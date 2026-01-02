@@ -864,3 +864,10 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Modificar lógica de años disponibles para incluir siempre el año actual
 - [x] Aunque no haya datos de 2026, debe aparecer en el selector
 - [x] Cuando llegue 2027, debe aparecer automáticamente
+
+## v82.13: Bug tabla mensual Hostel 2026
+- [x] Tabla mensual Hostel muestra €0.00 en todos los meses de 2026
+- [x] Tabla mensual Tienda SÍ muestra datos correctos de 2026
+- [x] Gráfico anual muestra barra de 2026 correctamente
+- [x] Investigar por qué hostelByMonth no incluye datos de 2026
+- [x] Asegurar que funcione para 2027 y años futuros
