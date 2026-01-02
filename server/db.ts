@@ -1531,8 +1531,34 @@ export async function getAggregatedHistoricalData(): Promise<{
   const db = await getDb();
   if (!db) return { hostelByYear: [], tiendaByYear: [], hostelByMonth: [], tiendaByMonth: [] };
   
-  // Get all historical data
-  const allData = await db.select().from(historicalCashData).orderBy(historicalCashData.year, historicalCashData.month);
+  // Get historical data (2014-2025)
+  const historicalData = await db.select().from(historicalCashData).orderBy(historicalCashData.year, historicalCashData.month);
+  
+  // Get current year data from cashClosings (2026+)
+  const currentYearClosings = await db.select({
+    year: sql<number>`YEAR(${cashClosings.date})`,
+    month: sql<number>`MONTH(${cashClosings.date})`,
+    businessType: businesses.code,
+    totalZ: cashClosings.zReading
+  }).from(cashClosings)
+    .innerJoin(businesses, eq(cashClosings.businessId, businesses.id))
+    .where(sql`YEAR(${cashClosings.date}) >= 2026`);
+  
+  // Combine both data sources
+  const allData = [
+    ...historicalData,
+    ...currentYearClosings.map(d => ({
+      id: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      year: d.year,
+      month: d.month,
+      businessType: d.businessType as 'hostel' | 'tienda',
+      totalZ: d.totalZ,
+      totalCash: '0',
+      totalCards: '0'
+    }))
+  ];
   
   // Aggregate by year for each business type
   const hostelByYear: { year: number; total: string }[] = [];
