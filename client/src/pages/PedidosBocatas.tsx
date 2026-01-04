@@ -14,12 +14,34 @@ type ProductGroup = {
 
 const PRODUCT_GROUPS: ProductGroup[] = [
   {
-    title: 'Baguettes y Tostas',
+    title: 'Bocatas',
     unitsPerBox: 6,
     products: [
-      'Baguettes',
-      'Tostas',
-      'Baguepizzas',
+      'Burguer',
+      'Lomo al Mojo',
+      'Serranito',
+      'Lomo W',
+      'Frankfurt',
+      'Tortilla',
+      'Empanado',
+      'BBQ',
+      'Pollo Bacon',
+      'Carbonara',
+      'York',
+      'Serrano',
+      'Piripi',
+    ],
+  },
+  {
+    title: 'Tostas',
+    unitsPerBox: 6,
+    products: [
+      'Tosta Barbacoa',
+      'Tosta Carbonara',
+      'Tosta Pollo Bacon',
+      'Tosta Rulo Cabra',
+      'Tosta 3 Quesos',
+      'Tosta York',
     ],
   },
   {
@@ -79,11 +101,13 @@ export default function PedidosBocatas() {
   };
 
   const formatTotalBoxes = (total: number) => {
-    if (total <= 25) return total.toString();
+    if (total < 25) return total.toString();
     const fullSets = Math.floor(total / 25);
     const remainder = total % 25;
-    if (remainder === 0) return `${fullSets * 25}`;
-    return `${fullSets * 25}+${remainder}`;
+    if (remainder === 0) {
+      return fullSets === 1 ? '25' : `${fullSets * 25}`;
+    }
+    return `${total} (${fullSets * 25}+${remainder})`;
   };
 
   const handleSave = async () => {
@@ -106,8 +130,7 @@ export default function PedidosBocatas() {
         text += `${group.title} (${group.unitsPerBox} unidades por caja):\n`;
         groupProducts.forEach(p => {
           if (p.boxesToOrder > 0) {
-            const total = calculateTotal(p, group.unitsPerBox);
-            text += `  ${p.name}: ${p.boxesToOrder} cajas | ${p.currentUnits} uds | Total: ${total} uds\n`;
+            text += `  ${p.name}: ${p.boxesToOrder} cajas\n`;
           }
         });
         text += '\n';

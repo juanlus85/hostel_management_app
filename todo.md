@@ -959,3 +959,19 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Desplegable de proveedores existentes (de la tabla suppliers)
 - [x] Permitir editar pedidos ya creados (nombre proveedor, fecha, notas)
 - [x] Botón "Editar" en cada pedido
+
+
+## Mejoras Sistema de Pedidos v86
+
+### Pedidos Bocatas del Chef
+- [x] Reorganizar productos en 3 grupos:
+  * Grupo 1: 13 Bocatas (6 uds/caja): Burguer, Lomo al Mojo, Serranito, Lomo W, Frankfurt, Tortilla, Empanado, BBQ, Pollo Bacon, Carbonara, York, Serrano, Piripi
+  * Grupo 2: Tostas (6 uds/caja): Tosta Barbacoa, Tosta Carbonara, Tosta Pollo Bacon, Tosta Rulo Cabra, Tosta 3 Quesos, Tosta York
+  * Grupo 3: Bocapizzas (16 uds/caja): Bocapizza York, Bocapizza Bacon, Bocapizza BBQ, Bocapizza 4Q, Bocapizza Atun
+- [x] Modificar función copiar: solo copiar número de cajas y nombre del producto (no stock ni total)
+- [x] Formato total: mostrar "25 (21+4)" en lugar de solo "25" cuando corresponda
+
+### Pedidos Generales
+- [x] Permitir modificar artículos ya añadidos a un pedido (cantidad, unidad)
+- [x] Permitir cambiar el estado del pedido directamente (desplegable o botones)
+- [x] Botón "Editar" en cada artículo de la lista

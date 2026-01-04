@@ -16,7 +16,9 @@ const UNITS = ['unidades', 'packs', 'cajas', 'kg', 'litros'];
 export default function PedidosGenerales() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isEditItemOpen, setIsEditItemOpen] = useState(false);
   const [editingOrderId, setEditingOrderId] = useState<number | null>(null);
+  const [editingItem, setEditingItem] = useState<any>(null);
   const [supplierName, setSupplierName] = useState('');
   const [estimatedDate, setEstimatedDate] = useState('');
   const [notes, setNotes] = useState('');
@@ -33,6 +35,7 @@ export default function PedidosGenerales() {
   const updateMutation = trpc.ordersPedidos.update.useMutation();
   const deleteMutation = trpc.ordersPedidos.delete.useMutation();
   const addItemMutation = trpc.ordersPedidos.addItem.useMutation();
+  const updateItemMutation = trpc.ordersPedidos.updateItem.useMutation();
   const deleteItemMutation = trpc.ordersPedidos.deleteItem.useMutation();
 
   const handleCreateOrder = async () => {
@@ -90,6 +93,33 @@ export default function PedidosGenerales() {
     }
   };
 
+  const openEditItem = (item: any) => {
+    setEditingItem(item);
+    setQuantity(item.quantity || '');
+    setUnit(item.unit || 'unidades');
+    setIsEditItemOpen(true);
+  };
+
+  const handleUpdateItem = async () => {
+    if (!editingItem) return;
+    const qty = parseInt(quantity) || 1;
+    try {
+      await updateItemMutation.mutateAsync({
+        id: editingItem.id,
+        quantity: qty.toString(),
+        unit: unit || undefined,
+      });
+      toast.success('Artículo actualizado correctamente');
+      setIsEditItemOpen(false);
+      setEditingItem(null);
+      setQuantity('');
+      setUnit('unidades');
+      refetch();
+    } catch (error) {
+      toast.error('Error al actualizar artículo');
+    }
+  };
+
   const handleAddItem = async () => {
     if (!currentOrderId) return;
     
@@ -122,23 +152,19 @@ export default function PedidosGenerales() {
     }
   };
 
-  const handleMarkAsOrdered = async (orderId: number) => {
+  const handleChangeStatus = async (orderId: number, newStatus: 'pending' | 'ordered' | 'delivered') => {
     try {
-      await updateMutation.mutateAsync({ id: orderId, isOrdered: true });
-      toast.success('Pedido marcado como ordenado');
+      if (newStatus === 'ordered') {
+        await updateMutation.mutateAsync({ id: orderId, isOrdered: true, isReceived: false });
+      } else if (newStatus === 'delivered') {
+        await updateMutation.mutateAsync({ id: orderId, isOrdered: true, isReceived: true });
+      } else {
+        await updateMutation.mutateAsync({ id: orderId, isOrdered: false, isReceived: false });
+      }
+      toast.success('Estado actualizado correctamente');
       refetch();
     } catch (error) {
-      toast.error('Error al actualizar pedido');
-    }
-  };
-
-  const handleMarkAsReceived = async (orderId: number) => {
-    try {
-      await updateMutation.mutateAsync({ id: orderId, isReceived: true });
-      toast.success('Pedido marcado como recibido');
-      refetch();
-    } catch (error) {
-      toast.error('Error al actualizar pedido');
+      toast.error('Error al actualizar estado');
     }
   };
 
@@ -183,6 +209,12 @@ ${order.notes ? `\nNotas: ${order.notes}` : ''}
     if (order.status === 'delivered') return <Badge className="bg-green-600">Recibido</Badge>;
     if (order.status === 'ordered') return <Badge className="bg-blue-600">Ordenado</Badge>;
     return <Badge variant="outline" className="border-amber-500 text-amber-600">Pendiente de pedir</Badge>;
+  };
+
+  const getStatusValue = (order: any): 'pending' | 'ordered' | 'delivered' => {
+    if (order.status === 'delivered') return 'delivered';
+    if (order.status === 'ordered') return 'ordered';
+    return 'pending';
   };
 
   return (
@@ -302,10 +334,25 @@ ${order.notes ? `\nNotas: ${order.notes}` : ''}
           <Card key={order.id}>
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
-                <div>
+                <div className="flex-1">
                   <CardTitle className="text-xl">{order.supplier}</CardTitle>
                   <div className="flex items-center gap-2 mt-2">
-                    {getStatusBadge(order)}
+                    <Select value={getStatusValue(order)} onValueChange={(val) => handleChangeStatus(order.id, val as any)}>
+                      <SelectTrigger className="w-48">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pending">
+                          <span className="text-amber-600">Pendiente de pedir</span>
+                        </SelectItem>
+                        <SelectItem value="ordered">
+                          <span className="text-blue-600">Ordenado</span>
+                        </SelectItem>
+                        <SelectItem value="delivered">
+                          <span className="text-green-600">Recibido</span>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                     {order.expectedDelivery && (
                       <div className="flex items-center gap-1 text-sm text-muted-foreground">
                         <Calendar className="h-3 w-3" />
@@ -321,18 +368,6 @@ ${order.notes ? `\nNotas: ${order.notes}` : ''}
                   <Button size="sm" variant="outline" onClick={() => copyOrderToClipboard(order)}>
                     <Copy className="h-4 w-4" />
                   </Button>
-                  {order.status === 'pending' && (
-                    <Button size="sm" onClick={() => handleMarkAsOrdered(order.id)}>
-                      <Check className="mr-1 h-4 w-4" />
-                      Ordenado
-                    </Button>
-                  )}
-                  {order.status === 'ordered' && (
-                    <Button size="sm" onClick={() => handleMarkAsReceived(order.id)} className="bg-green-600 hover:bg-green-700">
-                      <Check className="mr-1 h-4 w-4" />
-                      Recibido
-                    </Button>
-                  )}
                   <Button size="sm" variant="destructive" onClick={() => handleDeleteOrder(order.id)}>
                     <X className="h-4 w-4" />
                   </Button>
@@ -347,10 +382,16 @@ ${order.notes ? `\nNotas: ${order.notes}` : ''}
                       <div>
                         <span className="font-medium">{item.itemName}</span>
                         <span className="text-muted-foreground ml-2">x{parseInt(item.quantity)}</span>
+                        {item.unit && <span className="text-muted-foreground ml-1">({item.unit})</span>}
                       </div>
-                      <Button size="sm" variant="ghost" onClick={() => handleDeleteItem(item.id)}>
-                        <X className="h-4 w-4 text-destructive" />
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="ghost" onClick={() => openEditItem(item)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => handleDeleteItem(item.id)}>
+                          <X className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -404,6 +445,47 @@ ${order.notes ? `\nNotas: ${order.notes}` : ''}
               <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notas adicionales..." rows={2} />
             </div>
             <Button onClick={handleUpdateOrder} className="w-full">Guardar Cambios</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isEditItemOpen} onOpenChange={setIsEditItemOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Artículo</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Producto</Label>
+              <Input value={editingItem?.itemName || ''} disabled className="bg-muted" />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label>Cantidad *</Label>
+                <Input 
+                  type="number" 
+                  min="1" 
+                  step="1" 
+                  value={quantity} 
+                  onChange={(e) => setQuantity(e.target.value)} 
+                  placeholder="1" 
+                />
+              </div>
+              <div>
+                <Label>Unidad</Label>
+                <Select value={unit} onValueChange={setUnit}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {UNITS.map((u) => (
+                      <SelectItem key={u} value={u}>{u}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <Button onClick={handleUpdateItem} className="w-full">Guardar Cambios</Button>
           </div>
         </DialogContent>
       </Dialog>
