@@ -2,76 +2,93 @@ import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Copy, Save } from 'lucide-react';
 import { toast } from 'sonner';
 
-type ProductRow = {
-  name: string;
-  currentStock: number;
-  toOrder: number;
+type ProductGroup = {
+  title: string;
+  unitsPerBox: number;
+  products: string[];
 };
 
-const INITIAL_PRODUCTS: ProductRow[] = [
-  { name: 'Burguer', currentStock: 0, toOrder: 0 },
-  { name: 'Mojo', currentStock: 0, toOrder: 0 },
-  { name: 'Serranito', currentStock: 0, toOrder: 0 },
-  { name: 'Lomo W', currentStock: 0, toOrder: 0 },
-  { name: 'Frankfurt', currentStock: 0, toOrder: 0 },
-  { name: 'Tortilla', currentStock: 0, toOrder: 0 },
-  { name: 'Empanado', currentStock: 0, toOrder: 0 },
-  { name: 'BBQ', currentStock: 0, toOrder: 0 },
-  { name: 'Pollo Bacon', currentStock: 0, toOrder: 0 },
-  { name: 'Carbonara', currentStock: 0, toOrder: 0 },
-  { name: 'York', currentStock: 0, toOrder: 0 },
-  { name: 'Serrano', currentStock: 0, toOrder: 0 },
-  { name: 'Piripi', currentStock: 0, toOrder: 0 },
-  { name: 'Tosta Barbacoa', currentStock: 0, toOrder: 0 },
-  { name: 'Tosta Carbonara', currentStock: 0, toOrder: 0 },
-  { name: 'Tosta Pollo Bacon', currentStock: 0, toOrder: 0 },
-  { name: 'Tosta Rulo Cabra', currentStock: 0, toOrder: 0 },
-  { name: 'Tosta 3 Quesos', currentStock: 0, toOrder: 0 },
-  { name: 'Tosta York', currentStock: 0, toOrder: 0 },
-  { name: 'Bocapizza York', currentStock: 0, toOrder: 0 },
-  { name: 'Bocapizza Bacon', currentStock: 0, toOrder: 0 },
-  { name: 'Bocapizza BBQ', currentStock: 0, toOrder: 0 },
-  { name: 'Bocapizza 4Q', currentStock: 0, toOrder: 0 },
-  { name: 'Bocapizza Atun', currentStock: 0, toOrder: 0 },
+const PRODUCT_GROUPS: ProductGroup[] = [
+  {
+    title: 'Baguettes y Tostas',
+    unitsPerBox: 6,
+    products: [
+      'Baguettes',
+      'Tostas',
+      'Baguepizzas',
+    ],
+  },
+  {
+    title: 'Bocapizzas',
+    unitsPerBox: 16,
+    products: [
+      'Bocapizza York',
+      'Bocapizza Bacon',
+      'Bocapizza BBQ',
+      'Bocapizza 4Q',
+      'Bocapizza Atun',
+    ],
+  },
 ];
+
+type ProductData = {
+  name: string;
+  boxesToOrder: number;
+  currentUnits: number;
+};
 
 export default function PedidosBocatas() {
   const [orderDate, setOrderDate] = useState(new Date().toISOString().split('T')[0]);
-  const [products, setProducts] = useState<ProductRow[]>(INITIAL_PRODUCTS);
+  
+  // Inicializar productos
+  const initialProducts: ProductData[] = PRODUCT_GROUPS.flatMap(group =>
+    group.products.map(name => ({
+      name,
+      boxesToOrder: 0,
+      currentUnits: 0,
+    }))
+  );
+  
+  const [products, setProducts] = useState<ProductData[]>(initialProducts);
 
   const createMutation = trpc.chefOrders.create.useMutation();
   const { data: latestOrder } = trpc.chefOrders.getLatest.useQuery();
 
-  const updateStock = (index: number, value: string) => {
+  const updateBoxes = (index: number, value: string) => {
     const newProducts = [...products];
-    newProducts[index].currentStock = parseInt(value) || 0;
+    newProducts[index].boxesToOrder = parseInt(value) || 0;
     setProducts(newProducts);
   };
 
-  const updateToOrder = (index: number, value: string) => {
+  const updateUnits = (index: number, value: string) => {
     const newProducts = [...products];
-    newProducts[index].toOrder = parseInt(value) || 0;
+    newProducts[index].currentUnits = parseInt(value) || 0;
     setProducts(newProducts);
   };
 
-  const calculateTotal = (product: ProductRow) => {
-    return product.currentStock + product.toOrder;
+  const calculateTotal = (product: ProductData, unitsPerBox: number) => {
+    return (product.boxesToOrder * unitsPerBox) + product.currentUnits;
+  };
+
+  const getTotalBoxes = () => {
+    return products.reduce((sum, p) => sum + p.boxesToOrder, 0);
+  };
+
+  const formatTotalBoxes = (total: number) => {
+    if (total <= 25) return total.toString();
+    const fullSets = Math.floor(total / 25);
+    const remainder = total % 25;
+    if (remainder === 0) return `${fullSets * 25}`;
+    return `${fullSets * 25}+${remainder}`;
   };
 
   const handleSave = async () => {
-    // Mapear productos a formato del backend
-    const data: any = { orderDate };
-    
-    // Este es un placeholder - necesitarías mapear cada producto a su campo correspondiente
-    // Por ahora solo guardamos los datos básicos
-    
     try {
-      await createMutation.mutateAsync(data);
+      await createMutation.mutateAsync({ orderDate });
       toast.success('Pedido guardado correctamente');
     } catch (error) {
       toast.error('Error al guardar pedido');
@@ -79,30 +96,40 @@ export default function PedidosBocatas() {
   };
 
   const handleCopy = () => {
-    const lines = products
-      .filter(p => p.toOrder > 0)
-      .map(p => {
-        return `${p.name}: Hay ${p.currentStock} | Pedir ${p.toOrder} | Total ${calculateTotal(p)}`;
-      });
-
-    const text = `
-PEDIDO BOCATAS DEL CHEF
-Fecha: ${orderDate}
-
-${lines.join('\n')}
-
-Total productos a pedir: ${products.filter(p => p.toOrder > 0).length}
-Total cajas a pedir: ${products.reduce((sum, p) => sum + p.toOrder, 0)}
-    `.trim();
+    let text = `PEDIDO BOCATAS DEL CHEF\nFecha: ${orderDate}\n\n`;
+    
+    PRODUCT_GROUPS.forEach(group => {
+      const groupProducts = products.filter(p => group.products.includes(p.name));
+      const hasOrders = groupProducts.some(p => p.boxesToOrder > 0);
+      
+      if (hasOrders) {
+        text += `${group.title} (${group.unitsPerBox} unidades por caja):\n`;
+        groupProducts.forEach(p => {
+          if (p.boxesToOrder > 0) {
+            const total = calculateTotal(p, group.unitsPerBox);
+            text += `  ${p.name}: ${p.boxesToOrder} cajas | ${p.currentUnits} uds | Total: ${total} uds\n`;
+          }
+        });
+        text += '\n';
+      }
+    });
+    
+    const totalBoxes = getTotalBoxes();
+    text += `Total Cajas a Pedir: ${formatTotalBoxes(totalBoxes)}`;
 
     navigator.clipboard.writeText(text);
     toast.success('Pedido copiado al portapapeles');
   };
 
+  let productIndex = 0;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Pedidos Bocatas del Chef</h2>
+        <div>
+          <h2 className="text-2xl font-bold">Pedidos Bocatas del Chef</h2>
+          <p className="text-sm text-muted-foreground">Gestión especializada con cálculos automáticos</p>
+        </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleCopy}>
             <Copy className="mr-2 h-4 w-4" />
@@ -124,75 +151,85 @@ Total cajas a pedir: ${products.reduce((sum, p) => sum + p.toOrder, 0)}
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-blue-100 border-b-2 border-blue-300">
-                <tr>
-                  <th className="text-left p-3 font-semibold">Producto</th>
-                  <th className="text-center p-3 font-semibold w-32">Hay</th>
-                  <th className="text-center p-3 font-semibold w-32">Pedir</th>
-                  <th className="text-center p-3 font-semibold w-32 bg-blue-200">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.map((product, index) => {
-                  const total = calculateTotal(product);
-                  const hasOrder = product.toOrder > 0;
-                  
-                  return (
-                    <tr 
-                      key={product.name} 
-                      className={`border-b hover:bg-blue-50 ${hasOrder ? 'bg-blue-50' : ''}`}
-                    >
-                      <td className="p-3 font-medium">{product.name}</td>
-                      <td className="p-2 text-center">
-                        <Input
-                          type="number"
-                          min="0"
-                          step="1"
-                          value={product.currentStock || ''}
-                          onChange={(e) => updateStock(index, e.target.value)}
-                          className="text-center"
-                          placeholder="0"
-                        />
-                      </td>
-                      <td className="p-2 text-center">
-                        <Input
-                          type="number"
-                          min="0"
-                          step="1"
-                          value={product.toOrder || ''}
-                          onChange={(e) => updateToOrder(index, e.target.value)}
-                          className="text-center font-semibold"
-                          placeholder="0"
-                        />
-                      </td>
-                      <td className="p-3 text-center bg-blue-50">
-                        <span className={`font-bold text-lg ${hasOrder ? 'text-blue-600' : 'text-gray-600'}`}>
-                          {total}
-                        </span>
-                      </td>
+      {PRODUCT_GROUPS.map((group, groupIndex) => {
+        const startIndex = productIndex;
+        const groupProducts = products.slice(startIndex, startIndex + group.products.length);
+        productIndex += group.products.length;
+
+        return (
+          <Card key={groupIndex}>
+            <CardHeader className="bg-blue-50">
+              <CardTitle className="text-lg">{group.title}</CardTitle>
+              <p className="text-sm text-muted-foreground">{group.unitsPerBox} unidades por caja</p>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-blue-100 border-b-2 border-blue-300">
+                    <tr>
+                      <th className="text-left p-3 font-semibold">Artículo</th>
+                      <th className="text-center p-3 font-semibold w-32">Pedir (Cajas)</th>
+                      <th className="text-center p-3 font-semibold w-32">Hay (Unidades)</th>
+                      <th className="text-center p-3 font-semibold w-32 bg-blue-200">Total (Unidades)</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-              <tfoot className="bg-blue-100 border-t-2 border-blue-300">
-                <tr>
-                  <td className="p-3 font-bold">TOTAL CAJAS A PEDIR</td>
-                  <td className="p-3 text-center font-bold">
-                    {products.reduce((sum, p) => sum + p.currentStock, 0)}
-                  </td>
-                  <td className="p-3 text-center font-bold text-blue-600 text-lg">
-                    {products.reduce((sum, p) => sum + p.toOrder, 0)}
-                  </td>
-                  <td className="p-3 text-center font-bold text-lg bg-blue-200">
-                    {products.reduce((sum, p) => sum + calculateTotal(p), 0)}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
+                  </thead>
+                  <tbody>
+                    {groupProducts.map((product, idx) => {
+                      const actualIndex = startIndex + idx;
+                      const total = calculateTotal(product, group.unitsPerBox);
+                      const hasOrder = product.boxesToOrder > 0;
+
+                      return (
+                        <tr 
+                          key={actualIndex} 
+                          className={`border-b hover:bg-blue-50 ${hasOrder ? 'bg-blue-50' : ''}`}
+                        >
+                          <td className="p-3 font-medium">{product.name}</td>
+                          <td className="p-2 text-center">
+                            <Input
+                              type="number"
+                              min="0"
+                              step="1"
+                              value={product.boxesToOrder || ''}
+                              onChange={(e) => updateBoxes(actualIndex, e.target.value)}
+                              className="text-center font-semibold"
+                              placeholder="0"
+                            />
+                          </td>
+                          <td className="p-2 text-center">
+                            <Input
+                              type="number"
+                              min="0"
+                              step="1"
+                              value={product.currentUnits || ''}
+                              onChange={(e) => updateUnits(actualIndex, e.target.value)}
+                              className="text-center"
+                              placeholder="0"
+                            />
+                          </td>
+                          <td className="p-3 text-center bg-blue-50">
+                            <span className={`font-bold text-lg ${hasOrder ? 'text-blue-600' : 'text-gray-600'}`}>
+                              {total}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
+
+      <Card className="bg-blue-50 border-blue-300">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-bold">Total Cajas a Pedir</h3>
+            <div className="text-3xl font-bold text-blue-600">
+              {formatTotalBoxes(getTotalBoxes())}
+            </div>
           </div>
         </CardContent>
       </Card>

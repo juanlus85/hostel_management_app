@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Copy, Check, X, Calendar } from 'lucide-react';
+import { Plus, Copy, Check, X, Calendar, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +15,8 @@ const UNITS = ['unidades', 'packs', 'cajas', 'kg', 'litros'];
 
 export default function PedidosGenerales() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editingOrderId, setEditingOrderId] = useState<number | null>(null);
   const [supplierName, setSupplierName] = useState('');
   const [estimatedDate, setEstimatedDate] = useState('');
   const [notes, setNotes] = useState('');
@@ -26,6 +28,7 @@ export default function PedidosGenerales() {
 
   const { data: orders = [], refetch } = trpc.ordersPedidos.list.useQuery();
   const { data: products = [] } = trpc.inventoryProducts.list.useQuery();
+  const { data: suppliers = [] } = trpc.suppliers.list.useQuery();
   const createMutation = trpc.ordersPedidos.create.useMutation();
   const updateMutation = trpc.ordersPedidos.update.useMutation();
   const deleteMutation = trpc.ordersPedidos.delete.useMutation();
@@ -51,6 +54,39 @@ export default function PedidosGenerales() {
       refetch();
     } catch (error) {
       toast.error('Error al crear pedido');
+    }
+  };
+
+  const openEditOrder = (order: any) => {
+    setEditingOrderId(order.id);
+    setSupplierName(order.supplier || '');
+    setEstimatedDate(order.expectedDelivery || '');
+    setNotes(order.notes || '');
+    setIsEditOpen(true);
+  };
+
+  const handleUpdateOrder = async () => {
+    if (!editingOrderId) return;
+    if (!supplierName.trim()) {
+      toast.error('El nombre del proveedor es obligatorio');
+      return;
+    }
+    try {
+      await updateMutation.mutateAsync({
+        id: editingOrderId,
+        supplierName: supplierName.trim(),
+        estimatedDate: estimatedDate || undefined,
+        notes: notes || undefined,
+      });
+      toast.success('Pedido actualizado correctamente');
+      setIsEditOpen(false);
+      setEditingOrderId(null);
+      setSupplierName('');
+      setEstimatedDate('');
+      setNotes('');
+      refetch();
+    } catch (error) {
+      toast.error('Error al actualizar pedido');
     }
   };
 
@@ -146,7 +182,7 @@ ${order.notes ? `\nNotas: ${order.notes}` : ''}
   const getStatusBadge = (order: any) => {
     if (order.status === 'delivered') return <Badge className="bg-green-600">Recibido</Badge>;
     if (order.status === 'ordered') return <Badge className="bg-blue-600">Ordenado</Badge>;
-    return <Badge variant="outline">Pendiente</Badge>;
+    return <Badge variant="outline" className="border-amber-500 text-amber-600">Pendiente de pedir</Badge>;
   };
 
   return (
@@ -168,7 +204,25 @@ ${order.notes ? `\nNotas: ${order.notes}` : ''}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Proveedor *</Label>
-                  <Input value={supplierName} onChange={(e) => setSupplierName(e.target.value)} placeholder="Nombre del proveedor" />
+                  <Select value={supplierName} onValueChange={setSupplierName}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona un proveedor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {suppliers.map((s: any) => (
+                        <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                      ))}
+                      <SelectItem value="_custom">Otro (escribir)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {supplierName === '_custom' && (
+                    <Input 
+                      value={supplierName === '_custom' ? '' : supplierName}
+                      onChange={(e) => setSupplierName(e.target.value)} 
+                      placeholder="Nombre del proveedor"
+                      className="mt-2"
+                    />
+                  )}
                 </div>
                 <div>
                   <Label>Fecha estimada entrega</Label>
@@ -261,6 +315,9 @@ ${order.notes ? `\nNotas: ${order.notes}` : ''}
                   </div>
                 </div>
                 <div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={() => openEditOrder(order)}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
                   <Button size="sm" variant="outline" onClick={() => copyOrderToClipboard(order)}>
                     <Copy className="h-4 w-4" />
                   </Button>
@@ -309,6 +366,47 @@ ${order.notes ? `\nNotas: ${order.notes}` : ''}
           </Card>
         ))}
       </div>
+
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Pedido</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Proveedor *</Label>
+              <Select value={supplierName} onValueChange={setSupplierName}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un proveedor" />
+                </SelectTrigger>
+                <SelectContent>
+                  {suppliers.map((s: any) => (
+                    <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                  ))}
+                  <SelectItem value="_custom">Otro (escribir)</SelectItem>
+                </SelectContent>
+              </Select>
+              {supplierName === '_custom' && (
+                <Input 
+                  value={supplierName === '_custom' ? '' : supplierName}
+                  onChange={(e) => setSupplierName(e.target.value)} 
+                  placeholder="Nombre del proveedor"
+                  className="mt-2"
+                />
+              )}
+            </div>
+            <div>
+              <Label>Fecha estimada entrega</Label>
+              <Input type="date" value={estimatedDate} onChange={(e) => setEstimatedDate(e.target.value)} />
+            </div>
+            <div>
+              <Label>Notas</Label>
+              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notas adicionales..." rows={2} />
+            </div>
+            <Button onClick={handleUpdateOrder} className="w-full">Guardar Cambios</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

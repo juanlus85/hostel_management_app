@@ -936,3 +936,26 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Calcular Total automáticamente: Hay + Pedir
 - [x] Eliminar formulario de cajas/unidades (solo input simple de cantidad a pedir)
 - [x] Mantener botón Copiar y Guardar
+
+
+## Mejoras Sistema de Pedidos v85
+
+### Pedidos Bocatas del Chef
+- [x] Rediseñar con formato agrupado por tipo (Baguettes, Tostas, Bocapizzas)
+- [x] Columnas: Artículo | Pedir (Cajas) | Hay (Unidades) | Total (Unidades)
+- [x] Mostrar unidades por caja en cada grupo (ej: "6 unidades por caja")
+- [x] Calcular Total = (Cajas × Unidades/Caja) + Hay
+- [x] Total general con formato especial: cuando llegue a 25 mostrar "21+4" en lugar de "25"
+- [x] Agrupar productos: Baguettes (6 uds/caja), Tostas (6 uds/caja), Bocapizzas (16 uds/caja)
+
+### Inventario Productos
+- [x] Corregir bug: CSV no carga Coste, Precio y Stock correctamente
+- [x] Verificar que los valores numéricos se parsean correctamente
+- [x] Asegurar que los campos se guardan en la base de datos
+
+### Pedidos Generales
+- [x] Añadir tercer estado: "Pendiente de pedir" (antes de "Ordenado")
+- [x] Estados: Pendiente → Ordenado → Recibido
+- [x] Desplegable de proveedores existentes (de la tabla suppliers)
+- [x] Permitir editar pedidos ya creados (nombre proveedor, fecha, notas)
+- [x] Botón "Editar" en cada pedido

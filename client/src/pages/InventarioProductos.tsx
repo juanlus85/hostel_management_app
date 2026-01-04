@@ -83,12 +83,52 @@ export default function InventarioProductos() {
   };
 
   const parseCSVValue = (value: string): string => {
-    // Detectar y convertir formato europeo (1,50) a US (1.50)
-    const trimmed = value.trim().replace(/"/g, '');
-    // Si tiene coma como decimal, reemplazar por punto
-    if (/^\d+,\d+$/.test(trimmed)) {
-      return trimmed.replace(',', '.');
+    // Limpiar valor
+    let trimmed = value.trim().replace(/"/g, '');
+    
+    // Si está vacío, retornar vacío
+    if (!trimmed) return '';
+    
+    // Si no es un número, retornar tal cual
+    if (!/[\d,.]/.test(trimmed)) return trimmed;
+    
+    // Detectar formato:
+    // - Europeo con coma decimal: 1,50 o 1.234,50
+    // - US con punto decimal: 1.50 o 1,234.50
+    
+    // Si tiene punto Y coma, determinar cuál es el decimal
+    if (trimmed.includes('.') && trimmed.includes(',')) {
+      // Si el último separador es coma → formato europeo (1.234,50)
+      if (trimmed.lastIndexOf(',') > trimmed.lastIndexOf('.')) {
+        trimmed = trimmed.replace(/\./g, '').replace(',', '.');
+      } else {
+        // Si el último separador es punto → formato US (1,234.50)
+        trimmed = trimmed.replace(/,/g, '');
+      }
     }
+    // Si solo tiene coma → formato europeo (1,50)
+    else if (trimmed.includes(',') && !trimmed.includes('.')) {
+      trimmed = trimmed.replace(',', '.');
+    }
+    // Si solo tiene punto → puede ser decimal o separador de miles
+    else if (trimmed.includes('.')) {
+      // Si hay más de un punto, es separador de miles (1.234.567)
+      const dotCount = (trimmed.match(/\./g) || []).length;
+      if (dotCount > 1) {
+        trimmed = trimmed.replace(/\./g, '');
+      }
+      // Si hay un solo punto y está seguido de 1-2 dígitos → es decimal
+      // Si está seguido de 3 dígitos exactos → es separador de miles
+      else {
+        const afterDot = trimmed.split('.')[1];
+        if (afterDot && afterDot.length === 3 && /^\d+$/.test(afterDot)) {
+          // Es separador de miles (1.234)
+          trimmed = trimmed.replace('.', '');
+        }
+        // else: es decimal (1.50) → dejar tal cual
+      }
+    }
+    
     return trimmed;
   };
 
