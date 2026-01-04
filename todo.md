@@ -871,3 +871,39 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Gráfico anual muestra barra de 2026 correctamente
 - [x] Investigar por qué hostelByMonth no incluye datos de 2026
 - [x] Asegurar que funcione para 2027 y años futuros
+
+## v82.14: Bug gráfico Tienda 2026
+- [x] Gráfico anual de Tienda no muestra barra de 2026
+- [x] Tabla mensual de Tienda SÍ muestra datos correctos de 2026
+- [x] Gráfico anual de Hostel SÍ muestra barra de 2026
+- [x] Investigar por qué tiendaByYear no incluye 2026
+
+## Sistema de Gestión de Pedidos (v83)
+### Inventario
+- [ ] Tabla de productos con campos: nombre, categoría, en_inventario, precio, coste
+- [ ] Vista tipo Excel con todos los productos
+- [ ] Importación CSV (vacía BD y actualiza con nuevo CSV)
+- [ ] Añadir artículo manualmente
+- [ ] Modificar artículo existente
+
+### Pedidos Generales
+- [ ] Crear pedido con proveedor, fecha estimada
+- [ ] Marcar pedido como "pedido realizado"
+- [ ] Marcar pedido como "pedido recibido"
+- [ ] Añadir artículos al pedido con unidades/packs
+- [ ] Selector desplegable de artículos con autocompletado
+- [ ] Funcionalidad de copia al portapapeles
+
+### Pedidos Bocatas del Chef
+- [ ] Lista predefinida de artículos (Burguer, Mojo, Serranito, etc.)
+- [ ] Campo "Pedir" para número de cajas
+- [ ] Campo "Hay" para unidades actuales (editable)
+- [ ] Campo "Total" calculado automáticamente (no editable)
+- [ ] Baguettes/Tostas: 6 unidades por caja
+- [ ] Baguepizzas: 16 unidades por caja
+- [ ] Total de cajas con formato especial (25 = "21+4", 50 = "42+8")
+- [ ] Funcionalidad de copia al portapapeles (solo artículos > 0)
+
+### General
+- [ ] Solo visible para administradores
+- [ ] Menú "Pedidos" en la navegación

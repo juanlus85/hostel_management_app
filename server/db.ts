@@ -1732,3 +1732,251 @@ export async function getAvailableYears(): Promise<number[]> {
     return [new Date().getFullYear()];
   }
 }
+
+// ==================== INVENTORY PRODUCTS ====================
+export async function getAllInventoryProducts() {
+  const db = await getDb();
+  if (!db) return [];
+  const { inventoryProducts } = await import('../drizzle/schema');
+  return db.select().from(inventoryProducts).orderBy(inventoryProducts.name);
+}
+
+export async function createInventoryProduct(data: {
+  handle?: string;
+  ref?: string;
+  name: string;
+  category?: string;
+  cost: string;
+  price: string;
+  inStock: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const { inventoryProducts } = await import('../drizzle/schema');
+  const result = await db.insert(inventoryProducts).values(data);
+  return result[0].insertId;
+}
+
+export async function updateInventoryProduct(id: number, data: Partial<{
+  handle?: string;
+  ref?: string;
+  name?: string;
+  category?: string;
+  cost?: string;
+  price?: string;
+  inStock?: string;
+}>) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const { inventoryProducts } = await import('../drizzle/schema');
+  const { eq } = await import('drizzle-orm');
+  await db.update(inventoryProducts).set(data).where(eq(inventoryProducts.id, id));
+}
+
+export async function deleteInventoryProduct(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const { inventoryProducts } = await import('../drizzle/schema');
+  const { eq } = await import('drizzle-orm');
+  await db.delete(inventoryProducts).where(eq(inventoryProducts.id, id));
+}
+
+export async function replaceAllInventoryProducts(products: Array<{
+  handle?: string;
+  ref?: string;
+  name: string;
+  category?: string;
+  cost: string;
+  price: string;
+  inStock: string;
+}>) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const { inventoryProducts } = await import('../drizzle/schema');
+  
+  // Delete all existing products
+  await db.delete(inventoryProducts);
+  
+  // Insert new products
+  if (products.length > 0) {
+    await db.insert(inventoryProducts).values(products);
+  }
+}
+
+// ==================== ORDERS MANAGEMENT (Pedidos Generales) ====================
+export async function getAllOrdersWithItems() {
+  const db = await getDb();
+  if (!db) return [];
+  const { orders, orderItems } = await import('../drizzle/schema');
+  const { eq } = await import('drizzle-orm');
+  
+  const allOrders = await db.select().from(orders).orderBy(orders.createdAt);
+  
+  // Get items for each order
+  const ordersWithItems = await Promise.all(
+    allOrders.map(async (order) => {
+      const items = await db.select().from(orderItems).where(eq(orderItems.orderId, order.id));
+      return { ...order, items };
+    })
+  );
+  
+  return ordersWithItems;
+}
+
+export async function getOrderWithItemsById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const { orders, orderItems } = await import('../drizzle/schema');
+  const { eq } = await import('drizzle-orm');
+  
+  const order = await db.select().from(orders).where(eq(orders.id, id)).limit(1);
+  if (order.length === 0) return null;
+  
+  const items = await db.select().from(orderItems).where(eq(orderItems.orderId, id));
+  return { ...order[0], items };
+}
+
+export async function createOrderWithSupplier(data: {
+  supplierName: string;
+  estimatedDate?: string;
+  notes?: string;
+  userId: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const { orders } = await import('../drizzle/schema');
+  
+  const result = await db.insert(orders).values({
+    businessId: 1, // Default to hostel, can be changed later
+    userId: data.userId,
+    supplier: data.supplierName,
+    orderDate: new Date().toISOString().split('T')[0],
+    expectedDelivery: data.estimatedDate,
+    notes: data.notes,
+  });
+  
+  return result[0].insertId;
+}
+
+export async function updateOrderStatus(id: number, data: Partial<{
+  supplierName?: string;
+  estimatedDate?: string;
+  isOrdered?: boolean;
+  isReceived?: boolean;
+  notes?: string;
+}>) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const { orders } = await import('../drizzle/schema');
+  const { eq } = await import('drizzle-orm');
+  
+  const updateData: any = {};
+  if (data.supplierName !== undefined) updateData.supplier = data.supplierName;
+  if (data.estimatedDate !== undefined) updateData.expectedDelivery = data.estimatedDate;
+  if (data.notes !== undefined) updateData.notes = data.notes;
+  
+  // Map isOrdered and isReceived to status
+  if (data.isReceived) {
+    updateData.status = 'delivered';
+  } else if (data.isOrdered) {
+    updateData.status = 'ordered';
+  }
+  
+  await db.update(orders).set(updateData).where(eq(orders.id, id));
+}
+
+export async function deleteOrderWithItems(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const { orders, orderItems } = await import('../drizzle/schema');
+  const { eq } = await import('drizzle-orm');
+  
+  // Delete items first
+  await db.delete(orderItems).where(eq(orderItems.orderId, id));
+  
+  // Delete order
+  await db.delete(orders).where(eq(orders.id, id));
+}
+
+export async function createOrderItemForProduct(data: {
+  orderId: number;
+  productName: string;
+  quantity: string;
+  unit?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const { orderItems } = await import('../drizzle/schema');
+  
+  // Add unit to itemName if provided
+  const itemName = data.unit ? `${data.productName} (${data.unit})` : data.productName;
+  
+  const result = await db.insert(orderItems).values({
+    orderId: data.orderId,
+    itemName,
+    quantity: data.quantity,
+  });
+  
+  return result[0].insertId;
+}
+
+export async function updateOrderItemDetails(id: number, data: Partial<{
+  productName?: string;
+  quantity?: string;
+  unit?: string;
+}>) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const { orderItems } = await import('../drizzle/schema');
+  const { eq } = await import('drizzle-orm');
+  
+  const updateData: any = {};
+  
+  // If updating productName or unit, combine them
+  if (data.productName !== undefined || data.unit !== undefined) {
+    const currentItem = await db.select().from(orderItems).where(eq(orderItems.id, id)).limit(1);
+    if (currentItem.length > 0) {
+      const baseName = data.productName || currentItem[0].itemName.split(' (')[0];
+      const unit = data.unit || (currentItem[0].itemName.includes('(') ? currentItem[0].itemName.match(/\((.+)\)/)?.[1] : '');
+      updateData.itemName = unit ? `${baseName} (${unit})` : baseName;
+    }
+  }
+  
+  if (data.quantity !== undefined) updateData.quantity = data.quantity;
+  
+  await db.update(orderItems).set(updateData).where(eq(orderItems.id, id));
+}
+
+export async function deleteOrderItemById(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const { orderItems } = await import('../drizzle/schema');
+  const { eq } = await import('drizzle-orm');
+  await db.delete(orderItems).where(eq(orderItems.id, id));
+}
+
+// ==================== CHEF SANDWICH ORDERS ====================
+export async function getAllChefOrders() {
+  const db = await getDb();
+  if (!db) return [];
+  const { chefSandwichOrders } = await import('../drizzle/schema');
+  return db.select().from(chefSandwichOrders).orderBy(chefSandwichOrders.createdAt);
+}
+
+export async function getLatestChefOrder() {
+  const db = await getDb();
+  if (!db) return null;
+  const { chefSandwichOrders } = await import('../drizzle/schema');
+  const { desc } = await import('drizzle-orm');
+  const result = await db.select().from(chefSandwichOrders).orderBy(desc(chefSandwichOrders.createdAt)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function createChefOrder(data: any) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const { chefSandwichOrders } = await import('../drizzle/schema');
+  
+  const result = await db.insert(chefSandwichOrders).values(data);
+  return result[0].insertId;
+}

@@ -43,7 +43,10 @@ import {
   BarChart3,
   Vault,
   Key,
-  History
+  History,
+  ShoppingCart,
+  ClipboardList,
+  Sandwich
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState, createContext, useContext } from "react";
 import { useLocation } from "wouter";
@@ -62,6 +65,9 @@ const menuItems = [
   { icon: Wallet, label: "Caja", path: "/caja" },
   { icon: Receipt, label: "Facturas", path: "/facturas" },
   { icon: DollarSign, label: "Gastos/Ingresos", path: "/otros-gastos", adminOnly: true },
+  { icon: ShoppingCart, label: "Inventario Productos", path: "/inventario-productos", adminOnly: true },
+  { icon: ClipboardList, label: "Pedidos Generales", path: "/pedidos-generales", adminOnly: true },
+  { icon: Sandwich, label: "Pedidos Bocatas", path: "/pedidos-bocatas", adminOnly: true },
   { icon: Package, label: "Inventario", path: "/inventario" },
   { icon: AlertTriangle, label: "Incidencias", path: "/incidencias" },
   { icon: CheckSquare, label: "Tareas", path: "/tareas" },

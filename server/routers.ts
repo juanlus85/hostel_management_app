@@ -1407,5 +1407,167 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
       return db.getCurrentYearCashData(input.year);
     }),
   }),
+
+  // ==================== INVENTORY PRODUCTS ====================
+  inventoryProducts: router({
+    list: adminProcedure.query(async () => {
+      return db.getAllInventoryProducts();
+    }),
+    create: adminProcedure.input(z.object({
+      handle: z.string().optional(),
+      ref: z.string().optional(),
+      name: z.string(),
+      category: z.string().optional(),
+      cost: z.string(),
+      price: z.string(),
+      inStock: z.string(),
+    })).mutation(async ({ input }) => {
+      const id = await db.createInventoryProduct(input);
+      return { success: true, id };
+    }),
+    update: adminProcedure.input(z.object({
+      id: z.number(),
+      handle: z.string().optional(),
+      ref: z.string().optional(),
+      name: z.string().optional(),
+      category: z.string().optional(),
+      cost: z.string().optional(),
+      price: z.string().optional(),
+      inStock: z.string().optional(),
+    })).mutation(async ({ input }) => {
+      const { id, ...data } = input;
+      await db.updateInventoryProduct(id, data);
+      return { success: true };
+    }),
+    delete: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
+      await db.deleteInventoryProduct(input.id);
+      return { success: true };
+    }),
+    importCSV: adminProcedure.input(z.object({
+      products: z.array(z.object({
+        handle: z.string().optional(),
+        ref: z.string().optional(),
+        name: z.string(),
+        category: z.string().optional(),
+        cost: z.string(),
+        price: z.string(),
+        inStock: z.string(),
+      })),
+    })).mutation(async ({ input }) => {
+      await db.replaceAllInventoryProducts(input.products);
+      return { success: true };
+    }),
+  }),
+
+  // ==================== ORDERS (Pedidos) ====================
+  ordersPedidos: router({
+    list: adminProcedure.query(async () => {
+      return db.getAllOrdersWithItems();
+    }),
+    getById: adminProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
+      return db.getOrderWithItemsById(input.id);
+    }),
+    create: adminProcedure.input(z.object({
+      supplierName: z.string(),
+      estimatedDate: z.string().optional(),
+      notes: z.string().optional(),
+    })).mutation(async ({ input, ctx }) => {
+      const id = await db.createOrderWithSupplier({ ...input, userId: ctx.user.id });
+      return { success: true, id };
+    }),
+    update: adminProcedure.input(z.object({
+      id: z.number(),
+      supplierName: z.string().optional(),
+      estimatedDate: z.string().optional(),
+      isOrdered: z.boolean().optional(),
+      isReceived: z.boolean().optional(),
+      notes: z.string().optional(),
+    })).mutation(async ({ input }) => {
+      const { id, ...data } = input;
+      await db.updateOrderStatus(id, data);
+      return { success: true };
+    }),
+    delete: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
+      await db.deleteOrderWithItems(input.id);
+      return { success: true };
+    }),
+    addItem: adminProcedure.input(z.object({
+      orderId: z.number(),
+      productName: z.string(),
+      quantity: z.string(),
+      unit: z.string().optional(),
+    })).mutation(async ({ input }) => {
+      const id = await db.createOrderItemForProduct(input);
+      return { success: true, id };
+    }),
+    updateItem: adminProcedure.input(z.object({
+      id: z.number(),
+      productName: z.string().optional(),
+      quantity: z.string().optional(),
+      unit: z.string().optional(),
+    })).mutation(async ({ input }) => {
+      const { id, ...data } = input;
+      await db.updateOrderItemDetails(id, data);
+      return { success: true };
+    }),
+    deleteItem: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
+      await db.deleteOrderItemById(input.id);
+      return { success: true };
+    }),
+  }),
+
+  // ==================== CHEF SANDWICH ORDERS ====================
+  chefOrders: router({
+    list: adminProcedure.query(async () => {
+      return db.getAllChefOrders();
+    }),
+    getLatest: adminProcedure.query(async () => {
+      return db.getLatestChefOrder();
+    }),
+    create: adminProcedure.input(z.object({
+      orderDate: z.string(),
+      burguerBoxes: z.number().optional(),
+      burguerUnits: z.number().optional(),
+      mojoBoxes: z.number().optional(),
+      mojoUnits: z.number().optional(),
+      serranitoBoxes: z.number().optional(),
+      serranitoUnits: z.number().optional(),
+      lomoWBoxes: z.number().optional(),
+      lomoWUnits: z.number().optional(),
+      frankfurtBoxes: z.number().optional(),
+      frankfurtUnits: z.number().optional(),
+      tortillaBoxes: z.number().optional(),
+      tortillaUnits: z.number().optional(),
+      empanadoBoxes: z.number().optional(),
+      empanadoUnits: z.number().optional(),
+      bbqBoxes: z.number().optional(),
+      bbqUnits: z.number().optional(),
+      polloBaconBoxes: z.number().optional(),
+      polloBaconUnits: z.number().optional(),
+      carbonaraBoxes: z.number().optional(),
+      carbonaraUnits: z.number().optional(),
+      yorkBoxes: z.number().optional(),
+      yorkUnits: z.number().optional(),
+      serranoBoxes: z.number().optional(),
+      serranoUnits: z.number().optional(),
+      piripiBoxes: z.number().optional(),
+      piripiUnits: z.number().optional(),
+      tostaBarbacoa: z.number().optional(),
+      tostaCarbonara: z.number().optional(),
+      tostaPolloBoxes: z.number().optional(),
+      tostaPolloUnits: z.number().optional(),
+      tostaRuloCabra: z.number().optional(),
+      tosta3Quesos: z.number().optional(),
+      tostaYork: z.number().optional(),
+      bocapizzaYork: z.number().optional(),
+      bocapizzaBacon: z.number().optional(),
+      bocapizzaBBQ: z.number().optional(),
+      bocapizza4Q: z.number().optional(),
+      bocapizzaAtun: z.number().optional(),
+    })).mutation(async ({ input }) => {
+      const id = await db.createChefOrder(input);
+      return { success: true, id };
+    }),
+  }),
 });
 export type AppRouter = typeof appRouter;

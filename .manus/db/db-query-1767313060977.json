@@ -1,0 +1,20 @@
+{
+  "query": "SELECT id, name, code FROM businesses;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user uN1yFnMXg2uz2sS.48d4e14bb92a --database nKwKaPpEnuCPRfjQgd5Gdt --execute SELECT id, name, code FROM businesses;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "The Spot Central Hostel",
+      "code": "hostel"
+    },
+    {
+      "id": "2",
+      "name": "Sweet & Salty",
+      "code": "tienda"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tcode\n1\tThe Spot Central Hostel\thostel\n2\tSweet & Salty\ttienda\n",
+  "stderr": "",
+  "execution_time_ms": 101
+}

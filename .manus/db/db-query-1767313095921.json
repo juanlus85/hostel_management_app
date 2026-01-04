@@ -1,0 +1,80 @@
+{
+  "query": "SELECT \n  cc.id,\n  cc.date,\n  cc.businessId,\n  b.code as businessType,\n  cc.zReading\nFROM cash_closings cc\nINNER JOIN businesses b ON cc.businessId = b.id\nORDER BY cc.date DESC\nLIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user uN1yFnMXg2uz2sS.48d4e14bb92a --database nKwKaPpEnuCPRfjQgd5Gdt --execute SELECT \n  cc.id,\n  cc.date,\n  cc.businessId,\n  b.code as businessType,\n  cc.zReading\nFROM cash_closings cc\nINNER JOIN businesses b ON cc.businessId = b.id\nORDER BY cc.date DESC\nLIMIT 10;",
+  "rows": [
+    {
+      "id": "60001",
+      "date": "2025-12-27",
+      "businessId": "1",
+      "businessType": "hostel",
+      "zReading": "0.00"
+    },
+    {
+      "id": "30001",
+      "date": "2025-12-18",
+      "businessId": "1",
+      "businessType": "hostel",
+      "zReading": "0.00"
+    },
+    {
+      "id": "2",
+      "date": "2025-12-17",
+      "businessId": "1",
+      "businessType": "hostel",
+      "zReading": "0.00"
+    },
+    {
+      "id": "7",
+      "date": "2025-12-16",
+      "businessId": "2",
+      "businessType": "tienda",
+      "zReading": "103.40"
+    },
+    {
+      "id": "1",
+      "date": "2025-12-16",
+      "businessId": "1",
+      "businessType": "hostel",
+      "zReading": "153.52"
+    },
+    {
+      "id": "22",
+      "date": "2025-12-15",
+      "businessId": "2",
+      "businessType": "tienda",
+      "zReading": "63.70"
+    },
+    {
+      "id": "3",
+      "date": "2025-12-15",
+      "businessId": "1",
+      "businessType": "hostel",
+      "zReading": "545.76"
+    },
+    {
+      "id": "4",
+      "date": "2025-12-14",
+      "businessId": "1",
+      "businessType": "hostel",
+      "zReading": "347.97"
+    },
+    {
+      "id": "6",
+      "date": "2025-12-14",
+      "businessId": "2",
+      "businessType": "tienda",
+      "zReading": "197.60"
+    },
+    {
+      "id": "23",
+      "date": "2025-12-13",
+      "businessId": "2",
+      "businessType": "tienda",
+      "zReading": "1112.90"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tdate\tbusinessId\tbusinessType\tzReading\n60001\t2025-12-27\t1\thostel\t0.00\n30001\t2025-12-18\t1\thostel\t0.00\n2\t2025-12-17\t1\thostel\t0.00\n7\t2025-12-16\t2\ttienda\t103.40\n1\t2025-12-16\t1\thostel\t153.52\n22\t2025-12-15\t2\ttienda\t63.70\n3\t2025-12-15\t1\thostel\t545.76\n4\t2025-12-14\t1\thostel\t347.97\n6\t2025-12-14\t2\ttienda\t197.60\n23\t2025-12-13\t2\ttienda\t1112.90\n",
+  "stderr": "",
+  "execution_time_ms": 53
+}

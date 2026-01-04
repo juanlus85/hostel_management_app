@@ -538,3 +538,73 @@ export const historicalCashData = mysqlTable("historical_cash_data", {
 });
 export type HistoricalCashData = typeof historicalCashData.$inferSelect;
 export type InsertHistoricalCashData = typeof historicalCashData.$inferInsert;
+
+// ==================== INVENTORY PRODUCTS ====================
+export const inventoryProducts = mysqlTable("inventory_products", {
+  id: int("id").autoincrement().primaryKey(),
+  handle: varchar("handle", { length: 100 }).unique(), // Identificador único del CSV
+  ref: varchar("ref", { length: 50 }), // Referencia del producto
+  name: varchar("name", { length: 255 }).notNull(), // Nombre del producto
+  category: varchar("category", { length: 100 }), // Categoría
+  cost: decimal("cost", { precision: 10, scale: 2 }).default("0").notNull(), // Coste
+  price: decimal("price", { precision: 10, scale: 2 }).default("0").notNull(), // Precio de venta
+  inStock: decimal("inStock", { precision: 10, scale: 3 }).default("0").notNull(), // En inventario
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type InventoryProduct = typeof inventoryProducts.$inferSelect;
+export type InsertInventoryProduct = typeof inventoryProducts.$inferInsert;
+
+// ==================== CHEF SANDWICH ORDERS ====================
+// Tabla para pedidos específicos de Bocatas del Chef
+export const chefSandwichOrders = mysqlTable("chef_sandwich_orders", {
+  id: int("id").autoincrement().primaryKey(),
+  orderDate: varchar("orderDate", { length: 10 }).notNull(), // YYYY-MM-DD
+  // Productos predefinidos
+  burguerBoxes: int("burguerBoxes").default(0).notNull(),
+  burguerUnits: int("burguerUnits").default(0).notNull(),
+  mojoBoxes: int("mojoBoxes").default(0).notNull(),
+  mojoUnits: int("mojoUnits").default(0).notNull(),
+  serranitoBoxes: int("serranitoBoxes").default(0).notNull(),
+  serranitoUnits: int("serranitoUnits").default(0).notNull(),
+  lomoWBoxes: int("lomoWBoxes").default(0).notNull(),
+  lomoWUnits: int("lomoWUnits").default(0).notNull(),
+  frankfurtBoxes: int("frankfurtBoxes").default(0).notNull(),
+  frankfurtUnits: int("frankfurtUnits").default(0).notNull(),
+  tortillaBoxes: int("tortillaBoxes").default(0).notNull(),
+  tortillaUnits: int("tortillaUnits").default(0).notNull(),
+  empanadoBoxes: int("empanadoBoxes").default(0).notNull(),
+  empanadoUnits: int("empanadoUnits").default(0).notNull(),
+  bbqBoxes: int("bbqBoxes").default(0).notNull(),
+  bbqUnits: int("bbqUnits").default(0).notNull(),
+  polloBaconBoxes: int("polloBaconBoxes").default(0).notNull(),
+  polloBaconUnits: int("polloBaconUnits").default(0).notNull(),
+  carbonaraBoxes: int("carbonaraBoxes").default(0).notNull(),
+  carbonaraUnits: int("carbonaraUnits").default(0).notNull(),
+  yorkBoxes: int("yorkBoxes").default(0).notNull(),
+  yorkUnits: int("yorkUnits").default(0).notNull(),
+  serranoBoxes: int("serranoBoxes").default(0).notNull(),
+  serranoUnits: int("serranoUnits").default(0).notNull(),
+  piripiBoxes: int("piripiBoxes").default(0).notNull(),
+  piripiUnits: int("piripiUnits").default(0).notNull(),
+  // Tostas (6 por caja)
+  tostaBarbacoa: int("tostaBarbacoa").default(0).notNull(),
+  tostaCarbonara: int("tostaCarbonara").default(0).notNull(),
+  tostaPolloBoxes: int("tostaPolloBoxes").default(0).notNull(),
+  tostaPolloUnits: int("tostaPolloUnits").default(0).notNull(),
+  tostaRuloCabra: int("tostaRuloCabra").default(0).notNull(),
+  tosta3Quesos: int("tosta3Quesos").default(0).notNull(),
+  tostaYork: int("tostaYork").default(0).notNull(),
+  // Bocapizzas (16 por caja)
+  bocapizzaYork: int("bocapizzaYork").default(0).notNull(),
+  bocapizzaBacon: int("bocapizzaBacon").default(0).notNull(),
+  bocapizzaBBQ: int("bocapizzaBBQ").default(0).notNull(),
+  bocapizza4Q: int("bocapizza4Q").default(0).notNull(),
+  bocapizzaAtun: int("bocapizzaAtun").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ChefSandwichOrder = typeof chefSandwichOrders.$inferSelect;
+export type InsertChefSandwichOrder = typeof chefSandwichOrders.$inferInsert;

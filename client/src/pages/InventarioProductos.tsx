@@ -1,0 +1,304 @@
+import { useState } from 'react';
+import { trpc } from '@/lib/trpc';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Upload, Plus, Pencil, Trash2, Download } from 'lucide-react';
+import { toast } from 'sonner';
+
+export default function InventarioProductos() {
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+
+  const { data: products = [], refetch } = trpc.inventoryProducts.list.useQuery();
+  const createMutation = trpc.inventoryProducts.create.useMutation();
+  const updateMutation = trpc.inventoryProducts.update.useMutation();
+  const deleteMutation = trpc.inventoryProducts.delete.useMutation();
+  const importMutation = trpc.inventoryProducts.importCSV.useMutation();
+
+  const [formData, setFormData] = useState({
+    handle: '',
+    ref: '',
+    name: '',
+    category: '',
+    cost: '',
+    price: '',
+    inStock: '',
+  });
+
+  const handleCreate = async () => {
+    try {
+      await createMutation.mutateAsync(formData);
+      toast.success('Producto creado correctamente');
+      setIsCreateOpen(false);
+      setFormData({ handle: '', ref: '', name: '', category: '', cost: '', price: '', inStock: '' });
+      refetch();
+    } catch (error) {
+      toast.error('Error al crear producto');
+    }
+  };
+
+  const handleUpdate = async () => {
+    if (!editingProduct) return;
+    try {
+      await updateMutation.mutateAsync({ id: editingProduct.id, ...formData });
+      toast.success('Producto actualizado correctamente');
+      setEditingProduct(null);
+      setFormData({ handle: '', ref: '', name: '', category: '', cost: '', price: '', inStock: '' });
+      refetch();
+    } catch (error) {
+      toast.error('Error al actualizar producto');
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('¿Eliminar este producto?')) return;
+    try {
+      await deleteMutation.mutateAsync({ id });
+      toast.success('Producto eliminado correctamente');
+      refetch();
+    } catch (error) {
+      toast.error('Error al eliminar producto');
+    }
+  };
+
+  const handleCSVImport = async () => {
+    if (!csvFile) return;
+    
+    const text = await csvFile.text();
+    const lines = text.split('\n').filter(l => l.trim());
+    const headers = lines[0].split(',').map(h => h.trim());
+    
+    const products = lines.slice(1).map(line => {
+      const values = line.split(',').map(v => v.trim());
+      return {
+        handle: values[0] || '',
+        ref: values[1] || '',
+        name: values[2] || '',
+        category: values[3] || '',
+        cost: values[4] || '0',
+        price: values[5] || '0',
+        inStock: values[6] || '0',
+      };
+    }).filter(p => p.name);
+
+    try {
+      await importMutation.mutateAsync({ products });
+      toast.success(`${products.length} productos importados correctamente`);
+      setCsvFile(null);
+      refetch();
+    } catch (error) {
+      toast.error('Error al importar CSV');
+    }
+  };
+
+  const handleExportCSV = () => {
+    const headers = ['Handle', 'REF', 'Nombre', 'Categoría', 'Coste', 'Precio', 'En inventario'];
+    const rows = products.map(p => [
+      p.handle || '',
+      p.ref || '',
+      p.name,
+      p.category || '',
+      p.cost,
+      p.price,
+      p.inStock,
+    ]);
+    
+    const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `inventario_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+  };
+
+  const openEdit = (product: any) => {
+    setEditingProduct(product);
+    setFormData({
+      handle: product.handle || '',
+      ref: product.ref || '',
+      name: product.name,
+      category: product.category || '',
+      cost: product.cost,
+      price: product.price,
+      inStock: product.inStock,
+    });
+  };
+
+  return (
+    <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">Inventario de Productos</h1>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExportCSV}>
+            <Download className="mr-2 h-4 w-4" />
+            Exportar CSV
+          </Button>
+          
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Upload className="mr-2 h-4 w-4" />
+                Importar CSV
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Importar CSV</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  El CSV debe tener las columnas: Handle, REF, Nombre, Categoría, Coste, Precio, En inventario
+                </p>
+                <p className="text-sm font-semibold text-amber-600">
+                  ⚠️ IMPORTANTE: Esta acción REEMPLAZARÁ todo el inventario actual
+                </p>
+                <Input
+                  type="file"
+                  accept=".csv"
+                  onChange={(e) => setCsvFile(e.target.files?.[0] || null)}
+                />
+                <Button onClick={handleCSVImport} disabled={!csvFile} className="w-full">
+                  Importar (Reemplazar todo)
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Nuevo Producto
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Crear Producto</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4">
+                <div>
+                  <Label>Handle</Label>
+                  <Input value={formData.handle} onChange={(e) => setFormData({ ...formData, handle: e.target.value })} />
+                </div>
+                <div>
+                  <Label>REF</Label>
+                  <Input value={formData.ref} onChange={(e) => setFormData({ ...formData, ref: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Nombre *</Label>
+                  <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Categoría</Label>
+                  <Input value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} />
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <Label>Coste</Label>
+                    <Input type="number" step="0.01" value={formData.cost} onChange={(e) => setFormData({ ...formData, cost: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Precio</Label>
+                    <Input type="number" step="0.01" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Stock</Label>
+                    <Input type="number" step="0.001" value={formData.inStock} onChange={(e) => setFormData({ ...formData, inStock: e.target.value })} />
+                  </div>
+                </div>
+                <Button onClick={handleCreate}>Crear</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      <div className="border rounded-lg overflow-hidden">
+        <table className="w-full">
+          <thead className="bg-muted">
+            <tr>
+              <th className="text-left p-3">Handle</th>
+              <th className="text-left p-3">REF</th>
+              <th className="text-left p-3">Nombre</th>
+              <th className="text-left p-3">Categoría</th>
+              <th className="text-right p-3">Coste</th>
+              <th className="text-right p-3">Precio</th>
+              <th className="text-right p-3">Stock</th>
+              <th className="text-center p-3">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {products.map((product) => (
+              <tr key={product.id} className="border-t hover:bg-muted/50">
+                <td className="p-3 text-sm">{product.handle}</td>
+                <td className="p-3 text-sm">{product.ref}</td>
+                <td className="p-3 font-medium">{product.name}</td>
+                <td className="p-3 text-sm">{product.category}</td>
+                <td className="p-3 text-right">€{parseFloat(product.cost).toFixed(2)}</td>
+                <td className="p-3 text-right">€{parseFloat(product.price).toFixed(2)}</td>
+                <td className="p-3 text-right">{parseFloat(product.inStock).toFixed(3)}</td>
+                <td className="p-3">
+                  <div className="flex items-center justify-center gap-2">
+                    <Button size="sm" variant="ghost" onClick={() => openEdit(product)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => handleDelete(product.id)}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {editingProduct && (
+        <Dialog open={!!editingProduct} onOpenChange={() => setEditingProduct(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Producto</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4">
+              <div>
+                <Label>Handle</Label>
+                <Input value={formData.handle} onChange={(e) => setFormData({ ...formData, handle: e.target.value })} />
+              </div>
+              <div>
+                <Label>REF</Label>
+                <Input value={formData.ref} onChange={(e) => setFormData({ ...formData, ref: e.target.value })} />
+              </div>
+              <div>
+                <Label>Nombre *</Label>
+                <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+              </div>
+              <div>
+                <Label>Categoría</Label>
+                <Input value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} />
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <Label>Coste</Label>
+                  <Input type="number" step="0.01" value={formData.cost} onChange={(e) => setFormData({ ...formData, cost: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Precio</Label>
+                  <Input type="number" step="0.01" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Stock</Label>
+                  <Input type="number" step="0.001" value={formData.inStock} onChange={(e) => setFormData({ ...formData, inStock: e.target.value })} />
+                </div>
+              </div>
+              <Button onClick={handleUpdate}>Guardar Cambios</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+    </div>
+  );
+}
