@@ -975,3 +975,16 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Permitir modificar artículos ya añadidos a un pedido (cantidad, unidad)
 - [x] Permitir cambiar el estado del pedido directamente (desplegable o botones)
 - [x] Botón "Editar" en cada artículo de la lista
+
+
+## Mejoras Sistema de Pedidos v87
+
+### Pedidos Bocatas del Chef
+- [x] Implementar persistencia en localStorage para guardar el último pedido
+- [x] Cargar automáticamente los datos del último pedido al entrar
+- [x] Corregir formato total: debe mostrar "21+4" después de 25 (ej: 29 → "29 (25+4)")
+
+### Pedidos Generales
+- [x] Permitir añadir nuevos artículos a pedidos ya creados
+- [x] Botón "Añadir artículo" en cada pedido existente
+- [x] Permitir volver a estado "Pendiente de pedir" desde cualquier estado

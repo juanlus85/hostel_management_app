@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Copy, Save } from 'lucide-react';
+import { Copy, Save, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 
 type ProductGroup = {
@@ -63,6 +63,8 @@ type ProductData = {
   currentUnits: number;
 };
 
+const STORAGE_KEY = 'bocatas_pedido_draft';
+
 export default function PedidosBocatas() {
   const [orderDate, setOrderDate] = useState(new Date().toISOString().split('T')[0]);
   
@@ -79,6 +81,34 @@ export default function PedidosBocatas() {
 
   const createMutation = trpc.chefOrders.create.useMutation();
   const { data: latestOrder } = trpc.chefOrders.getLatest.useQuery();
+
+  // Cargar datos del localStorage al montar el componente
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.products && Array.isArray(parsed.products)) {
+          setProducts(parsed.products);
+        }
+        if (parsed.orderDate) {
+          setOrderDate(parsed.orderDate);
+        }
+      } catch (error) {
+        console.error('Error loading saved order:', error);
+      }
+    }
+  }, []);
+
+  // Guardar en localStorage cada vez que cambian los productos o la fecha
+  useEffect(() => {
+    const dataToSave = {
+      products,
+      orderDate,
+      savedAt: new Date().toISOString(),
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+  }, [products, orderDate]);
 
   const updateBoxes = (index: number, value: string) => {
     const newProducts = [...products];
@@ -101,13 +131,21 @@ export default function PedidosBocatas() {
   };
 
   const formatTotalBoxes = (total: number) => {
-    if (total < 25) return total.toString();
+    if (total <= 25) return total.toString();
     const fullSets = Math.floor(total / 25);
     const remainder = total % 25;
     if (remainder === 0) {
       return fullSets === 1 ? '25' : `${fullSets * 25}`;
     }
     return `${total} (${fullSets * 25}+${remainder})`;
+  };
+
+  const handleReset = () => {
+    if (!confirm('¿Borrar el pedido actual y empezar de cero?')) return;
+    setProducts(initialProducts);
+    setOrderDate(new Date().toISOString().split('T')[0]);
+    localStorage.removeItem(STORAGE_KEY);
+    toast.success('Pedido reiniciado');
   };
 
   const handleSave = async () => {
@@ -151,9 +189,13 @@ export default function PedidosBocatas() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Pedidos Bocatas del Chef</h2>
-          <p className="text-sm text-muted-foreground">Gestión especializada con cálculos automáticos</p>
+          <p className="text-sm text-muted-foreground">Gestión especializada con cálculos automáticos y guardado automático</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={handleReset}>
+            <RotateCcw className="mr-2 h-4 w-4" />
+            Reiniciar
+          </Button>
           <Button variant="outline" onClick={handleCopy}>
             <Copy className="mr-2 h-4 w-4" />
             Copiar

@@ -17,7 +17,9 @@ export default function PedidosGenerales() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isEditItemOpen, setIsEditItemOpen] = useState(false);
+  const [isAddItemOpen, setIsAddItemOpen] = useState(false);
   const [editingOrderId, setEditingOrderId] = useState<number | null>(null);
+  const [addingToOrderId, setAddingToOrderId] = useState<number | null>(null);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [supplierName, setSupplierName] = useState('');
   const [estimatedDate, setEstimatedDate] = useState('');
@@ -120,6 +122,49 @@ export default function PedidosGenerales() {
     }
   };
 
+  const openAddItemToOrder = (orderId: number) => {
+    setAddingToOrderId(orderId);
+    setSelectedProductId('');
+    setCustomProductName('');
+    setQuantity('');
+    setUnit('unidades');
+    setIsAddItemOpen(true);
+  };
+
+  const handleAddItemToExistingOrder = async () => {
+    if (!addingToOrderId) return;
+    
+    const productName = selectedProductId === '_custom' 
+      ? customProductName.trim() 
+      : products.find(p => p.id.toString() === selectedProductId)?.name || '';
+    
+    if (!productName) {
+      toast.error('Selecciona un producto o escribe un nombre');
+      return;
+    }
+    
+    const qty = parseInt(quantity) || 1;
+    
+    try {
+      await addItemMutation.mutateAsync({
+        orderId: addingToOrderId,
+        productName,
+        quantity: qty.toString(),
+        unit: unit || undefined,
+      });
+      toast.success('Producto añadido');
+      setIsAddItemOpen(false);
+      setAddingToOrderId(null);
+      setSelectedProductId('');
+      setCustomProductName('');
+      setQuantity('');
+      setUnit('unidades');
+      refetch();
+    } catch (error) {
+      toast.error('Error al añadir producto');
+    }
+  };
+
   const handleAddItem = async () => {
     if (!currentOrderId) return;
     
@@ -154,12 +199,12 @@ export default function PedidosGenerales() {
 
   const handleChangeStatus = async (orderId: number, newStatus: 'pending' | 'ordered' | 'delivered') => {
     try {
-      if (newStatus === 'ordered') {
+      if (newStatus === 'pending') {
+        await updateMutation.mutateAsync({ id: orderId, isOrdered: false, isReceived: false });
+      } else if (newStatus === 'ordered') {
         await updateMutation.mutateAsync({ id: orderId, isOrdered: true, isReceived: false });
       } else if (newStatus === 'delivered') {
         await updateMutation.mutateAsync({ id: orderId, isOrdered: true, isReceived: true });
-      } else {
-        await updateMutation.mutateAsync({ id: orderId, isOrdered: false, isReceived: false });
       }
       toast.success('Estado actualizado correctamente');
       refetch();
@@ -394,9 +439,21 @@ ${order.notes ? `\nNotas: ${order.notes}` : ''}
                       </div>
                     </div>
                   ))}
+                  <div className="pt-2">
+                    <Button size="sm" variant="outline" onClick={() => openAddItemToOrder(order.id)} className="w-full">
+                      <Plus className="mr-2 h-4 w-4" />
+                      Añadir artículo
+                    </Button>
+                  </div>
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">Sin productos añadidos</p>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Sin productos añadidos</p>
+                  <Button size="sm" variant="outline" onClick={() => openAddItemToOrder(order.id)} className="w-full">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Añadir artículo
+                  </Button>
+                </div>
               )}
               {order.notes && (
                 <div className="mt-4 p-3 bg-muted rounded text-sm">
@@ -486,6 +543,67 @@ ${order.notes ? `\nNotas: ${order.notes}` : ''}
               </div>
             </div>
             <Button onClick={handleUpdateItem} className="w-full">Guardar Cambios</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAddItemOpen} onOpenChange={setIsAddItemOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Añadir Artículo al Pedido</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Producto *</Label>
+              <Select value={selectedProductId} onValueChange={setSelectedProductId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un producto" />
+                </SelectTrigger>
+                <SelectContent>
+                  {products.map((p) => (
+                    <SelectItem key={p.id} value={p.id.toString()}>
+                      {p.name} {p.category && `(${p.category})`}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="_custom">Otro (escribir)</SelectItem>
+                </SelectContent>
+              </Select>
+              {selectedProductId === '_custom' && (
+                <Input 
+                  value={customProductName} 
+                  onChange={(e) => setCustomProductName(e.target.value)} 
+                  placeholder="Nombre del producto"
+                  className="mt-2"
+                />
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label>Cantidad *</Label>
+                <Input 
+                  type="number" 
+                  min="1" 
+                  step="1" 
+                  value={quantity} 
+                  onChange={(e) => setQuantity(e.target.value)} 
+                  placeholder="1" 
+                />
+              </div>
+              <div>
+                <Label>Unidad</Label>
+                <Select value={unit} onValueChange={setUnit}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {UNITS.map((u) => (
+                      <SelectItem key={u} value={u}>{u}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <Button onClick={handleAddItemToExistingOrder} className="w-full">Añadir Artículo</Button>
           </div>
         </DialogContent>
       </Dialog>
