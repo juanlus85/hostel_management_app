@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { trpc } from '@/lib/trpc';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,7 +28,21 @@ export default function InventarioProductos() {
     inStock: '',
   });
 
+  // Ordenar productos por categoría
+  const sortedProducts = useMemo(() => {
+    return [...products].sort((a, b) => {
+      const catA = a.category || 'Sin categoría';
+      const catB = b.category || 'Sin categoría';
+      if (catA !== catB) return catA.localeCompare(catB);
+      return a.name.localeCompare(b.name);
+    });
+  }, [products]);
+
   const handleCreate = async () => {
+    if (!formData.name.trim()) {
+      toast.error('El nombre es obligatorio');
+      return;
+    }
     try {
       await createMutation.mutateAsync(formData);
       toast.success('Producto creado correctamente');
@@ -42,6 +56,10 @@ export default function InventarioProductos() {
 
   const handleUpdate = async () => {
     if (!editingProduct) return;
+    if (!formData.name.trim()) {
+      toast.error('El nombre es obligatorio');
+      return;
+    }
     try {
       await updateMutation.mutateAsync({ id: editingProduct.id, ...formData });
       toast.success('Producto actualizado correctamente');
@@ -64,39 +82,72 @@ export default function InventarioProductos() {
     }
   };
 
+  const parseCSVValue = (value: string): string => {
+    // Detectar y convertir formato europeo (1,50) a US (1.50)
+    const trimmed = value.trim().replace(/"/g, '');
+    // Si tiene coma como decimal, reemplazar por punto
+    if (/^\d+,\d+$/.test(trimmed)) {
+      return trimmed.replace(',', '.');
+    }
+    return trimmed;
+  };
+
   const handleCSVImport = async () => {
     if (!csvFile) return;
     
-    const text = await csvFile.text();
-    const lines = text.split('\n').filter(l => l.trim());
-    const headers = lines[0].split(',').map(h => h.trim());
-    
-    const products = lines.slice(1).map(line => {
-      const values = line.split(',').map(v => v.trim());
-      return {
-        handle: values[0] || '',
-        ref: values[1] || '',
-        name: values[2] || '',
-        category: values[3] || '',
-        cost: values[4] || '0',
-        price: values[5] || '0',
-        inStock: values[6] || '0',
-      };
-    }).filter(p => p.name);
-
     try {
+      const text = await csvFile.text();
+      
+      // Detectar separador (coma o punto y coma)
+      const firstLine = text.split('\n')[0];
+      const separator = firstLine.includes(';') ? ';' : ',';
+      
+      const lines = text.split('\n').filter(l => l.trim());
+      const headers = lines[0].split(separator).map(h => h.trim().replace(/"/g, ''));
+      
+      const products = lines.slice(1).map(line => {
+        // Parsear respetando comillas
+        const values: string[] = [];
+        let current = '';
+        let inQuotes = false;
+        
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === separator && !inQuotes) {
+            values.push(current.trim());
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        values.push(current.trim());
+        
+        return {
+          handle: parseCSVValue(values[0] || ''),
+          ref: parseCSVValue(values[1] || ''),
+          name: parseCSVValue(values[2] || ''),
+          category: parseCSVValue(values[3] || ''),
+          cost: parseCSVValue(values[4] || '0'),
+          price: parseCSVValue(values[5] || '0'),
+          inStock: parseCSVValue(values[6] || '0'),
+        };
+      }).filter(p => p.name);
+
       await importMutation.mutateAsync({ products });
       toast.success(`${products.length} productos importados correctamente`);
       setCsvFile(null);
       refetch();
     } catch (error) {
       toast.error('Error al importar CSV');
+      console.error(error);
     }
   };
 
   const handleExportCSV = () => {
     const headers = ['Handle', 'REF', 'Nombre', 'Categoría', 'Coste', 'Precio', 'En inventario'];
-    const rows = products.map(p => [
+    const rows = sortedProducts.map(p => [
       p.handle || '',
       p.ref || '',
       p.name,
@@ -129,9 +180,9 @@ export default function InventarioProductos() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Inventario de Productos</h1>
+        <h2 className="text-2xl font-bold">Catálogo de Productos</h2>
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleExportCSV}>
             <Download className="mr-2 h-4 w-4" />
@@ -152,6 +203,12 @@ export default function InventarioProductos() {
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
                   El CSV debe tener las columnas: Handle, REF, Nombre, Categoría, Coste, Precio, En inventario
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Soporta separadores: coma (,) o punto y coma (;)
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Decimales: acepta punto (1.50) o coma (1,50)
                 </p>
                 <p className="text-sm font-semibold text-amber-600">
                   ⚠️ IMPORTANTE: Esta acción REEMPLAZARÁ todo el inventario actual
@@ -180,14 +237,6 @@ export default function InventarioProductos() {
                 <DialogTitle>Crear Producto</DialogTitle>
               </DialogHeader>
               <div className="grid gap-4">
-                <div>
-                  <Label>Handle</Label>
-                  <Input value={formData.handle} onChange={(e) => setFormData({ ...formData, handle: e.target.value })} />
-                </div>
-                <div>
-                  <Label>REF</Label>
-                  <Input value={formData.ref} onChange={(e) => setFormData({ ...formData, ref: e.target.value })} />
-                </div>
                 <div>
                   <Label>Nombre *</Label>
                   <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
@@ -221,8 +270,6 @@ export default function InventarioProductos() {
         <table className="w-full">
           <thead className="bg-muted">
             <tr>
-              <th className="text-left p-3">Handle</th>
-              <th className="text-left p-3">REF</th>
               <th className="text-left p-3">Nombre</th>
               <th className="text-left p-3">Categoría</th>
               <th className="text-right p-3">Coste</th>
@@ -232,10 +279,8 @@ export default function InventarioProductos() {
             </tr>
           </thead>
           <tbody>
-            {products.map((product) => (
+            {sortedProducts.map((product) => (
               <tr key={product.id} className="border-t hover:bg-muted/50">
-                <td className="p-3 text-sm">{product.handle}</td>
-                <td className="p-3 text-sm">{product.ref}</td>
                 <td className="p-3 font-medium">{product.name}</td>
                 <td className="p-3 text-sm">{product.category}</td>
                 <td className="p-3 text-right">€{parseFloat(product.cost).toFixed(2)}</td>
@@ -264,14 +309,6 @@ export default function InventarioProductos() {
               <DialogTitle>Editar Producto</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4">
-              <div>
-                <Label>Handle</Label>
-                <Input value={formData.handle} onChange={(e) => setFormData({ ...formData, handle: e.target.value })} />
-              </div>
-              <div>
-                <Label>REF</Label>
-                <Input value={formData.ref} onChange={(e) => setFormData({ ...formData, ref: e.target.value })} />
-              </div>
               <div>
                 <Label>Nombre *</Label>
                 <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />

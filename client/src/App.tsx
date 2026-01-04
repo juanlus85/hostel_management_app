@@ -24,9 +24,7 @@ import ResumenSemanal from "./pages/ResumenSemanal";
 import CajasF from "./pages/CajasF";
 import CodigosAcceso from "./pages/CodigosAcceso";
 import HistoricoCajas from "./pages/HistoricoCajas";
-import InventarioProductos from "./pages/InventarioProductos";
-import PedidosGenerales from "./pages/PedidosGenerales";
-import PedidosBocatas from "./pages/PedidosBocatas";
+import PedidosUnificado from "./pages/PedidosUnificado";
 
 function Router() {
   return (
@@ -49,9 +47,7 @@ function Router() {
         <Route path="/cajas-f" component={CajasF} />
         <Route path="/codigos-acceso" component={CodigosAcceso} />
         <Route path="/historico-cajas" component={HistoricoCajas} />
-        <Route path="/inventario-productos" component={InventarioProductos} />
-        <Route path="/pedidos-generales" component={PedidosGenerales} />
-        <Route path="/pedidos-bocatas" component={PedidosBocatas} />
+        <Route path="/pedidos" component={PedidosUnificado} />
         <Route path="/404" component={NotFound} />
         <Route component={NotFound} />
       </Switch>

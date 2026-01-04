@@ -907,3 +907,32 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 ### General
 - [ ] Solo visible para administradores
 - [ ] Menú "Pedidos" en la navegación
+
+
+## Mejoras Sistema de Pedidos v84
+
+### Estructura General
+- [x] Unificar los 3 módulos en un solo menú "Pedidos" con pestañas
+- [x] Crear componente PedidosUnificado.tsx con Tabs (Inventario | Pedidos Generales | Bocatas)
+- [x] Actualizar menú lateral para mostrar solo "Pedidos" en lugar de 3 items separados
+
+### Inventario Productos
+- [x] Ocultar columnas Handle y REF de la tabla
+- [x] Ordenar productos por Categoría (alfabéticamente)
+- [x] Corregir importación CSV: detectar separadores (coma/punto y coma)
+- [x] Corregir parsing de números decimales (punto vs coma decimal)
+- [x] Validar que Coste, Precio y Stock se importen correctamente
+
+### Pedidos Generales
+- [x] Añadir desplegable de productos del Inventario al añadir item
+- [x] Añadir desplegable de unidades (unidades, packs, cajas, kg, litros)
+- [x] Cambiar inputs de cantidad a solo números enteros (no decimales)
+- [x] Modificar función copiar para NO incluir fecha estimada
+
+### Pedidos Bocatas
+- [x] Rediseñar con vista tipo Excel (tabla compacta)
+- [x] Columnas: Producto | Hay (stock actual) | Pedir (input editable) | Total
+- [x] Mostrar todos los productos en una sola tabla
+- [x] Calcular Total automáticamente: Hay + Pedir
+- [x] Eliminar formulario de cajas/unidades (solo input simple de cantidad a pedir)
+- [x] Mantener botón Copiar y Guardar

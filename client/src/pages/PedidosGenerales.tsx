@@ -5,10 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Copy, Check, X, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+
+const UNITS = ['unidades', 'packs', 'cajas', 'kg', 'litros'];
 
 export default function PedidosGenerales() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -16,11 +19,13 @@ export default function PedidosGenerales() {
   const [estimatedDate, setEstimatedDate] = useState('');
   const [notes, setNotes] = useState('');
   const [currentOrderId, setCurrentOrderId] = useState<number | null>(null);
-  const [productName, setProductName] = useState('');
+  const [selectedProductId, setSelectedProductId] = useState('');
+  const [customProductName, setCustomProductName] = useState('');
   const [quantity, setQuantity] = useState('');
-  const [unit, setUnit] = useState('');
+  const [unit, setUnit] = useState('unidades');
 
   const { data: orders = [], refetch } = trpc.ordersPedidos.list.useQuery();
+  const { data: products = [] } = trpc.inventoryProducts.list.useQuery();
   const createMutation = trpc.ordersPedidos.create.useMutation();
   const updateMutation = trpc.ordersPedidos.update.useMutation();
   const deleteMutation = trpc.ordersPedidos.delete.useMutation();
@@ -51,21 +56,30 @@ export default function PedidosGenerales() {
 
   const handleAddItem = async () => {
     if (!currentOrderId) return;
-    if (!productName.trim()) {
-      toast.error('El nombre del producto es obligatorio');
+    
+    const productName = selectedProductId === '_custom' 
+      ? customProductName.trim() 
+      : products.find(p => p.id.toString() === selectedProductId)?.name || '';
+    
+    if (!productName) {
+      toast.error('Selecciona un producto o escribe un nombre');
       return;
     }
+    
+    const qty = parseInt(quantity) || 1;
+    
     try {
       await addItemMutation.mutateAsync({
         orderId: currentOrderId,
-        productName: productName.trim(),
-        quantity: quantity || '1',
+        productName,
+        quantity: qty.toString(),
         unit: unit || undefined,
       });
       toast.success('Producto añadido');
-      setProductName('');
+      setSelectedProductId('');
+      setCustomProductName('');
       setQuantity('');
-      setUnit('');
+      setUnit('unidades');
       refetch();
     } catch (error) {
       toast.error('Error al añadir producto');
@@ -116,11 +130,10 @@ export default function PedidosGenerales() {
   const copyOrderToClipboard = (order: any) => {
     const text = `
 PEDIDO A ${order.supplier?.toUpperCase()}
-${order.expectedDelivery ? `Fecha estimada: ${order.expectedDelivery}` : ''}
 
 PRODUCTOS:
-${order.items?.filter((i: any) => parseFloat(i.quantity) > 0).map((item: any) => 
-  `- ${item.itemName}: ${item.quantity}`
+${order.items?.filter((i: any) => parseInt(i.quantity) > 0).map((item: any) => 
+  `- ${item.itemName}: ${parseInt(item.quantity)}`
 ).join('\n')}
 
 ${order.notes ? `\nNotas: ${order.notes}` : ''}
@@ -137,9 +150,9 @@ ${order.notes ? `\nNotas: ${order.notes}` : ''}
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Pedidos Generales</h1>
+        <h2 className="text-2xl font-bold">Pedidos a Proveedores</h2>
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
             <Button>
@@ -171,19 +184,55 @@ ${order.notes ? `\nNotas: ${order.notes}` : ''}
               {currentOrderId && (
                 <div className="border-t pt-4 space-y-4">
                   <h3 className="font-semibold">Añadir productos al pedido</h3>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="col-span-2">
-                      <Label>Producto *</Label>
-                      <Input value={productName} onChange={(e) => setProductName(e.target.value)} placeholder="Nombre del producto" />
+                  <div>
+                    <Label>Producto *</Label>
+                    <Select value={selectedProductId} onValueChange={setSelectedProductId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona un producto" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {products.map((p) => (
+                          <SelectItem key={p.id} value={p.id.toString()}>
+                            {p.name} {p.category && `(${p.category})`}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="_custom">Otro (escribir)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {selectedProductId === '_custom' && (
+                      <Input 
+                        value={customProductName} 
+                        onChange={(e) => setCustomProductName(e.target.value)} 
+                        placeholder="Nombre del producto"
+                        className="mt-2"
+                      />
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label>Cantidad *</Label>
+                      <Input 
+                        type="number" 
+                        min="1" 
+                        step="1" 
+                        value={quantity} 
+                        onChange={(e) => setQuantity(e.target.value)} 
+                        placeholder="1" 
+                      />
                     </div>
                     <div>
-                      <Label>Cantidad</Label>
-                      <Input value={quantity} onChange={(e) => setQuantity(e.target.value)} placeholder="1" />
+                      <Label>Unidad</Label>
+                      <Select value={unit} onValueChange={setUnit}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {UNITS.map((u) => (
+                            <SelectItem key={u} value={u}>{u}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                  </div>
-                  <div>
-                    <Label>Unidad (opcional)</Label>
-                    <Input value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="cajas, kg, unidades..." />
                   </div>
                   <Button onClick={handleAddItem} variant="outline" className="w-full">Añadir Producto</Button>
                   <Button onClick={() => { setIsCreateOpen(false); setCurrentOrderId(null); }} className="w-full">Finalizar</Button>
@@ -236,11 +285,11 @@ ${order.notes ? `\nNotas: ${order.notes}` : ''}
             <CardContent>
               {order.items && order.items.length > 0 ? (
                 <div className="space-y-2">
-                  {order.items.filter((i: any) => parseFloat(i.quantity) > 0).map((item: any) => (
+                  {order.items.filter((i: any) => parseInt(i.quantity) > 0).map((item: any) => (
                     <div key={item.id} className="flex items-center justify-between py-2 border-b last:border-0">
                       <div>
                         <span className="font-medium">{item.itemName}</span>
-                        <span className="text-muted-foreground ml-2">x{item.quantity}</span>
+                        <span className="text-muted-foreground ml-2">x{parseInt(item.quantity)}</span>
                       </div>
                       <Button size="sm" variant="ghost" onClick={() => handleDeleteItem(item.id)}>
                         <X className="h-4 w-4 text-destructive" />
