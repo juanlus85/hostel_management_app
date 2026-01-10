@@ -51,8 +51,14 @@ export default function ExportarPolicia() {
         return;
       }
 
+      // Validar código de municipio
+      if (!settings.municipioCode || settings.municipioCode.length !== 5) {
+        alert("Error: Debe configurar el código de municipio INE (5 dígitos) en Configuración");
+        return;
+      }
+
       // Generate XML
-      const xml = generatePoliceXML(guestsToExport, settings.policeCode);
+      const xml = generatePoliceXML(guestsToExport, settings.policeCode, settings.municipioCode);
       
       // Download file
       const blob = new Blob([xml], { type: "application/xml;charset=utf-8" });
@@ -77,7 +83,7 @@ export default function ExportarPolicia() {
     }
   };
 
-  const generatePoliceXML = (guests: any[], policeCode: string) => {
+  const generatePoliceXML = (guests: any[], policeCode: string, municipioCode: string) => {
     const now = new Date();
     const timezone = '+01:00'; // Timezone de España
     
@@ -187,8 +193,8 @@ export default function ExportarPolicia() {
       
       // Código de municipio o nombre según el país
       if (guest.country === 'ESP') {
-        // Para España, usar código de municipio (5 dígitos)
-        xml += `          <codigoMunicipio>${guest.municipioCode || '00000'}</codigoMunicipio>\n`;
+        // Para España, usar código de municipio del establecimiento (5 dígitos)
+        xml += `          <codigoMunicipio>${municipioCode}</codigoMunicipio>\n`;
       } else {
         // Para otros países, usar nombre de municipio
         xml += `          <nombreMunicipio>${escapeXml(guest.city || 'No especificado')}</nombreMunicipio>\n`;

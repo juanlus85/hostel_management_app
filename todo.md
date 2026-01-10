@@ -1332,3 +1332,10 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [ ] Check-in Online: Interfaz pública accesible sin login
 - [ ] Backend: Endpoints para ambos tipos de check-in
 - [ ] Frontend: Interfaces públicas y privadas para gestión
+
+
+## Bug Código Municipio XML (v44) - COMPLETADO
+- [x] Exportar Policía: XML rechazado por código de municipio incorrecto [00000]
+- [x] Agregar campo "Código Municipio INE" en configuración del hostel
+- [x] Actualizar generación XML para usar código de municipio real del establecimiento
+- [x] Validar que el código tenga 5 dígitos antes de generar XML

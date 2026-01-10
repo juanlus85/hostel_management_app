@@ -28,6 +28,7 @@ export default function ConfiguracionCheckin() {
     hostelEmail: "",
     hostelRta: "",
     policeCode: "",
+    municipioCode: "",
     wifiPassword: "",
     checkoutTime: "",
     defaultEntranceCode: "",
@@ -49,6 +50,7 @@ export default function ConfiguracionCheckin() {
         hostelEmail: settings.hostelEmail || "",
         hostelRta: settings.hostelRta || "",
         policeCode: settings.policeCode || "",
+        municipioCode: settings.municipioCode || "",
         wifiPassword: settings.wifiPassword || "",
         checkoutTime: settings.checkoutTime || "",
         defaultEntranceCode: settings.defaultEntranceCode || "",
@@ -167,6 +169,21 @@ export default function ConfiguracionCheckin() {
                 />
                 <p className="text-xs text-muted-foreground mt-1">
                   Para exportación XML Sistema Hospedajes
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="municipioCode">Código Municipio INE *</Label>
+                <Input
+                  id="municipioCode"
+                  value={formData.municipioCode}
+                  onChange={(e) => setFormData({ ...formData, municipioCode: e.target.value })}
+                  placeholder="28079"
+                  maxLength={5}
+                  required
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  5 dígitos del municipio (ej: 28079 = Madrid)
                 </p>
               </div>
 

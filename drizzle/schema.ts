@@ -692,6 +692,7 @@ export const hostelSettingsCheckin = mysqlTable("hostel_settings_checkin", {
   hostelWebsite: varchar("hostelWebsite", { length: 255 }),
   hostelRta: varchar("hostelRta", { length: 100 }), // Número RTA
   policeCode: varchar("policeCode", { length: 100 }), // Código establecimiento para Sistema Hospedajes
+  municipioCode: varchar("municipioCode", { length: 5 }), // Código INE del municipio (5 dígitos)
   hostelLogo: text("hostelLogo"), // Base64 o URL del logo
   
   // Información adicional
