@@ -28,7 +28,9 @@ import {
   weeklyAvailabilitySources, InsertWeeklyAvailabilitySource, WeeklyAvailabilitySource,
   weeklyAvailabilityRecords, InsertWeeklyAvailabilityRecord, WeeklyAvailabilityRecord,
   appSettings, InsertAppSetting, AppSetting,
-  historicalCashData, InsertHistoricalCashData, HistoricalCashData
+  historicalCashData, InsertHistoricalCashData, HistoricalCashData,
+  guests, InsertGuest, Guest,
+  hostelSettingsCheckin, InsertHostelSettingCheckin, HostelSettingCheckin
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -1979,4 +1981,119 @@ export async function createChefOrder(data: any) {
   
   const result = await db.insert(chefSandwichOrders).values(data);
   return result[0].insertId;
+}
+
+// ==================== GUESTS (Check-in) ====================
+export async function getAllGuests() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(guests).orderBy(guests.createdAt);
+}
+
+export async function getGuestById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const { eq } = await import('drizzle-orm');
+  const result = await db.select().from(guests).where(eq(guests.id, id)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function getGuestByToken(token: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const { eq } = await import('drizzle-orm');
+  const result = await db.select().from(guests).where(eq(guests.token, token)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function searchGuests(filters: {
+  search?: string;
+  startDate?: string;
+  endDate?: string;
+  status?: string;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+  const { and, or, like, gte, lte, eq } = await import('drizzle-orm');
+  
+  const conditions = [];
+  
+  if (filters.search) {
+    conditions.push(
+      or(
+        like(guests.firstName, `%${filters.search}%`),
+        like(guests.lastName, `%${filters.search}%`),
+        like(guests.documentNumber, `%${filters.search}%`),
+        like(guests.reservationNumber, `%${filters.search}%`),
+        like(guests.email, `%${filters.search}%`)
+      )
+    );
+  }
+  
+  if (filters.startDate) {
+    conditions.push(gte(guests.checkInDate, filters.startDate));
+  }
+  
+  if (filters.endDate) {
+    conditions.push(lte(guests.checkInDate, filters.endDate));
+  }
+  
+  if (filters.status) {
+    conditions.push(eq(guests.status, filters.status as any));
+  }
+  
+  if (conditions.length === 0) {
+    return db.select().from(guests).orderBy(guests.createdAt);
+  }
+  
+  return db.select().from(guests).where(and(...conditions)).orderBy(guests.createdAt);
+}
+
+export async function createGuest(data: InsertGuest) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  
+  const result = await db.insert(guests).values(data);
+  return result[0].insertId;
+}
+
+export async function updateGuest(id: number, data: Partial<InsertGuest>) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const { eq } = await import('drizzle-orm');
+  
+  await db.update(guests).set(data).where(eq(guests.id, id));
+}
+
+export async function deleteGuest(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const { eq } = await import('drizzle-orm');
+  
+  await db.delete(guests).where(eq(guests.id, id));
+}
+
+// ==================== HOSTEL SETTINGS (Check-in) ====================
+export async function getHostelSettings() {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const result = await db.select().from(hostelSettingsCheckin).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function upsertHostelSettings(data: Partial<InsertHostelSettingCheckin>) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  
+  const existing = await getHostelSettings();
+  
+  if (existing) {
+    const { eq } = await import('drizzle-orm');
+    await db.update(hostelSettingsCheckin).set(data).where(eq(hostelSettingsCheckin.id, existing.id));
+    return existing.id;
+  } else {
+    const result = await db.insert(hostelSettingsCheckin).values(data as InsertHostelSettingCheckin);
+    return result[0].insertId;
+  }
 }

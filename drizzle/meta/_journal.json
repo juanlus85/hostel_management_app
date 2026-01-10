@@ -211,6 +211,13 @@
       "when": 1767526682880,
       "tag": "0029_dazzling_starbolt",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "5",
+      "when": 1768007350717,
+      "tag": "0030_stormy_nighthawk",
+      "breakpoints": true
     }
   ]
 }

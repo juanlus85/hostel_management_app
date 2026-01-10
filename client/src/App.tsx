@@ -25,6 +25,7 @@ import CajasF from "./pages/CajasF";
 import CodigosAcceso from "./pages/CodigosAcceso";
 import HistoricoCajas from "./pages/HistoricoCajas";
 import PedidosUnificado from "./pages/PedidosUnificado";
+import CheckinUnificado from "./pages/CheckinUnificado";
 
 function Router() {
   return (
@@ -48,6 +49,7 @@ function Router() {
         <Route path="/codigos-acceso" component={CodigosAcceso} />
         <Route path="/historico-cajas" component={HistoricoCajas} />
         <Route path="/pedidos" component={PedidosUnificado} />
+        <Route path="/checkin" component={CheckinUnificado} />
         <Route path="/404" component={NotFound} />
         <Route component={NotFound} />
       </Switch>

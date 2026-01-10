@@ -66,6 +66,7 @@ const menuItems = [
   { icon: Receipt, label: "Facturas", path: "/facturas" },
   { icon: DollarSign, label: "Gastos/Ingresos", path: "/otros-gastos", adminOnly: true },
   { icon: ShoppingCart, label: "Pedidos", path: "/pedidos", adminOnly: true },
+  { icon: ClipboardList, label: "Check-in", path: "/checkin", adminOnly: true },
   { icon: Package, label: "Inventario", path: "/inventario" },
   { icon: AlertTriangle, label: "Incidencias", path: "/incidencias" },
   { icon: CheckSquare, label: "Tareas", path: "/tareas" },

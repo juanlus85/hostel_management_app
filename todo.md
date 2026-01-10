@@ -988,3 +988,100 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Permitir añadir nuevos artículos a pedidos ya creados
 - [x] Botón "Añadir artículo" en cada pedido existente
 - [x] Permitir volver a estado "Pendiente de pedir" desde cualquier estado
+
+
+## Sistema de Check-in de Huéspedes v88 (MVP Completado)
+
+### Base de Datos
+- [x] Crear tabla guests con todos los campos necesarios
+- [x] Crear tabla hostel_settings_checkin para configuración
+- [x] Reutilizar tabla room_codes existente
+- [x] Crear índices para búsquedas rápidas
+
+### Backend (tRPC)
+- [x] Endpoints CRUD para guests
+- [x] Endpoint para check-in presencial
+- [ ] Endpoint para check-in online (público) - Próxima fase
+- [ ] Endpoint para generar link personalizado - Próxima fase
+- [x] Endpoint para exportación XML policía
+- [ ] Endpoint para generación de PDF - Próxima fase
+- [x] Endpoints para configuración del sistema
+- [ ] Endpoint para envío de emails - Próxima fase
+
+### Frontend - Componente Principal
+- [x] Crear CheckinUnificado.tsx con pestañas
+- [x] Pestañas: Check-in | Huéspedes | Anticipado | Online | Códigos | Exportar | Config
+
+### Pestaña Check-in Presencial
+- [x] Formulario de huéspedes (múltiples)
+- [x] Datos de reserva (fechas, habitación, códigos)
+- [x] Información de pago
+- [x] Firma digital con canvas
+- [x] Aceptación de términos y condiciones
+- [x] Validación completa de campos
+
+### Pestaña Huéspedes
+- [x] Búsqueda por nombre, documento, reserva, fechas
+- [x] Tarjetas de huéspedes con estados
+- [ ] Ver detalles completos - Próxima fase
+- [ ] Editar huésped existente - Próxima fase
+- [ ] Descargar PDF individual - Próxima fase
+- [x] Eliminar huésped
+
+### Pestaña Check-in Anticipado
+- [ ] Formulario para generar link personalizado (SIN códigos)
+- [ ] Campos: reserva, nombre, email, habitación, fecha llegada
+- [ ] Selección de idioma (ES/EN)
+- [ ] Generar link único con token
+- [ ] Copiar link al portapapeles
+- [ ] Enviar por email
+- [ ] Huésped rellena formulario pero NO recibe códigos
+
+### Pestaña Check-in Online
+- [ ] Formulario para generar link personalizado (CON códigos)
+- [ ] Campos: reserva, nombre, email, habitación, códigos de acceso
+- [ ] Selección de idioma (ES/EN)
+- [ ] Generar link único con token
+- [ ] Copiar link al portapapeles
+- [ ] Enviar por email
+- [ ] Huésped rellena formulario y recibe códigos automáticamente
+
+### Pestaña Códigos de Acceso
+- [ ] Reutilizar componente existente de room_codes
+- [ ] Integración con asignación automática
+
+### Pestaña Exportar Policía
+- [x] Selector de rango de fechas
+- [x] Lista de huéspedes a exportar
+- [x] Validación de datos obligatorios
+- [x] Generación de XML según Real Decreto 933/2021
+- [x] Descarga del archivo XML
+
+### Pestaña Configuración
+- [x] Datos del hostel (nombre, dirección, RTA)
+- [x] Código establecimiento policía
+- [x] Términos y condiciones (ES/EN)
+- [ ] Política de privacidad (ES/EN) - Próxima fase
+- [ ] Mensajes de bienvenida (ES/EN) - Próxima fase
+- [x] Configuración SMTP
+- [ ] Tipos de habitación - Próxima fase
+
+### Ruta Pública
+- [ ] Crear ruta /public/checkin/:token
+- [ ] Formulario público sin autenticación
+- [ ] Cargar datos pre-rellenados desde token
+- [ ] Permitir completar check-in
+- [ ] Mostrar información de acceso al finalizar
+- [ ] Enviar email de confirmación
+
+### Componentes Auxiliares
+- [ ] SignaturePad para firma digital
+- [ ] GuestFormFields para formulario de huésped
+- [ ] GuestCard para tarjetas de huéspedes
+- [ ] EditGuestModal para edición
+
+### Funcionalidades Adicionales
+- [ ] Generación de PDF con todos los datos y firma
+- [ ] Sistema de notificaciones para check-ins online
+- [ ] Dashboard de estadísticas de check-ins
+- [ ] Integración con sistema de reservas existente
