@@ -78,101 +78,147 @@ export default function ExportarPolicia() {
   };
 
   const generatePoliceXML = (guests: any[], policeCode: string) => {
-    const now = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const timezone = '+01:00'; // Timezone de España
     
     let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
-    xml += '<PARTES_VIAJEROS>\n';
-    xml += `  <CODIGO_ESTABLECIMIENTO>${policeCode}</CODIGO_ESTABLECIMIENTO>\n`;
-    xml += `  <FECHA_GENERACION>${now}</FECHA_GENERACION>\n`;
-    xml += '  <VIAJEROS>\n';
+    xml += '<ns2:peticion xmlns:ns2="http://www.neg.hospedajes.mir.es/altaParteHospedaje">\n';
+    xml += '  <solicitud>\n';
+    xml += `    <codigoEstablecimiento>${escapeXml(policeCode)}</codigoEstablecimiento>\n`;
 
     guests.forEach((guest, index) => {
       if (!guest.firstName || !guest.lastName || !guest.documentNumber) {
         return; // Skip incomplete guests
       }
 
-      xml += '    <VIAJERO>\n';
-      xml += `      <ORDEN>${index + 1}</ORDEN>\n`;
+      xml += '    <comunicacion>\n';
+      xml += '      <contrato>\n';
+      xml += `        <referencia>${escapeXml(guest.reservationNumber || 'SIN-REF')}</referencia>\n`;
       
-      // Datos personales
-      xml += `      <NOMBRE>${escapeXml(guest.firstName)}</NOMBRE>\n`;
-      xml += `      <PRIMER_APELLIDO>${escapeXml(guest.lastName.split(' ')[0] || guest.lastName)}</PRIMER_APELLIDO>\n`;
-      if (guest.lastName.split(' ').length > 1) {
-        xml += `      <SEGUNDO_APELLIDO>${escapeXml(guest.lastName.split(' ').slice(1).join(' '))}</SEGUNDO_APELLIDO>\n`;
+      // Fechas del contrato
+      const checkInDate = guest.checkInDate ? new Date(guest.checkInDate) : now;
+      const checkOutDate = guest.checkOutDate ? new Date(guest.checkOutDate) : new Date(checkInDate.getTime() + 86400000);
+      
+      xml += `        <fechaContrato>${checkInDate.toISOString().split('T')[0]}${timezone}</fechaContrato>\n`;
+      xml += `        <fechaEntrada>${checkInDate.toISOString().replace('Z', timezone)}</fechaEntrada>\n`;
+      xml += `        <fechaSalida>${checkOutDate.toISOString().replace('Z', timezone)}</fechaSalida>\n`;
+      xml += `        <numPersonas>1</numPersonas>\n`;
+      xml += `        <numHabitaciones>1</numHabitaciones>\n`;
+      xml += `        <internet>${guest.hasInternet !== false ? 'true' : 'false'}</internet>\n`;
+      
+      // Información de pago
+      xml += '        <pago>\n';
+      
+      // Mapear tipo de pago al formato oficial
+      let tipoPago = 'EFECT';
+      if (guest.paymentType) {
+        const paymentMap: Record<string, string> = {
+          'Efectivo': 'EFECT',
+          'Tarjeta': 'TARJT',
+          'Transferencia': 'TRANS',
+          'Plataforma': 'PLATF',
+          'Móvil': 'MOVIL',
+          'Destino': 'DESTI',
+        };
+        tipoPago = paymentMap[guest.paymentType] || 'OTRO';
+      }
+      
+      xml += `          <tipoPago>${tipoPago}</tipoPago>\n`;
+      xml += `          <fechaPago>${checkInDate.toISOString().split('T')[0]}${timezone}</fechaPago>\n`;
+      xml += `          <medioPago>${escapeXml(guest.paymentMethod || 'No especificado')}</medioPago>\n`;
+      xml += `          <titular>${escapeXml(guest.paymentHolder || guest.firstName + ' ' + guest.lastName)}</titular>\n`;
+      
+      // Caducidad de tarjeta (solo si es pago con tarjeta)
+      if (tipoPago === 'TARJT') {
+        const futureDate = new Date();
+        futureDate.setFullYear(futureDate.getFullYear() + 2);
+        const month = String(futureDate.getMonth() + 1).padStart(2, '0');
+        const year = futureDate.getFullYear();
+        xml += `          <caducidadTarjeta>${month}/${year}</caducidadTarjeta>\n`;
+      }
+      
+      xml += '        </pago>\n';
+      xml += '      </contrato>\n';
+      
+      // Datos de la persona
+      xml += '      <persona>\n';
+      xml += '        <rol>VI</rol>\n';
+      xml += `        <nombre>${escapeXml(guest.firstName)}</nombre>\n`;
+      
+      // Dividir apellidos
+      const apellidos = guest.lastName.trim().split(/\s+/);
+      xml += `        <apellido1>${escapeXml(apellidos[0] || '')}</apellido1>\n`;
+      if (apellidos.length > 1) {
+        xml += `        <apellido2>${escapeXml(apellidos.slice(1).join(' '))}</apellido2>\n`;
       }
       
       // Documento
       const docType = guest.documentType === 'DNI' ? 'NIF' : guest.documentType || 'PAS';
-      xml += `      <TIPO_DOCUMENTO>${docType}</TIPO_DOCUMENTO>\n`;
-      xml += `      <NUMERO_DOCUMENTO>${escapeXml(guest.documentNumber)}</NUMERO_DOCUMENTO>\n`;
+      xml += `        <tipoDocumento>${docType}</tipoDocumento>\n`;
+      xml += `        <numeroDocumento>${escapeXml(guest.documentNumber)}</numeroDocumento>\n`;
       
-      if (guest.supportNumber && docType === 'NIF') {
-        xml += `      <SOPORTE_DOCUMENTO>${escapeXml(guest.supportNumber)}</SOPORTE_DOCUMENTO>\n`;
+      if (guest.supportNumber) {
+        xml += `        <soporteDocumento>${escapeXml(guest.supportNumber)}</soporteDocumento>\n`;
       }
       
-      // Datos demográficos
+      // Fecha de nacimiento
       if (guest.birthDate) {
-        xml += `      <FECHA_NACIMIENTO>${guest.birthDate}</FECHA_NACIMIENTO>\n`;
+        xml += `        <fechaNacimiento>${guest.birthDate}${timezone}</fechaNacimiento>\n`;
       }
       
+      // Nacionalidad (código ISO alfa-3)
       if (guest.nationality) {
-        xml += `      <NACIONALIDAD>${escapeXml(guest.nationality)}</NACIONALIDAD>\n`;
+        xml += `        <nacionalidad>${escapeXml(guest.nationality)}</nacionalidad>\n`;
       }
       
+      // Sexo
       if (guest.gender) {
         const genderCode = guest.gender === 'male' ? 'H' : guest.gender === 'female' ? 'M' : 'O';
-        xml += `      <SEXO>${genderCode}</SEXO>\n`;
-      }
-      
-      // Fechas de estancia
-      if (guest.checkInDate) {
-        xml += `      <FECHA_ENTRADA>${guest.checkInDate}</FECHA_ENTRADA>\n`;
-      }
-      
-      if (guest.checkOutDate) {
-        xml += `      <FECHA_SALIDA>${guest.checkOutDate}</FECHA_SALIDA>\n`;
+        xml += `        <sexo>${genderCode}</sexo>\n`;
       }
       
       // Dirección
-      if (guest.street) {
-        xml += `      <DIRECCION>${escapeXml(guest.street)}</DIRECCION>\n`;
+      xml += '        <direccion>\n';
+      xml += `          <direccion>${escapeXml(guest.street || 'No especificada')}</direccion>\n`;
+      
+      if (guest.addressExtra) {
+        xml += `          <direccionComplementaria>${escapeXml(guest.addressExtra)}</direccionComplementaria>\n`;
       }
       
-      if (guest.city) {
-        xml += `      <MUNICIPIO>${escapeXml(guest.city)}</MUNICIPIO>\n`;
-      }
-      
-      if (guest.province) {
-        xml += `      <PROVINCIA>${escapeXml(guest.province)}</PROVINCIA>\n`;
+      // Código de municipio o nombre según el país
+      if (guest.country === 'ESP') {
+        // Para España, usar código de municipio (5 dígitos)
+        xml += `          <codigoMunicipio>${guest.municipioCode || '00000'}</codigoMunicipio>\n`;
+      } else {
+        // Para otros países, usar nombre de municipio
+        xml += `          <nombreMunicipio>${escapeXml(guest.city || 'No especificado')}</nombreMunicipio>\n`;
       }
       
       if (guest.postalCode) {
-        xml += `      <CODIGO_POSTAL>${escapeXml(guest.postalCode)}</CODIGO_POSTAL>\n`;
+        xml += `          <codigoPostal>${escapeXml(guest.postalCode)}</codigoPostal>\n`;
       }
       
-      if (guest.country) {
-        xml += `      <PAIS>${escapeXml(guest.country)}</PAIS>\n`;
-      }
+      xml += `          <pais>${escapeXml(guest.country || 'ESP')}</pais>\n`;
+      xml += '        </direccion>\n';
       
       // Datos de contacto
       if (guest.phone) {
-        xml += `      <TELEFONO>${escapeXml(guest.phone)}</TELEFONO>\n`;
+        xml += `        <telefono>${escapeXml(guest.phone)}</telefono>\n`;
       }
       
       if (guest.email) {
-        xml += `      <EMAIL>${escapeXml(guest.email)}</EMAIL>\n`;
+        xml += `        <correo>${escapeXml(guest.email)}</correo>\n`;
       }
       
-      // Parentesco (si aplica)
-      if (guest.relationship) {
-        xml += `      <PARENTESCO>${escapeXml(guest.relationship)}</PARENTESCO>\n`;
-      }
+      // Parentesco (PM = Persona Mayor, por defecto)
+      xml += `        <parentesco>${guest.relationship || 'PM'}</parentesco>\n`;
       
-      xml += '    </VIAJERO>\n';
+      xml += '      </persona>\n';
+      xml += '    </comunicacion>\n';
     });
 
-    xml += '  </VIAJEROS>\n';
-    xml += '</PARTES_VIAJEROS>\n';
+    xml += '  </solicitud>\n';
+    xml += '</ns2:peticion>\n';
 
     return xml;
   };

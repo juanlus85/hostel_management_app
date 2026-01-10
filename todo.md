@@ -1314,3 +1314,10 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Incluir declaración de aceptación de condiciones antes de la firma en el PDF
 - [x] Mostrar checkbox marcado indicando que el huésped aceptó las condiciones
 - [x] Incluir fecha y hora del check-in en la declaración
+
+
+## Bug Formato XML (v42) - COMPLETADO
+- [x] Exportar Policía: XML generado no es compatible con sistema oficial del Ministerio del Interior
+- [x] Error: "Cannot find the declaration of element 'PARTES_VIAJEROS'" - Resuelto
+- [x] Revisar archivos de referencia con implementación funcional - Plantilla oficial analizada
+- [x] Corregir estructura XML según esquema XSD oficial - Formato ns2:peticion implementado
