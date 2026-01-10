@@ -21,6 +21,7 @@ interface GuestData {
   lastName: string;
   documentNumber: string;
   documentType: string;
+  supportNumber: string; // Número de soporte (solo para DNI)
   gender: string;
   nationality: string;
   nationalityOther: string; // Campo libre cuando selecciona "Otro"
@@ -36,6 +37,7 @@ export default function CheckinPresencial() {
       lastName: "",
       documentNumber: "",
       documentType: "PAS",
+      supportNumber: "",
       gender: "male",
       nationality: "ESP",
       nationalityOther: "",
@@ -67,15 +69,16 @@ export default function CheckinPresencial() {
     numberOfRooms: 1,
     hasInternet: true,
     accommodationType: "S.A. (Solo Aloj.)",
-    reservationOrigin: "Walk In",
+    reservationOrigin: "Booking.com",
   });
 
-  // Auto-calcular fecha de salida (+1 día)
+  // Auto-calcular fecha de salida (+1 día a las 11:00)
   useEffect(() => {
     if (reservationData.checkInDate) {
       const checkIn = new Date(reservationData.checkInDate);
       const checkOut = new Date(checkIn);
       checkOut.setDate(checkOut.getDate() + 1);
+      checkOut.setHours(11, 0, 0, 0); // 11:00 AM
       setReservationData(prev => ({
         ...prev,
         checkOutDate: checkOut.toISOString().slice(0, 16)
@@ -85,13 +88,33 @@ export default function CheckinPresencial() {
 
   // Información de pago (OBLIGATORIA según normativa)
   const [paymentData, setPaymentData] = useState({
-    paymentType: "Efectivo",
+    paymentType: "Transferencia",
     paymentDate: new Date().toISOString().split("T")[0],
     amountPaid: "",
     amountPending: "",
     paymentHolder: "",
-    paymentMethod: "", // Visa, Mastercard, etc.
+    paymentMethod: "Transferencia Booking",
   });
+
+  // Auto-rellenar titular del pago con nombre del huésped principal
+  useEffect(() => {
+    if (guests[0]?.firstName && guests[0]?.lastName) {
+      setPaymentData(prev => ({
+        ...prev,
+        paymentHolder: `${guests[0].firstName} ${guests[0].lastName}`
+      }));
+    }
+  }, [guests]);
+
+  // Auto-actualizar fecha de pago con fecha de entrada
+  useEffect(() => {
+    if (reservationData.checkInDate) {
+      setPaymentData(prev => ({
+        ...prev,
+        paymentDate: reservationData.checkInDate.split("T")[0]
+      }));
+    }
+  }, [reservationData.checkInDate]);
 
   // Firma digital
   const [signature, setSignature] = useState("");
@@ -148,8 +171,14 @@ export default function CheckinPresencial() {
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const x = "touches" in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
-    const y = "touches" in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
+    
+    const x = (clientX - rect.left) * scaleX;
+    const y = (clientY - rect.top) * scaleY;
 
     const ctx = canvas.getContext("2d");
     if (ctx) {
@@ -165,8 +194,14 @@ export default function CheckinPresencial() {
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const x = "touches" in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
-    const y = "touches" in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
+    
+    const x = (clientX - rect.left) * scaleX;
+    const y = (clientY - rect.top) * scaleY;
 
     const ctx = canvas.getContext("2d");
     if (ctx) {
@@ -207,6 +242,7 @@ export default function CheckinPresencial() {
         lastName: "",
         documentNumber: "",
         documentType: "PAS",
+        supportNumber: "",
         gender: "male",
         nationality: "ESP",
         nationalityOther: "",
@@ -360,6 +396,7 @@ export default function CheckinPresencial() {
           lastName: "",
           documentNumber: "",
           documentType: "PAS",
+          supportNumber: "",
           gender: "male",
           nationality: "ESP",
           nationalityOther: "",
@@ -387,7 +424,7 @@ export default function CheckinPresencial() {
         numberOfRooms: 1,
         hasInternet: true,
         accommodationType: "S.A. (Solo Aloj.)",
-        reservationOrigin: "Walk In",
+        reservationOrigin: "Booking.com",
       });
       setPaymentData({
         paymentType: "EFECT",
@@ -533,96 +570,6 @@ export default function CheckinPresencial() {
             />
             <Label htmlFor="hasInternet">Internet</Label>
           </div>
-        </div>
-      </Card>
-
-      {/* Información de Pago (OBLIGATORIA) */}
-      <Card className="p-6">
-        <h2 className="text-xl font-bold mb-4">Información de Pago *</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="paymentType">Tipo de Pago *</Label>
-            <Select
-              value={paymentData.paymentType}
-              onValueChange={(value) => setPaymentData({ ...paymentData, paymentType: value })}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Efectivo">Efectivo</SelectItem>
-                <SelectItem value="Tarjeta">Tarjeta</SelectItem>
-                <SelectItem value="Transferencia">Transferencia</SelectItem>
-                <SelectItem value="PayPal">PayPal</SelectItem>
-                <SelectItem value="Bizum">Bizum</SelectItem>
-                <SelectItem value="Otro">Otro</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label htmlFor="paymentDate">Fecha de Pago *</Label>
-            <Input
-              id="paymentDate"
-              type="date"
-              value={paymentData.paymentDate}
-              onChange={(e) => setPaymentData({ ...paymentData, paymentDate: e.target.value })}
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="amountPaid">Cantidad Abonada (€)</Label>
-            <Input
-              id="amountPaid"
-              type="number"
-              step="0.01"
-              value={paymentData.amountPaid}
-              onChange={(e) => setPaymentData({ ...paymentData, amountPaid: e.target.value })}
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="amountPending">Cantidad Pendiente (€)</Label>
-            <Input
-              id="amountPending"
-              type="number"
-              step="0.01"
-              value={paymentData.amountPending}
-              onChange={(e) => setPaymentData({ ...paymentData, amountPending: e.target.value })}
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="paymentHolder">Titular del Pago</Label>
-            <Input
-              id="paymentHolder"
-              value={paymentData.paymentHolder}
-              onChange={(e) => setPaymentData({ ...paymentData, paymentHolder: e.target.value })}
-              placeholder="Nombre y apellidos"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="paymentMethod">Medio de Pago</Label>
-            <Input
-              id="paymentMethod"
-              value={paymentData.paymentMethod}
-              onChange={(e) => setPaymentData({ ...paymentData, paymentMethod: e.target.value })}
-              placeholder="Visa, Mastercard, PayPal, etc."
-            />
-          </div>
-
-          {paymentData.paymentType === "Tarjeta" && (
-            <div>
-              <Label htmlFor="cardExpiry">Fecha de Caducidad Tarjeta</Label>
-              <Input
-                id="cardExpiry"
-                value={paymentData.paymentMethod}
-                onChange={(e) => setPaymentData({ ...paymentData, paymentMethod: e.target.value })}
-                placeholder="MM/AAAA"
-              />
-            </div>
-          )}
         </div>
       </Card>
 
@@ -803,6 +750,18 @@ export default function CheckinPresencial() {
                 />
               </div>
 
+              {guest.documentType === "NIF" && (
+                <div>
+                  <Label htmlFor={`supportNumber-${index}`}>Número de Soporte</Label>
+                  <Input
+                    id={`supportNumber-${index}`}
+                    value={guest.supportNumber}
+                    onChange={(e) => updateGuest(index, "supportNumber", e.target.value)}
+                    placeholder="Número de soporte del DNI"
+                  />
+                </div>
+              )}
+
               <div>
                 <Label htmlFor={`gender-${index}`}>Sexo *</Label>
                 <Select
@@ -860,6 +819,96 @@ export default function CheckinPresencial() {
           Añadir Huésped ({guests.length}/3)
         </Button>
       )}
+
+      {/* Información de Pago (OBLIGATORIA) */}
+      <Card className="p-6">
+        <h2 className="text-xl font-bold mb-4">Información de Pago *</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="paymentType">Tipo de Pago *</Label>
+            <Select
+              value={paymentData.paymentType}
+              onValueChange={(value) => setPaymentData({ ...paymentData, paymentType: value })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Efectivo">Efectivo</SelectItem>
+                <SelectItem value="Tarjeta">Tarjeta</SelectItem>
+                <SelectItem value="Transferencia">Transferencia</SelectItem>
+                <SelectItem value="PayPal">PayPal</SelectItem>
+                <SelectItem value="Bizum">Bizum</SelectItem>
+                <SelectItem value="Otro">Otro</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="paymentDate">Fecha de Pago *</Label>
+            <Input
+              id="paymentDate"
+              type="date"
+              value={paymentData.paymentDate}
+              onChange={(e) => setPaymentData({ ...paymentData, paymentDate: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="amountPaid">Cantidad Abonada (€)</Label>
+            <Input
+              id="amountPaid"
+              type="number"
+              step="0.01"
+              value={paymentData.amountPaid}
+              onChange={(e) => setPaymentData({ ...paymentData, amountPaid: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="amountPending">Cantidad Pendiente (€)</Label>
+            <Input
+              id="amountPending"
+              type="number"
+              step="0.01"
+              value={paymentData.amountPending}
+              onChange={(e) => setPaymentData({ ...paymentData, amountPending: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="paymentHolder">Titular del Pago</Label>
+            <Input
+              id="paymentHolder"
+              value={paymentData.paymentHolder}
+              onChange={(e) => setPaymentData({ ...paymentData, paymentHolder: e.target.value })}
+              placeholder="Nombre y apellidos"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="paymentMethod">Medio de Pago</Label>
+            <Input
+              id="paymentMethod"
+              value={paymentData.paymentMethod}
+              onChange={(e) => setPaymentData({ ...paymentData, paymentMethod: e.target.value })}
+              placeholder="Visa, Mastercard, PayPal, etc."
+            />
+          </div>
+
+          {paymentData.paymentType === "Tarjeta" && (
+            <div>
+              <Label htmlFor="cardExpiry">Fecha de Caducidad Tarjeta</Label>
+              <Input
+                id="cardExpiry"
+                value={paymentData.paymentMethod}
+                onChange={(e) => setPaymentData({ ...paymentData, paymentMethod: e.target.value })}
+                placeholder="MM/AAAA"
+              />
+            </div>
+          )}
+        </div>
+      </Card>
 
       {/* Firma Digital (solo huésped principal) */}
       <Card className="p-6">

@@ -1220,3 +1220,16 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Número de habitaciones: por defecto 1, no mostrar campo
 - [x] Fecha de caducidad tarjeta: solo mostrar si tipo de pago es Tarjeta
 - [x] Quitar campos: Fecha de expedición y caducidad de documento (no los pide web oficial)
+
+
+## Ajustes Check-in Presencial (v33) - COMPLETADOS
+- [x] Hora de salida por defecto: día +1 a las 11:00
+- [x] Origen de reserva por defecto: Booking.com
+- [x] Tipo de pago por defecto: Transferencia
+- [x] Fecha de pago por defecto: fecha de entrada
+- [x] Titular del pago por defecto: nombre del huésped principal
+- [x] Medio de pago por defecto: "Transferencia Booking"
+- [x] Reordenar: información de pago DESPUÉS de huéspedes
+- [x] Agregar campo "Número de Soporte" cuando se selecciona DNI (NIF)
+- [x] Corregir canvas de firma: coordenadas del ratón escaladas correctamente
+- [x] Corregir error al completar check-in: reservationOrigin debe ser "Booking.com" no "Booking"
