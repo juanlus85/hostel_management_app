@@ -1351,3 +1351,11 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Agregar sección "Condiciones y Firma" con checkbox de aceptación al formulario público
 - [x] Canvas de firma obligatorio en formulario público
 - [x] Formulario completamente bil ingüe (español/inglés) con botón de cambio de idioma
+
+
+## Mejoras Check-in Anticipado v47 - COMPLETADO
+- [x] Agregar botón "Editar" en pestaña Check-in Anticipado para completar 100% de campos desde recepción
+- [x] Cambiar pantalla final del formulario público por mensaje de agradecimiento bil ingüe
+- [x] Incluir recordatorio de presentar documento original a la llegada
+- [x] Eliminar botón que lleva al sistema del hostel, permitir solo cerrar ventana
+- [x] Agregar campo "Día de llegada" (fecha de check-in) al formulario de Check-in Anticipado

@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
-import { Loader2, ExternalLink, Eye, Trash2, CheckCircle2 } from "lucide-react";
+import { Loader2, ExternalLink, Eye, Trash2, CheckCircle2, Edit2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -13,6 +13,8 @@ export default function CheckinAnticipado() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedGuest, setSelectedGuest] = useState<any>(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [editingGuest, setEditingGuest] = useState<any>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   // Obtener check-ins pendientes y filtrar anticipados en frontend
   const { data: allPendingGuests, isLoading, refetch } = trpc.checkin.guests.search.useQuery({
@@ -60,6 +62,12 @@ export default function CheckinAnticipado() {
     if (confirm("¿Eliminar este check-in anticipado?")) {
       deleteGuest.mutate({ id });
     }
+  };
+
+  const handleEdit = (guest: any) => {
+    setEditingGuest({ ...guest });
+    setShowEditModal(true);
+    setShowDetails(false);
   };
 
   const publicUrl = `${window.location.origin}/checkin-anticipado-publico`;
@@ -154,6 +162,14 @@ export default function CheckinAnticipado() {
                         title="Ver detalles"
                       >
                         <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEdit(guest)}
+                        title="Editar"
+                      >
+                        <Edit2 className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"

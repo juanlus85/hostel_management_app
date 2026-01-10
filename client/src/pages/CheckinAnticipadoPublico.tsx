@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CheckCircle2, Loader2, Home } from "lucide-react";
+import { CheckCircle2, Loader2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { COUNTRIES } from "@/lib/countries";
@@ -38,6 +38,9 @@ export default function CheckinAnticipadoPublico() {
     province: "",
     postalCode: "",
     country: "ESP",
+    
+    // Fecha de llegada
+    checkInDate: "",
   });
 
   const createGuestMutation = trpc.checkin.guests.create.useMutation();
@@ -169,6 +172,7 @@ export default function CheckinAnticipadoPublico() {
         signature: signatureData,
         checkinType: "anticipado",
         status: "pending",
+        checkInDate: formData.checkInDate,
         // Campos opcionales que se completarán en recepción
         // Campos opcionales que se completarán en recepción
         // reservationNumber, checkInDate, checkOutDate, roomNumber se omiten
@@ -192,16 +196,37 @@ export default function CheckinAnticipadoPublico() {
             <h2 className="text-2xl font-bold text-green-900">
               {t("¡Check-in Anticipado Completado!", "Early Check-in Completed!")}
             </h2>
-            <p className="text-muted-foreground">
+            <div className="space-y-4 text-left">
+              <p className="text-base font-semibold text-gray-800">
+                {t(
+                  "Gracias por facilitarnos tu información",
+                  "Thank you for providing us with your information"
+                )}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {t(
+                  "Tu información nos permitirá agilizar significativamente tu proceso de check-in a la llegada. Nuestro equipo de recepción ya tiene tus datos y podrá completar el registro de forma rápida y eficiente.",
+                  "Your information will allow us to significantly speed up your check-in process upon arrival. Our reception team already has your details and will be able to complete the registration quickly and efficiently."
+                )}
+              </p>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mt-4">
+                <p className="text-sm font-semibold text-amber-900 mb-2">
+                  {t("Recordatorio Importante", "Important Reminder")}
+                </p>
+                <p className="text-sm text-amber-800">
+                  {t(
+                    "Es obligatorio presentar el documento original (DNI, Pasaporte, etc.) a la llegada. Este será utilizado para verificar que los datos facilitados sean correctos y completar el registro oficial.",
+                    "It is mandatory to present the original document (ID, Passport, etc.) upon arrival. This will be used to verify that the information provided is correct and to complete the official registration."
+                  )}
+                </p>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-6">
               {t(
-                "Gracias por completar tus datos. El personal del hostel revisará tu información y te asignará habitación y códigos de acceso.",
-                "Thank you for completing your information. The hostel staff will review your data and assign you a room and access codes."
+                "Puedes cerrar esta ventana. ¡Te esperamos en el hostel!",
+                "You can close this window. We look forward to seeing you at the hostel!"
               )}
             </p>
-            <Button onClick={() => window.location.href = "/"} className="w-full">
-              <Home className="w-4 h-4 mr-2" />
-              {t("Volver al inicio", "Back to home")}
-            </Button>
           </CardContent>
         </Card>
       </div>
@@ -374,6 +399,23 @@ export default function CheckinAnticipadoPublico() {
                       required
                     />
                   </div>
+                </div>
+              </div>
+
+              {/* Fecha de Llegada */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold border-b pb-2">
+                  {t("Fecha de Llegada", "Arrival Date")} *
+                </h3>
+                <div>
+                  <Label htmlFor="checkInDate">{t("Día de llegada al hostel", "Hostel arrival date")} *</Label>
+                  <Input
+                    id="checkInDate"
+                    type="date"
+                    value={formData.checkInDate}
+                    onChange={(e) => setFormData({ ...formData, checkInDate: e.target.value })}
+                    required
+                  />
                 </div>
               </div>
 
