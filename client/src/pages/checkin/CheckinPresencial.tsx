@@ -372,8 +372,8 @@ export default function CheckinPresencial() {
           // Pago
           paymentType: paymentData.paymentType as any,
           paymentDate: paymentData.paymentDate,
-          amountPaid: paymentData.amountPaid || undefined,
-          amountPending: paymentData.amountPending || undefined,
+          amountPaid: paymentData.amountPaid ? paymentData.amountPaid : "0",
+          amountPending: paymentData.amountPending ? paymentData.amountPending : "0",
           paymentHolder: paymentData.paymentHolder || undefined,
           paymentMethod: paymentData.paymentMethod || undefined,
           

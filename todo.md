@@ -1245,3 +1245,17 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Corregir campos o validación que causa el error 500
 - [x] Problema: checkInDate y checkOutDate se enviaban en formato datetime-local (YYYY-MM-DDTHH:MM)
 - [x] Solución: Convertir a formato YYYY-MM-DD usando .split("T")[0] antes de enviar al backend
+
+
+## Error al Crear Guest - Valores Inválidos
+- [ ] Backend recibe campos con valores "default", "?", etc.
+- [ ] Investigar por qué handleSubmit envía estos valores
+- [ ] Corregir mapeo de campos para enviar solo valores válidos o undefined
+
+
+## Error 500 al Crear Guest - CORREGIDO (v35)
+- [x] Backend recibía checkInDate y checkOutDate en formato datetime-local (YYYY-MM-DDTHH:MM)
+- [x] Schema esperaba formato YYYY-MM-DD (varchar(10))
+- [x] Soluci\u00f3n: Convertir fechas usando .split("T")[0] antes de enviar al backend
+- [x] Backend recibía amountPaid y amountPending como strings vacíos ""
+- [x] Soluci\u00f3n: Convertir strings vacíos a "0" antes de enviar
