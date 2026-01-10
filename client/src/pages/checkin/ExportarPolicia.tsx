@@ -21,40 +21,55 @@ export default function ExportarPolicia() {
   });
 
   const handleExport = () => {
-    if (!settings?.policeCode) {
-      alert("Error: Debe configurar el código de establecimiento en Configuración");
-      return;
+    try {
+      if (!settings?.policeCode) {
+        alert("Error: Debe configurar el código de establecimiento en Configuración");
+        return;
+      }
+
+      if (!startDate || !endDate) {
+        alert("Error: Debe seleccionar las fechas de inicio y fin");
+        return;
+      }
+
+      if (!guests || guests.length === 0) {
+        alert("No hay huéspedes para exportar en el rango de fechas seleccionado");
+        return;
+      }
+
+      const guestsToExport = selectedGuests.length > 0
+        ? guests.filter(g => selectedGuests.includes(g.id!))
+        : guests;
+
+      if (guestsToExport.length === 0) {
+        alert("Debe seleccionar al menos un huésped");
+        return;
+      }
+
+      // Generate XML
+      const xml = generatePoliceXML(guestsToExport, settings.policeCode);
+      
+      // Download file
+      const blob = new Blob([xml], { type: "application/xml;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const filename = `hospedajes_${startDate.replace(/-/g, '')}_${endDate.replace(/-/g, '')}.xml`;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      
+      // Cleanup
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 100);
+
+      alert(`Archivo XML generado correctamente con ${guestsToExport.length} huésped(es)`);
+    } catch (error) {
+      console.error('Error al generar XML:', error);
+      alert(`Error al generar el archivo XML: ${error}`);
     }
-
-    if (!guests || guests.length === 0) {
-      alert("No hay huéspedes para exportar en el rango de fechas seleccionado");
-      return;
-    }
-
-    const guestsToExport = selectedGuests.length > 0
-      ? guests.filter(g => selectedGuests.includes(g.id!))
-      : guests;
-
-    if (guestsToExport.length === 0) {
-      alert("Debe seleccionar al menos un huésped");
-      return;
-    }
-
-    // Generate XML
-    const xml = generatePoliceXML(guestsToExport, settings.policeCode);
-    
-    // Download file
-    const blob = new Blob([xml], { type: "application/xml" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `hospedajes_${startDate}_${endDate}.xml`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    alert(`Archivo XML generado correctamente con ${guestsToExport.length} huésped(es)`);
   };
 
   const generatePoliceXML = (guests: any[], policeCode: string) => {

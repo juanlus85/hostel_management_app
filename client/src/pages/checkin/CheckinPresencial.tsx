@@ -122,6 +122,7 @@ export default function CheckinPresencial() {
   const [signature, setSignature] = useState("");
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const { data: rooms } = trpc.accessCodes.list.useQuery();
   const { data: settings } = trpc.checkin.settings.get.useQuery();
@@ -318,6 +319,12 @@ export default function CheckinPresencial() {
     // Validar dirección compartida
     if (!sharedAddress.street || !sharedAddress.city || !sharedAddress.country) {
       toast.error("Complete la dirección de los huéspedes");
+      return;
+    }
+
+    // Validar aceptación de condiciones
+    if (!acceptedTerms) {
+      toast.error("Debe aceptar las condiciones del establecimiento y la política de protección de datos");
       return;
     }
 
@@ -912,10 +919,50 @@ export default function CheckinPresencial() {
         </div>
       </Card>
 
-      {/* Firma Digital (solo huésped principal) */}
+      {/* Condiciones y Firma */}
       <Card className="p-6">
-        <h2 className="text-xl font-bold mb-4">Firma del Huésped Principal *</h2>
+        <h2 className="text-xl font-bold mb-4">Condiciones y Firma / Terms & Signature</h2>
+        
+        {/* Texto de condiciones */}
+        <div className="mb-6 space-y-4 p-4 bg-muted rounded-lg">
+          <div>
+            <p className="text-sm">
+              Los huéspedes manifiestan que han leído, conocen y se comprometen a cumplir las normas y condiciones del establecimiento.
+            </p>
+            <p className="text-sm italic text-muted-foreground mt-2">
+              The guests state that they have read, know, undertake and agree to comply with the rules and conditions of the establishment.
+            </p>
+          </div>
+          
+          <div>
+            <p className="text-sm">
+              Los huéspedes manifiestan que han leído, conocen y se comprometen a cumplir las normas y condiciones del establecimiento. Éstas se encuentran a disposición del huésped, expuestas en la recepción del establecimiento.
+            </p>
+            <p className="text-sm italic text-muted-foreground mt-2">
+              The guests state that they have read, know, undertake and agree to comply with the rules and conditions of the establishment. These are available to the guests, displayed at the reception of the establishment.
+            </p>
+          </div>
+        </div>
+
+        {/* Checkbox de aceptación */}
+        <div className="mb-6 flex items-start space-x-3 p-4 border-2 border-primary/20 rounded-lg bg-primary/5">
+          <Checkbox
+            id="acceptTerms"
+            checked={acceptedTerms}
+            onCheckedChange={(checked) => setAcceptedTerms(checked === true)}
+            className="mt-1"
+          />
+          <label
+            htmlFor="acceptTerms"
+            className="text-sm font-medium leading-relaxed cursor-pointer"
+          >
+            Acepto las condiciones del establecimiento y la política de protección de datos / I accept the establishment conditions and privacy policy *
+          </label>
+        </div>
+
+        {/* Firma */}
         <div className="space-y-4">
+          <Label className="text-base font-semibold">Firma / Signature *</Label>
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-white">
             <canvas
               ref={canvasRef}
@@ -929,9 +976,12 @@ export default function CheckinPresencial() {
               onTouchMove={draw}
               onTouchEnd={stopDrawing}
             />
+            <p className="text-xs text-muted-foreground text-center mt-2">
+              Firme aquí / Sign here
+            </p>
           </div>
           <Button variant="outline" onClick={clearSignature}>
-            Borrar Firma
+            Borrar firma / Clear signature
           </Button>
         </div>
       </Card>

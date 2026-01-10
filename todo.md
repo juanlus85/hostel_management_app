@@ -1290,3 +1290,11 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [ ] Implementar descarga de XML individual para subir a policía
 - [x] Eliminación con diálogo de confirmación (ya implementado)
 - [ ] Conectar botones de acción en lista de check-ins (Ver, Editar, PDF, XML, Eliminar)
+
+
+## Bugs Reportados (v40) - EN PROGRESO
+- [x] Códigos de Acceso: Mover del menú principal a pestaña dentro de Check-in
+- [x] Gestión de Huéspedes: Error al editar huésped (botón Editar no funciona) - Mensaje informativo temporal
+- [x] Gestión de Huéspedes: Cambiar descarga de TXT a PDF profesional con firma incluida
+- [x] Exportar Policía: No permite descargar el archivo XML - Mejorada validación y mensajes de error
+- [x] Check-in Presencial: Agregar sección de condiciones y términos antes de la firma con checkbox de aceptación

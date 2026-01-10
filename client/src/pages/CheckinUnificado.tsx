@@ -14,6 +14,7 @@ import CheckinPresencial from "./checkin/CheckinPresencial";
 import GestionHuespedes from "./checkin/GestionHuespedes";
 import ExportarPolicia from "./checkin/ExportarPolicia";
 import ConfiguracionCheckin from "./checkin/ConfiguracionCheckin";
+import CodigosAccesoReal from "./CodigosAcceso";
 
 // Placeholder components (to be implemented in next phase)
 const CheckinAnticipado = () => (
@@ -44,19 +45,7 @@ const CheckinOnline = () => (
   </Card>
 );
 
-const CodigosAcceso = () => (
-  <Card className="p-6">
-    <h2 className="text-2xl font-bold mb-4">Códigos de Acceso</h2>
-    <p className="text-muted-foreground">
-      Gestión de códigos de habitaciones.
-      <br />
-      Nota: Ya existe un sistema de códigos en el menú principal.
-    </p>
-    <p className="text-sm text-muted-foreground mt-4">
-      Funcionalidad en desarrollo - Próxima fase
-    </p>
-  </Card>
-);
+
 
 export default function CheckinUnificado() {
   const [activeTab, setActiveTab] = useState("checkin");
@@ -119,7 +108,7 @@ export default function CheckinUnificado() {
         </TabsContent>
 
         <TabsContent value="codigos">
-          <CodigosAcceso />
+          <CodigosAccesoReal />
         </TabsContent>
 
         <TabsContent value="policia">

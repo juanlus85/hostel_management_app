@@ -59,73 +59,135 @@ export default function GestionHuespedes() {
   };
 
   const handleEdit = (guestId: number) => {
-    setLocation(`/checkin/editar/${guestId}`);
+    // TODO: Implementar modal de edición
+    alert('Funcionalidad de edición en desarrollo. Por ahora puedes eliminar y crear un nuevo registro.');
   };
 
   const handleDownloadPDF = async (guest: any) => {
     try {
-      // Generar PDF con datos del huésped
-      const content = `
-FICHA DE REGISTRO DE VIAJERO
-
-=================================
-DATOS PERSONALES
-=================================
-Nombre: ${guest.firstName} ${guest.lastName}
-Documento: ${guest.documentType} ${guest.documentNumber}
-Nacionalidad: ${guest.nationality}
-Fecha de Nacimiento: ${guest.birthDate || "-"}
-Género: ${guest.gender}
-Teléfono: ${guest.phone || "-"}
-Email: ${guest.email || "-"}
-
-=================================
-DATOS DE RESERVA
-=================================
-Número de Reserva: ${guest.reservationNumber || "-"}
-Habitación: ${guest.roomNumber || "-"}
-Check-in: ${guest.checkInDate ? new Date(guest.checkInDate).toLocaleString() : "-"}
-Check-out: ${guest.checkOutDate ? new Date(guest.checkOutDate).toLocaleString() : "-"}
-Estado: ${guest.status || "pending"}
-
-=================================
-DIRECCIÓN
-=================================
-Calle: ${guest.street || "-"}
-Ciudad: ${guest.city || "-"}
-Provincia: ${guest.province || "-"}
-Código Postal: ${guest.postalCode || "-"}
-País: ${guest.country || "-"}
-
-=================================
-INFORMACIÓN DE PAGO
-=================================
-Tipo de Pago: ${guest.paymentType || "-"}
-Cantidad Abonada: ${guest.amountPaid || "0"}€
-Cantidad Pendiente: ${guest.amountPending || "0"}€
-Titular: ${guest.paymentHolder || "-"}
-Método: ${guest.paymentMethod || "-"}
-
-=================================
-Firma del Huésped
-=================================
-${guest.signature ? "[Firma capturada]" : "[Sin firma]"}
-
-Generado: ${new Date().toLocaleString()}
-      `;
-
-      const blob = new Blob([content], { type: "text/plain" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `ficha_${guest.firstName}_${guest.lastName}_${guest.documentNumber}.txt`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      const { jsPDF } = await import('jspdf');
+      const doc = new jsPDF();
       
-      alert("PDF generado correctamente (formato texto)");
+      let y = 20;
+      const lineHeight = 7;
+      const leftMargin = 20;
+      
+      // Título
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      doc.text('FICHA DE REGISTRO DE VIAJERO', leftMargin, y);
+      y += lineHeight * 2;
+      
+      // Datos Personales
+      doc.setFontSize(14);
+      doc.text('DATOS PERSONALES', leftMargin, y);
+      y += lineHeight;
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Nombre: ${guest.firstName} ${guest.lastName}`, leftMargin, y);
+      y += lineHeight;
+      doc.text(`Documento: ${guest.documentType} ${guest.documentNumber}`, leftMargin, y);
+      y += lineHeight;
+      doc.text(`Nacionalidad: ${guest.nationality}`, leftMargin, y);
+      y += lineHeight;
+      doc.text(`Fecha de Nacimiento: ${guest.birthDate || "-"}`, leftMargin, y);
+      y += lineHeight;
+      doc.text(`Género: ${guest.gender}`, leftMargin, y);
+      y += lineHeight;
+      doc.text(`Teléfono: ${guest.phone || "-"}`, leftMargin, y);
+      y += lineHeight;
+      doc.text(`Email: ${guest.email || "-"}`, leftMargin, y);
+      y += lineHeight * 2;
+      
+      // Datos de Reserva
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('DATOS DE RESERVA', leftMargin, y);
+      y += lineHeight;
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Número de Reserva: ${guest.reservationNumber || "-"}`, leftMargin, y);
+      y += lineHeight;
+      doc.text(`Habitación: ${guest.roomNumber || "-"}`, leftMargin, y);
+      y += lineHeight;
+      doc.text(`Check-in: ${guest.checkInDate ? new Date(guest.checkInDate).toLocaleString() : "-"}`, leftMargin, y);
+      y += lineHeight;
+      doc.text(`Check-out: ${guest.checkOutDate ? new Date(guest.checkOutDate).toLocaleString() : "-"}`, leftMargin, y);
+      y += lineHeight;
+      doc.text(`Estado: ${guest.status === 'completed' ? 'Completado' : guest.status}`, leftMargin, y);
+      y += lineHeight * 2;
+      
+      // Dirección
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('DIRECCIÓN', leftMargin, y);
+      y += lineHeight;
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Calle: ${guest.street || "-"}`, leftMargin, y);
+      y += lineHeight;
+      doc.text(`Ciudad: ${guest.city || "-"}`, leftMargin, y);
+      y += lineHeight;
+      doc.text(`Provincia: ${guest.province || "-"}`, leftMargin, y);
+      y += lineHeight;
+      doc.text(`Código Postal: ${guest.postalCode || "-"}`, leftMargin, y);
+      y += lineHeight;
+      doc.text(`País: ${guest.country || "-"}`, leftMargin, y);
+      y += lineHeight * 2;
+      
+      // Información de Pago
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('INFORMACIÓN DE PAGO', leftMargin, y);
+      y += lineHeight;
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Tipo de Pago: ${guest.paymentType || "-"}`, leftMargin, y);
+      y += lineHeight;
+      doc.text(`Cantidad Abonada: ${guest.amountPaid || "0"}€`, leftMargin, y);
+      y += lineHeight;
+      doc.text(`Cantidad Pendiente: ${guest.amountPending || "0"}€`, leftMargin, y);
+      y += lineHeight;
+      doc.text(`Titular: ${guest.paymentHolder || "-"}`, leftMargin, y);
+      y += lineHeight;
+      doc.text(`Método: ${guest.paymentMethod || "-"}`, leftMargin, y);
+      y += lineHeight * 2;
+      
+      // Firma
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('FIRMA DEL HUÉSPED', leftMargin, y);
+      y += lineHeight;
+      
+      if (guest.signature) {
+        try {
+          // Añadir imagen de firma (base64)
+          doc.addImage(guest.signature, 'PNG', leftMargin, y, 80, 30);
+          y += 35;
+        } catch (e) {
+          doc.setFontSize(10);
+          doc.setFont('helvetica', 'italic');
+          doc.text('[Firma capturada]', leftMargin, y);
+          y += lineHeight;
+        }
+      } else {
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'italic');
+        doc.text('[Sin firma]', leftMargin, y);
+        y += lineHeight;
+      }
+      
+      y += lineHeight;
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Generado: ${new Date().toLocaleString()}`, leftMargin, y);
+      
+      // Descargar PDF
+      doc.save(`ficha_${guest.firstName}_${guest.lastName}_${guest.documentNumber}.pdf`);
+      
+      alert("PDF generado correctamente");
     } catch (error) {
+      console.error('Error al generar PDF:', error);
       alert("Error al generar PDF");
     }
   };

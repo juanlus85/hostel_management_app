@@ -71,7 +71,6 @@ const menuItems = [
   { icon: AlertTriangle, label: "Incidencias", path: "/incidencias" },
   { icon: CheckSquare, label: "Tareas", path: "/tareas" },
   { icon: Sparkles, label: "Housekeeping", path: "/housekeeping" },
-  { icon: Key, label: "Códigos Acceso", path: "/codigos-acceso" },
 ];
 
 const housekeepingMenuItems = [
@@ -80,7 +79,7 @@ const housekeepingMenuItems = [
   { icon: AlertTriangle, label: "Incidencias", path: "/incidencias" },
   { icon: Package, label: "Inventario", path: "/inventario" },
   { icon: LayoutDashboard, label: "Housekeeping", path: "/housekeeping" },
-  { icon: Key, label: "Códigos Acceso", path: "/codigos-acceso" },
+  { icon: ClipboardList, label: "Check-in", path: "/checkin" },
 ];
 
 const adminMenuItems = [
