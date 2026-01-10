@@ -620,6 +620,7 @@ export const guests = mysqlTable("guests", {
   gender: mysqlEnum("gender", ["male", "female", "other"]),
   nationality: varchar("nationality", { length: 100 }),
   birthDate: varchar("birthDate", { length: 10 }), // YYYY-MM-DD
+  issueDate: varchar("issueDate", { length: 10 }), // YYYY-MM-DD - Fecha de expedición
   documentExpiry: varchar("documentExpiry", { length: 10 }), // YYYY-MM-DD
   
   // Dirección

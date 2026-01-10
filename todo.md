@@ -1085,3 +1085,125 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [ ] Sistema de notificaciones para check-ins online
 - [ ] Dashboard de estadísticas de check-ins
 - [ ] Integración con sistema de reservas existente
+
+
+## Mejoras Check-in Presencial v89
+
+### Formulario Completo
+- [ ] Añadir todos los campos obligatorios para policía
+- [ ] Desplegable de nacionalidades (países)
+- [ ] Desplegable de género (Masculino/Femenino/Otro)
+- [ ] Desplegable de tipo documento (Passport/DNI/NIE/Driving License)
+- [ ] Campos de dirección completa (calle, piso, código postal, ciudad, provincia)
+- [ ] Teléfonos y email
+
+### Firma Digital
+- [ ] Crear componente SignaturePad con canvas
+- [ ] Botón "Borrar firma" para limpiar canvas
+- [ ] Guardar firma como imagen base64 en base de datos
+- [ ] Mostrar firma guardada en vista de huéspedes
+
+### Múltiples Huéspedes
+- [ ] Botón "Añadir Huésped (1/3)" para agregar segundo/tercer huésped
+- [ ] Cada huésped tiene su propio formulario completo
+- [ ] Indicar huésped principal con badge "Principal"
+- [ ] Todos los huéspedes comparten la misma reserva
+- [ ] Guardar todos los huéspedes en una sola transacción
+
+
+## Mejoras Check-in Presencial (v89)
+
+### Formulario Completo según Normativa Policial
+- [ ] Campos obligatorios de policía española (Real Decreto 933/2021):
+  - [ ] Nombre y apellidos
+  - [ ] Número de documento
+  - [ ] Tipo de documento (Passport, DNI, NIE, Driving License)
+  - [ ] Género (Masculino, Femenino, Otro)
+  - [ ] Nacionalidad con desplegable + opción "Otro" (campo de texto libre)
+  - [ ] Fecha de nacimiento
+  - [ ] Fecha de expedición del documento
+  - [ ] Dirección completa (compartida por todos los huéspedes de la reserva)
+  - [ ] Teléfono y email
+
+### Información de Reserva
+- [ ] Selector de habitación (desplegable con habitaciones existentes)
+- [ ] Auto-completar tipo de habitación al seleccionar número
+- [ ] Fecha entrada y salida
+- [ ] Número de reserva
+- [ ] Código hostel y código habitación
+- [ ] Número de habitaciones
+- [ ] Internet (Sí/No)
+- [ ] Régimen (S.A., A.D., M.P., P.C.)
+- [ ] Origen de reserva (Walk In, Booking.com, Airbnb, etc.)
+
+### Información de Pago (Obligatoria)
+- [ ] Tipo de pago (Efectivo, Tarjeta, Transferencia, etc.)
+- [ ] Fecha de pago
+- [ ] Cantidad abonada
+- [ ] Cantidad pendiente
+- [ ] Medio de pago (Visa, Mastercard, PayPal, etc.)
+- [ ] Titular del pago
+
+### Múltiples Huéspedes
+- [ ] Permitir añadir hasta 3 huéspedes por reserva
+- [ ] Botón "Añadir Huésped (1/3)"
+- [ ] Cada huésped con sus datos personales completos
+- [ ] Dirección compartida entre todos los huéspedes
+- [ ] Solo el huésped principal firma
+
+### Firma Digital
+- [ ] Componente SignaturePad con canvas HTML5
+- [ ] Captura de firma con ratón o táctil
+- [ ] Botón "Borrar firma"
+- [ ] Guardar firma como base64 en BD
+- [ ] Solo el huésped principal debe firmar
+
+### Header Informativo
+- [ ] Mostrar nombre del hostel
+- [ ] Mostrar RTA del hostel
+- [ ] Diseño "Welcome to our Home" según referencia
+
+### Validación
+- [ ] Validar campos obligatorios antes de guardar
+- [ ] Validar que el huésped principal haya firmado
+- [ ] Validar fechas (entrada < salida)
+- [ ] Mensaje de error claro si falta información
+
+### Backend
+- [ ] Verificar que schema tiene todos los campos necesarios
+- [ ] Ajustar procedimiento create para aceptar múltiples huéspedes
+- [ ] Guardar groupId para vincular huéspedes de la misma reserva
+- [ ] Marcar isPrincipal = true solo para el primer huésped
+
+### Validación de Documentos según Nacionalidad
+- [ ] DNI: Solo para españoles
+- [ ] NIE: Solo para europeos
+- [ ] Carnet de conducir: Solo para españoles
+- [ ] ID Card: Solo para europeos
+- [ ] Pasaporte: Todos (obligatorio para no europeos)
+- [ ] Deshabilitar opciones de documento según nacionalidad seleccionada
+- [ ] Mostrar mensaje de ayuda cuando se selecciona nacionalidad
+
+
+## Mejoras Check-in Presencial (v31) - COMPLETADAS
+- [x] Agregar campo issueDate (fecha de expedición) a schema de guests
+- [x] Implementar validación de documentos según nacionalidad
+  - [x] DNI (NIF): Solo españoles
+  - [x] NIE: Solo europeos
+  - [x] Pasaporte (PAS): Todos (obligatorio para no europeos)
+  - [x] OTRO: Todos
+- [x] Agregar selector de habitación con auto-completado de tipo
+- [x] Implementar dirección compartida por todos los huéspedes
+- [x] Agregar campo "Otro" en nacionalidad con texto libre
+- [x] Implementar información de pago obligatoria según normativa
+  - [x] Tipo de pago con códigos oficiales (EFECT, TARJT, PLATF, TRANS, MOVIL, TREG, DESTI, OTRO)
+  - [x] Fecha de pago
+  - [x] Cantidad abonada y pendiente
+  - [x] Titular del pago
+  - [x] Medio de pago (Visa, Mastercard, etc.)
+- [x] Agregar firma digital solo para huésped principal
+- [x] Permitir hasta 3 huéspedes por reserva
+- [x] Crear archivo shared/countries.ts con códigos ISO alpha-3 y validaciones
+- [x] Crear archivo POLICE_CODES_REFERENCE.md con documentación oficial
+- [x] Implementar todos los campos según plantilla XML oficial de policía
+- [x] Probar formulario completo en navegador
