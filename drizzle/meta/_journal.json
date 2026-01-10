@@ -225,6 +225,13 @@
       "when": 1768009001445,
       "tag": "0031_amazing_polaris",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "5",
+      "when": 1768048822538,
+      "tag": "0032_small_queen_noir",
+      "breakpoints": true
     }
   ]
 }

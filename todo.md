@@ -1259,3 +1259,11 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Soluci\u00f3n: Convertir fechas usando .split("T")[0] antes de enviar al backend
 - [x] Backend recibía amountPaid y amountPending como strings vacíos ""
 - [x] Soluci\u00f3n: Convertir strings vacíos a "0" antes de enviar
+
+
+## Error 500 Persistente al Crear Guest (v36) - CORREGIDO
+- [x] Verificar que tabla guests en BD tenga todos los campos del schema
+- [x] Ejecutar db:push para sincronizar schema con base de datos
+- [x] Verificar campos faltantes en tabla guests
+- [x] Problema: Campo issueDate estaba en schema de Drizzle pero no en BD
+- [x] Solución: Eliminar issueDate del schema (no lo requiere web oficial de policía)
