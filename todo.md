@@ -1233,3 +1233,15 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Agregar campo "Número de Soporte" cuando se selecciona DNI (NIF)
 - [x] Corregir canvas de firma: coordenadas del ratón escaladas correctamente
 - [x] Corregir error al completar check-in: reservationOrigin debe ser "Booking.com" no "Booking"
+
+
+## Errores 500 Backend
+- [ ] Error al crear guest: fallo en inserción con muchos campos
+- [ ] Error en dashboard: query COALESCE en tabla otros_gastos
+
+
+## Error 500 al Crear Guest - CORREGIDO
+- [x] Investigar error de inserción en tabla guests (muchos campos)
+- [x] Corregir campos o validación que causa el error 500
+- [x] Problema: checkInDate y checkOutDate se enviaban en formato datetime-local (YYYY-MM-DDTHH:MM)
+- [x] Solución: Convertir a formato YYYY-MM-DD usando .split("T")[0] antes de enviar al backend

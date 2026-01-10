@@ -358,8 +358,8 @@ export default function CheckinPresencial() {
           
           // Reserva
           reservationNumber: reservationData.reservationNumber || undefined,
-          checkInDate: reservationData.checkInDate,
-          checkOutDate: reservationData.checkOutDate || undefined,
+          checkInDate: reservationData.checkInDate.split("T")[0], // Convertir YYYY-MM-DDTHH:MM a YYYY-MM-DD
+          checkOutDate: reservationData.checkOutDate ? reservationData.checkOutDate.split("T")[0] : undefined,
           roomNumber: reservationData.roomNumber,
           roomType: reservationData.roomType || undefined,
           roomCode: reservationData.roomCode || undefined,
