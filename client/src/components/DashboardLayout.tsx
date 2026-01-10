@@ -66,7 +66,7 @@ const menuItems = [
   { icon: Receipt, label: "Facturas", path: "/facturas" },
   { icon: DollarSign, label: "Gastos/Ingresos", path: "/otros-gastos", adminOnly: true },
   { icon: ShoppingCart, label: "Pedidos", path: "/pedidos", adminOnly: true },
-  { icon: ClipboardList, label: "Check-in", path: "/checkin", adminOnly: true },
+  { icon: ClipboardList, label: "Check-in", path: "/checkin", staffOnly: true },
   { icon: Package, label: "Inventario", path: "/inventario" },
   { icon: AlertTriangle, label: "Incidencias", path: "/incidencias" },
   { icon: CheckSquare, label: "Tareas", path: "/tareas" },
@@ -79,7 +79,6 @@ const housekeepingMenuItems = [
   { icon: AlertTriangle, label: "Incidencias", path: "/incidencias" },
   { icon: Package, label: "Inventario", path: "/inventario" },
   { icon: LayoutDashboard, label: "Housekeeping", path: "/housekeeping" },
-  { icon: ClipboardList, label: "Check-in", path: "/checkin" },
 ];
 
 const adminMenuItems = [
@@ -249,14 +248,18 @@ function DashboardLayoutContent({
   const { selectedBusiness, setSelectedBusiness } = useBusinessContext();
   const isAdmin = user?.role === "admin";
   const isHousekeeping = user?.role === "housekeeping";
+  const isEmployee = user?.role === "user";
   // Housekeeping solo ve su menú específico
   // Admin ve menú completo + opciones admin
-  // User ve menú completo sin opciones admin
+  // Employee (user) ve menú completo sin opciones adminOnly pero sí staffOnly
+  // Otros roles no ven ni adminOnly ni staffOnly
   const currentMenuItems = isHousekeeping 
     ? housekeepingMenuItems 
     : isAdmin
     ? [...menuItems, ...adminMenuItems]
-    : menuItems.filter(item => !item.adminOnly);
+    : isEmployee
+    ? menuItems.filter(item => !item.adminOnly)
+    : menuItems.filter(item => !item.adminOnly && !item.staffOnly);
 
   useEffect(() => {
     if (isCollapsed) {

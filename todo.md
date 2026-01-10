@@ -1359,3 +1359,8 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Incluir recordatorio de presentar documento original a la llegada
 - [x] Eliminar botón que lleva al sistema del hostel, permitir solo cerrar ventana
 - [x] Agregar campo "Día de llegada" (fecha de check-in) al formulario de Check-in Anticipado
+
+
+## Nuevas Funcionalidades v48 - COMPLETADO
+- [x] Modal de edición completo: Formulario emergente con todos los campos editables (datos personales, dirección, reserva, habitación, códigos, fechas)
+- [x] Control de acceso: Menú Check-in visible solo para empleados (role=user) y administradores (role=admin)

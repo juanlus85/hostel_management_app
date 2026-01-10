@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import EditGuestModal from "@/components/EditGuestModal";
 
 export default function CheckinAnticipado() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -266,6 +267,14 @@ export default function CheckinAnticipado() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Modal de Edición */}
+      <EditGuestModal
+        guest={editingGuest}
+        open={showEditModal}
+        onOpenChange={setShowEditModal}
+        onSuccess={refetch}
+      />
     </Card>
   );
 }
