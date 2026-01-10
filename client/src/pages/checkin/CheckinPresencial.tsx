@@ -25,8 +25,6 @@ interface GuestData {
   nationality: string;
   nationalityOther: string; // Campo libre cuando selecciona "Otro"
   birthDate: string;
-  issueDate: string;
-  documentExpiry: string;
   phone: string;
   email: string;
 }
@@ -38,12 +36,10 @@ export default function CheckinPresencial() {
       lastName: "",
       documentNumber: "",
       documentType: "PAS",
-      gender: "H",
+      gender: "male",
       nationality: "ESP",
       nationalityOther: "",
       birthDate: "",
-      issueDate: "",
-      documentExpiry: "",
       phone: "",
       email: "",
     },
@@ -62,7 +58,7 @@ export default function CheckinPresencial() {
   // Información de reserva
   const [reservationData, setReservationData] = useState({
     reservationNumber: "",
-    checkInDate: "",
+    checkInDate: new Date().toISOString().slice(0, 16), // YYYY-MM-DDTHH:MM
     checkOutDate: "",
     roomNumber: "",
     roomType: "",
@@ -74,9 +70,22 @@ export default function CheckinPresencial() {
     reservationOrigin: "Walk In",
   });
 
+  // Auto-calcular fecha de salida (+1 día)
+  useEffect(() => {
+    if (reservationData.checkInDate) {
+      const checkIn = new Date(reservationData.checkInDate);
+      const checkOut = new Date(checkIn);
+      checkOut.setDate(checkOut.getDate() + 1);
+      setReservationData(prev => ({
+        ...prev,
+        checkOutDate: checkOut.toISOString().slice(0, 16)
+      }));
+    }
+  }, [reservationData.checkInDate]);
+
   // Información de pago (OBLIGATORIA según normativa)
   const [paymentData, setPaymentData] = useState({
-    paymentType: "EFECT",
+    paymentType: "Efectivo",
     paymentDate: new Date().toISOString().split("T")[0],
     amountPaid: "",
     amountPending: "",
@@ -113,12 +122,24 @@ export default function CheckinPresencial() {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    // Ajustar dimensiones del canvas al tamaño del contenedor
+    const resizeCanvas = () => {
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = 200; // Altura fija
+      
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.strokeStyle = "#000";
+        ctx.lineWidth = 2;
+        ctx.lineCap = "round";
+      }
+    };
 
-    ctx.strokeStyle = "#000";
-    ctx.lineWidth = 2;
-    ctx.lineCap = "round";
+    resizeCanvas();
+    window.addEventListener("resize", resizeCanvas);
+    
+    return () => window.removeEventListener("resize", resizeCanvas);
   }, []);
 
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
@@ -186,12 +207,10 @@ export default function CheckinPresencial() {
         lastName: "",
         documentNumber: "",
         documentType: "PAS",
-        gender: "H",
+        gender: "male",
         nationality: "ESP",
         nationalityOther: "",
         birthDate: "",
-        issueDate: "",
-        documentExpiry: "",
         phone: "",
         email: "",
       },
@@ -288,8 +307,6 @@ export default function CheckinPresencial() {
           gender: guest.gender as "male" | "female" | "other",
           nationality: guest.nationality === "OTRO" ? guest.nationalityOther : guest.nationality,
           birthDate: guest.birthDate,
-          issueDate: guest.issueDate || undefined,
-          documentExpiry: guest.documentExpiry || undefined,
           
           // Dirección compartida
           street: sharedAddress.street,
@@ -343,12 +360,10 @@ export default function CheckinPresencial() {
           lastName: "",
           documentNumber: "",
           documentType: "PAS",
-          gender: "H",
+          gender: "male",
           nationality: "ESP",
           nationalityOther: "",
           birthDate: "",
-          issueDate: "",
-          documentExpiry: "",
           phone: "",
           email: "",
         },
@@ -451,33 +466,22 @@ export default function CheckinPresencial() {
           </div>
 
           <div>
-            <Label htmlFor="checkInDate">Fecha de Entrada *</Label>
+            <Label htmlFor="checkInDate">Fecha y Hora de Entrada *</Label>
             <Input
               id="checkInDate"
-              type="date"
+              type="datetime-local"
               value={reservationData.checkInDate}
               onChange={(e) => setReservationData({ ...reservationData, checkInDate: e.target.value })}
             />
           </div>
 
           <div>
-            <Label htmlFor="checkOutDate">Fecha de Salida</Label>
+            <Label htmlFor="checkOutDate">Fecha y Hora de Salida</Label>
             <Input
               id="checkOutDate"
-              type="date"
+              type="datetime-local"
               value={reservationData.checkOutDate}
               onChange={(e) => setReservationData({ ...reservationData, checkOutDate: e.target.value })}
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="numberOfRooms">Número de Habitaciones</Label>
-            <Input
-              id="numberOfRooms"
-              type="number"
-              min="1"
-              value={reservationData.numberOfRooms}
-              onChange={(e) => setReservationData({ ...reservationData, numberOfRooms: parseInt(e.target.value) || 1 })}
             />
           </div>
 
@@ -546,11 +550,12 @@ export default function CheckinPresencial() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {PAYMENT_TYPES.map((type) => (
-                  <SelectItem key={type.code} value={type.code}>
-                    {type.label}
-                  </SelectItem>
-                ))}
+                <SelectItem value="Efectivo">Efectivo</SelectItem>
+                <SelectItem value="Tarjeta">Tarjeta</SelectItem>
+                <SelectItem value="Transferencia">Transferencia</SelectItem>
+                <SelectItem value="PayPal">PayPal</SelectItem>
+                <SelectItem value="Bizum">Bizum</SelectItem>
+                <SelectItem value="Otro">Otro</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -606,6 +611,18 @@ export default function CheckinPresencial() {
               placeholder="Visa, Mastercard, PayPal, etc."
             />
           </div>
+
+          {paymentData.paymentType === "Tarjeta" && (
+            <div>
+              <Label htmlFor="cardExpiry">Fecha de Caducidad Tarjeta</Label>
+              <Input
+                id="cardExpiry"
+                value={paymentData.paymentMethod}
+                onChange={(e) => setPaymentData({ ...paymentData, paymentMethod: e.target.value })}
+                placeholder="MM/AAAA"
+              />
+            </div>
+          )}
         </div>
       </Card>
 
@@ -796,11 +813,9 @@ export default function CheckinPresencial() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {GENDER_CODES.map((g) => (
-                      <SelectItem key={g.code} value={g.code}>
-                        {g.label}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="male">Hombre</SelectItem>
+                    <SelectItem value="female">Mujer</SelectItem>
+                    <SelectItem value="other">Otro</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -812,26 +827,6 @@ export default function CheckinPresencial() {
                   type="date"
                   value={guest.birthDate}
                   onChange={(e) => updateGuest(index, "birthDate", e.target.value)}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor={`issueDate-${index}`}>Fecha de Expedición</Label>
-                <Input
-                  id={`issueDate-${index}`}
-                  type="date"
-                  value={guest.issueDate}
-                  onChange={(e) => updateGuest(index, "issueDate", e.target.value)}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor={`documentExpiry-${index}`}>Fecha de Caducidad</Label>
-                <Input
-                  id={`documentExpiry-${index}`}
-                  type="date"
-                  value={guest.documentExpiry}
-                  onChange={(e) => updateGuest(index, "documentExpiry", e.target.value)}
                 />
               </div>
 
@@ -873,9 +868,8 @@ export default function CheckinPresencial() {
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-white">
             <canvas
               ref={canvasRef}
-              width={600}
-              height={200}
-              className="w-full touch-none"
+              className="w-full touch-none border border-gray-200"
+              style={{ height: "200px" }}
               onMouseDown={startDrawing}
               onMouseMove={draw}
               onMouseUp={stopDrawing}

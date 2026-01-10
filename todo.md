@@ -1207,3 +1207,16 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Crear archivo POLICE_CODES_REFERENCE.md con documentación oficial
 - [x] Implementar todos los campos según plantilla XML oficial de policía
 - [x] Probar formulario completo en navegador
+
+
+## Errores Check-in Presencial (v32) - CORREGIDOS
+- [x] Canvas de firma: desalineación entre donde se firma y donde aparece la firma
+- [x] Error de validación: "Invalid option" en gender (debe ser "male"/"female"/"other", no "H"/"M"/"O")
+- [x] Error de validación: "Invalid option" en paymentType (códigos backend diferentes a frontend)
+- [x] Fecha de entrada: debe incluir hora (formato: YYYY-MM-DDTHH:MM:SS)
+- [x] Fecha de salida: por defecto debe ser +1 día de la entrada
+- [x] Fecha de contrato: debe ser igual a fecha de check-in (no pedir, calcular)
+- [x] Número de personas: calcular automáticamente según huéspedes agregados (no mostrar campo)
+- [x] Número de habitaciones: por defecto 1, no mostrar campo
+- [x] Fecha de caducidad tarjeta: solo mostrar si tipo de pago es Tarjeta
+- [x] Quitar campos: Fecha de expedición y caducidad de documento (no los pide web oficial)
