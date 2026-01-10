@@ -1588,7 +1588,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
       getById: protectedProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
         return db.getGuestById(input.id);
       }),
-      create: protectedProcedure.input(z.object({
+      create: publicProcedure.input(z.object({
         firstName: z.string(),
         lastName: z.string(),
         documentNumber: z.string(),
@@ -1634,7 +1634,22 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
         checkinType: z.enum(["presencial", "anticipado", "online"]).optional(),
         language: z.enum(["es", "en"]).optional(),
       })).mutation(async ({ input, ctx }) => {
-        const id = await db.createGuest({ ...input, createdBy: ctx.user.id });
+        // Para check-ins públicos (anticipado), createdBy será null
+        const id = await db.createGuest({ ...input, createdBy: ctx.user?.id || null });
+        
+        // Si es check-in anticipado y tiene email, enviar confirmación
+        if (input.checkinType === 'anticipado' && input.email) {
+          const { sendCheckinAnticipadoConfirmation } = await import('./email');
+          await sendCheckinAnticipadoConfirmation({
+            firstName: input.firstName,
+            lastName: input.lastName,
+            email: input.email,
+            documentNumber: input.documentNumber,
+            checkInDate: input.checkInDate,
+            language: input.language || 'es',
+          });
+        }
+        
         return { success: true, id };
       }),
       update: protectedProcedure.input(z.object({

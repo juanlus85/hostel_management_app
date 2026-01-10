@@ -1364,3 +1364,8 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 ## Nuevas Funcionalidades v48 - COMPLETADO
 - [x] Modal de edición completo: Formulario emergente con todos los campos editables (datos personales, dirección, reserva, habitación, códigos, fechas)
 - [x] Control de acceso: Menú Check-in visible solo para empleados (role=user) y administradores (role=admin)
+
+
+## Nuevas Funcionalidades v49 - COMPLETADO
+- [x] Corregir error de autenticación en check-in anticipado público (debe ser accesible sin login)
+- [x] Implementar email de confirmación automático cuando un huésped complete el check-in anticipado (sin códigos de acceso, solo confirmación de datos recibidos)

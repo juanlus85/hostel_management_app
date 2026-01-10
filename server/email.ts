@@ -290,3 +290,142 @@ export async function sendShiftNotificationEmail(
 
   await sendEmail(employeeEmail, subject, html);
 }
+
+
+// Send check-in anticipado confirmation email
+export async function sendCheckinAnticipadoConfirmation(
+  guestData: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    documentNumber: string;
+    checkInDate?: string;
+    language?: string;
+  }
+): Promise<{ success: boolean; error?: string }> {
+  const isSpanish = guestData.language === "es" || !guestData.language;
+  
+  const subject = isSpanish 
+    ? "Confirmación de Check-in Anticipado - The Spot Central Hostel"
+    : "Early Check-in Confirmation - The Spot Central Hostel";
+  
+  const html = isSpanish ? `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #2563eb; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+        .content { background-color: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+        .info-box { background-color: white; padding: 20px; margin: 20px 0; border-left: 4px solid #2563eb; border-radius: 4px; }
+        .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 14px; }
+        .highlight { color: #2563eb; font-weight: bold; }
+        .warning { background-color: #fef3c7; padding: 15px; border-left: 4px solid #f59e0b; margin: 20px 0; border-radius: 4px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>¡Check-in Anticipado Recibido!</h1>
+        </div>
+        <div class="content">
+          <p>Hola <strong>${guestData.firstName} ${guestData.lastName}</strong>,</p>
+          
+          <p>Hemos recibido correctamente tu información de check-in anticipado. Gracias por completar el formulario.</p>
+          
+          <div class="info-box">
+            <h3>Resumen de tu Reserva</h3>
+            <p><strong>Nombre:</strong> ${guestData.firstName} ${guestData.lastName}</p>
+            <p><strong>Documento:</strong> ${guestData.documentNumber}</p>
+            ${guestData.checkInDate ? `<p><strong>Fecha de llegada:</strong> ${new Date(guestData.checkInDate).toLocaleDateString('es-ES')}</p>` : ''}
+          </div>
+          
+          <div class="warning">
+            <h3>⚠️ Importante - Documento Original</h3>
+            <p>Recuerda que <span class="highlight">debes presentar tu documento de identidad original</span> al hacer el check-in en recepción. Es un requisito obligatorio de la policía española.</p>
+          </div>
+          
+          <p>Nuestro equipo revisará tu información y te asignará una habitación. Al llegar, solo tendrás que pasar por recepción para:</p>
+          <ul>
+            <li>Verificar tu documento original</li>
+            <li>Recoger las llaves de tu habitación</li>
+            <li>Recibir información sobre el hostel</li>
+          </ul>
+          
+          <p>Si tienes alguna pregunta o necesitas modificar algo, no dudes en contactarnos.</p>
+          
+          <p>¡Te esperamos pronto!</p>
+          
+          <p><strong>The Spot Central Hostel Team</strong></p>
+        </div>
+        <div class="footer">
+          <p>The Spot Central Hostel<br>
+          Email: thespotcentralhostel@gmail.com</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  ` : `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #2563eb; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+        .content { background-color: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+        .info-box { background-color: white; padding: 20px; margin: 20px 0; border-left: 4px solid #2563eb; border-radius: 4px; }
+        .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 14px; }
+        .highlight { color: #2563eb; font-weight: bold; }
+        .warning { background-color: #fef3c7; padding: 15px; border-left: 4px solid #f59e0b; margin: 20px 0; border-radius: 4px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>Early Check-in Received!</h1>
+        </div>
+        <div class="content">
+          <p>Hello <strong>${guestData.firstName} ${guestData.lastName}</strong>,</p>
+          
+          <p>We have successfully received your early check-in information. Thank you for completing the form.</p>
+          
+          <div class="info-box">
+            <h3>Booking Summary</h3>
+            <p><strong>Name:</strong> ${guestData.firstName} ${guestData.lastName}</p>
+            <p><strong>Document:</strong> ${guestData.documentNumber}</p>
+            ${guestData.checkInDate ? `<p><strong>Arrival date:</strong> ${new Date(guestData.checkInDate).toLocaleDateString('en-US')}</p>` : ''}
+          </div>
+          
+          <div class="warning">
+            <h3>⚠️ Important - Original Document</h3>
+            <p>Remember that <span class="highlight">you must present your original ID document</span> when checking in at reception. This is a mandatory requirement by Spanish police.</p>
+          </div>
+          
+          <p>Our team will review your information and assign you a room. Upon arrival, you just need to stop by reception to:</p>
+          <ul>
+            <li>Verify your original document</li>
+            <li>Collect your room keys</li>
+            <li>Receive information about the hostel</li>
+          </ul>
+          
+          <p>If you have any questions or need to modify anything, please don't hesitate to contact us.</p>
+          
+          <p>See you soon!</p>
+          
+          <p><strong>The Spot Central Hostel Team</strong></p>
+        </div>
+        <div class="footer">
+          <p>The Spot Central Hostel<br>
+          Email: thespotcentralhostel@gmail.com</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+  
+  return sendEmail(guestData.email, subject, html);
+}
