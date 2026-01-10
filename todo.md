@@ -1339,3 +1339,15 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Agregar campo "Código Municipio INE" en configuración del hostel
 - [x] Actualizar generación XML para usar código de municipio real del establecimiento
 - [x] Validar que el código tenga 5 dígitos antes de generar XML
+
+## Mejoras Check-in Anticipado (v45) - EN PROGRESO
+- [x] Pestaña "Anticipado": Mostrar lista de check-ins pendientes (estado "pending" + tipo "anticipado")
+- [x] Check-ins completados pasan automáticamente a pestaña "Huéspedes" - Botón manual
+- [ ] PENDIENTE: Eliminar campos del formulario público (número de reserva, fecha de llegada, fecha de salida)
+- [ ] PENDIENTE: Agregar campo "Número de Soporte" obligatorio para DNI español (aparece en frontal)
+- [ ] PENDIENTE: Lista completa de nacionalidades (todos los países)
+- [ ] PENDIENTE: Todos los campos obligatorios (mismos que check-in presencial)
+- [ ] PENDIENTE: Solo recopilar: datos de huéspedes + dirección (sin datos de reserva ni pago)
+- [ ] PENDIENTE: Agregar sección "Condiciones y Firma" con checkbox de aceptación al formulario público
+- [ ] PENDIENTE: Canvas de firma obligatorio en formulario público
+- [ ] PENDIENTE: Formulario completamente bil ingüe (español/inglés)
