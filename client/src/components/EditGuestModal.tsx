@@ -60,7 +60,7 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
   });
 
   // Obtener habitaciones disponibles
-  const { data: accessCodes } = trpc.checkin.accessCodes.list.useQuery();
+  const { data: accessCodes } = trpc.accessCodes.list.useQuery();
 
   const updateGuestMutation = trpc.checkin.guests.update.useMutation({
     onSuccess: () => {
