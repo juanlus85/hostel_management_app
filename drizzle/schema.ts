@@ -616,6 +616,7 @@ export const guests = mysqlTable("guests", {
   firstName: varchar("firstName", { length: 100 }).notNull(),
   lastName: varchar("lastName", { length: 100 }).notNull(),
   documentNumber: varchar("documentNumber", { length: 50 }).notNull(),
+  documentSupport: varchar("documentSupport", { length: 50 }), // Número de soporte para DNI español
   documentType: varchar("documentType", { length: 50 }).default("Passport").notNull(), // Passport, ID Card, Driver License
   gender: mysqlEnum("gender", ["male", "female", "other"]),
   nationality: varchar("nationality", { length: 100 }),
@@ -637,7 +638,7 @@ export const guests = mysqlTable("guests", {
   
   // Información de reserva
   reservationNumber: varchar("reservationNumber", { length: 100 }),
-  checkInDate: varchar("checkInDate", { length: 10 }).notNull(), // YYYY-MM-DD
+  checkInDate: varchar("checkInDate", { length: 10 }), // YYYY-MM-DD - Opcional para check-in anticipado
   checkOutDate: varchar("checkOutDate", { length: 10 }),
   roomNumber: varchar("roomNumber", { length: 10 }),
   roomType: varchar("roomType", { length: 100 }),

@@ -239,6 +239,20 @@
       "when": 1768079024458,
       "tag": "0033_clean_ezekiel",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "5",
+      "when": 1768079936696,
+      "tag": "0034_jittery_blink",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "5",
+      "when": 1768080209876,
+      "tag": "0035_stiff_the_santerians",
+      "breakpoints": true
     }
   ]
 }
