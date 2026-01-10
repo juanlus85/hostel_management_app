@@ -1321,3 +1321,14 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Error: "Cannot find the declaration of element 'PARTES_VIAJEROS'" - Resuelto
 - [x] Revisar archivos de referencia con implementación funcional - Plantilla oficial analizada
 - [x] Corregir estructura XML según esquema XSD oficial - Formato ns2:peticion implementado
+
+
+## Nuevas Funcionalidades Check-in (v43) - EN PROGRESO
+- [x] Check-in Anticipado: Formulario web público para que huéspedes completen datos antes de llegar
+- [x] Check-in Anticipado: Sin generación de códigos de acceso (solo recopilación de datos)
+- [x] Check-in Anticipado: Validación de campos obligatorios y guardado en base de datos
+- [ ] Check-in Online: Sistema de auto check-in con generación automática de códigos
+- [ ] Check-in Online: Envío de códigos por email/SMS al huésped
+- [ ] Check-in Online: Interfaz pública accesible sin login
+- [ ] Backend: Endpoints para ambos tipos de check-in
+- [ ] Frontend: Interfaces públicas y privadas para gestión

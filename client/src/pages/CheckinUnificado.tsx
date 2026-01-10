@@ -15,21 +15,7 @@ import GestionHuespedes from "./checkin/GestionHuespedes";
 import ExportarPolicia from "./checkin/ExportarPolicia";
 import ConfiguracionCheckin from "./checkin/ConfiguracionCheckin";
 import CodigosAccesoReal from "./CodigosAcceso";
-
-// Placeholder components (to be implemented in next phase)
-const CheckinAnticipado = () => (
-  <Card className="p-6">
-    <h2 className="text-2xl font-bold mb-4">Check-in Anticipado</h2>
-    <p className="text-muted-foreground">
-      Generar link para que el huésped rellene el formulario antes de llegar.
-      <br />
-      <strong>NO se envían códigos de acceso</strong> (los da el recepcionista en persona).
-    </p>
-    <p className="text-sm text-muted-foreground mt-4">
-      Funcionalidad en desarrollo - Próxima fase
-    </p>
-  </Card>
-);
+import CheckinAnticipado from "./checkin/CheckinAnticipado";
 
 const CheckinOnline = () => (
   <Card className="p-6">
