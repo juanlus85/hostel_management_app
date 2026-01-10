@@ -1298,3 +1298,19 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Gestión de Huéspedes: Cambiar descarga de TXT a PDF profesional con firma incluida
 - [x] Exportar Policía: No permite descargar el archivo XML - Mejorada validación y mensajes de error
 - [x] Check-in Presencial: Agregar sección de condiciones y términos antes de la firma con checkbox de aceptación
+
+
+## Bug Crítico (v41) - RESUELTO
+- [x] Exportar Policía: XML sigue sin descargarse - Inicializar fechas con valores por defecto del mes actual
+
+## Nueva Funcionalidad (v41) - COMPLETADO
+- [x] Gestión de Huéspedes: Implementar modal de edición completo con formulario pre-rellenado
+- [x] Backend: Crear endpoint para obtener datos completos de un huésped por ID - Ya existe getById
+- [x] Backend: Crear endpoint para actualizar datos de un huésped existente - Ya existe update
+- [x] Frontend: Modal de edición con todos los campos editables
+- [x] Frontend: Validación y guardado de cambios
+
+## Mejora PDF Huésped (v41) - COMPLETADO
+- [x] Incluir declaración de aceptación de condiciones antes de la firma en el PDF
+- [x] Mostrar checkbox marcado indicando que el huésped aceptó las condiciones
+- [x] Incluir fecha y hora del check-in en la declaración

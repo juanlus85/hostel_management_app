@@ -10,8 +10,13 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 
 export default function ExportarPolicia() {
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  // Inicializar con el primer y último día del mes actual
+  const today = new Date();
+  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  
+  const [startDate, setStartDate] = useState(firstDay.toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(lastDay.toISOString().split('T')[0]);
   const [selectedGuests, setSelectedGuests] = useState<number[]>([]);
 
   const { data: settings } = trpc.checkin.settings.get.useQuery();
