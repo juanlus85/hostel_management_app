@@ -28,6 +28,7 @@ interface GuestData {
   birthDate: string;
   phone: string;
   email: string;
+  relationship?: string; // Parentesco (SOLO obligatorio para menores de edad)
 }
 
 export default function CheckinPresencial() {
@@ -44,6 +45,7 @@ export default function CheckinPresencial() {
       birthDate: "",
       phone: "",
       email: "",
+      relationship: "",
     },
   ]);
 
@@ -90,8 +92,8 @@ export default function CheckinPresencial() {
   const [paymentData, setPaymentData] = useState({
     paymentType: "Transferencia",
     paymentDate: new Date().toISOString().split("T")[0],
-    amountPaid: "",
-    amountPending: "",
+    amountPaid: "0",
+    amountPending: "0",
     paymentHolder: "",
     paymentMethod: "Transferencia Booking",
   });

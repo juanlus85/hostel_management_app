@@ -66,12 +66,23 @@ const menuItems = [
   { icon: Receipt, label: "Facturas", path: "/facturas" },
   { icon: DollarSign, label: "Gastos/Ingresos", path: "/otros-gastos", adminOnly: true },
   { icon: ShoppingCart, label: "Pedidos", path: "/pedidos", adminOnly: true },
-  { icon: ClipboardList, label: "Check-in", path: "/checkin", adminOnly: true },
+  { 
+    icon: ClipboardList, 
+    label: "Check-in", 
+    path: "/checkin", 
+    adminOnly: true,
+    submenu: [
+      { label: "Check-in Presencial", path: "/checkin" },
+      { label: "Gestión de Huéspedes", path: "/checkin/gestion" },
+      { label: "Exportar Policía", path: "/checkin/exportar" },
+      { label: "Configuración", path: "/checkin/configuracion" },
+      { label: "Códigos de Acceso", path: "/codigos-acceso" },
+    ]
+  },
   { icon: Package, label: "Inventario", path: "/inventario" },
   { icon: AlertTriangle, label: "Incidencias", path: "/incidencias" },
   { icon: CheckSquare, label: "Tareas", path: "/tareas" },
   { icon: Sparkles, label: "Housekeeping", path: "/housekeeping" },
-  { icon: Key, label: "Códigos Acceso", path: "/codigos-acceso" },
 ];
 
 const housekeepingMenuItems = [
