@@ -1269,9 +1269,12 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Solución: Eliminar issueDate del schema (no lo requiere web oficial de policía)
 
 
-## Reorganización de Menú
-- [ ] Mover "Códigos de Acceso" dentro del submenú de "Check-in"
-- [ ] Eliminar entrada de "Códigos Acceso" del menú principal
+## Bugs Reportados (v38) - CORREGIDOS
+- [x] Menú de Códigos de Acceso desapareció del menú principal (restaurado)
+- [x] Gestión de Huéspedes: botón Ver implementado (modal con detalles completos)
+- [x] Gestión de Huéspedes: botón Editar implementado (navega a /checkin/editar/:id)
+- [x] Gestión de Huéspedes: botón PDF implementado (descarga ficha en formato texto)
+- [x] Exportar Policía: botón XML ya estaba implementado, actualizado formato según plantilla oficial
 
 ## Ajustes Formulario Check-in
 - [x] Cantidad Abonada: valor por defecto "0" (editable)

@@ -58,7 +58,7 @@ export default function ExportarPolicia() {
   };
 
   const generatePoliceXML = (guests: any[], policeCode: string) => {
-    const now = new Date().toISOString();
+    const now = new Date().toISOString().split('T')[0];
     
     let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
     xml += '<PARTES_VIAJEROS>\n';
@@ -73,11 +73,24 @@ export default function ExportarPolicia() {
 
       xml += '    <VIAJERO>\n';
       xml += `      <ORDEN>${index + 1}</ORDEN>\n`;
+      
+      // Datos personales
       xml += `      <NOMBRE>${escapeXml(guest.firstName)}</NOMBRE>\n`;
-      xml += `      <APELLIDOS>${escapeXml(guest.lastName)}</APELLIDOS>\n`;
-      xml += `      <TIPO_DOCUMENTO>${guest.documentType || 'P'}</TIPO_DOCUMENTO>\n`;
+      xml += `      <PRIMER_APELLIDO>${escapeXml(guest.lastName.split(' ')[0] || guest.lastName)}</PRIMER_APELLIDO>\n`;
+      if (guest.lastName.split(' ').length > 1) {
+        xml += `      <SEGUNDO_APELLIDO>${escapeXml(guest.lastName.split(' ').slice(1).join(' '))}</SEGUNDO_APELLIDO>\n`;
+      }
+      
+      // Documento
+      const docType = guest.documentType === 'DNI' ? 'NIF' : guest.documentType || 'PAS';
+      xml += `      <TIPO_DOCUMENTO>${docType}</TIPO_DOCUMENTO>\n`;
       xml += `      <NUMERO_DOCUMENTO>${escapeXml(guest.documentNumber)}</NUMERO_DOCUMENTO>\n`;
       
+      if (guest.supportNumber && docType === 'NIF') {
+        xml += `      <SOPORTE_DOCUMENTO>${escapeXml(guest.supportNumber)}</SOPORTE_DOCUMENTO>\n`;
+      }
+      
+      // Datos demográficos
       if (guest.birthDate) {
         xml += `      <FECHA_NACIMIENTO>${guest.birthDate}</FECHA_NACIMIENTO>\n`;
       }
@@ -87,16 +100,52 @@ export default function ExportarPolicia() {
       }
       
       if (guest.gender) {
-        const genderCode = guest.gender === 'male' ? 'M' : guest.gender === 'female' ? 'F' : 'O';
+        const genderCode = guest.gender === 'male' ? 'H' : guest.gender === 'female' ? 'M' : 'O';
         xml += `      <SEXO>${genderCode}</SEXO>\n`;
       }
       
+      // Fechas de estancia
       if (guest.checkInDate) {
         xml += `      <FECHA_ENTRADA>${guest.checkInDate}</FECHA_ENTRADA>\n`;
       }
       
       if (guest.checkOutDate) {
         xml += `      <FECHA_SALIDA>${guest.checkOutDate}</FECHA_SALIDA>\n`;
+      }
+      
+      // Dirección
+      if (guest.street) {
+        xml += `      <DIRECCION>${escapeXml(guest.street)}</DIRECCION>\n`;
+      }
+      
+      if (guest.city) {
+        xml += `      <MUNICIPIO>${escapeXml(guest.city)}</MUNICIPIO>\n`;
+      }
+      
+      if (guest.province) {
+        xml += `      <PROVINCIA>${escapeXml(guest.province)}</PROVINCIA>\n`;
+      }
+      
+      if (guest.postalCode) {
+        xml += `      <CODIGO_POSTAL>${escapeXml(guest.postalCode)}</CODIGO_POSTAL>\n`;
+      }
+      
+      if (guest.country) {
+        xml += `      <PAIS>${escapeXml(guest.country)}</PAIS>\n`;
+      }
+      
+      // Datos de contacto
+      if (guest.phone) {
+        xml += `      <TELEFONO>${escapeXml(guest.phone)}</TELEFONO>\n`;
+      }
+      
+      if (guest.email) {
+        xml += `      <EMAIL>${escapeXml(guest.email)}</EMAIL>\n`;
+      }
+      
+      // Parentesco (si aplica)
+      if (guest.relationship) {
+        xml += `      <PARENTESCO>${escapeXml(guest.relationship)}</PARENTESCO>\n`;
       }
       
       xml += '    </VIAJERO>\n';
