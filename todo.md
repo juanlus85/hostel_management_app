@@ -1369,3 +1369,18 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 ## Nuevas Funcionalidades v49 - COMPLETADO
 - [x] Corregir error de autenticación en check-in anticipado público (debe ser accesible sin login)
 - [x] Implementar email de confirmación automático cuando un huésped complete el check-in anticipado (sin códigos de acceso, solo confirmación de datos recibidos)
+
+
+## Mejoras Modal Edición Check-in Anticipado v50 - COMPLETADO
+- [x] Selector de habitación: Desplegable con habitaciones disponibles (en lugar de texto libre)
+- [x] Tipo de habitación: Campo obligatorio que se auto-completa al seleccionar habitación
+- [x] Tipos de pago: Usar opciones oficiales de Hospederías (EFECT, TARJT, TRANS, PLATF, MOVIL, TREG, DESTI, OTRO)
+- [x] Titular del pago: Por defecto "Titular de la reserva" (en lugar del nombre del huésped)
+
+
+## Mejoras Modal Edición Check-in Anticipado v50 - COMPLETADO
+- [x] Replicar exactamente los mismos campos del check-in presencial en el modal de edición
+- [x] Selector de habitación con desplegable (habitaciones disponibles)
+- [x] Tipo de habitación obligatorio (auto-completa al seleccionar habitación)
+- [x] Tipos de pago oficiales de Hospederías (EFECT, TARJT, TRANS, PLATF, MOVIL, TREG, DESTI, OTRO)
+- [x] Titular del pago por defecto "Titular de la reserva"

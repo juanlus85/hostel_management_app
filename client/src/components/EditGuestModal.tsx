@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import { COUNTRIES } from "@/lib/countries";
+import { COUNTRIES, PAYMENT_TYPES } from "@/../../shared/countries";
 
 interface EditGuestModalProps {
   guest: any;
@@ -42,14 +42,25 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
     checkInDate: "",
     checkOutDate: "",
     roomNumber: "",
+    roomType: "",
+    roomCode: "",
+    entranceCode: "",
+    numberOfRooms: "1",
+    hasInternet: true,
+    accommodationType: "S.A. (Solo Aloj.)",
+    reservationOrigin: "Booking.com",
     
     // Información de pago
-    paymentType: "cash",
-    paymentHolder: "",
+    paymentType: "TRANS",
+    paymentDate: "",
+    paymentHolder: "Titular de la reserva",
+    paymentMethod: "Transferencia Booking",
     amountPaid: "0",
     amountPending: "0",
-    paymentMethod: "cash",
   });
+
+  // Obtener habitaciones disponibles
+  const { data: accessCodes } = trpc.checkin.accessCodes.list.useQuery();
 
   const updateGuestMutation = trpc.checkin.guests.update.useMutation({
     onSuccess: () => {
@@ -85,19 +96,49 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
         checkInDate: guest.checkInDate || "",
         checkOutDate: guest.checkOutDate || "",
         roomNumber: guest.roomNumber || "",
-        paymentType: guest.paymentType || "cash",
-        paymentHolder: guest.paymentHolder || "",
+        roomType: guest.roomType || "",
+        roomCode: guest.roomCode || "",
+        entranceCode: guest.entranceCode || "",
+        numberOfRooms: guest.numberOfRooms?.toString() || "1",
+        hasInternet: guest.hasInternet !== false,
+        accommodationType: guest.accommodationType || "S.A. (Solo Aloj.)",
+        reservationOrigin: guest.reservationOrigin || "Booking.com",
+        paymentType: guest.paymentType || "TRANS",
+        paymentDate: guest.paymentDate || "",
+        paymentHolder: guest.paymentHolder || "Titular de la reserva",
+        paymentMethod: guest.paymentMethod || "Transferencia Booking",
         amountPaid: guest.amountPaid?.toString() || "0",
         amountPending: guest.amountPending?.toString() || "0",
-        paymentMethod: guest.paymentMethod || "cash",
       });
     }
   }, [guest, open]);
+
+  // Auto-completar tipo de habitación y códigos al seleccionar habitación
+  const handleRoomChange = (roomNumber: string) => {
+    const room = accessCodes?.find(r => r.roomNumber === roomNumber);
+    if (room) {
+      setFormData(prev => ({
+        ...prev,
+        roomNumber: roomNumber,
+        roomType: room.roomType,
+        roomCode: room.roomCode || "",
+        entranceCode: room.entranceCode || "",
+      }));
+    } else {
+      setFormData(prev => ({ ...prev, roomNumber }));
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!guest?.id) return;
+
+    // Validar que tipo de habitación esté presente
+    if (!formData.roomType) {
+      toast.error("El tipo de habitación es obligatorio");
+      return;
+    }
 
     const updateData: any = {
       id: guest.id,
@@ -120,11 +161,19 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
       checkInDate: formData.checkInDate || undefined,
       checkOutDate: formData.checkOutDate || undefined,
       roomNumber: formData.roomNumber || undefined,
-      paymentType: formData.paymentType || undefined,
+      roomType: formData.roomType || undefined,
+      roomCode: formData.roomCode || undefined,
+      entranceCode: formData.entranceCode || undefined,
+      numberOfRooms: parseInt(formData.numberOfRooms) || undefined,
+      hasInternet: formData.hasInternet,
+      accommodationType: formData.accommodationType as any,
+      reservationOrigin: formData.reservationOrigin as any,
+      paymentType: formData.paymentType as any,
+      paymentDate: formData.paymentDate || undefined,
       paymentHolder: formData.paymentHolder || undefined,
+      paymentMethod: formData.paymentMethod || undefined,
       amountPaid: formData.amountPaid || undefined,
       amountPending: formData.amountPending || undefined,
-      paymentMethod: formData.paymentMethod || undefined,
       status: "completed", // Marcar como completado al guardar todos los datos
     };
 
@@ -135,7 +184,7 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Editar Check-in</DialogTitle>
+          <DialogTitle>Editar Check-in Anticipado</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -183,9 +232,10 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="PAS">Pasaporte</SelectItem>
-                    <SelectItem value="DNI">DNI</SelectItem>
+                    <SelectItem value="NIF">DNI (NIF)</SelectItem>
                     <SelectItem value="NIE">NIE</SelectItem>
+                    <SelectItem value="PAS">Pasaporte</SelectItem>
+                    <SelectItem value="OTRO">Otro</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -198,13 +248,14 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
                   required
                 />
               </div>
-              {formData.documentType === "DNI" && (
+              {formData.documentType === "NIF" && (
                 <div>
-                  <Label htmlFor="documentSupport">Número de Soporte DNI</Label>
+                  <Label htmlFor="documentSupport">Número de Soporte (DNI)</Label>
                   <Input
                     id="documentSupport"
                     value={formData.documentSupport}
                     onChange={(e) => setFormData({ ...formData, documentSupport: e.target.value })}
+                    placeholder="Aparece en el frontal del DNI"
                   />
                 </div>
               )}
@@ -232,21 +283,23 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
                 />
               </div>
               <div>
-                <Label htmlFor="phone">Teléfono</Label>
+                <Label htmlFor="phone">Teléfono *</Label>
                 <Input
                   id="phone"
                   type="tel"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  required
                 />
               </div>
               <div>
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Email *</Label>
                 <Input
                   id="email"
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  required
                 />
               </div>
             </div>
@@ -321,29 +374,109 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
                 />
               </div>
               <div>
-                <Label htmlFor="roomNumber">Habitación</Label>
-                <Input
-                  id="roomNumber"
-                  value={formData.roomNumber}
-                  onChange={(e) => setFormData({ ...formData, roomNumber: e.target.value })}
-                />
+                <Label htmlFor="reservationOrigin">Origen de Reserva *</Label>
+                <Select value={formData.reservationOrigin} onValueChange={(v) => setFormData({ ...formData, reservationOrigin: v })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Walk In">Walk In</SelectItem>
+                    <SelectItem value="Booking.com">Booking.com</SelectItem>
+                    <SelectItem value="Airbnb">Airbnb</SelectItem>
+                    <SelectItem value="Expedia">Expedia</SelectItem>
+                    <SelectItem value="Website">Website</SelectItem>
+                    <SelectItem value="Phone">Phone</SelectItem>
+                    <SelectItem value="Email">Email</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div>
-                <Label htmlFor="checkInDate">Fecha Check-in</Label>
+                <Label htmlFor="checkInDate">Fecha Check-in *</Label>
                 <Input
                   id="checkInDate"
-                  type="date"
+                  type="datetime-local"
                   value={formData.checkInDate}
                   onChange={(e) => setFormData({ ...formData, checkInDate: e.target.value })}
+                  required
                 />
               </div>
               <div>
-                <Label htmlFor="checkOutDate">Fecha Check-out</Label>
+                <Label htmlFor="checkOutDate">Fecha Check-out *</Label>
                 <Input
                   id="checkOutDate"
-                  type="date"
+                  type="datetime-local"
                   value={formData.checkOutDate}
                   onChange={(e) => setFormData({ ...formData, checkOutDate: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="roomNumber">Habitación *</Label>
+                <Select value={formData.roomNumber} onValueChange={handleRoomChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar habitación" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {accessCodes?.map((room) => (
+                      <SelectItem key={room.id} value={room.roomNumber}>
+                        Habitación {room.roomNumber} - {room.roomType}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="roomType">Tipo de Habitación *</Label>
+                <Input
+                  id="roomType"
+                  value={formData.roomType}
+                  onChange={(e) => setFormData({ ...formData, roomType: e.target.value })}
+                  placeholder="Se auto-completa al seleccionar habitación"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="roomCode">Código de Habitación</Label>
+                <Input
+                  id="roomCode"
+                  value={formData.roomCode}
+                  onChange={(e) => setFormData({ ...formData, roomCode: e.target.value })}
+                  placeholder="Se auto-completa al seleccionar habitación"
+                />
+              </div>
+              <div>
+                <Label htmlFor="entranceCode">Código de Entrada</Label>
+                <Input
+                  id="entranceCode"
+                  value={formData.entranceCode}
+                  onChange={(e) => setFormData({ ...formData, entranceCode: e.target.value })}
+                  placeholder="Se auto-completa al seleccionar habitación"
+                />
+              </div>
+              <div>
+                <Label htmlFor="accommodationType">Tipo de Alojamiento *</Label>
+                <Select value={formData.accommodationType} onValueChange={(v) => setFormData({ ...formData, accommodationType: v })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="S.A. (Solo Aloj.)">S.A. (Solo Aloj.)</SelectItem>
+                    <SelectItem value="A.D. (Aloj. y Desayuno)">A.D. (Aloj. y Desayuno)</SelectItem>
+                    <SelectItem value="M.P. (Media Pensión)">M.P. (Media Pensión)</SelectItem>
+                    <SelectItem value="P.C. (Pensión Completa)">P.C. (Pensión Completa)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="numberOfRooms">Número de Habitaciones *</Label>
+                <Input
+                  id="numberOfRooms"
+                  type="number"
+                  min="1"
+                  value={formData.numberOfRooms}
+                  onChange={(e) => setFormData({ ...formData, numberOfRooms: e.target.value })}
+                  required
                 />
               </div>
             </div>
@@ -354,17 +487,28 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
             <h3 className="text-lg font-semibold border-b pb-2">Información de Pago</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="paymentType">Tipo de Pago</Label>
+                <Label htmlFor="paymentType">Tipo de Pago *</Label>
                 <Select value={formData.paymentType} onValueChange={(v) => setFormData({ ...formData, paymentType: v })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="cash">Efectivo</SelectItem>
-                    <SelectItem value="card">Tarjeta</SelectItem>
-                    <SelectItem value="transfer">Transferencia</SelectItem>
+                    {PAYMENT_TYPES.map((pt) => (
+                      <SelectItem key={pt.code} value={pt.code}>
+                        {pt.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div>
+                <Label htmlFor="paymentDate">Fecha de Pago</Label>
+                <Input
+                  id="paymentDate"
+                  type="date"
+                  value={formData.paymentDate}
+                  onChange={(e) => setFormData({ ...formData, paymentDate: e.target.value })}
+                />
               </div>
               <div>
                 <Label htmlFor="paymentHolder">Titular del Pago</Label>
@@ -372,6 +516,16 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
                   id="paymentHolder"
                   value={formData.paymentHolder}
                   onChange={(e) => setFormData({ ...formData, paymentHolder: e.target.value })}
+                  placeholder="Titular de la reserva"
+                />
+              </div>
+              <div>
+                <Label htmlFor="paymentMethod">Medio de Pago</Label>
+                <Input
+                  id="paymentMethod"
+                  value={formData.paymentMethod}
+                  onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
+                  placeholder="Ej: Transferencia Booking"
                 />
               </div>
               <div>
@@ -398,7 +552,7 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
           </div>
 
           {/* Botones */}
-          <div className="flex justify-end gap-2 pt-4">
+          <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
