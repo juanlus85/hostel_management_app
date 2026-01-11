@@ -90,7 +90,7 @@ export default function CheckinPresencial() {
 
   // Información de pago (OBLIGATORIA según normativa)
   const [paymentData, setPaymentData] = useState({
-    paymentType: "Transferencia",
+    paymentType: "TRANS",
     paymentDate: new Date().toISOString().split("T")[0],
     amountPaid: "0",
     amountPending: "0",
@@ -124,7 +124,9 @@ export default function CheckinPresencial() {
   const [isDrawing, setIsDrawing] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
 
-  const { data: rooms } = trpc.accessCodes.list.useQuery();
+  const { data: rooms } = trpc.accessCodes.list.useQuery(undefined, {
+    retry: false,
+  });
   const { data: settings } = trpc.checkin.settings.get.useQuery();
   const createGuest = trpc.checkin.guests.create.useMutation();
 
@@ -436,7 +438,7 @@ export default function CheckinPresencial() {
         reservationOrigin: "Booking.com",
       });
       setPaymentData({
-        paymentType: "EFECT",
+        paymentType: "TRANS",
         paymentDate: new Date().toISOString().split("T")[0],
         amountPaid: "",
         amountPending: "",
@@ -705,11 +707,11 @@ export default function CheckinPresencial() {
                   </SelectTrigger>
                   <SelectContent>
                     {COUNTRIES.map((country) => (
-                      <SelectItem key={country.code} value={country.code}>
+                      <SelectItem key={`${index}-nationality-${country.code}`} value={country.code}>
                         {country.name}
                       </SelectItem>
                     ))}
-                    <SelectItem value="OTRO">Otro (especificar)</SelectItem>
+                    <SelectItem key={`${index}-nationality-OTRO`} value="OTRO">Otro (especificar)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -843,12 +845,14 @@ export default function CheckinPresencial() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Efectivo">Efectivo</SelectItem>
-                <SelectItem value="Tarjeta">Tarjeta</SelectItem>
-                <SelectItem value="Transferencia">Transferencia</SelectItem>
-                <SelectItem value="PayPal">PayPal</SelectItem>
-                <SelectItem value="Bizum">Bizum</SelectItem>
-                <SelectItem value="Otro">Otro</SelectItem>
+                <SelectItem value="EFECT">Efectivo</SelectItem>
+                <SelectItem value="TARJT">Tarjeta</SelectItem>
+                <SelectItem value="TRANS">Transferencia</SelectItem>
+                <SelectItem value="PLATF">Plataforma (Booking, Airbnb...)</SelectItem>
+                <SelectItem value="MOVIL">Pago Móvil (Bizum, PayPal...)</SelectItem>
+                <SelectItem value="TREG">Transferencia Regalo</SelectItem>
+                <SelectItem value="DESTI">Destino</SelectItem>
+                <SelectItem value="OTRO">Otro</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -905,7 +909,7 @@ export default function CheckinPresencial() {
             />
           </div>
 
-          {paymentData.paymentType === "Tarjeta" && (
+          {paymentData.paymentType === "TARJT" && (
             <div>
               <Label htmlFor="cardExpiry">Fecha de Caducidad Tarjeta</Label>
               <Input

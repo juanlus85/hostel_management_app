@@ -1417,3 +1417,52 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Agregar botón "Limpiar Registros Antiguos" en ExportarPolicia.tsx
 - [x] Compilar y probar que el servidor arranca correctamente
 - [x] Crear paquete ZIP para despliegue en VPS
+
+
+## Bug Reportado v57b - IDENTIFICADO
+
+- [x] Menú de check-in se queda cargando infinitamente (loading spinner)
+- [x] Investigar qué consulta está fallando o tardando demasiado
+- [x] Causa: Faltan tablas `guests` y `hostel_settings_checkin` en base de datos de producción
+- [x] Crear script SQL para crear las tablas faltantes
+- [ ] Ejecutar script en phpMyAdmin de producción
+
+
+## Corrección Script SQL v57c - COMPLETADO
+
+- [x] Error al ejecutar script: columna `hostelName` no existe
+- [x] Investigar estructura actual de tabla hostel_settings_checkin en producción
+- [x] Crear script SQL que renombre columnas existentes y agregue faltantes
+- [ ] Usuario debe ejecutar script corregido en phpMyAdmin
+
+
+## Verificación Sistema Check-in v57d - EN PROGRESO
+
+- [x] Check-in funciona correctamente ✅
+- [x] Códigos funciona correctamente ✅
+- [x] Config funciona correctamente ✅
+- [x] Verificar qué secciones no funcionan
+- [ ] Huéspedes - loading infinito ❌
+- [ ] Anticipado - loading infinito ❌
+- [ ] Policía - loading infinito ❌
+- [x] Identificar qué consultas fallan en estas secciones
+- [x] Causa: Tabla guests tiene estructura diferente, faltan 13 columnas
+- [x] Agregar columnas faltantes a tabla guests en producción (script SQL creado)
+- [ ] Probar que las secciones cargan correctamente
+
+
+## Warning React Keys Duplicadas - EN PROGRESO
+
+- [ ] Warning: "Encountered two children with the same key, 'GBR'"
+- [ ] Buscar dónde se usa 'GBR' como key en componentes de check-in
+- [ ] Corregir usando keys únicas (índice + valor o ID único)
+
+
+## Error Validación paymentType - EN PROGRESO
+
+- [x] Error al completar check-in: "Invalid option: expected one of EFECT, TARJT, TRANS..."
+- [x] Causa: paymentData.paymentType tiene valor "Transferencia" (español) en lugar de "TRANS" (código)
+- [x] Cambiar valor por defecto de "Transferencia" a "TRANS"
+- [x] Corregir Select para usar códigos del enum (EFECT, TARJT, TRANS, etc.)
+- [x] Corregir condición de "Tarjeta" a "TARJT"
+- [ ] Usuario debe probar que el check-in se complete correctamente
