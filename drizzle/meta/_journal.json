@@ -211,6 +211,62 @@
       "when": 1767526682880,
       "tag": "0029_dazzling_starbolt",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "5",
+      "when": 1768007350717,
+      "tag": "0030_stormy_nighthawk",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "5",
+      "when": 1768009001445,
+      "tag": "0031_amazing_polaris",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "5",
+      "when": 1768048822538,
+      "tag": "0032_small_queen_noir",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "5",
+      "when": 1768079024458,
+      "tag": "0033_clean_ezekiel",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "5",
+      "when": 1768079936696,
+      "tag": "0034_jittery_blink",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "5",
+      "when": 1768080209876,
+      "tag": "0035_stiff_the_santerians",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "5",
+      "when": 1768091378575,
+      "tag": "0036_odd_rachel_grey",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "5",
+      "when": 1768093236409,
+      "tag": "0037_neat_squadron_sinister",
+      "breakpoints": true
     }
   ]
 }

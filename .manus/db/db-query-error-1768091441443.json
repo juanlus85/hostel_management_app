@@ -1,0 +1,8 @@
+{
+  "query": "UPDATE `guests` SET `paymentType` = 'EFECT' WHERE `paymentType` = 'Efectivo';\nUPDATE `guests` SET `paymentType` = 'TARJT' WHERE `paymentType` = 'Tarjeta';\nUPDATE `guests` SET `paymentType` = 'TRANS' WHERE `paymentType` = 'Transferencia';\nUPDATE `guests` SET `paymentType` = 'MOVIL' WHERE `paymentType` IN ('PayPal', 'Bizum');\nUPDATE `guests` SET `paymentType` = 'OTRO' WHERE `paymentType` = 'Otro';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user uN1yFnMXg2uz2sS.48d4e14bb92a --database nKwKaPpEnuCPRfjQgd5Gdt --execute UPDATE `guests` SET `paymentType` = 'EFECT' WHERE `paymentType` = 'Efectivo';\nUPDATE `guests` SET `paymentType` = 'TARJT' WHERE `paymentType` = 'Tarjeta';\nUPDATE `guests` SET `paymentType` = 'TRANS' WHERE `paymentType` = 'Transferencia';\nUPDATE `guests` SET `paymentType` = 'MOVIL' WHERE `paymentType` IN ('PayPal', 'Bizum');\nUPDATE `guests` SET `paymentType` = 'OTRO' WHERE `paymentType` = 'Otro';",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1265 (01000) at line 1: Data truncated for column '%s' at row %d"
+  ]
+}

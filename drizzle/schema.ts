@@ -608,3 +608,121 @@ export const chefSandwichOrders = mysqlTable("chef_sandwich_orders", {
 
 export type ChefSandwichOrder = typeof chefSandwichOrders.$inferSelect;
 export type InsertChefSandwichOrder = typeof chefSandwichOrders.$inferInsert;
+
+// ==================== GUESTS (Huéspedes Check-in) ====================
+export const guests = mysqlTable("guests", {
+  id: int("id").autoincrement().primaryKey(),
+  // Información básica del huésped
+  firstName: varchar("firstName", { length: 100 }).notNull(),
+  lastName: varchar("lastName", { length: 100 }).notNull(),
+  documentNumber: varchar("documentNumber", { length: 50 }).notNull(),
+  documentSupport: varchar("documentSupport", { length: 50 }), // Número de soporte para DNI español
+  documentType: varchar("documentType", { length: 50 }).default("Passport").notNull(), // Passport, ID Card, Driver License
+  gender: mysqlEnum("gender", ["Hombre", "Mujer", "Otro"]),
+  nationality: varchar("nationality", { length: 100 }),
+  birthDate: varchar("birthDate", { length: 10 }), // YYYY-MM-DD
+  documentExpiry: varchar("documentExpiry", { length: 10 }), // YYYY-MM-DD
+  
+  // Dirección
+  street: varchar("street", { length: 255 }),
+  addressExtra: varchar("addressExtra", { length: 255 }),
+  postalCode: varchar("postalCode", { length: 20 }),
+  city: varchar("city", { length: 100 }),
+  province: varchar("province", { length: 100 }),
+  country: varchar("country", { length: 100 }),
+  
+  // Contacto
+  phone: varchar("phone", { length: 50 }),
+  phoneExtra: varchar("phoneExtra", { length: 50 }),
+  email: varchar("email", { length: 320 }),
+  
+  // Información de reserva
+  reservationNumber: varchar("reservationNumber", { length: 100 }),
+  checkInDate: varchar("checkInDate", { length: 10 }), // YYYY-MM-DD - Opcional para check-in anticipado
+  checkOutDate: varchar("checkOutDate", { length: 10 }),
+  roomNumber: varchar("roomNumber", { length: 10 }),
+  roomType: varchar("roomType", { length: 100 }),
+  roomCode: varchar("roomCode", { length: 10 }), // Código de acceso habitación
+  entranceCode: varchar("entranceCode", { length: 10 }), // Código de entrada hostel
+  numberOfRooms: int("numberOfRooms").default(1).notNull(),
+  hasInternet: boolean("hasInternet").default(true).notNull(),
+  accommodationType: mysqlEnum("accommodationType", ["S.A. (Solo Aloj.)", "A.D. (Aloj. y Desayuno)", "M.P. (Media Pensión)", "P.C. (Pensión Completa)"]).default("S.A. (Solo Aloj.)").notNull(),
+  reservationOrigin: mysqlEnum("reservationOrigin", ["Walk In", "Booking.com", "Airbnb", "Expedia", "Website", "Phone", "Email", "Other"]).default("Walk In").notNull(),
+  
+  // Información de pago
+  paymentType: mysqlEnum("paymentType", ["EFECT", "TARJT", "TRANS", "PLATF", "MOVIL", "TREG", "DESTI", "OTRO"]).default("TRANS").notNull(),
+  paymentDate: varchar("paymentDate", { length: 10 }), // YYYY-MM-DD
+  amountPaid: decimal("amountPaid", { precision: 10, scale: 2 }).default("0").notNull(),
+  amountPending: decimal("amountPending", { precision: 10, scale: 2 }).default("0").notNull(),
+  paymentHolder: varchar("paymentHolder", { length: 255 }),
+  paymentMethod: varchar("paymentMethod", { length: 255 }),
+  
+  // Número de personas
+  numberOfGuests: int("numberOfGuests").default(1).notNull(),
+  
+  // Firma y términos
+  signature: text("signature"), // Base64 de la firma
+  acceptedTerms: boolean("acceptedTerms").default(false).notNull(),
+  acceptedPrivacy: boolean("acceptedPrivacy").default(false).notNull(),
+  
+  // Metadatos
+  isMainGuest: boolean("isMainGuest").default(true).notNull(), // Si es el huésped principal
+  groupId: varchar("groupId", { length: 100 }), // ID del grupo de huéspedes (para múltiples huéspedes)
+  status: mysqlEnum("status", ["pending", "completed", "online", "cancelled"]).default("pending").notNull(),
+  checkinType: mysqlEnum("checkinType", ["presencial", "anticipado", "online"]).default("presencial").notNull(), // Tipo de check-in
+  language: mysqlEnum("language", ["es", "en"]).default("es").notNull(),
+  token: varchar("token", { length: 255 }).unique(), // Token único para check-in online
+  sendCodes: boolean("sendCodes").default(false).notNull(), // Si se enviaron códigos (online vs anticipado)
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  createdBy: int("createdBy"), // Usuario que creó el registro
+});
+
+export type Guest = typeof guests.$inferSelect;
+export type InsertGuest = typeof guests.$inferInsert;
+
+// ==================== HOSTEL SETTINGS (Configuración Check-in) ====================
+export const hostelSettingsCheckin = mysqlTable("hostel_settings_checkin", {
+  id: int("id").autoincrement().primaryKey(),
+  // Datos del hostel
+  hostelName: varchar("hostelName", { length: 255 }),
+  hostelAddress: text("hostelAddress"),
+  hostelPhone: varchar("hostelPhone", { length: 50 }),
+  hostelEmail: varchar("hostelEmail", { length: 320 }),
+  hostelWebsite: varchar("hostelWebsite", { length: 255 }),
+  hostelRta: varchar("hostelRta", { length: 100 }), // Número RTA
+  policeCode: varchar("policeCode", { length: 100 }), // Código establecimiento para Sistema Hospedajes
+  municipioCode: varchar("municipioCode", { length: 5 }), // Código INE del municipio (5 dígitos)
+  hostelLogo: text("hostelLogo"), // Base64 o URL del logo
+  
+  // Información adicional
+  wifiPassword: varchar("wifiPassword", { length: 255 }),
+  checkoutTime: varchar("checkoutTime", { length: 5 }), // HH:MM
+  defaultEntranceCode: varchar("defaultEntranceCode", { length: 10 }),
+  
+  // Términos y condiciones (bilingüe)
+  termsConditionsEs: text("termsConditionsEs"),
+  termsConditionsEn: text("termsConditionsEn"),
+  privacyPolicyEs: text("privacyPolicyEs"),
+  privacyPolicyEn: text("privacyPolicyEn"),
+  welcomeMessageEs: text("welcomeMessageEs"),
+  welcomeMessageEn: text("welcomeMessageEn"),
+  
+  // Tipos de habitación disponibles (JSON array)
+  roomTypes: text("roomTypes"), // JSON: ["Individual", "Doble", "Triple", "Cuádruple", "Suite"]
+  
+  // Configuración SMTP
+  smtpHost: varchar("smtpHost", { length: 255 }),
+  smtpPort: int("smtpPort"),
+  smtpUser: varchar("smtpUser", { length: 255 }),
+  smtpPassword: varchar("smtpPassword", { length: 255 }),
+  smtpFromEmail: varchar("smtpFromEmail", { length: 320 }),
+  smtpFromName: varchar("smtpFromName", { length: 255 }),
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type HostelSettingCheckin = typeof hostelSettingsCheckin.$inferSelect;
+export type InsertHostelSettingCheckin = typeof hostelSettingsCheckin.$inferInsert;

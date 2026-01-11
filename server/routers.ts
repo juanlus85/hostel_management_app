@@ -1569,5 +1569,189 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
       return { success: true, id };
     }),
   }),
+
+  // ==================== CHECK-IN ====================
+  checkin: router({
+    // Guests
+    guests: router({
+      list: protectedProcedure.query(async () => {
+        return db.getAllGuests();
+      }),
+      search: protectedProcedure.input(z.object({
+        search: z.string().optional(),
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+        status: z.string().optional(),
+      })).query(async ({ input }) => {
+        return db.searchGuests(input);
+      }),
+      getById: protectedProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
+        return db.getGuestById(input.id);
+      }),
+      create: publicProcedure.input(z.object({
+        firstName: z.string(),
+        lastName: z.string(),
+        documentNumber: z.string(),
+        documentSupport: z.string().optional(),
+        documentType: z.string().optional(),
+        gender: z.enum(["Hombre", "Mujer", "Otro"]).optional(),
+        nationality: z.string().optional(),
+        birthDate: z.string().optional(),
+        documentExpiry: z.string().optional(),
+        street: z.string().optional(),
+        addressExtra: z.string().optional(),
+        postalCode: z.string().optional(),
+        city: z.string().optional(),
+        province: z.string().optional(),
+        country: z.string().optional(),
+        phone: z.string().optional(),
+        phoneExtra: z.string().optional(),
+        email: z.string().optional(),
+        reservationNumber: z.string().optional(),
+        checkInDate: z.string().optional(),
+        checkOutDate: z.string().optional(),
+        roomNumber: z.string().optional(),
+        roomType: z.string().optional(),
+        roomCode: z.string().optional(),
+        entranceCode: z.string().optional(),
+        numberOfRooms: z.number().optional(),
+        hasInternet: z.boolean().optional(),
+        accommodationType: z.enum(["S.A. (Solo Aloj.)", "A.D. (Aloj. y Desayuno)", "M.P. (Media Pensión)", "P.C. (Pensión Completa)"]).optional(),
+        reservationOrigin: z.enum(["Walk In", "Booking.com", "Airbnb", "Expedia", "Website", "Phone", "Email", "Other"]).optional(),
+        paymentType: z.enum(["EFECT", "TARJT", "TRANS", "PLATF", "MOVIL", "TREG", "DESTI", "OTRO"]).optional(),
+        paymentDate: z.string().optional(),
+        amountPaid: z.string().optional(),
+        amountPending: z.string().optional(),
+        paymentHolder: z.string().optional(),
+        paymentMethod: z.string().optional(),
+        numberOfGuests: z.number().optional(),
+        signature: z.string().optional(),
+        acceptedTerms: z.boolean().optional(),
+        acceptedPrivacy: z.boolean().optional(),
+        isMainGuest: z.boolean().optional(),
+        groupId: z.string().optional(),
+        status: z.enum(["pending", "completed", "online", "cancelled"]).optional(),
+        checkinType: z.enum(["presencial", "anticipado", "online"]).optional(),
+        language: z.enum(["es", "en"]).optional(),
+      })).mutation(async ({ input, ctx }) => {
+        // Para check-ins públicos (anticipado), createdBy será null
+        const id = await db.createGuest({ ...input, createdBy: ctx.user?.id || null });
+        
+        // Si es check-in anticipado y tiene email, enviar confirmación
+        if (input.checkinType === 'anticipado' && input.email) {
+          const { sendCheckinAnticipadoConfirmation, sendCheckinAnticipadoNotificationToReception } = await import('./email');
+          
+          // Enviar confirmación al huésped
+          await sendCheckinAnticipadoConfirmation({
+            firstName: input.firstName,
+            lastName: input.lastName,
+            email: input.email,
+            documentNumber: input.documentNumber,
+            checkInDate: input.checkInDate,
+            language: input.language || 'es',
+          });
+          
+          // Enviar notificación a recepción
+          await sendCheckinAnticipadoNotificationToReception({
+            firstName: input.firstName,
+            lastName: input.lastName,
+            email: input.email,
+            phone: input.phone,
+            documentNumber: input.documentNumber,
+            nationality: input.nationality,
+            checkInDate: input.checkInDate,
+            reservationNumber: input.reservationNumber,
+          });
+        }
+        
+        return { success: true, id };
+      }),
+      update: protectedProcedure.input(z.object({
+        id: z.number(),
+        firstName: z.string().optional(),
+        lastName: z.string().optional(),
+        documentNumber: z.string().optional(),
+        documentType: z.string().optional(),
+        gender: z.enum(["Hombre", "Mujer", "Otro"]).optional(),
+        nationality: z.string().optional(),
+        birthDate: z.string().optional(),
+        documentExpiry: z.string().optional(),
+        street: z.string().optional(),
+        addressExtra: z.string().optional(),
+        postalCode: z.string().optional(),
+        city: z.string().optional(),
+        province: z.string().optional(),
+        country: z.string().optional(),
+        phone: z.string().optional(),
+        phoneExtra: z.string().optional(),
+        email: z.string().optional(),
+        reservationNumber: z.string().optional(),
+        checkInDate: z.string().optional(),
+        checkOutDate: z.string().optional(),
+        roomNumber: z.string().optional(),
+        roomType: z.string().optional(),
+        roomCode: z.string().optional(),
+        entranceCode: z.string().optional(),
+        numberOfRooms: z.number().optional(),
+        hasInternet: z.boolean().optional(),
+        accommodationType: z.enum(["S.A. (Solo Aloj.)", "A.D. (Aloj. y Desayuno)", "M.P. (Media Pensión)", "P.C. (Pensión Completa)"]).optional(),
+        reservationOrigin: z.enum(["Walk In", "Booking.com", "Airbnb", "Expedia", "Website", "Phone", "Email", "Other"]).optional(),
+        paymentType: z.enum(["EFECT", "TARJT", "TRANS", "PLATF", "MOVIL", "TREG", "DESTI", "OTRO"]).optional(),
+        paymentDate: z.string().optional(),
+        amountPaid: z.string().optional(),
+        amountPending: z.string().optional(),
+        paymentHolder: z.string().optional(),
+        paymentMethod: z.string().optional(),
+        numberOfGuests: z.number().optional(),
+        signature: z.string().optional(),
+        acceptedTerms: z.boolean().optional(),
+        acceptedPrivacy: z.boolean().optional(),
+        status: z.enum(["pending", "completed", "online", "cancelled"]).optional(),
+      })).mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        await db.updateGuest(id, data);
+        return { success: true };
+      }),
+      delete: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
+        await db.deleteGuest(input.id);
+        return { success: true };
+      }),
+    }),
+    
+    // Settings
+    settings: router({
+      get: protectedProcedure.query(async () => {
+        return db.getHostelSettings();
+      }),
+      update: adminProcedure.input(z.object({
+        hostelName: z.string().optional(),
+        hostelAddress: z.string().optional(),
+        hostelPhone: z.string().optional(),
+        hostelEmail: z.string().optional(),
+        hostelWebsite: z.string().optional(),
+        hostelRta: z.string().optional(),
+        policeCode: z.string().optional(),
+        wifiPassword: z.string().optional(),
+        checkoutTime: z.string().optional(),
+        defaultEntranceCode: z.string().optional(),
+        termsConditionsEs: z.string().optional(),
+        termsConditionsEn: z.string().optional(),
+        privacyPolicyEs: z.string().optional(),
+        privacyPolicyEn: z.string().optional(),
+        welcomeMessageEs: z.string().optional(),
+        welcomeMessageEn: z.string().optional(),
+        roomTypes: z.string().optional(),
+        smtpHost: z.string().optional(),
+        smtpPort: z.number().optional(),
+        smtpUser: z.string().optional(),
+        smtpPassword: z.string().optional(),
+        smtpFromEmail: z.string().optional(),
+        smtpFromName: z.string().optional(),
+      })).mutation(async ({ input }) => {
+        await db.upsertHostelSettings(input);
+        return { success: true };
+      }),
+    }),
+  }),
 });
 export type AppRouter = typeof appRouter;
