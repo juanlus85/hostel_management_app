@@ -1,1 +1,0 @@
-ALTER TABLE `safe_boxes` MODIFY COLUMN `accumulated` decimal(10,2) NOT NULL DEFAULT '0';

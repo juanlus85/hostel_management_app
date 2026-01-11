@@ -1,1 +1,0 @@
-ALTER TABLE `hostel_settings_checkin` ADD `municipioCode` varchar(5);

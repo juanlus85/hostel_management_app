@@ -25,20 +25,11 @@ import CajasF from "./pages/CajasF";
 import CodigosAcceso from "./pages/CodigosAcceso";
 import HistoricoCajas from "./pages/HistoricoCajas";
 import PedidosUnificado from "./pages/PedidosUnificado";
-import CheckinUnificado from "./pages/CheckinUnificado";
-import CheckinAnticipadoPublico from "./pages/CheckinAnticipadoPublico";
 
 function Router() {
   return (
-    <Switch>
-      {/* Rutas públicas sin layout */}
-      <Route path="/checkin-anticipado-publico" component={CheckinAnticipadoPublico} />
-      
-      {/* Rutas privadas con DashboardLayout */}
-      <Route>
-        {() => (
-          <DashboardLayout>
-            <Switch>
+    <DashboardLayout>
+      <Switch>
         <Route path="/" component={Home} />
         <Route path="/turnos" component={Turnos} />
         <Route path="/caja" component={Caja} />
@@ -57,14 +48,10 @@ function Router() {
         <Route path="/codigos-acceso" component={CodigosAcceso} />
         <Route path="/historico-cajas" component={HistoricoCajas} />
         <Route path="/pedidos" component={PedidosUnificado} />
-        <Route path="/checkin" component={CheckinUnificado} />
         <Route path="/404" component={NotFound} />
         <Route component={NotFound} />
-            </Switch>
-          </DashboardLayout>
-        )}
-      </Route>
-    </Switch>
+      </Switch>
+    </DashboardLayout>
   );
 }
 

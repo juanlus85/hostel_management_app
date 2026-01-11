@@ -1,9 +1,0 @@
-{
-  "query": "ALTER TABLE `guests` MODIFY COLUMN `gender` VARCHAR(50);\nUPDATE `guests` SET `gender` = 'Hombre' WHERE `gender` = 'male';\nUPDATE `guests` SET `gender` = 'Mujer' WHERE `gender` = 'female';\nUPDATE `guests` SET `gender` = 'Otro' WHERE `gender` = 'other';\nALTER TABLE `guests` MODIFY COLUMN `gender` enum('Hombre','Mujer','Otro');",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user uN1yFnMXg2uz2sS.48d4e14bb92a --database nKwKaPpEnuCPRfjQgd5Gdt --execute ALTER TABLE `guests` MODIFY COLUMN `gender` VARCHAR(50);\nUPDATE `guests` SET `gender` = 'Hombre' WHERE `gender` = 'male';\nUPDATE `guests` SET `gender` = 'Mujer' WHERE `gender` = 'female';\nUPDATE `guests` SET `gender` = 'Otro' WHERE `gender` = 'other';\nALTER TABLE `guests` MODIFY COLUMN `gender` enum('Hombre','Mujer','Otro');",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 1168
-}

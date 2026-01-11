@@ -1,1 +1,0 @@
-ALTER TABLE guests ADD COLUMN issueDate VARCHAR(10) AFTER birthDate;

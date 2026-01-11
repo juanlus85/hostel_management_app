@@ -1,1 +1,0 @@
-ALTER TABLE `guests` DROP COLUMN `issueDate`;

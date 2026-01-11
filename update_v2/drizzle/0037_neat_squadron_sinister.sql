@@ -1,1 +1,0 @@
-ALTER TABLE `guests` MODIFY COLUMN `gender` enum('Hombre','Mujer','Otro');

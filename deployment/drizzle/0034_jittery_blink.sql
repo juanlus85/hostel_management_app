@@ -1,1 +1,0 @@
-ALTER TABLE `guests` ADD `documentSupport` varchar(50);

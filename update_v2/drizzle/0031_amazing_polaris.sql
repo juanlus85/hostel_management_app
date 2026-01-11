@@ -1,1 +1,0 @@
-ALTER TABLE `guests` ADD `issueDate` varchar(10);
