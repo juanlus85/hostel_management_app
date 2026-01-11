@@ -14,7 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { trpc } from "@/lib/trpc";
 import { Loader2, Plus, Trash2, Save } from "lucide-react";
 import { toast } from "sonner";
-import { COUNTRIES, getAllowedDocumentTypes, PAYMENT_TYPES, GENDER_CODES } from "@/../../shared/countries";
+import { getCountriesSorted, getCountryName, getAllowedDocumentTypes, PAYMENT_TYPES, GENDER_CODES } from "@/../../shared/countries";
 
 interface GuestData {
   firstName: string;
@@ -643,9 +643,9 @@ export default function CheckinPresencial() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {COUNTRIES.map((country) => (
+                {getCountriesSorted('es').map((country) => (
                   <SelectItem key={country.code} value={country.code}>
-                    {country.name}
+                    {getCountryName(country.code, 'es')}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -658,7 +658,7 @@ export default function CheckinPresencial() {
       {guests.map((guest, index) => {
         const allowedDocs = getAllowedDocumentTypes(guest.nationality);
         const isSpanish = guest.nationality === "ESP";
-        const country = COUNTRIES.find(c => c.code === guest.nationality);
+        const country = getCountriesSorted('es').find(c => c.code === guest.nationality);
         const isEU = country?.isEU || false;
 
         return (
@@ -704,9 +704,9 @@ export default function CheckinPresencial() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {COUNTRIES.map((country) => (
+                    {getCountriesSorted('es').map((country) => (
                       <SelectItem key={country.code} value={country.code}>
-                        {country.name}
+                        {getCountryName(country.code, 'es')}
                       </SelectItem>
                     ))}
                     <SelectItem value="OTRO">Otro (especificar)</SelectItem>
@@ -843,12 +843,14 @@ export default function CheckinPresencial() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Efectivo">Efectivo</SelectItem>
-                <SelectItem value="Tarjeta">Tarjeta</SelectItem>
-                <SelectItem value="Transferencia">Transferencia</SelectItem>
-                <SelectItem value="PayPal">PayPal</SelectItem>
-                <SelectItem value="Bizum">Bizum</SelectItem>
-                <SelectItem value="Otro">Otro</SelectItem>
+                <SelectItem value="EFECT">Efectivo</SelectItem>
+                <SelectItem value="TARJT">Tarjeta</SelectItem>
+                <SelectItem value="TRANS">Transferencia</SelectItem>
+                <SelectItem value="PLATF">Plataforma (Booking, Airbnb)</SelectItem>
+                <SelectItem value="MOVIL">Móvil (Bizum, PayPal)</SelectItem>
+                <SelectItem value="TREG">Tarjeta Regalo</SelectItem>
+                <SelectItem value="DESTI">Destino</SelectItem>
+                <SelectItem value="OTRO">Otro</SelectItem>
               </SelectContent>
             </Select>
           </div>

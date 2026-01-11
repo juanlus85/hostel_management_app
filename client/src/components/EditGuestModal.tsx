@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import { COUNTRIES, PAYMENT_TYPES } from "@/../../shared/countries";
+import { getCountriesSorted, getCountryName, PAYMENT_TYPES } from "@/../../shared/countries";
 
 interface EditGuestModalProps {
   guest: any;
@@ -248,9 +248,9 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {COUNTRIES.map((c) => (
+                    {getCountriesSorted('es').map((c) => (
                       <SelectItem key={c.code} value={c.code}>
-                        {c.name}
+                        {getCountryName(c.code, 'es')}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -297,9 +297,9 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="male">Hombre</SelectItem>
-                    <SelectItem value="female">Mujer</SelectItem>
-                    <SelectItem value="other">Otro</SelectItem>
+                    <SelectItem value="Hombre">Hombre</SelectItem>
+                    <SelectItem value="Mujer">Mujer</SelectItem>
+                    <SelectItem value="Otro">Otro</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -381,9 +381,9 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {COUNTRIES.map((c) => (
+                    {getCountriesSorted('es').map((c) => (
                       <SelectItem key={c.code} value={c.code}>
-                        {c.name}
+                        {getCountryName(c.code, 'es')}
                       </SelectItem>
                     ))}
                   </SelectContent>

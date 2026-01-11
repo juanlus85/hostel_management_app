@@ -1421,3 +1421,12 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 ## Corrección XML Policía v54b - COMPLETADO
 
 - [x] Corregir generación de XML para incluir número de soporte del documento (documentSupport)
+
+## Correcciones Formularios y Filtros v55 - COMPLETADO
+
+- [x] Corregir tipos de pago en check-in presencial (usar códigos oficiales EFECT, TARJT, etc.)
+- [x] Ordenar países alfabéticamente según idioma del formulario (ES/EN)
+- [x] Mostrar "Country" en lugar de "Nationality" en formulario inglés
+- [x] Filtrar check-ins pendientes en vista Huéspedes (solo mostrar completed)
+- [x] Corregir campo género en modal de edición (no se carga)
+- [x] Cambiar origen de reserva por defecto a "Booking.com" en modal de edición

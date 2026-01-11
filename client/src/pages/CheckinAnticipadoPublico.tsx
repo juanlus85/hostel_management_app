@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { COUNTRIES } from "@/lib/countries";
+import { getCountriesSorted, getCountryName } from "../../../shared/countries";
 
 export default function CheckinAnticipadoPublico() {
   const [lang, setLang] = useState<"es" | "en">("es");
@@ -309,9 +309,9 @@ export default function CheckinAnticipadoPublico() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {COUNTRIES.map((country) => (
+                        {getCountriesSorted(lang).map((country) => (
                           <SelectItem key={country.code} value={country.code}>
-                            {lang === "es" ? country.nationality : country.nationalityEn}
+                            {getCountryName(country.code, lang)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -488,9 +488,9 @@ export default function CheckinAnticipadoPublico() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {COUNTRIES.map((country) => (
+                        {getCountriesSorted(lang).map((country) => (
                           <SelectItem key={country.code} value={country.code}>
-                            {lang === "es" ? country.name : country.nameEn}
+                            {getCountryName(country.code, lang)}
                           </SelectItem>
                         ))}
                       </SelectContent>
