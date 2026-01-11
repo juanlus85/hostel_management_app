@@ -1393,3 +1393,8 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Enviar email a recepción (thespotcentralhostel@gmail.com) cuando se recibe un check-in anticipado
 - [x] Titular del pago: Mostrar nombre completo del huésped por defecto al editar
 - [x] Valores por defecto al editar: Tipo de pago TRANS, Fecha check-in del huésped a las 11:00, Check-out +1 día a las 11:00, Origen Booking.com
+
+
+## Corrección Fechas Modal Edición v52 - COMPLETADO
+- [x] Fecha de pago por defecto: fecha del check-in (sin hora)
+- [x] Convertir fechas datetime-local a formato YYYY-MM-DD antes de enviar al backend

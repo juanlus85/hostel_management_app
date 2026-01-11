@@ -79,6 +79,7 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
       // Calcular fechas por defecto si el huésped dio fecha de llegada
       let defaultCheckIn = guest.checkInDate || "";
       let defaultCheckOut = guest.checkOutDate || "";
+      let defaultPaymentDate = guest.paymentDate || "";
       
       if (guest.checkInDate && !guest.checkOutDate) {
         // Si tiene fecha de llegada pero no de salida, calcular +1 día a las 11:00
@@ -90,6 +91,11 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
         checkOutDate.setDate(checkOutDate.getDate() + 1);
         checkOutDate.setHours(11, 0, 0, 0);
         defaultCheckOut = checkOutDate.toISOString().slice(0, 16);
+      }
+      
+      // Fecha de pago por defecto: fecha del check-in (solo fecha, sin hora)
+      if (!defaultPaymentDate && guest.checkInDate) {
+        defaultPaymentDate = guest.checkInDate.slice(0, 10); // YYYY-MM-DD
       }
       
       setFormData({
@@ -120,7 +126,7 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
         accommodationType: guest.accommodationType || "S.A. (Solo Aloj.)",
         reservationOrigin: guest.reservationOrigin || "Booking.com",
         paymentType: guest.paymentType || "TRANS",
-        paymentDate: guest.paymentDate || "",
+        paymentDate: defaultPaymentDate,
         paymentHolder: guest.paymentHolder || `${guest.firstName} ${guest.lastName}`,
         paymentMethod: guest.paymentMethod || "Transferencia Booking",
         amountPaid: guest.amountPaid?.toString() || "0",
@@ -156,6 +162,15 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
       return;
     }
 
+    // Convertir fechas datetime-local a formato YYYY-MM-DD para la base de datos
+    const formatDateForDB = (dateStr: string) => {
+      if (!dateStr) return undefined;
+      // Si ya está en formato YYYY-MM-DD, devolver tal cual
+      if (dateStr.length === 10) return dateStr;
+      // Si es datetime-local (YYYY-MM-DDTHH:mm), extraer solo la fecha
+      return dateStr.slice(0, 10);
+    };
+    
     const updateData: any = {
       id: guest.id,
       firstName: formData.firstName,
@@ -165,7 +180,7 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
       documentNumber: formData.documentNumber,
       documentSupport: formData.documentSupport || undefined,
       gender: formData.gender as "male" | "female" | "other",
-      birthDate: formData.birthDate,
+      birthDate: formatDateForDB(formData.birthDate),
       phone: formData.phone,
       email: formData.email,
       street: formData.street,
@@ -174,8 +189,8 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
       postalCode: formData.postalCode,
       country: formData.country,
       reservationNumber: formData.reservationNumber || undefined,
-      checkInDate: formData.checkInDate || undefined,
-      checkOutDate: formData.checkOutDate || undefined,
+      checkInDate: formatDateForDB(formData.checkInDate),
+      checkOutDate: formatDateForDB(formData.checkOutDate),
       roomNumber: formData.roomNumber || undefined,
       roomType: formData.roomType || undefined,
       roomCode: formData.roomCode || undefined,
@@ -185,7 +200,7 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
       accommodationType: formData.accommodationType as any,
       reservationOrigin: formData.reservationOrigin as any,
       paymentType: formData.paymentType as any,
-      paymentDate: formData.paymentDate || undefined,
+      paymentDate: formatDateForDB(formData.paymentDate),
       paymentHolder: formData.paymentHolder || undefined,
       paymentMethod: formData.paymentMethod || undefined,
       amountPaid: formData.amountPaid || undefined,
