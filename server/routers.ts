@@ -1637,6 +1637,12 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
         // Para check-ins públicos (anticipado), createdBy será null
         const id = await db.createGuest({ ...input, createdBy: ctx.user?.id || null });
         
+        // Generar PDF automáticamente si el check-in está completado
+        if (input.status === 'completed') {
+          const { generateGuestPDF } = await import('./generateGuestPDF');
+          await generateGuestPDF(id);
+        }
+        
         // Si es check-in anticipado y tiene email, enviar confirmación
         if (input.checkinType === 'anticipado' && input.email) {
           const { sendCheckinAnticipadoConfirmation, sendCheckinAnticipadoNotificationToReception } = await import('./email');
@@ -1710,6 +1716,13 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
       })).mutation(async ({ input }) => {
         const { id, ...data } = input;
         await db.updateGuest(id, data);
+        
+        // Generar PDF automáticamente si se cambia el status a completed
+        if (data.status === 'completed') {
+          const { generateGuestPDF } = await import('./generateGuestPDF');
+          await generateGuestPDF(id);
+        }
+        
         return { success: true };
       }),
       delete: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {

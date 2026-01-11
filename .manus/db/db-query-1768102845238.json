@@ -1,0 +1,37 @@
+{
+  "query": "SELECT id, firstName, lastName, checkinType, status, checkInDate, createdAt FROM guests ORDER BY createdAt DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user uN1yFnMXg2uz2sS.48d4e14bb92a --database nKwKaPpEnuCPRfjQgd5Gdt --execute SELECT id, firstName, lastName, checkinType, status, checkInDate, createdAt FROM guests ORDER BY createdAt DESC LIMIT 10;",
+  "rows": [
+    {
+      "id": "150005",
+      "firstName": "Paco",
+      "lastName": "Gonzalez",
+      "checkinType": "anticipado",
+      "status": "pending",
+      "checkInDate": "2026-01-12",
+      "createdAt": "2026-01-11 01:49:22"
+    },
+    {
+      "id": "150004",
+      "firstName": "Julio",
+      "lastName": "Salinas",
+      "checkinType": "presencial",
+      "status": "completed",
+      "checkInDate": "2026-01-11",
+      "createdAt": "2026-01-11 01:47:48"
+    },
+    {
+      "id": "150003",
+      "firstName": "Charles",
+      "lastName": "Chubb",
+      "checkinType": "anticipado",
+      "status": "completed",
+      "checkInDate": "2026-01-11",
+      "createdAt": "2026-01-11 01:32:53"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tfirstName\tlastName\tcheckinType\tstatus\tcheckInDate\tcreatedAt\n150005\tPaco\tGonzalez\tanticipado\tpending\t2026-01-12\t2026-01-11 01:49:22\n150004\tJulio\tSalinas\tpresencial\tcompleted\t2026-01-11\t2026-01-11 01:47:48\n150003\tCharles\tChubb\tanticipado\tcompleted\t2026-01-11\t2026-01-11 01:32:53\n",
+  "stderr": "",
+  "execution_time_ms": 235
+}

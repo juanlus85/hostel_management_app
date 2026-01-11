@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
-import { Loader2, Download, AlertCircle, CheckCircle2, Trash2 } from "lucide-react";
+import { Loader2, Download, AlertCircle, CheckCircle2, Trash2, X } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -23,15 +23,18 @@ export default function ExportarPolicia() {
   const { data: guests, isLoading, refetch } = trpc.checkin.guests.search.useQuery({
     startDate: startDate || undefined,
     endDate: endDate || undefined,
+    status: "completed", // Solo mostrar check-ins completados
   });
-  
-  const cleanupMutation = trpc.checkin.cleanupOldGuests.useMutation({
+    const cleanupMutation = trpc.checkin.cleanupOldGuests.useMutation({
     onSuccess: (data) => {
       alert(`Limpieza completada. ${data.deletedCount} huésped(es) eliminado(s).`);
       refetch();
     },
-    onError: (error) => {
-      alert(`Error al limpiar registros: ${error.message}`);
+  });
+
+  const deleteGuestMutation = trpc.checkin.guests.delete.useMutation({
+    onSuccess: () => {
+      refetch();
     },
   });
   
@@ -357,12 +360,12 @@ export default function ExportarPolicia() {
                   key={guest.id}
                   className="flex items-center justify-between p-3 bg-muted rounded-lg"
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 flex-1">
                     <Checkbox
                       checked={isSelected}
                       onCheckedChange={() => toggleGuest(guest.id!)}
                     />
-                    <div>
+                    <div className="flex-1">
                       <div className="font-medium">
                         {guest.firstName} {guest.lastName}
                       </div>
@@ -372,11 +375,25 @@ export default function ExportarPolicia() {
                       </div>
                     </div>
                   </div>
-                  {isComplete ? (
-                    <Badge variant="default">Completo</Badge>
-                  ) : (
-                    <Badge variant="destructive">Faltan datos</Badge>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {isComplete ? (
+                      <Badge variant="default">Completo</Badge>
+                    ) : (
+                      <Badge variant="destructive">Faltan datos</Badge>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        if (confirm(`¿Eliminar a ${guest.firstName} ${guest.lastName}?`)) {
+                          deleteGuestMutation.mutate({ id: guest.id! });
+                        }
+                      }}
+                      disabled={deleteGuestMutation.isPending}
+                    >
+                      <X className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
                 </div>
               );
             })}

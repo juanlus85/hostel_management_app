@@ -1466,3 +1466,26 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Corregir Select para usar códigos del enum (EFECT, TARJT, TRANS, etc.)
 - [x] Corregir condición de "Tarjeta" a "TARJT"
 - [ ] Usuario debe probar que el check-in se complete correctamente
+
+
+## Error Columnas Duplicadas SQL - EN PROGRESO
+
+- [ ] Error al ejecutar script: "Nombre duplicado de columna 'documentExpiry'"
+- [ ] Algunas columnas ya existen en producción
+- [ ] Crear script SQL con verificación IF NOT EXISTS para cada columna
+- [ ] Probar script corregido
+
+
+## Problemas Check-in Online y PDFs - EN PROGRESO
+
+- [ ] Check-in online no aparece en la vista "Exportar Policía"
+- [ ] No se generan PDFs automáticamente al completar check-in (ni presencial ni online)
+- [ ] Investigar filtro en consulta de Exportar Policía
+- [ ] Investigar si la función de generación de PDF se está llamando
+- [ ] Corregir ambos problemas
+
+
+## Bugs y Mejoras Check-in (v57)
+- [x] Implementar generación automática de PDF al completar check-in (presencial/online/anticipado)
+- [x] Filtrar vista de Policía para mostrar solo check-ins completados
+- [x] Agregar botón de eliminar individual para cada registro en vista Policía
