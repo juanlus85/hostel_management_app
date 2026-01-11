@@ -51,14 +51,8 @@ export default function ExportarPolicia() {
         return;
       }
 
-      // Validar código de municipio
-      if (!settings.municipioCode || settings.municipioCode.length !== 5) {
-        alert("Error: Debe configurar el código de municipio INE (5 dígitos) en Configuración");
-        return;
-      }
-
       // Generate XML
-      const xml = generatePoliceXML(guestsToExport, settings.policeCode, settings.municipioCode);
+      const xml = generatePoliceXML(guestsToExport, settings.policeCode);
       
       // Download file
       const blob = new Blob([xml], { type: "application/xml;charset=utf-8" });
@@ -83,7 +77,7 @@ export default function ExportarPolicia() {
     }
   };
 
-  const generatePoliceXML = (guests: any[], policeCode: string, municipioCode: string) => {
+  const generatePoliceXML = (guests: any[], policeCode: string) => {
     const now = new Date();
     const timezone = '+01:00'; // Timezone de España
     
@@ -179,7 +173,7 @@ export default function ExportarPolicia() {
       
       // Sexo
       if (guest.gender) {
-        const genderCode = guest.gender === 'male' ? 'H' : guest.gender === 'female' ? 'M' : 'O';
+        const genderCode = guest.gender === 'Hombre' ? 'H' : guest.gender === 'Mujer' ? 'M' : 'O';
         xml += `        <sexo>${genderCode}</sexo>\n`;
       }
       
@@ -193,8 +187,9 @@ export default function ExportarPolicia() {
       
       // Código de municipio o nombre según el país
       if (guest.country === 'ESP') {
-        // Para España, usar código de municipio del establecimiento (5 dígitos)
-        xml += `          <codigoMunicipio>${municipioCode}</codigoMunicipio>\n`;
+        // Para España, usar código postal del huésped (primeros 5 dígitos = código municipio INE)
+        const codigoMunicipio = guest.postalCode ? guest.postalCode.slice(0, 5).padStart(5, '0') : '00000';
+        xml += `          <codigoMunicipio>${codigoMunicipio}</codigoMunicipio>\n`;
       } else {
         // Para otros países, usar nombre de municipio
         xml += `          <nombreMunicipio>${escapeXml(guest.city || 'No especificado')}</nombreMunicipio>\n`;

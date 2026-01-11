@@ -27,7 +27,7 @@ export default function CheckinAnticipadoPublico() {
     documentType: "PAS",
     documentNumber: "",
     documentSupport: "", // Número de soporte para DNI español
-    gender: "male",
+    gender: "Hombre",
     birthDate: "",
     phone: "",
     email: "",
@@ -69,8 +69,14 @@ export default function CheckinAnticipadoPublico() {
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const x = "touches" in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
-    const y = "touches" in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
+    
+    const x = (clientX - rect.left) * scaleX;
+    const y = (clientY - rect.top) * scaleY;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
@@ -86,8 +92,14 @@ export default function CheckinAnticipadoPublico() {
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const x = "touches" in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
-    const y = "touches" in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
+    
+    const x = (clientX - rect.left) * scaleX;
+    const y = (clientY - rect.top) * scaleY;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
@@ -160,7 +172,7 @@ export default function CheckinAnticipadoPublico() {
         documentType: formData.documentType,
         documentNumber: formData.documentNumber,
         documentSupport: formData.documentSupport || undefined,
-        gender: formData.gender as "male" | "female" | "other",
+        gender: formData.gender as "Hombre" | "Mujer" | "Otro",
         birthDate: formData.birthDate,
         phone: formData.phone,
         email: formData.email,
@@ -361,8 +373,9 @@ export default function CheckinAnticipadoPublico() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="male">{t("Hombre", "Male")}</SelectItem>
-                        <SelectItem value="female">{t("Mujer", "Female")}</SelectItem>
+                        <SelectItem value="Hombre">{t("Hombre", "Male")}</SelectItem>
+                        <SelectItem value="Mujer">{t("Mujer", "Female")}</SelectItem>
+                        <SelectItem value="Otro">{t("Otro", "Other")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

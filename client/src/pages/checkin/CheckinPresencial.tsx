@@ -39,7 +39,7 @@ export default function CheckinPresencial() {
       documentNumber: "",
       documentType: "PAS",
       supportNumber: "",
-      gender: "male",
+      gender: "Hombre",
       nationality: "ESP",
       nationalityOther: "",
       birthDate: "",
@@ -246,7 +246,7 @@ export default function CheckinPresencial() {
         documentNumber: "",
         documentType: "PAS",
         supportNumber: "",
-        gender: "male",
+        gender: "Hombre",
         nationality: "ESP",
         nationalityOther: "",
         birthDate: "",
@@ -349,7 +349,7 @@ export default function CheckinPresencial() {
           lastName: guest.lastName,
           documentNumber: guest.documentNumber,
           documentType: guest.documentType,
-          gender: guest.gender as "male" | "female" | "other",
+          gender: guest.gender as "Hombre" | "Mujer" | "Otro",
           nationality: guest.nationality === "OTRO" ? guest.nationalityOther : guest.nationality,
           birthDate: guest.birthDate,
           
@@ -406,7 +406,7 @@ export default function CheckinPresencial() {
           documentNumber: "",
           documentType: "PAS",
           supportNumber: "",
-          gender: "male",
+          gender: "Hombre",
           nationality: "ESP",
           nationalityOther: "",
           birthDate: "",
@@ -781,9 +781,9 @@ export default function CheckinPresencial() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="male">Hombre</SelectItem>
-                    <SelectItem value="female">Mujer</SelectItem>
-                    <SelectItem value="other">Otro</SelectItem>
+                    <SelectItem value="Hombre">Hombre</SelectItem>
+                    <SelectItem value="Mujer">Mujer</SelectItem>
+                    <SelectItem value="Otro">Otro</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

@@ -112,137 +112,148 @@ export default function GestionHuespedes() {
       const { jsPDF } = await import('jspdf');
       const doc = new jsPDF();
       
-      let y = 20;
-      const lineHeight = 7;
-      const leftMargin = 20;
+      const lineHeight = 6;
+      const leftMargin = 15;
+      const rightColumnX = 110;
+      const pageWidth = 210; // A4 width in mm
       
-      // Título
-      doc.setFontSize(18);
+      // Título centrado
+      doc.setFontSize(16);
       doc.setFont('helvetica', 'bold');
-      doc.text('FICHA DE REGISTRO DE VIAJERO', leftMargin, y);
-      y += lineHeight * 2;
+      doc.text('FICHA DE REGISTRO DE VIAJERO', pageWidth / 2, 15, { align: 'center' });
+      
+      // COLUMNA IZQUIERDA
+      let yLeft = 25;
       
       // Datos Personales
-      doc.setFontSize(14);
-      doc.text('DATOS PERSONALES', leftMargin, y);
-      y += lineHeight;
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Nombre: ${guest.firstName} ${guest.lastName}`, leftMargin, y);
-      y += lineHeight;
-      doc.text(`Documento: ${guest.documentType} ${guest.documentNumber}`, leftMargin, y);
-      y += lineHeight;
-      doc.text(`Nacionalidad: ${guest.nationality}`, leftMargin, y);
-      y += lineHeight;
-      doc.text(`Fecha de Nacimiento: ${guest.birthDate || "-"}`, leftMargin, y);
-      y += lineHeight;
-      doc.text(`Género: ${guest.gender}`, leftMargin, y);
-      y += lineHeight;
-      doc.text(`Teléfono: ${guest.phone || "-"}`, leftMargin, y);
-      y += lineHeight;
-      doc.text(`Email: ${guest.email || "-"}`, leftMargin, y);
-      y += lineHeight * 2;
-      
-      // Datos de Reserva
-      doc.setFontSize(14);
+      doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
-      doc.text('DATOS DE RESERVA', leftMargin, y);
-      y += lineHeight;
-      doc.setFontSize(10);
+      doc.text('DATOS PERSONALES', leftMargin, yLeft);
+      yLeft += lineHeight;
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
-      doc.text(`Número de Reserva: ${guest.reservationNumber || "-"}`, leftMargin, y);
-      y += lineHeight;
-      doc.text(`Habitación: ${guest.roomNumber || "-"}`, leftMargin, y);
-      y += lineHeight;
-      doc.text(`Check-in: ${guest.checkInDate ? new Date(guest.checkInDate).toLocaleString() : "-"}`, leftMargin, y);
-      y += lineHeight;
-      doc.text(`Check-out: ${guest.checkOutDate ? new Date(guest.checkOutDate).toLocaleString() : "-"}`, leftMargin, y);
-      y += lineHeight;
-      doc.text(`Estado: ${guest.status === 'completed' ? 'Completado' : guest.status}`, leftMargin, y);
-      y += lineHeight * 2;
+      doc.text(`Nombre: ${guest.firstName} ${guest.lastName}`, leftMargin, yLeft);
+      yLeft += lineHeight;
+      doc.text(`Documento: ${guest.documentType} ${guest.documentNumber}`, leftMargin, yLeft);
+      yLeft += lineHeight;
+      if (guest.documentSupport) {
+        doc.text(`Soporte: ${guest.documentSupport}`, leftMargin, yLeft);
+        yLeft += lineHeight;
+      }
+      doc.text(`Nacionalidad: ${guest.nationality}`, leftMargin, yLeft);
+      yLeft += lineHeight;
+      doc.text(`Nacimiento: ${guest.birthDate || "-"}`, leftMargin, yLeft);
+      yLeft += lineHeight;
+      doc.text(`Género: ${guest.gender}`, leftMargin, yLeft);
+      yLeft += lineHeight;
+      doc.text(`Teléfono: ${guest.phone || "-"}`, leftMargin, yLeft);
+      yLeft += lineHeight;
+      doc.text(`Email: ${guest.email || "-"}`, leftMargin, yLeft);
+      yLeft += lineHeight + 2;
       
       // Dirección
-      doc.setFontSize(14);
+      doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
-      doc.text('DIRECCIÓN', leftMargin, y);
-      y += lineHeight;
-      doc.setFontSize(10);
+      doc.text('DIRECCIÓN', leftMargin, yLeft);
+      yLeft += lineHeight;
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
-      doc.text(`Calle: ${guest.street || "-"}`, leftMargin, y);
-      y += lineHeight;
-      doc.text(`Ciudad: ${guest.city || "-"}`, leftMargin, y);
-      y += lineHeight;
-      doc.text(`Provincia: ${guest.province || "-"}`, leftMargin, y);
-      y += lineHeight;
-      doc.text(`Código Postal: ${guest.postalCode || "-"}`, leftMargin, y);
-      y += lineHeight;
-      doc.text(`País: ${guest.country || "-"}`, leftMargin, y);
-      y += lineHeight * 2;
+      doc.text(`Calle: ${guest.street || "-"}`, leftMargin, yLeft);
+      yLeft += lineHeight;
+      doc.text(`Ciudad: ${guest.city || "-"}`, leftMargin, yLeft);
+      yLeft += lineHeight;
+      doc.text(`Provincia: ${guest.province || "-"}`, leftMargin, yLeft);
+      yLeft += lineHeight;
+      doc.text(`CP: ${guest.postalCode || "-"} | País: ${guest.country || "-"}`, leftMargin, yLeft);
+      yLeft += lineHeight + 2;
+      
+      // COLUMNA DERECHA
+      let yRight = 25;
+      
+      // Datos de Reserva
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('DATOS DE RESERVA', rightColumnX, yRight);
+      yRight += lineHeight;
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Nº Reserva: ${guest.reservationNumber || "-"}`, rightColumnX, yRight);
+      yRight += lineHeight;
+      doc.text(`Habitación: ${guest.roomNumber || "-"}`, rightColumnX, yRight);
+      yRight += lineHeight;
+      doc.text(`Tipo: ${guest.roomType || "-"}`, rightColumnX, yRight);
+      yRight += lineHeight;
+      doc.text(`Check-in: ${guest.checkInDate ? new Date(guest.checkInDate).toLocaleDateString() : "-"}`, rightColumnX, yRight);
+      yRight += lineHeight;
+      doc.text(`Check-out: ${guest.checkOutDate ? new Date(guest.checkOutDate).toLocaleDateString() : "-"}`, rightColumnX, yRight);
+      yRight += lineHeight;
+      doc.text(`Nº Habitaciones: ${guest.numberOfRooms || "1"}`, rightColumnX, yRight);
+      yRight += lineHeight;
+      doc.text(`Alojamiento: ${guest.accommodationType || "-"}`, rightColumnX, yRight);
+      yRight += lineHeight;
+      doc.text(`Origen: ${guest.reservationOrigin || "-"}`, rightColumnX, yRight);
+      yRight += lineHeight + 2;
       
       // Información de Pago
-      doc.setFontSize(14);
+      doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
-      doc.text('INFORMACIÓN DE PAGO', leftMargin, y);
-      y += lineHeight;
-      doc.setFontSize(10);
+      doc.text('INFORMACIÓN DE PAGO', rightColumnX, yRight);
+      yRight += lineHeight;
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
-      doc.text(`Tipo de Pago: ${guest.paymentType || "-"}`, leftMargin, y);
-      y += lineHeight;
-      doc.text(`Cantidad Abonada: ${guest.amountPaid || "0"}€`, leftMargin, y);
-      y += lineHeight;
-      doc.text(`Cantidad Pendiente: ${guest.amountPending || "0"}€`, leftMargin, y);
-      y += lineHeight;
-      doc.text(`Titular: ${guest.paymentHolder || "-"}`, leftMargin, y);
-      y += lineHeight;
-      doc.text(`Método: ${guest.paymentMethod || "-"}`, leftMargin, y);
-      y += lineHeight * 2;
+      doc.text(`Tipo: ${guest.paymentType || "-"}`, rightColumnX, yRight);
+      yRight += lineHeight;
+      doc.text(`Fecha: ${guest.paymentDate || "-"}`, rightColumnX, yRight);
+      yRight += lineHeight;
+      doc.text(`Abonado: ${guest.amountPaid || "0"}€`, rightColumnX, yRight);
+      yRight += lineHeight;
+      doc.text(`Pendiente: ${guest.amountPending || "0"}€`, rightColumnX, yRight);
+      yRight += lineHeight;
+      doc.text(`Titular: ${guest.paymentHolder || "-"}`, rightColumnX, yRight);
+      yRight += lineHeight;
+      doc.text(`Método: ${guest.paymentMethod || "-"}`, rightColumnX, yRight);
+      yRight += lineHeight + 2;
       
-      // Declaración de Aceptación de Condiciones
-      doc.setFontSize(12);
+      // Usar la posición más baja de las dos columnas
+      let y = Math.max(yLeft, yRight);
+      
+      // Declaración de Aceptación de Condiciones (compacta)
+      doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
       doc.text('ACEPTACIÓN DE CONDICIONES', leftMargin, y);
-      y += lineHeight * 1.5;
+      y += lineHeight;
       
       // Checkbox marcado
-      doc.setFontSize(10);
+      doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
-      // Dibujar checkbox marcado
-      doc.rect(leftMargin, y - 3, 4, 4); // Cuadrado del checkbox
-      doc.line(leftMargin + 1, y - 1, leftMargin + 2, y); // Marca de verificación parte 1
-      doc.line(leftMargin + 2, y, leftMargin + 4, y - 3); // Marca de verificación parte 2
+      doc.rect(leftMargin, y - 2.5, 3, 3);
+      doc.line(leftMargin + 0.5, y - 1, leftMargin + 1.5, y - 0.5);
+      doc.line(leftMargin + 1.5, y - 0.5, leftMargin + 3, y - 2.5);
       
-      // Texto de aceptación
-      const acceptanceText = 'El huésped manifiesta que ha leído, conoce y se compromete a cumplir';
-      doc.text(acceptanceText, leftMargin + 7, y);
+      // Texto de aceptación (compacto)
+      doc.text('El huésped acepta las normas del establecimiento y la política de protección de datos.', leftMargin + 5, y);
       y += lineHeight;
-      doc.text('las normas y condiciones del establecimiento y la política de protección de datos.', leftMargin + 7, y);
-      y += lineHeight * 1.5;
       
-      // Fecha y hora de aceptación
+      // Fecha de aceptación (compacta)
       const checkInDateTime = guest.checkInDate ? new Date(guest.checkInDate) : new Date();
-      const acceptanceDate = checkInDateTime.toLocaleDateString('es-ES', { 
-        year: 'numeric', month: 'long', day: 'numeric' 
-      });
-      const acceptanceTime = checkInDateTime.toLocaleTimeString('es-ES', { 
-        hour: '2-digit', minute: '2-digit' 
-      });
+      const acceptanceDate = checkInDateTime.toLocaleDateString('es-ES');
       doc.setFont('helvetica', 'italic');
-      doc.text(`Firmado y aceptado el ${acceptanceDate} a las ${acceptanceTime}`, leftMargin, y);
-      y += lineHeight * 2;
+      doc.text(`Firmado el ${acceptanceDate}`, leftMargin, y);
+      y += lineHeight + 2;
       
-      // Firma
-      doc.setFontSize(14);
+      // Firma (más pequeña)
+      doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
       doc.text('FIRMA DEL HUÉSPED', leftMargin, y);
       y += lineHeight;
       
       if (guest.signature) {
         try {
-          // Añadir imagen de firma (base64)
-          doc.addImage(guest.signature, 'PNG', leftMargin, y, 80, 30);
-          y += 35;
+          // Añadir imagen de firma (más pequeña para que quepa)
+          doc.addImage(guest.signature, 'PNG', leftMargin, y, 60, 20);
+          y += 22;
         } catch (e) {
-          doc.setFontSize(10);
+          doc.setFontSize(8);
           doc.setFont('helvetica', 'italic');
           doc.text('[Firma capturada]', leftMargin, y);
           y += lineHeight;

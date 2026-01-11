@@ -1987,7 +1987,21 @@ export async function createChefOrder(data: any) {
 export async function getAllGuests() {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(guests).orderBy(guests.createdAt);
+  const { and, or, eq, ne } = await import('drizzle-orm');
+  
+  // Excluir check-ins anticipados no completados (status pending)
+  // Solo mostrar: completed, online, cancelled, o anticipados que ya están completed
+  return db.select().from(guests)
+    .where(
+      or(
+        ne(guests.checkinType, 'anticipado'),
+        and(
+          eq(guests.checkinType, 'anticipado'),
+          eq(guests.status, 'completed')
+        )
+      )
+    )
+    .orderBy(guests.createdAt);
 }
 
 export async function getGuestById(id: number) {

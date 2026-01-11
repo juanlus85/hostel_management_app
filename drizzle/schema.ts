@@ -618,7 +618,7 @@ export const guests = mysqlTable("guests", {
   documentNumber: varchar("documentNumber", { length: 50 }).notNull(),
   documentSupport: varchar("documentSupport", { length: 50 }), // Número de soporte para DNI español
   documentType: varchar("documentType", { length: 50 }).default("Passport").notNull(), // Passport, ID Card, Driver License
-  gender: mysqlEnum("gender", ["male", "female", "other"]),
+  gender: mysqlEnum("gender", ["Hombre", "Mujer", "Otro"]),
   nationality: varchar("nationality", { length: 100 }),
   birthDate: varchar("birthDate", { length: 10 }), // YYYY-MM-DD
   documentExpiry: varchar("documentExpiry", { length: 10 }), // YYYY-MM-DD
