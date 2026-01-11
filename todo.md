@@ -1409,3 +1409,15 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Filtrado check-ins: los no completados solo en "Anticipado", no en "Huéspedes"
 - [ ] Origen de reserva: verificar que aparece Booking.com por defecto
 - [x] Código municipio INE: usar código postal del huésped (ya no necesita configuración)
+
+## Gestión Automática de Registros v54 - COMPLETADO
+
+- [x] Generación automática de PDF al completar check-in (presencial, online, anticipado)
+- [x] Almacenar PDF en carpeta Registros/ con formato "DDMMAA - Nombre Cliente.pdf"
+- [x] Botón de eliminación manual en vista Exportar Policía
+- [x] Eliminación automática de huéspedes 3 días después de fecha de entrada
+- [x] Conservar solo PDF en carpeta Registros después de eliminación automática
+
+## Corrección XML Policía v54b - COMPLETADO
+
+- [x] Corregir generación de XML para incluir número de soporte del documento (documentSupport)

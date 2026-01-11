@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
-import { Loader2, Download, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Loader2, Download, AlertCircle, CheckCircle2, Trash2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -20,9 +20,18 @@ export default function ExportarPolicia() {
   const [selectedGuests, setSelectedGuests] = useState<number[]>([]);
 
   const { data: settings } = trpc.checkin.settings.get.useQuery();
-  const { data: guests, isLoading } = trpc.checkin.guests.search.useQuery({
+  const { data: guests, isLoading, refetch } = trpc.checkin.guests.search.useQuery({
     startDate: startDate || undefined,
     endDate: endDate || undefined,
+  });
+  
+  const deleteGuestMutation = trpc.checkin.guests.delete.useMutation({
+    onSuccess: () => {
+      refetch();
+    },
+    onError: () => {
+      alert('Error al eliminar el huésped');
+    },
   });
 
   const handleExport = () => {
@@ -157,8 +166,8 @@ export default function ExportarPolicia() {
       xml += `        <tipoDocumento>${docType}</tipoDocumento>\n`;
       xml += `        <numeroDocumento>${escapeXml(guest.documentNumber)}</numeroDocumento>\n`;
       
-      if (guest.supportNumber) {
-        xml += `        <soporteDocumento>${escapeXml(guest.supportNumber)}</soporteDocumento>\n`;
+      if (guest.documentSupport) {
+        xml += `        <soporteDocumento>${escapeXml(guest.documentSupport)}</soporteDocumento>\n`;
       }
       
       // Fecha de nacimiento
@@ -355,11 +364,26 @@ export default function ExportarPolicia() {
                       </div>
                     </div>
                   </div>
-                  {isComplete ? (
-                    <Badge variant="default">Completo</Badge>
-                  ) : (
-                    <Badge variant="destructive">Faltan datos</Badge>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {isComplete ? (
+                      <Badge variant="default">Completo</Badge>
+                    ) : (
+                      <Badge variant="destructive">Faltan datos</Badge>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        if (confirm(`¿Eliminar a ${guest.firstName} ${guest.lastName} de la base de datos?\n\nEsta acción no se puede deshacer.`)) {
+                          deleteGuestMutation.mutate({ id: guest.id! });
+                        }
+                      }}
+                      disabled={deleteGuestMutation.isPending}
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               );
             })}

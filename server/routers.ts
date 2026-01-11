@@ -1664,6 +1664,20 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           });
         }
         
+        // Si el check-in está completado, generar PDF automáticamente
+        if (input.status === 'completed') {
+          try {
+            const { generateGuestPDF } = await import('./pdfGenerator');
+            const guest = await db.getGuestById(id);
+            if (guest) {
+              await generateGuestPDF(guest);
+            }
+          } catch (error) {
+            console.error('Error generating PDF:', error);
+            // No fallar la operación si falla la generación del PDF
+          }
+        }
+        
         return { success: true, id };
       }),
       update: protectedProcedure.input(z.object({
@@ -1709,7 +1723,28 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
         status: z.enum(["pending", "completed", "online", "cancelled"]).optional(),
       })).mutation(async ({ input }) => {
         const { id, ...data } = input;
+        
+        // Obtener estado anterior
+        const previousGuest = await db.getGuestById(id);
+        const wasCompleted = previousGuest?.status === 'completed';
+        
+        // Actualizar huésped
         await db.updateGuest(id, data);
+        
+        // Si el status cambió a completed, generar PDF automáticamente
+        if (!wasCompleted && input.status === 'completed') {
+          try {
+            const { generateGuestPDF } = await import('./pdfGenerator');
+            const guest = await db.getGuestById(id);
+            if (guest) {
+              await generateGuestPDF(guest);
+            }
+          } catch (error) {
+            console.error('Error generating PDF:', error);
+            // No fallar la operación si falla la generación del PDF
+          }
+        }
+        
         return { success: true };
       }),
       delete: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
