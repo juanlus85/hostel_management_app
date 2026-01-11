@@ -1430,3 +1430,19 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Filtrar check-ins pendientes en vista Huéspedes (solo mostrar completed)
 - [x] Corregir campo género en modal de edición (no se carga)
 - [x] Cambiar origen de reserva por defecto a "Booking.com" en modal de edición
+
+## Etiqueta XML Descargado v56 - EN PROGRESO
+
+- [ ] Agregar campo xmlDownloaded (boolean) en schema de guests
+- [ ] Crear endpoint para marcar XML como descargado
+- [ ] Agregar columna "Estado XML" en tabla de Exportar Policía
+- [ ] Mostrar badge "Descargado" cuando xmlDownloaded sea true
+- [ ] Actualizar función de descarga XML para marcar como descargado
+
+## Corrección Cron y Limpieza Manual v56 - COMPLETADO
+
+- [x] Eliminar código de cron automático del servidor
+- [x] Agregar endpoint manual para limpiar registros antiguos
+- [x] Agregar botón "Limpiar Registros Antiguos" en interfaz
+- [ ] Compilar versión sin cron
+- [ ] Crear paquete de actualización funcional

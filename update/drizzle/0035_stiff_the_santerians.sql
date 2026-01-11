@@ -1,0 +1,1 @@
+ALTER TABLE `guests` MODIFY COLUMN `checkInDate` varchar(10);

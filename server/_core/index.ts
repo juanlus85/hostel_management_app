@@ -7,8 +7,8 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
-import cron from "node-cron";
-import { cleanupOldGuests } from "../cleanupOldGuests";
+// import cron from "node-cron";
+// import { cleanupOldGuests } from "../cleanupOldGuests";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -61,20 +61,7 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
-    
-    // Programar limpieza automática de huéspedes antiguos (cada día a las 3:00 AM)
-    cron.schedule('0 3 * * *', async () => {
-      console.log('[Cron] Ejecutando limpieza automática de huéspedes...');
-      try {
-        await cleanupOldGuests();
-      } catch (error) {
-        console.error('[Cron] Error en limpieza automática:', error);
-      }
-    }, {
-      timezone: 'Europe/Madrid'
-    });
-    
-    console.log('[Cron] Tarea de limpieza programada para las 3:00 AM diariamente');
+
   });
 }
 

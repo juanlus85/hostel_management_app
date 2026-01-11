@@ -1751,6 +1751,31 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
         await db.deleteGuest(input.id);
         return { success: true };
       }),
+      cleanupOld: adminProcedure.mutation(async () => {
+        // Eliminar huéspedes con más de 3 días desde su check-in
+        const guests = await db.getAllGuests();
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        let deletedCount = 0;
+        
+        for (const guest of guests) {
+          if (!guest.checkInDate) continue;
+          
+          const checkInDate = new Date(guest.checkInDate);
+          checkInDate.setHours(0, 0, 0, 0);
+          
+          const diffTime = today.getTime() - checkInDate.getTime();
+          const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+          
+          if (diffDays > 3) {
+            await db.deleteGuest(guest.id);
+            deletedCount++;
+          }
+        }
+        
+        return { success: true, deletedCount };
+      }),
     }),
     
     // Settings

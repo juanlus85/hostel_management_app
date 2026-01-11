@@ -33,6 +33,16 @@ export default function ExportarPolicia() {
       alert('Error al eliminar el huésped');
     },
   });
+  
+  const cleanupOldMutation = trpc.checkin.guests.cleanupOld.useMutation({
+    onSuccess: (data) => {
+      alert(`Limpieza completada. ${data.deletedCount} huésped(es) eliminado(s).`);
+      refetch();
+    },
+    onError: () => {
+      alert('Error al limpiar registros antiguos');
+    },
+  });
 
   const handleExport = () => {
     try {
@@ -389,7 +399,24 @@ export default function ExportarPolicia() {
             })}
           </div>
 
-          <div className="flex justify-end">
+          <div className="flex justify-between items-center">
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (confirm('¿Eliminar todos los huéspedes con más de 3 días desde su check-in?\n\nEsta acción no se puede deshacer. Los PDFs generados se conservarán en la carpeta Registros.')) {
+                  cleanupOldMutation.mutate();
+                }
+              }}
+              disabled={cleanupOldMutation.isPending}
+            >
+              {cleanupOldMutation.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="mr-2 h-4 w-4" />
+              )}
+              Limpiar Registros Antiguos (+3 días)
+            </Button>
+            
             <Button
               onClick={handleExport}
               disabled={!settings?.policeCode || !startDate || !endDate}
