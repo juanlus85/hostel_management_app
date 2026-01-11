@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
-import { Loader2, Download, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Loader2, Download, AlertCircle, CheckCircle2, Trash2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -20,10 +20,27 @@ export default function ExportarPolicia() {
   const [selectedGuests, setSelectedGuests] = useState<number[]>([]);
 
   const { data: settings } = trpc.checkin.settings.get.useQuery();
-  const { data: guests, isLoading } = trpc.checkin.guests.search.useQuery({
+  const { data: guests, isLoading, refetch } = trpc.checkin.guests.search.useQuery({
     startDate: startDate || undefined,
     endDate: endDate || undefined,
   });
+  
+  const cleanupMutation = trpc.checkin.cleanupOldGuests.useMutation({
+    onSuccess: (data) => {
+      alert(`Limpieza completada. ${data.deletedCount} huésped(es) eliminado(s).`);
+      refetch();
+    },
+    onError: (error) => {
+      alert(`Error al limpiar registros: ${error.message}`);
+    },
+  });
+  
+  const handleCleanup = () => {
+    if (!confirm('¿Estás seguro de que quieres eliminar los huéspedes con más de 3 días desde su check-in?\n\nLos PDFs generados se conservarán en la carpeta Registros.')) {
+      return;
+    }
+    cleanupMutation.mutate();
+  };
 
   const handleExport = () => {
     try {
@@ -365,7 +382,21 @@ export default function ExportarPolicia() {
             })}
           </div>
 
-          <div className="flex justify-end">
+          <div className="flex justify-between items-center">
+            <Button
+              onClick={handleCleanup}
+              disabled={cleanupMutation.isPending}
+              variant="destructive"
+              size="lg"
+            >
+              {cleanupMutation.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="mr-2 h-4 w-4" />
+              )}
+              Limpiar Registros Antiguos (+3 días)
+            </Button>
+            
             <Button
               onClick={handleExport}
               disabled={!settings?.policeCode || !startDate || !endDate}

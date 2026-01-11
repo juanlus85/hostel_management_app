@@ -267,6 +267,20 @@
       "when": 1768093236409,
       "tag": "0037_neat_squadron_sinister",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "5",
+      "when": 1768098891132,
+      "tag": "0038_soft_rachel_grey",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "5",
+      "when": 1768098965998,
+      "tag": "0039_strange_sage",
+      "breakpoints": true
     }
   ]
 }

@@ -1409,3 +1409,11 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Filtrado check-ins: los no completados solo en "Anticipado", no en "Huéspedes"
 - [ ] Origen de reserva: verificar que aparece Booking.com por defecto
 - [x] Código municipio INE: usar código postal del huésped (ya no necesita configuración)
+
+
+## Corrección Limpieza Manual v57 - COMPLETADO
+
+- [x] Agregar endpoint manual cleanupOldGuests en backend (sin cron)
+- [x] Agregar botón "Limpiar Registros Antiguos" en ExportarPolicia.tsx
+- [x] Compilar y probar que el servidor arranca correctamente
+- [x] Crear paquete ZIP para despliegue en VPS

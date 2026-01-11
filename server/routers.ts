@@ -1752,6 +1752,13 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
         return { success: true };
       }),
     }),
+    
+    // Manual cleanup of old guests
+    cleanupOldGuests: protectedProcedure.mutation(async () => {
+      const { cleanupOldGuests } = await import('./cleanupOldGuests');
+      const result = await cleanupOldGuests();
+      return { success: true, deletedCount: result.deletedCount };
+    }),
   }),
 });
 export type AppRouter = typeof appRouter;
