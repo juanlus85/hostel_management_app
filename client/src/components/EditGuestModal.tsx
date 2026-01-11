@@ -76,6 +76,22 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
   // Cargar datos del huésped cuando se abre el modal
   useEffect(() => {
     if (guest && open) {
+      // Calcular fechas por defecto si el huésped dio fecha de llegada
+      let defaultCheckIn = guest.checkInDate || "";
+      let defaultCheckOut = guest.checkOutDate || "";
+      
+      if (guest.checkInDate && !guest.checkOutDate) {
+        // Si tiene fecha de llegada pero no de salida, calcular +1 día a las 11:00
+        const checkInDate = new Date(guest.checkInDate);
+        checkInDate.setHours(11, 0, 0, 0);
+        defaultCheckIn = checkInDate.toISOString().slice(0, 16);
+        
+        const checkOutDate = new Date(checkInDate);
+        checkOutDate.setDate(checkOutDate.getDate() + 1);
+        checkOutDate.setHours(11, 0, 0, 0);
+        defaultCheckOut = checkOutDate.toISOString().slice(0, 16);
+      }
+      
       setFormData({
         firstName: guest.firstName || "",
         lastName: guest.lastName || "",
@@ -93,8 +109,8 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
         postalCode: guest.postalCode || "",
         country: guest.country || "ESP",
         reservationNumber: guest.reservationNumber || "",
-        checkInDate: guest.checkInDate || "",
-        checkOutDate: guest.checkOutDate || "",
+        checkInDate: defaultCheckIn,
+        checkOutDate: defaultCheckOut,
         roomNumber: guest.roomNumber || "",
         roomType: guest.roomType || "",
         roomCode: guest.roomCode || "",
@@ -105,7 +121,7 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
         reservationOrigin: guest.reservationOrigin || "Booking.com",
         paymentType: guest.paymentType || "TRANS",
         paymentDate: guest.paymentDate || "",
-        paymentHolder: guest.paymentHolder || "Titular de la reserva",
+        paymentHolder: guest.paymentHolder || `${guest.firstName} ${guest.lastName}`,
         paymentMethod: guest.paymentMethod || "Transferencia Booking",
         amountPaid: guest.amountPaid?.toString() || "0",
         amountPending: guest.amountPending?.toString() || "0",
@@ -436,24 +452,7 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
                   required
                 />
               </div>
-              <div>
-                <Label htmlFor="roomCode">Código de Habitación</Label>
-                <Input
-                  id="roomCode"
-                  value={formData.roomCode}
-                  onChange={(e) => setFormData({ ...formData, roomCode: e.target.value })}
-                  placeholder="Se auto-completa al seleccionar habitación"
-                />
-              </div>
-              <div>
-                <Label htmlFor="entranceCode">Código de Entrada</Label>
-                <Input
-                  id="entranceCode"
-                  value={formData.entranceCode}
-                  onChange={(e) => setFormData({ ...formData, entranceCode: e.target.value })}
-                  placeholder="Se auto-completa al seleccionar habitación"
-                />
-              </div>
+              {/* Códigos ocultos - se entregan llaves físicas en recepción */}
               <div>
                 <Label htmlFor="accommodationType">Tipo de Alojamiento *</Label>
                 <Select value={formData.accommodationType} onValueChange={(v) => setFormData({ ...formData, accommodationType: v })}>

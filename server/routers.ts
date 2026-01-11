@@ -1618,7 +1618,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
         hasInternet: z.boolean().optional(),
         accommodationType: z.enum(["S.A. (Solo Aloj.)", "A.D. (Aloj. y Desayuno)", "M.P. (Media Pensión)", "P.C. (Pensión Completa)"]).optional(),
         reservationOrigin: z.enum(["Walk In", "Booking.com", "Airbnb", "Expedia", "Website", "Phone", "Email", "Other"]).optional(),
-        paymentType: z.enum(["Efectivo", "Tarjeta", "Transferencia", "PayPal", "Bizum", "Otro"]).optional(),
+        paymentType: z.enum(["EFECT", "TARJT", "TRANS", "PLATF", "MOVIL", "TREG", "DESTI", "OTRO"]).optional(),
         paymentDate: z.string().optional(),
         amountPaid: z.string().optional(),
         amountPending: z.string().optional(),
@@ -1639,7 +1639,9 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
         
         // Si es check-in anticipado y tiene email, enviar confirmación
         if (input.checkinType === 'anticipado' && input.email) {
-          const { sendCheckinAnticipadoConfirmation } = await import('./email');
+          const { sendCheckinAnticipadoConfirmation, sendCheckinAnticipadoNotificationToReception } = await import('./email');
+          
+          // Enviar confirmación al huésped
           await sendCheckinAnticipadoConfirmation({
             firstName: input.firstName,
             lastName: input.lastName,
@@ -1647,6 +1649,18 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             documentNumber: input.documentNumber,
             checkInDate: input.checkInDate,
             language: input.language || 'es',
+          });
+          
+          // Enviar notificación a recepción
+          await sendCheckinAnticipadoNotificationToReception({
+            firstName: input.firstName,
+            lastName: input.lastName,
+            email: input.email,
+            phone: input.phone,
+            documentNumber: input.documentNumber,
+            nationality: input.nationality,
+            checkInDate: input.checkInDate,
+            reservationNumber: input.reservationNumber,
           });
         }
         
@@ -1682,7 +1696,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
         hasInternet: z.boolean().optional(),
         accommodationType: z.enum(["S.A. (Solo Aloj.)", "A.D. (Aloj. y Desayuno)", "M.P. (Media Pensión)", "P.C. (Pensión Completa)"]).optional(),
         reservationOrigin: z.enum(["Walk In", "Booking.com", "Airbnb", "Expedia", "Website", "Phone", "Email", "Other"]).optional(),
-        paymentType: z.enum(["Efectivo", "Tarjeta", "Transferencia", "PayPal", "Bizum", "Otro"]).optional(),
+        paymentType: z.enum(["EFECT", "TARJT", "TRANS", "PLATF", "MOVIL", "TREG", "DESTI", "OTRO"]).optional(),
         paymentDate: z.string().optional(),
         amountPaid: z.string().optional(),
         amountPending: z.string().optional(),

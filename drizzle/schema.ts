@@ -650,7 +650,7 @@ export const guests = mysqlTable("guests", {
   reservationOrigin: mysqlEnum("reservationOrigin", ["Walk In", "Booking.com", "Airbnb", "Expedia", "Website", "Phone", "Email", "Other"]).default("Walk In").notNull(),
   
   // Información de pago
-  paymentType: mysqlEnum("paymentType", ["Efectivo", "Tarjeta", "Transferencia", "PayPal", "Bizum", "Otro"]).default("Efectivo").notNull(),
+  paymentType: mysqlEnum("paymentType", ["EFECT", "TARJT", "TRANS", "PLATF", "MOVIL", "TREG", "DESTI", "OTRO"]).default("TRANS").notNull(),
   paymentDate: varchar("paymentDate", { length: 10 }), // YYYY-MM-DD
   amountPaid: decimal("amountPaid", { precision: 10, scale: 2 }).default("0").notNull(),
   amountPending: decimal("amountPending", { precision: 10, scale: 2 }).default("0").notNull(),

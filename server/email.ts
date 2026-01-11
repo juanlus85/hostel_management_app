@@ -429,3 +429,109 @@ export async function sendCheckinAnticipadoConfirmation(
   
   return sendEmail(guestData.email, subject, html);
 }
+
+
+// Send notification to reception when early check-in is received
+export async function sendCheckinAnticipadoNotificationToReception(
+  guestData: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+    documentNumber: string;
+    nationality?: string;
+    checkInDate?: string;
+    reservationNumber?: string;
+  }
+): Promise<{ success: boolean; error?: string }> {
+  const subject = `Nuevo Check-in Anticipado Recibido - ${guestData.firstName} ${guestData.lastName}`;
+  
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #059669; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+        .content { background-color: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+        .info-box { background-color: white; padding: 20px; margin: 20px 0; border-left: 4px solid #059669; border-radius: 4px; }
+        .data-row { display: flex; margin: 10px 0; }
+        .data-label { font-weight: bold; min-width: 150px; color: #6b7280; }
+        .data-value { color: #111827; }
+        .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 14px; }
+        .action-needed { background-color: #fef3c7; padding: 15px; border-left: 4px solid #f59e0b; margin: 20px 0; border-radius: 4px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>📋 Nuevo Check-in Anticipado</h1>
+        </div>
+        <div class="content">
+          <p>Se ha recibido un nuevo formulario de check-in anticipado que requiere revisión y asignación de habitación.</p>
+          
+          <div class="info-box">
+            <h3>Datos del Huésped</h3>
+            <div class="data-row">
+              <span class="data-label">Nombre completo:</span>
+              <span class="data-value">${guestData.firstName} ${guestData.lastName}</span>
+            </div>
+            <div class="data-row">
+              <span class="data-label">Documento:</span>
+              <span class="data-value">${guestData.documentNumber}</span>
+            </div>
+            ${guestData.nationality ? `
+            <div class="data-row">
+              <span class="data-label">Nacionalidad:</span>
+              <span class="data-value">${guestData.nationality}</span>
+            </div>
+            ` : ''}
+            <div class="data-row">
+              <span class="data-label">Email:</span>
+              <span class="data-value">${guestData.email}</span>
+            </div>
+            ${guestData.phone ? `
+            <div class="data-row">
+              <span class="data-label">Teléfono:</span>
+              <span class="data-value">${guestData.phone}</span>
+            </div>
+            ` : ''}
+            ${guestData.reservationNumber ? `
+            <div class="data-row">
+              <span class="data-label">Nº Reserva:</span>
+              <span class="data-value">${guestData.reservationNumber}</span>
+            </div>
+            ` : ''}
+            ${guestData.checkInDate ? `
+            <div class="data-row">
+              <span class="data-label">Fecha de llegada:</span>
+              <span class="data-value">${new Date(guestData.checkInDate).toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+            </div>
+            ` : ''}
+          </div>
+          
+          <div class="action-needed">
+            <h3>⚠️ Acciones Pendientes</h3>
+            <ul>
+              <li>Revisar los datos del huésped en el sistema</li>
+              <li>Asignar habitación disponible</li>
+              <li>Completar información de pago si es necesario</li>
+              <li>Preparar llaves físicas para la llegada</li>
+            </ul>
+          </div>
+          
+          <p><strong>Accede al sistema de gestión para completar el check-in.</strong></p>
+        </div>
+        <div class="footer">
+          <p>Sistema de Gestión - The Spot Central Hostel<br>
+          Notificación automática</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+  
+  return sendEmail('thespotcentralhostel@gmail.com', subject, html);
+}

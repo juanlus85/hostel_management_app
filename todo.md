@@ -1384,3 +1384,12 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Tipo de habitación obligatorio (auto-completa al seleccionar habitación)
 - [x] Tipos de pago oficiales de Hospederías (EFECT, TARJT, TRANS, PLATF, MOVIL, TREG, DESTI, OTRO)
 - [x] Titular del pago por defecto "Titular de la reserva"
+
+
+## Correcciones Modal Check-in Anticipado v51 - COMPLETADO
+- [x] Ocultar campos "Código de Habitación" y "Código de Entrada" (solo para check-in presencial con llaves físicas)
+- [x] Corregir error de validación: backend espera códigos de pago (TRANS, EFECT, etc.) no texto descriptivo
+- [x] Mostrar firma del huésped en el modal de detalles del check-in anticipado
+- [x] Enviar email a recepción (thespotcentralhostel@gmail.com) cuando se recibe un check-in anticipado
+- [x] Titular del pago: Mostrar nombre completo del huésped por defecto al editar
+- [x] Valores por defecto al editar: Tipo de pago TRANS, Fecha check-in del huésped a las 11:00, Check-out +1 día a las 11:00, Origen Booking.com
