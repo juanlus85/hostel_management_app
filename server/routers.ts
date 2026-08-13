@@ -1930,6 +1930,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           throw new TRPCError({ code: "BAD_REQUEST", message: "Este enlace ya no está disponible" });
         }
 
+        const settings = await db.getHostelSettings();
         return {
           email: link.email,
           language: link.language,
@@ -1938,6 +1939,13 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           checkOutDate: link.checkOutDate,
           roomType: link.roomType,
           numberOfGuests: link.numberOfGuests,
+          hostelName: settings?.hostelName || "The Spot Central Hostel",
+          termsUrlEs: settings?.termsUrlEs || "",
+          termsUrlEn: settings?.termsUrlEn || "",
+          privacyUrlEs: settings?.privacyUrlEs || "",
+          privacyUrlEn: settings?.privacyUrlEn || "",
+          welcomeMessageEs: settings?.welcomeMessageEs || "",
+          welcomeMessageEn: settings?.welcomeMessageEn || "",
         };
       }),
       completePublic: publicProcedure.input(z.object({
@@ -2025,6 +2033,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
         const { generateGuestPDF } = await import("./generateGuestPDF");
         await generateGuestPDF(guestId);
 
+        const settings = await db.getHostelSettings();
         const { sendOnlineCheckinConfirmation } = await import("./email");
         await sendOnlineCheckinConfirmation({
           firstName: input.firstName,
@@ -2034,6 +2043,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           roomNumber: link.roomNumber,
           roomCode: link.roomCode,
           entranceCode: link.entranceCode,
+          welcomeMessage: link.language === "en" ? settings?.welcomeMessageEn : settings?.welcomeMessageEs,
         });
 
         return {
@@ -2059,13 +2069,18 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
         hostelWebsite: z.string().optional(),
         hostelRta: z.string().optional(),
         policeCode: z.string().optional(),
+        municipioCode: z.string().max(5).optional(),
         wifiPassword: z.string().optional(),
         checkoutTime: z.string().optional(),
         defaultEntranceCode: z.string().optional(),
         termsConditionsEs: z.string().optional(),
         termsConditionsEn: z.string().optional(),
+        termsUrlEs: z.string().url().or(z.literal("")).optional(),
+        termsUrlEn: z.string().url().or(z.literal("")).optional(),
         privacyPolicyEs: z.string().optional(),
         privacyPolicyEn: z.string().optional(),
+        privacyUrlEs: z.string().url().or(z.literal("")).optional(),
+        privacyUrlEn: z.string().url().or(z.literal("")).optional(),
         welcomeMessageEs: z.string().optional(),
         welcomeMessageEn: z.string().optional(),
         roomTypes: z.string().optional(),

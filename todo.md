@@ -1523,3 +1523,10 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Crear formulario público de check-in online con validaciones.
 - [x] Entregar códigos de acceso tras completar el check-in online.
 - [x] Integrar check-ins online con PDF, exportación de policía y limpieza manual.
+
+## Mejoras de configuración, check-in y policía
+- [x] Configurar URLs públicas para condiciones, términos y protección de datos.
+- [x] Corregir la persistencia del código postal INE en Configuración.
+- [x] Añadir instrucciones de bienvenida bilingües configurables para el check-in online.
+- [x] Añadir un selector visual ENGLISH / ESPAÑOL en la cabecera del enlace público.
+- [x] Permitir abrir, imprimir y guardar como PDF cada registro desde Policía.

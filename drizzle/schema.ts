@@ -737,8 +737,12 @@ export const hostelSettingsCheckin = mysqlTable("hostel_settings_checkin", {
   // Términos y condiciones (bilingüe)
   termsConditionsEs: text("termsConditionsEs"),
   termsConditionsEn: text("termsConditionsEn"),
+  termsUrlEs: varchar("termsUrlEs", { length: 500 }),
+  termsUrlEn: varchar("termsUrlEn", { length: 500 }),
   privacyPolicyEs: text("privacyPolicyEs"),
   privacyPolicyEn: text("privacyPolicyEn"),
+  privacyUrlEs: varchar("privacyUrlEs", { length: 500 }),
+  privacyUrlEn: varchar("privacyUrlEn", { length: 500 }),
   welcomeMessageEs: text("welcomeMessageEs"),
   welcomeMessageEn: text("welcomeMessageEn"),
   

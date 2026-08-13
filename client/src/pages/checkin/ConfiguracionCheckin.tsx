@@ -34,6 +34,14 @@ export default function ConfiguracionCheckin() {
     defaultEntranceCode: "",
     termsConditionsEs: "",
     termsConditionsEn: "",
+    termsUrlEs: "",
+    termsUrlEn: "",
+    privacyPolicyEs: "",
+    privacyPolicyEn: "",
+    privacyUrlEs: "",
+    privacyUrlEn: "",
+    welcomeMessageEs: "",
+    welcomeMessageEn: "",
     smtpHost: "",
     smtpPort: 587,
     smtpUser: "",
@@ -56,6 +64,14 @@ export default function ConfiguracionCheckin() {
         defaultEntranceCode: settings.defaultEntranceCode || "",
         termsConditionsEs: settings.termsConditionsEs || "",
         termsConditionsEn: settings.termsConditionsEn || "",
+        termsUrlEs: settings.termsUrlEs || "",
+        termsUrlEn: settings.termsUrlEn || "",
+        privacyPolicyEs: settings.privacyPolicyEs || "",
+        privacyPolicyEn: settings.privacyPolicyEn || "",
+        privacyUrlEs: settings.privacyUrlEs || "",
+        privacyUrlEn: settings.privacyUrlEn || "",
+        welcomeMessageEs: settings.welcomeMessageEs || "",
+        welcomeMessageEn: settings.welcomeMessageEn || "",
         smtpHost: settings.smtpHost || "",
         smtpPort: settings.smtpPort || 587,
         smtpUser: settings.smtpUser || "",
@@ -96,9 +112,10 @@ export default function ConfiguracionCheckin() {
 
       <form onSubmit={handleSubmit}>
         <Tabs defaultValue="general" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="terminos">Términos</TabsTrigger>
+            <TabsTrigger value="bienvenida">Bienvenida</TabsTrigger>
             <TabsTrigger value="smtp">SMTP</TabsTrigger>
           </TabsList>
 
@@ -240,6 +257,48 @@ export default function ConfiguracionCheckin() {
                 placeholder="The guests state that they have read, know, undertake and agree to comply with the rules and conditions of the establishment..."
                 rows={6}
               />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="termsUrlEs">URL de condiciones (Español)</Label>
+                <Input id="termsUrlEs" type="url" value={formData.termsUrlEs} onChange={(e) => setFormData({ ...formData, termsUrlEs: e.target.value })} placeholder="https://tudominio.com/condiciones" />
+              </div>
+              <div>
+                <Label htmlFor="termsUrlEn">Terms URL (English)</Label>
+                <Input id="termsUrlEn" type="url" value={formData.termsUrlEn} onChange={(e) => setFormData({ ...formData, termsUrlEn: e.target.value })} placeholder="https://yourdomain.com/terms" />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="privacyEs">Política de privacidad (Español)</Label>
+              <Textarea id="privacyEs" value={formData.privacyPolicyEs} onChange={(e) => setFormData({ ...formData, privacyPolicyEs: e.target.value })} placeholder="Información sobre el tratamiento de datos personales..." rows={4} />
+            </div>
+            <div>
+              <Label htmlFor="privacyEn">Privacy policy (English)</Label>
+              <Textarea id="privacyEn" value={formData.privacyPolicyEn} onChange={(e) => setFormData({ ...formData, privacyPolicyEn: e.target.value })} placeholder="Information about the processing of personal data..." rows={4} />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="privacyUrlEs">URL de privacidad (Español)</Label>
+                <Input id="privacyUrlEs" type="url" value={formData.privacyUrlEs} onChange={(e) => setFormData({ ...formData, privacyUrlEs: e.target.value })} placeholder="https://tudominio.com/privacidad" />
+              </div>
+              <div>
+                <Label htmlFor="privacyUrlEn">Privacy URL (English)</Label>
+                <Input id="privacyUrlEn" type="url" value={formData.privacyUrlEn} onChange={(e) => setFormData({ ...formData, privacyUrlEn: e.target.value })} placeholder="https://yourdomain.com/privacy" />
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="bienvenida" className="space-y-4 mt-6">
+            <p className="text-sm text-muted-foreground">Este texto aparece al comienzo del enlace público de check-in online, según el idioma elegido por el huésped.</p>
+            <div>
+              <Label htmlFor="welcomeEs">Instrucciones de bienvenida (Español)</Label>
+              <Textarea id="welcomeEs" value={formData.welcomeMessageEs} onChange={(e) => setFormData({ ...formData, welcomeMessageEs: e.target.value })} placeholder="Te damos la bienvenida. Completa el formulario y recibirás tus códigos de acceso..." rows={6} />
+            </div>
+            <div>
+              <Label htmlFor="welcomeEn">Welcome instructions (English)</Label>
+              <Textarea id="welcomeEn" value={formData.welcomeMessageEn} onChange={(e) => setFormData({ ...formData, welcomeMessageEn: e.target.value })} placeholder="Welcome. Complete the form and you will receive your access codes..." rows={6} />
             </div>
           </TabsContent>
 

@@ -438,6 +438,7 @@ export async function sendOnlineCheckinConfirmation(guestData: {
   roomNumber: string;
   roomCode?: string | null;
   entranceCode?: string | null;
+  welcomeMessage?: string | null;
 }): Promise<{ success: boolean; error?: string }> {
   const isSpanish = guestData.language !== "en";
   const subject = isSpanish
@@ -449,6 +450,7 @@ export async function sendOnlineCheckinConfirmation(guestData: {
       <div style="background:#0f766e;color:white;padding:24px;border-radius:10px 10px 0 0"><h1 style="margin:0">¡Check-in completado!</h1></div>
       <div style="background:#f8fafc;padding:28px;border-radius:0 0 10px 10px">
         <p>Hola <strong>${guestData.firstName}</strong>, tu registro online se ha completado correctamente.</p>
+        ${guestData.welcomeMessage ? `<div style="background:#eff6ff;border-left:4px solid #2563eb;padding:14px;border-radius:6px;white-space:pre-line">${guestData.welcomeMessage}</div>` : ""}
         <p><strong>Llegada:</strong> ${arrivalDate}<br><strong>Habitación:</strong> ${guestData.roomNumber}</p>
         <div style="background:white;border-left:4px solid #0f766e;padding:18px;border-radius:6px">
           <h2 style="margin-top:0">Tus códigos de acceso</h2>
@@ -462,6 +464,7 @@ export async function sendOnlineCheckinConfirmation(guestData: {
       <div style="background:#0f766e;color:white;padding:24px;border-radius:10px 10px 0 0"><h1 style="margin:0">Online check-in completed!</h1></div>
       <div style="background:#f8fafc;padding:28px;border-radius:0 0 10px 10px">
         <p>Hello <strong>${guestData.firstName}</strong>, your online registration has been completed successfully.</p>
+        ${guestData.welcomeMessage ? `<div style="background:#eff6ff;border-left:4px solid #2563eb;padding:14px;border-radius:6px;white-space:pre-line">${guestData.welcomeMessage}</div>` : ""}
         <p><strong>Arrival:</strong> ${arrivalDate}<br><strong>Room:</strong> ${guestData.roomNumber}</p>
         <div style="background:white;border-left:4px solid #0f766e;padding:18px;border-radius:6px">
           <h2 style="margin-top:0">Your access codes</h2>

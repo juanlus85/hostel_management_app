@@ -8,6 +8,8 @@ import { Loader2, Download, AlertCircle, CheckCircle2, Trash2, X } from "lucide-
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Eye, Printer, FileDown } from "lucide-react";
 
 export default function ExportarPolicia() {
   // Inicializar con el primer y último día del mes actual
@@ -18,6 +20,7 @@ export default function ExportarPolicia() {
   const [startDate, setStartDate] = useState(firstDay.toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(lastDay.toISOString().split('T')[0]);
   const [selectedGuests, setSelectedGuests] = useState<number[]>([]);
+  const [viewingGuest, setViewingGuest] = useState<any>(null);
 
   const { data: settings } = trpc.checkin.settings.get.useQuery();
   const { data: guests, isLoading, refetch } = trpc.checkin.guests.search.useQuery({
@@ -271,6 +274,59 @@ export default function ExportarPolicia() {
     }
   };
 
+  const handleDownloadGuestPDF = async (guest: any) => {
+    try {
+      const { jsPDF } = await import("jspdf");
+      const document = new jsPDF();
+      const margin = 15;
+      let y = 16;
+      const addSection = (title: string, rows: Array<[string, unknown]>) => {
+        document.setFont("helvetica", "bold");
+        document.setFontSize(11);
+        document.text(title, margin, y);
+        y += 6;
+        document.setFont("helvetica", "normal");
+        document.setFontSize(9);
+        rows.forEach(([label, value]) => {
+          const content = `${label}: ${value || "—"}`;
+          const split = document.splitTextToSize(content, 180);
+          document.text(split, margin, y);
+          y += split.length * 5;
+        });
+        y += 4;
+      };
+      document.setFont("helvetica", "bold");
+      document.setFontSize(16);
+      document.text("FICHA DE REGISTRO DE VIAJERO", 105, y, { align: "center" });
+      y += 12;
+      addSection("DATOS PERSONALES", [["Nombre", `${guest.firstName} ${guest.lastName}`], ["Documento", `${guest.documentType || ""} ${guest.documentNumber || ""}`], ["Soporte", guest.documentSupport], ["Nacionalidad", guest.nationality], ["Nacimiento", guest.birthDate], ["Género", guest.gender], ["Teléfono", guest.phone], ["Email", guest.email]]);
+      addSection("DIRECCIÓN", [["Dirección", guest.street], ["Complemento", guest.addressExtra], ["Ciudad", guest.city], ["Provincia", guest.province], ["Código postal", guest.postalCode], ["País", guest.country]]);
+      addSection("RESERVA Y ESTANCIA", [["Reserva", guest.reservationNumber], ["Habitación", guest.roomNumber], ["Tipo", guest.roomType], ["Entrada", guest.checkInDate], ["Salida", guest.checkOutDate], ["Origen", guest.reservationOrigin], ["Tipo de check-in", guest.checkinType], ["Estado", guest.status]]);
+      addSection("PAGO", [["Tipo", guest.paymentType], ["Abonado", `${guest.amountPaid || "0"} €`], ["Pendiente", `${guest.amountPending || "0"} €`], ["Titular", guest.paymentHolder], ["Medio", guest.paymentMethod]]);
+      if (guest.signature && y < 250) {
+        document.setFont("helvetica", "bold");
+        document.text("FIRMA DEL HUÉSPED", margin, y);
+        y += 5;
+        try { document.addImage(guest.signature, "PNG", margin, y, 65, 22); } catch { document.setFont("helvetica", "normal"); document.text("[Firma capturada]", margin, y + 8); }
+      }
+      const datePrefix = guest.checkInDate ? guest.checkInDate.replaceAll("-", "") : "registro";
+      document.save(`${datePrefix} - ${guest.firstName}_${guest.lastName}.pdf`);
+    } catch (downloadError) {
+      console.error(downloadError);
+      alert("No se pudo generar el PDF del registro");
+    }
+  };
+
+  const handlePrintGuest = (guest: any) => {
+    const popup = window.open("", "_blank", "width=850,height=900");
+    if (!popup) return alert("Permite las ventanas emergentes para imprimir el registro");
+    const row = (label: string, value: unknown) => `<tr><th>${label}</th><td>${value || "—"}</td></tr>`;
+    popup.document.write(`<!doctype html><html><head><title>Registro ${guest.firstName} ${guest.lastName}</title><style>body{font-family:Arial,sans-serif;margin:35px;color:#111827}h1{font-size:20px;border-bottom:2px solid #0f766e;padding-bottom:10px}h2{font-size:14px;margin-top:22px;color:#0f766e}table{width:100%;border-collapse:collapse}th,td{border:1px solid #d1d5db;text-align:left;padding:8px;font-size:12px}th{width:32%;background:#f3f4f6}@media print{body{margin:15mm}}</style></head><body><h1>FICHA DE REGISTRO DE VIAJERO</h1><h2>Datos personales</h2><table>${row("Nombre", `${guest.firstName} ${guest.lastName}`)}${row("Documento", `${guest.documentType || ""} ${guest.documentNumber || ""}`)}${row("Nacionalidad", guest.nationality)}${row("Nacimiento", guest.birthDate)}${row("Teléfono", guest.phone)}${row("Email", guest.email)}</table><h2>Dirección</h2><table>${row("Dirección", guest.street)}${row("Ciudad", guest.city)}${row("Provincia", guest.province)}${row("Código postal", guest.postalCode)}${row("País", guest.country)}</table><h2>Reserva</h2><table>${row("Reserva", guest.reservationNumber)}${row("Habitación", guest.roomNumber)}${row("Entrada", guest.checkInDate)}${row("Salida", guest.checkOutDate)}${row("Tipo", guest.checkinType)}${row("Estado", guest.status)}</table><h2>Pago</h2><table>${row("Tipo", guest.paymentType)}${row("Abonado", `${guest.amountPaid || "0"} €`)}${row("Pendiente", `${guest.amountPending || "0"} €`)}</table></body></html>`);
+    popup.document.close();
+    popup.focus();
+    setTimeout(() => popup.print(), 250);
+  };
+
   return (
     <Card className="p-6">
       <div className="mb-6">
@@ -381,6 +437,9 @@ export default function ExportarPolicia() {
                     ) : (
                       <Badge variant="destructive">Faltan datos</Badge>
                     )}
+                    <Button variant="outline" size="sm" onClick={() => setViewingGuest(guest)}>
+                      <Eye className="mr-2 h-4 w-4" />Ver
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -425,6 +484,28 @@ export default function ExportarPolicia() {
           </div>
         </>
       )}
+      <Dialog open={!!viewingGuest} onOpenChange={(open) => !open && setViewingGuest(null)}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Registro de {viewingGuest?.firstName} {viewingGuest?.lastName}</DialogTitle>
+            <DialogDescription>Consulta todos los datos completados antes de comunicar el parte a Policía.</DialogDescription>
+          </DialogHeader>
+          {viewingGuest && <div className="grid gap-4 text-sm sm:grid-cols-2">
+            <RecordSection title="Datos personales" rows={[["Documento", `${viewingGuest.documentType || ""} ${viewingGuest.documentNumber || ""}`], ["Soporte", viewingGuest.documentSupport], ["Nacionalidad", viewingGuest.nationality], ["Nacimiento", viewingGuest.birthDate], ["Género", viewingGuest.gender], ["Teléfono", viewingGuest.phone], ["Email", viewingGuest.email]]} />
+            <RecordSection title="Reserva y estancia" rows={[["Reserva", viewingGuest.reservationNumber], ["Habitación", viewingGuest.roomNumber], ["Tipo habitación", viewingGuest.roomType], ["Entrada", viewingGuest.checkInDate], ["Salida", viewingGuest.checkOutDate], ["Tipo check-in", viewingGuest.checkinType], ["Estado", viewingGuest.status]]} />
+            <RecordSection title="Dirección" rows={[["Dirección", viewingGuest.street], ["Complemento", viewingGuest.addressExtra], ["Ciudad", viewingGuest.city], ["Provincia", viewingGuest.province], ["CP", viewingGuest.postalCode], ["País", viewingGuest.country]]} />
+            <RecordSection title="Pago" rows={[["Tipo", viewingGuest.paymentType], ["Abonado", `${viewingGuest.amountPaid || "0"} €`], ["Pendiente", `${viewingGuest.amountPending || "0"} €`], ["Titular", viewingGuest.paymentHolder], ["Medio", viewingGuest.paymentMethod]]} />
+          </div>}
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => handlePrintGuest(viewingGuest)}><Printer className="mr-2 h-4 w-4" />Imprimir</Button>
+            <Button onClick={() => handleDownloadGuestPDF(viewingGuest)}><FileDown className="mr-2 h-4 w-4" />Guardar PDF</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
+}
+
+function RecordSection({ title, rows }: { title: string; rows: Array<[string, unknown]> }) {
+  return <div className="rounded-lg border p-4"><h3 className="mb-3 font-semibold">{title}</h3><dl className="space-y-1">{rows.map(([label, value]) => <div key={label} className="grid grid-cols-[115px_1fr] gap-2"><dt className="text-muted-foreground">{label}</dt><dd className="break-words">{String(value || "—")}</dd></div>)}</dl></div>;
 }
