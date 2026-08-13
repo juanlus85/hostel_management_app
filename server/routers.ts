@@ -2042,6 +2042,8 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
         }
 
         const settings = await db.getHostelSettings();
+        const accessCodeList = await db.getAllAccessCodes();
+        const room = accessCodeList.find((code) => code.roomNumber === link.roomNumber);
         return {
           email: link.email,
           language: link.language,
@@ -2049,6 +2051,9 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           checkInDate: link.checkInDate,
           checkOutDate: link.checkOutDate,
           roomType: link.roomType,
+          roomNumber: link.roomNumber,
+          floor: room?.floor || "",
+          floorLevel: room?.floorLevel || "",
           numberOfGuests: link.numberOfGuests,
           hostelName: settings?.hostelName || "The Spot Central Hostel",
           termsUrlEs: settings?.termsUrlEs || "",
@@ -2057,6 +2062,19 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           privacyUrlEn: settings?.privacyUrlEn || "",
           welcomeMessageEs: settings?.welcomeMessageEs || "",
           welcomeMessageEn: settings?.welcomeMessageEn || "",
+          hostelAddress: settings?.hostelAddress || "",
+          hostelPhone: settings?.hostelPhone || "",
+          hostelEmail: settings?.hostelEmail || "",
+          wifiPassword: settings?.wifiPassword || "",
+          arrivalMapUrl: settings?.arrivalMapUrl || "",
+          arrivalIntroEs: settings?.arrivalIntroEs || "",
+          arrivalIntroEn: settings?.arrivalIntroEn || "",
+          keyInstructionsEs: settings?.keyInstructionsEs || "",
+          keyInstructionsEn: settings?.keyInstructionsEn || "",
+          commonAreasEs: settings?.commonAreasEs || "",
+          commonAreasEn: settings?.commonAreasEn || "",
+          houseRulesEs: settings?.houseRulesEs || "",
+          houseRulesEn: settings?.houseRulesEn || "",
         };
       }),
       completePublic: publicProcedure.input(z.object({
@@ -2153,6 +2171,8 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
         await generateGuestPDF(guestId);
 
         const settings = await db.getHostelSettings();
+        const accessCodeList = await db.getAllAccessCodes();
+        const roomDetails = accessCodeList.find((code) => code.roomNumber === link.roomNumber);
         const { sendOnlineCheckinConfirmation } = await import("./email");
         await sendOnlineCheckinConfirmation({
           firstName: input.firstName,
@@ -2163,6 +2183,17 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           roomCode: link.roomCode,
           entranceCode,
           welcomeMessage: link.language === "en" ? settings?.welcomeMessageEn : settings?.welcomeMessageEs,
+          roomType: link.roomType,
+          floor: link.language === "en" ? roomDetails?.floorLevel : roomDetails?.floor,
+          hostelAddress: settings?.hostelAddress,
+          hostelPhone: settings?.hostelPhone,
+          hostelEmail: settings?.hostelEmail,
+          wifiPassword: settings?.wifiPassword,
+          arrivalMapUrl: settings?.arrivalMapUrl,
+          arrivalIntro: link.language === "en" ? settings?.arrivalIntroEn : settings?.arrivalIntroEs,
+          keyInstructions: link.language === "en" ? settings?.keyInstructionsEn : settings?.keyInstructionsEs,
+          commonAreas: link.language === "en" ? settings?.commonAreasEn : settings?.commonAreasEs,
+          houseRules: link.language === "en" ? settings?.houseRulesEn : settings?.houseRulesEs,
         });
 
         return {
@@ -2171,6 +2202,23 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           roomCode: link.roomCode,
           entranceCode,
           checkInDate: link.checkInDate,
+          roomType: link.roomType,
+          floor: roomDetails?.floor || "",
+          floorLevel: roomDetails?.floorLevel || "",
+          hostelName: settings?.hostelName || "The Spot Central Hostel",
+          hostelAddress: settings?.hostelAddress || "",
+          hostelPhone: settings?.hostelPhone || "",
+          hostelEmail: settings?.hostelEmail || "",
+          wifiPassword: settings?.wifiPassword || "",
+          arrivalMapUrl: settings?.arrivalMapUrl || "",
+          arrivalIntroEs: settings?.arrivalIntroEs || "",
+          arrivalIntroEn: settings?.arrivalIntroEn || "",
+          keyInstructionsEs: settings?.keyInstructionsEs || "",
+          keyInstructionsEn: settings?.keyInstructionsEn || "",
+          commonAreasEs: settings?.commonAreasEs || "",
+          commonAreasEn: settings?.commonAreasEn || "",
+          houseRulesEs: settings?.houseRulesEs || "",
+          houseRulesEn: settings?.houseRulesEn || "",
         };
       }),
     }),
@@ -2202,6 +2250,15 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
         privacyUrlEn: z.string().url().or(z.literal("")).optional(),
         welcomeMessageEs: z.string().optional(),
         welcomeMessageEn: z.string().optional(),
+        arrivalMapUrl: z.string().url().or(z.literal("")).optional(),
+        arrivalIntroEs: z.string().optional(),
+        arrivalIntroEn: z.string().optional(),
+        keyInstructionsEs: z.string().optional(),
+        keyInstructionsEn: z.string().optional(),
+        commonAreasEs: z.string().optional(),
+        commonAreasEn: z.string().optional(),
+        houseRulesEs: z.string().optional(),
+        houseRulesEn: z.string().optional(),
         roomTypes: z.string().optional(),
         smtpHost: z.string().optional(),
         smtpPort: z.number().optional(),

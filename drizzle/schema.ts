@@ -745,6 +745,15 @@ export const hostelSettingsCheckin = mysqlTable("hostel_settings_checkin", {
   privacyUrlEn: varchar("privacyUrlEn", { length: 500 }),
   welcomeMessageEs: text("welcomeMessageEs"),
   welcomeMessageEn: text("welcomeMessageEn"),
+  arrivalMapUrl: varchar("arrivalMapUrl", { length: 500 }),
+  arrivalIntroEs: text("arrivalIntroEs"),
+  arrivalIntroEn: text("arrivalIntroEn"),
+  keyInstructionsEs: text("keyInstructionsEs"),
+  keyInstructionsEn: text("keyInstructionsEn"),
+  commonAreasEs: text("commonAreasEs"),
+  commonAreasEn: text("commonAreasEn"),
+  houseRulesEs: text("houseRulesEs"),
+  houseRulesEn: text("houseRulesEn"),
   
   // Tipos de habitación disponibles (JSON array)
   roomTypes: text("roomTypes"), // JSON: ["Individual", "Doble", "Triple", "Cuádruple", "Suite"]

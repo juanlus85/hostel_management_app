@@ -439,6 +439,17 @@ export async function sendOnlineCheckinConfirmation(guestData: {
   roomCode?: string | null;
   entranceCode?: string | null;
   welcomeMessage?: string | null;
+  roomType?: string | null;
+  floor?: string | null;
+  hostelAddress?: string | null;
+  hostelPhone?: string | null;
+  hostelEmail?: string | null;
+  wifiPassword?: string | null;
+  arrivalMapUrl?: string | null;
+  arrivalIntro?: string | null;
+  keyInstructions?: string | null;
+  commonAreas?: string | null;
+  houseRules?: string | null;
 }): Promise<{ success: boolean; error?: string }> {
   const isSpanish = guestData.language !== "en";
   const subject = isSpanish
@@ -459,6 +470,18 @@ export async function sendOnlineCheckinConfirmation(guestData: {
           <p style="margin:18px 0 4px"><strong>2. Código de la habitación ${guestData.roomNumber}</strong></p>
           <p style="margin:0;font-size:24px;font-weight:bold;letter-spacing:3px;color:#0f766e">${guestData.roomCode || "NO CONFIGURADO"}</p>
         </div>
+        <div style="margin-top:18px;background:white;padding:18px;border-radius:6px">
+          <h2 style="margin-top:0">Guía de llegada</h2>
+          ${guestData.arrivalIntro ? `<p style="white-space:pre-line">${guestData.arrivalIntro}</p>` : ""}
+          ${guestData.hostelAddress ? `<p><strong>Dirección:</strong> ${guestData.hostelAddress}</p>` : ""}
+          ${guestData.arrivalMapUrl ? `<p><a href="${guestData.arrivalMapUrl}" style="color:#0f766e;font-weight:bold">Ver mapa de llegada</a></p>` : ""}
+          <p><strong>Habitación ${guestData.roomNumber}${guestData.roomType ? ` · ${guestData.roomType}` : ""}${guestData.floor ? ` · ${guestData.floor}` : ""}</strong></p>
+          ${guestData.keyInstructions ? `<p style="white-space:pre-line"><strong>Recogida de llave:</strong><br>${guestData.keyInstructions}</p>` : ""}
+          ${guestData.wifiPassword ? `<p><strong>Wi‑Fi:</strong> ${guestData.wifiPassword}</p>` : ""}
+          ${guestData.commonAreas ? `<p style="white-space:pre-line"><strong>Zonas comunes:</strong><br>${guestData.commonAreas}</p>` : ""}
+          ${guestData.houseRules ? `<p style="white-space:pre-line"><strong>Normas:</strong><br>${guestData.houseRules}</p>` : ""}
+          ${(guestData.hostelPhone || guestData.hostelEmail) ? `<p><strong>Contacto:</strong> ${[guestData.hostelPhone, guestData.hostelEmail].filter(Boolean).join(" · ")}</p>` : ""}
+        </div>
         <p>Conserva este correo y presenta tu documento original cuando sea necesario.</p>
       </div>
     </div>` : `
@@ -474,6 +497,18 @@ export async function sendOnlineCheckinConfirmation(guestData: {
           <p style="margin:0;font-size:24px;font-weight:bold;letter-spacing:3px;color:#0f766e">${guestData.entranceCode || "NOT CONFIGURED"}</p>
           <p style="margin:18px 0 4px"><strong>2. Room ${guestData.roomNumber} code</strong></p>
           <p style="margin:0;font-size:24px;font-weight:bold;letter-spacing:3px;color:#0f766e">${guestData.roomCode || "NOT CONFIGURED"}</p>
+        </div>
+        <div style="margin-top:18px;background:white;padding:18px;border-radius:6px">
+          <h2 style="margin-top:0">Arrival guide</h2>
+          ${guestData.arrivalIntro ? `<p style="white-space:pre-line">${guestData.arrivalIntro}</p>` : ""}
+          ${guestData.hostelAddress ? `<p><strong>Address:</strong> ${guestData.hostelAddress}</p>` : ""}
+          ${guestData.arrivalMapUrl ? `<p><a href="${guestData.arrivalMapUrl}" style="color:#0f766e;font-weight:bold">View arrival map</a></p>` : ""}
+          <p><strong>Room ${guestData.roomNumber}${guestData.roomType ? ` · ${guestData.roomType}` : ""}${guestData.floor ? ` · ${guestData.floor}` : ""}</strong></p>
+          ${guestData.keyInstructions ? `<p style="white-space:pre-line"><strong>Key collection:</strong><br>${guestData.keyInstructions}</p>` : ""}
+          ${guestData.wifiPassword ? `<p><strong>Wi‑Fi:</strong> ${guestData.wifiPassword}</p>` : ""}
+          ${guestData.commonAreas ? `<p style="white-space:pre-line"><strong>Common areas:</strong><br>${guestData.commonAreas}</p>` : ""}
+          ${guestData.houseRules ? `<p style="white-space:pre-line"><strong>House rules:</strong><br>${guestData.houseRules}</p>` : ""}
+          ${(guestData.hostelPhone || guestData.hostelEmail) ? `<p><strong>Contact:</strong> ${[guestData.hostelPhone, guestData.hostelEmail].filter(Boolean).join(" · ")}</p>` : ""}
         </div>
         <p>Please keep this email and present your original ID document whenever required.</p>
       </div>

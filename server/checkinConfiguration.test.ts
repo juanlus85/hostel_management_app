@@ -11,4 +11,9 @@ describe("Check-in configuration routes", () => {
     expect(appRouter._def.procedures["checkin.guests.getById"]).toBeDefined();
     expect(appRouter._def.procedures["checkin.guests.search"]).toBeDefined();
   });
+
+  it("keeps the public online invitation routes available for the arrival guide", () => {
+    expect(appRouter._def.procedures["checkin.online.getPublic"]).toBeDefined();
+    expect(appRouter._def.procedures["checkin.online.completePublic"]).toBeDefined();
+  });
 });

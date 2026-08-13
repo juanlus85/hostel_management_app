@@ -1559,3 +1559,9 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 
 ## Usabilidad Tablet
 - [x] Añadir un botón de "Añadir otro huésped" al final de cada ficha de huésped.
+
+## Guía de llegada Check-in Online
+- [x] Añadir una guía de llegada bilingüe y estructurada a la confirmación final.
+- [x] Permitir configurar los textos de ubicación, llave, Wi‑Fi, zonas comunes, normas y contacto.
+- [x] Incluir automáticamente nombre, habitación, planta, tipo de habitación y códigos de acceso.
+- [x] Incluir la guía de llegada también en el correo de confirmación.

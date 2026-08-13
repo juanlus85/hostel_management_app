@@ -42,6 +42,15 @@ export default function ConfiguracionCheckin() {
     privacyUrlEn: "",
     welcomeMessageEs: "",
     welcomeMessageEn: "",
+    arrivalMapUrl: "",
+    arrivalIntroEs: "",
+    arrivalIntroEn: "",
+    keyInstructionsEs: "",
+    keyInstructionsEn: "",
+    commonAreasEs: "",
+    commonAreasEn: "",
+    houseRulesEs: "",
+    houseRulesEn: "",
     smtpHost: "",
     smtpPort: 587,
     smtpUser: "",
@@ -72,6 +81,15 @@ export default function ConfiguracionCheckin() {
         privacyUrlEn: settings.privacyUrlEn || "",
         welcomeMessageEs: settings.welcomeMessageEs || "",
         welcomeMessageEn: settings.welcomeMessageEn || "",
+        arrivalMapUrl: settings.arrivalMapUrl || "",
+        arrivalIntroEs: settings.arrivalIntroEs || "",
+        arrivalIntroEn: settings.arrivalIntroEn || "",
+        keyInstructionsEs: settings.keyInstructionsEs || "",
+        keyInstructionsEn: settings.keyInstructionsEn || "",
+        commonAreasEs: settings.commonAreasEs || "",
+        commonAreasEn: settings.commonAreasEn || "",
+        houseRulesEs: settings.houseRulesEs || "",
+        houseRulesEn: settings.houseRulesEn || "",
         smtpHost: settings.smtpHost || "",
         smtpPort: settings.smtpPort || 587,
         smtpUser: settings.smtpUser || "",
@@ -299,6 +317,21 @@ export default function ConfiguracionCheckin() {
             <div>
               <Label htmlFor="welcomeEn">Welcome instructions (English)</Label>
               <Textarea id="welcomeEn" value={formData.welcomeMessageEn} onChange={(e) => setFormData({ ...formData, welcomeMessageEn: e.target.value })} placeholder="Welcome. Complete the form and you will receive your access codes..." rows={6} />
+            </div>
+            <div>
+              <Label htmlFor="arrivalMapUrl">URL del mapa de llegada</Label>
+              <Input id="arrivalMapUrl" type="url" value={formData.arrivalMapUrl} onChange={(e) => setFormData({ ...formData, arrivalMapUrl: e.target.value })} placeholder="https://mapa.thespotcentralhostel.com/" />
+            </div>
+            <p className="text-sm text-muted-foreground">Los siguientes textos se mostrarán al finalizar el Check-in Online y en el correo de confirmación. Los códigos, habitación, planta, Wi‑Fi y datos de contacto se añaden automáticamente.</p>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div><Label htmlFor="arrivalIntroEs">Guía de llegada (Español)</Label><Textarea id="arrivalIntroEs" value={formData.arrivalIntroEs} onChange={(e) => setFormData({ ...formData, arrivalIntroEs: e.target.value })} placeholder="La recepción no estará abierta presencialmente a tu llegada, pero puedes acceder en cualquier momento siguiendo estas instrucciones." rows={5} /></div>
+              <div><Label htmlFor="arrivalIntroEn">Arrival guide (English)</Label><Textarea id="arrivalIntroEn" value={formData.arrivalIntroEn} onChange={(e) => setFormData({ ...formData, arrivalIntroEn: e.target.value })} placeholder="Reception may not be open in person at your arrival time, but you can access the hostel at any time with these instructions." rows={5} /></div>
+              <div><Label htmlFor="keyInstructionsEs">Recogida de llave (Español)</Label><Textarea id="keyInstructionsEs" value={formData.keyInstructionsEs} onChange={(e) => setFormData({ ...formData, keyInstructionsEs: e.target.value })} placeholder="Junto a la puerta encontrarás una caja con tu tarjeta de acceso." rows={4} /></div>
+              <div><Label htmlFor="keyInstructionsEn">Key collection (English)</Label><Textarea id="keyInstructionsEn" value={formData.keyInstructionsEn} onChange={(e) => setFormData({ ...formData, keyInstructionsEn: e.target.value })} placeholder="Next to the door you will find a box containing your room key card." rows={4} /></div>
+              <div><Label htmlFor="commonAreasEs">Zonas comunes (Español)</Label><Textarea id="commonAreasEs" value={formData.commonAreasEs} onChange={(e) => setFormData({ ...formData, commonAreasEs: e.target.value })} placeholder="En la tercera planta encontrarás cocina, salón y terraza." rows={4} /></div>
+              <div><Label htmlFor="commonAreasEn">Common areas (English)</Label><Textarea id="commonAreasEn" value={formData.commonAreasEn} onChange={(e) => setFormData({ ...formData, commonAreasEn: e.target.value })} placeholder="On the third floor you will find a kitchen, living room and rooftop terrace." rows={4} /></div>
+              <div><Label htmlFor="houseRulesEs">Normas (Español)</Label><Textarea id="houseRulesEs" value={formData.houseRulesEs} onChange={(e) => setFormData({ ...formData, houseRulesEs: e.target.value })} placeholder="No está permitido fumar en el hostel salvo en la terraza." rows={4} /></div>
+              <div><Label htmlFor="houseRulesEn">House rules (English)</Label><Textarea id="houseRulesEn" value={formData.houseRulesEn} onChange={(e) => setFormData({ ...formData, houseRulesEn: e.target.value })} placeholder="Smoking is not allowed inside the hostel, except on the rooftop terrace." rows={4} /></div>
             </div>
           </TabsContent>
 
