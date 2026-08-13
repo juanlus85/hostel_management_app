@@ -22,6 +22,7 @@ function tabletContext(): TrpcContext {
 
 describe("Tablet role", () => {
   it("registers the restricted police registration and document scan procedures", () => {
+    expect(appRouter._def.procedures["checkin.tablet.getLegalSettings"]).toBeDefined();
     expect(appRouter._def.procedures["checkin.tablet.registerGroup"]).toBeDefined();
     expect(appRouter._def.procedures["checkin.tablet.scanDocument"]).toBeDefined();
   });

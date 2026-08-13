@@ -23,6 +23,14 @@ const housekeepingProcedure = protectedProcedure.use(({ ctx, next }) => {
   return next({ ctx });
 });
 
+function getMadridStayDates() {
+  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Madrid", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.filter((part) => part.type !== "literal").map((part) => [part.type, part.value]));
+  const date = new Date(Date.UTC(Number(values.year), Number(values.month) - 1, Number(values.day)));
+  const format = (value: Date) => value.toISOString().slice(0, 10);
+  return { checkInDate: format(date), checkOutDate: format(new Date(date.getTime() + 86_400_000)) };
+}
+
 export const appRouter = router({
   system: systemRouter,
   
@@ -1699,15 +1707,18 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
   // ==================== CHECK-IN ====================
   checkin: router({
     tablet: router({
+      getLegalSettings: tabletProcedure.query(async () => {
+        const settings = await db.getHostelSettings();
+        return {
+          hostelName: settings?.hostelName || "The Spot Central Hostel",
+          termsUrlEs: settings?.termsUrlEs || "",
+          termsUrlEn: settings?.termsUrlEn || "",
+          privacyUrlEs: settings?.privacyUrlEs || "",
+          privacyUrlEn: settings?.privacyUrlEn || "",
+        };
+      }),
       registerGroup: tabletProcedure.input(z.object({
-        reservationNumber: z.string().trim().optional(),
-        reservationOrigin: z.enum(["Walk In", "Booking.com", "Airbnb", "Expedia", "Website", "Phone", "Email", "Other"]).optional(),
-        checkInDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-        checkOutDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-        roomNumber: z.string().trim().min(1),
-        roomType: z.string().trim().optional(),
-        paymentType: z.enum(["EFECT", "TARJT", "TRANS", "PLATF", "MOVIL", "TREG", "DESTI", "OTRO"]).default("EFECT"),
-        amountPaid: z.string().optional(),
+        language: z.enum(["es", "en"]),
         guests: z.array(z.object({
           firstName: z.string().trim().min(1),
           lastName: z.string().trim().min(1),
@@ -1726,10 +1737,13 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           country: z.string().trim().min(1),
           phone: z.string().trim().min(1),
           email: z.string().email(),
+          signature: z.string().min(100),
+          acceptedTerms: z.literal(true),
           acceptedPrivacy: z.literal(true),
         })).min(1).max(12),
       })).mutation(async ({ input, ctx }) => {
         const groupId = `tablet-${randomBytes(12).toString("hex")}`;
+        const stayDates = getMadridStayDates();
         const guestIds: number[] = [];
         for (let index = 0; index < input.guests.length; index += 1) {
           const guest = input.guests[index];
@@ -1739,23 +1753,24 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             documentExpiry: guest.documentExpiry || null,
             addressExtra: guest.addressExtra || null,
             province: guest.province || null,
-            reservationNumber: input.reservationNumber || null,
-            reservationOrigin: input.reservationOrigin || "Walk In",
-            checkInDate: input.checkInDate,
-            checkOutDate: input.checkOutDate,
-            roomNumber: input.roomNumber,
-            roomType: input.roomType || null,
-            paymentType: input.paymentType,
-            amountPaid: input.amountPaid || "0",
+            reservationNumber: null,
+            reservationOrigin: "Walk In",
+            checkInDate: stayDates.checkInDate,
+            checkOutDate: stayDates.checkOutDate,
+            roomNumber: null,
+            roomType: null,
+            paymentType: "EFECT",
+            amountPaid: "0",
             amountPending: "0",
             numberOfGuests: input.guests.length,
-            acceptedTerms: true,
-            acceptedPrivacy: true,
+            signature: guest.signature,
+            acceptedTerms: guest.acceptedTerms,
+            acceptedPrivacy: guest.acceptedPrivacy,
             isMainGuest: index === 0,
             groupId,
             status: "completed",
             checkinType: "presencial",
-            language: "es",
+            language: input.language,
             sendCodes: false,
             createdBy: ctx.user.id,
           });

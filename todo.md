@@ -1544,3 +1544,11 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Validar los campos imprescindibles para Policía antes de guardar.
 - [x] Añadir escaneo opcional y temporal de DNI, ID o pasaporte para rellenar campos.
 - [x] Informar que las imágenes de documentos no se almacenan tras el reconocimiento.
+
+## Rediseño autoservicio Tablet
+- [x] Crear diseño profesional con identidad visual del hostel y logotipo en cabecera.
+- [x] Añadir selector visual Español / English y traducción de todo el flujo.
+- [x] Eliminar datos internos de reserva, habitación, pago e importe del formulario del huésped.
+- [x] Usar entrada hoy y salida mañana automáticamente en el registro Tablet.
+- [x] Abrir la cámara del dispositivo para escanear documentos de forma opcional.
+- [x] Separar aceptación de términos y privacidad con enlaces legales obligatorios.
