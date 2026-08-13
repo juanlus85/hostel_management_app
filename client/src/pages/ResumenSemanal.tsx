@@ -11,6 +11,7 @@ import { Loader2, TrendingUp, Wallet, CreditCard, AlertTriangle, Package, CheckS
 import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Line } from 'react-chartjs-2';
+import { buildAvailabilityHistory } from '@/lib/availabilityHistory';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -736,40 +737,9 @@ export default function ResumenSemanal() {
               <CardContent>
                 {(() => {
                   // Agrupar datos por año y semana
-                  const dataByYear: Record<number, { week: string; total: number }[]> = {};
-                  
-                  allAvailabilityRecords?.forEach(record => {
-                    const weekDate = new Date(record.weekStart);
-                    const year = weekDate.getFullYear();
-                    const weekNumber = Math.ceil((weekDate.getDate() + 6 - weekDate.getDay()) / 7);
-                    const weekLabel = `S${weekNumber}`;
-                    
-                    if (!dataByYear[year]) {
-                      dataByYear[year] = [];
-                    }
-                    
-                    // Buscar si ya existe esta semana
-                    const existingWeek = dataByYear[year].find(w => w.week === weekLabel);
-                    if (existingWeek) {
-                      existingWeek.total += parseFloat(record.amount);
-                    } else {
-                      dataByYear[year].push({
-                        week: weekLabel,
-                        total: parseFloat(record.amount)
-                      });
-                    }
-                  });
-                  
-                  // Obtener todas las semanas únicas
-                  const allWeeks = Array.from(
-                    new Set(
-                      Object.values(dataByYear).flatMap(weeks => weeks.map(w => w.week))
-                    )
-                  ).sort((a, b) => {
-                    const numA = parseInt(a.replace('S', ''));
-                    const numB = parseInt(b.replace('S', ''));
-                    return numA - numB;
-                  });
+                  // El lunes almacenado en la base de datos es el identificador único de cada semana.
+                  // Así, semanas diferentes no se mezclan en etiquetas genéricas como S1 o S2.
+                  const { allWeeks, yearsWithData } = buildAvailabilityHistory(allAvailabilityRecords || []);
                   
                   // Colores para cada año
                   const colors = [
@@ -781,27 +751,24 @@ export default function ResumenSemanal() {
                   ];
                   
                   // Crear datasets por año
-                  const datasets = Object.keys(dataByYear).sort().map((year, index) => {
-                    const yearData = dataByYear[parseInt(year)];
+                  const datasets = yearsWithData.map((year, index) => {
                     const color = colors[index % colors.length];
                     
                     return {
-                      label: year,
-                      data: allWeeks.map(week => {
-                        const weekData = yearData.find(w => w.week === week);
-                        return weekData ? weekData.total : null;
-                      }),
+                      label: String(year),
+                      data: allWeeks.map(week => week.totals[year] ?? null),
                       borderColor: color.border,
                       backgroundColor: color.bg,
                       pointRadius: 6,
                       pointHoverRadius: 8,
                       tension: 0.3,
-                      fill: false
+                      fill: false,
+                      spanGaps: false,
                     };
                   });
                   
                   const chartData = {
-                    labels: allWeeks,
+                    labels: allWeeks.map(week => week.label),
                     datasets
                   };
                   
@@ -814,6 +781,9 @@ export default function ResumenSemanal() {
                       },
                       tooltip: {
                         callbacks: {
+                          title: function(context) {
+                            return `Semana del ${context[0]?.label || ''}`;
+                          },
                           label: function(context) {
                             let label = context.dataset.label || '';
                             if (label) {
@@ -834,6 +804,14 @@ export default function ResumenSemanal() {
                           callback: function(value) {
                             return '€' + value;
                           }
+                        }
+                      },
+                      x: {
+                        ticks: {
+                          autoSkip: true,
+                          maxTicksLimit: 16,
+                          maxRotation: 60,
+                          minRotation: 45,
                         }
                       }
                     }

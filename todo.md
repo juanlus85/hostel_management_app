@@ -1501,3 +1501,7 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 
 ## Corrección de despliegue OCR
 - [x] Corregir el error "No procedure found on path ocr.processInvoiceFile" por desajuste entre el cliente y el servidor desplegados.
+
+## Corrección gráfico de disponibilidad
+- [x] Restaurar el histórico de disponibilidad por semanas con fecha real en el eje horizontal.
+- [x] Corregir la agrupación anual para no mezclar ni omitir semanas de distintos años.
