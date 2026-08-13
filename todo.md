@@ -1573,3 +1573,7 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 
 ## Corrección de persistencia de guía de llegada
 - [x] Corregir que los textos de guía de llegada se guarden y se recuperen al volver a Configuración.
+
+## Corrección de confirmación Check-in Online
+- [x] Ocultar el mensaje inicial de bienvenida después de completar el check-in.
+- [x] Mantener accesible la guía de llegada desde el enlace hasta el día siguiente.

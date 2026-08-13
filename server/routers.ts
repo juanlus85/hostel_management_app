@@ -6,6 +6,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { randomBytes } from "node:crypto";
 import * as db from "./db";
+import { canAccessOnlineGuide, dayAfter, effectiveGuideExpiry } from "@shared/onlineGuideAccess";
 
 // Admin-only procedure
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -2017,8 +2018,8 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           amountPaid: input.amountPaid || "0",
           amountPending: input.amountPending || "0",
           createdBy: ctx.user.id,
-          // El enlace se invalida después del día de llegada.
-          expiresAt: input.checkInDate,
+          // La guía se mantiene accesible durante el día posterior a la llegada.
+          expiresAt: dayAfter(input.checkInDate),
         });
 
         return { id: linkId, token };
@@ -2032,19 +2033,23 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
         if (!link) throw new TRPCError({ code: "NOT_FOUND", message: "El enlace de check-in no existe" });
 
         const today = new Date().toISOString().slice(0, 10);
-        if (link.status === "pending" && link.expiresAt < today) {
-          await db.updateOnlineCheckinLink(link.id, { status: "expired" });
-          link.status = "expired";
+        const guideExpiry = effectiveGuideExpiry(link);
+        if (link.expiresAt !== guideExpiry) {
+          await db.updateOnlineCheckinLink(link.id, { expiresAt: guideExpiry });
+          link.expiresAt = guideExpiry;
         }
-
-        if (link.status !== "pending") {
+        if (!canAccessOnlineGuide(link, today)) {
+          if (link.status === "pending") await db.updateOnlineCheckinLink(link.id, { status: "expired" });
           throw new TRPCError({ code: "BAD_REQUEST", message: "Este enlace ya no está disponible" });
         }
 
         const settings = await db.getHostelSettings();
         const accessCodeList = await db.getAllAccessCodes();
         const room = accessCodeList.find((code) => code.roomNumber === link.roomNumber);
+        const completedGuest = link.status === "completed" && link.guestId ? await db.getGuestById(link.guestId) : null;
         return {
+          completed: link.status === "completed",
+          guestName: completedGuest?.firstName || "",
           email: link.email,
           language: link.language,
           reservationNumber: link.reservationNumber,
@@ -2052,6 +2057,8 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           checkOutDate: link.checkOutDate,
           roomType: link.roomType,
           roomNumber: link.roomNumber,
+          roomCode: link.status === "completed" ? link.roomCode : "",
+          entranceCode: link.status === "completed" ? link.entranceCode : "",
           floor: room?.floor || "",
           floorLevel: room?.floorLevel || "",
           numberOfGuests: link.numberOfGuests,
@@ -2079,6 +2086,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
       }),
       completePublic: publicProcedure.input(z.object({
         token: z.string().length(64),
+        language: z.enum(["es", "en"]),
         firstName: z.string().min(1),
         lastName: z.string().min(1),
         documentNumber: z.string().min(1),
@@ -2159,13 +2167,13 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           acceptedPrivacy: true,
           status: "completed",
           checkinType: "online",
-          language: link.language,
+          language: input.language,
           token: link.token,
           sendCodes: true,
           createdBy: null,
         });
 
-        await db.updateOnlineCheckinLink(link.id, { status: "completed", guestId, completedAt: new Date(), entranceCode });
+        await db.updateOnlineCheckinLink(link.id, { status: "completed", guestId, completedAt: new Date(), entranceCode, expiresAt: dayAfter(link.checkInDate), language: input.language });
 
         const { generateGuestPDF } = await import("./generateGuestPDF");
         await generateGuestPDF(guestId);
@@ -2177,23 +2185,23 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
         await sendOnlineCheckinConfirmation({
           firstName: input.firstName,
           email: input.email,
-          language: link.language,
+          language: input.language,
           checkInDate: link.checkInDate,
           roomNumber: link.roomNumber,
           roomCode: link.roomCode,
           entranceCode,
-          welcomeMessage: link.language === "en" ? settings?.welcomeMessageEn : settings?.welcomeMessageEs,
+          welcomeMessage: input.language === "en" ? settings?.welcomeMessageEn : settings?.welcomeMessageEs,
           roomType: link.roomType,
-          floor: link.language === "en" ? roomDetails?.floorLevel : roomDetails?.floor,
+          floor: input.language === "en" ? roomDetails?.floorLevel : roomDetails?.floor,
           hostelAddress: settings?.hostelAddress,
           hostelPhone: settings?.hostelPhone,
           hostelEmail: settings?.hostelEmail,
           wifiPassword: settings?.wifiPassword,
           arrivalMapUrl: settings?.arrivalMapUrl,
-          arrivalIntro: link.language === "en" ? settings?.arrivalIntroEn : settings?.arrivalIntroEs,
-          keyInstructions: link.language === "en" ? settings?.keyInstructionsEn : settings?.keyInstructionsEs,
-          commonAreas: link.language === "en" ? settings?.commonAreasEn : settings?.commonAreasEs,
-          houseRules: link.language === "en" ? settings?.houseRulesEn : settings?.houseRulesEs,
+          arrivalIntro: input.language === "en" ? settings?.arrivalIntroEn : settings?.arrivalIntroEs,
+          keyInstructions: input.language === "en" ? settings?.keyInstructionsEn : settings?.keyInstructionsEs,
+          commonAreas: input.language === "en" ? settings?.commonAreasEn : settings?.commonAreasEs,
+          houseRules: input.language === "en" ? settings?.houseRulesEn : settings?.houseRulesEs,
         });
 
         return {
