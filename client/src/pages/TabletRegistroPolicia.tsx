@@ -52,6 +52,25 @@ export default function TabletRegistroPolicia() {
     if (cameraStream && videoRef.current) videoRef.current.srcObject = cameraStream;
   }, [cameraStream]);
   useEffect(() => () => cameraStream?.getTracks().forEach((track) => track.stop()), [cameraStream]);
+  useEffect(() => {
+    const lastCanvas = [...canvasRefs.current].filter(Boolean).at(-1);
+    const guestCards = lastCanvas?.closest(".overflow-hidden")?.parentElement;
+    if (!guestCards) return;
+    const existing = guestCards.querySelector<HTMLButtonElement>("[data-tablet-add-guest-footer]");
+    const button = existing || document.createElement("button");
+    button.dataset.tabletAddGuestFooter = "true";
+    button.type = "button";
+    button.className = "flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#6fc6ce] bg-white px-5 py-4 text-sm font-semibold text-[#0d6570] transition hover:border-[#147c89] hover:bg-[#f0fbfc]";
+    button.innerHTML = `<span aria-hidden="true" style="font-size:1.25rem;line-height:1">＋</span>${lang === "es" ? "Añadir otro huésped a esta reserva" : "Add another guest to this reservation"}`;
+    button.onclick = () => {
+      setGuests((current) => [...current, blankGuest()]);
+      setSigned((current) => [...current, false]);
+      setDocumentSides((current) => [...current, { front: false, back: false }]);
+      window.setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }), 50);
+    };
+    if (!existing) guestCards.appendChild(button);
+    return () => { button.onclick = null; };
+  }, [guests.length, lang]);
 
   const updateGuest = (index: number, patch: Partial<GuestForm>) => setGuests((current) => current.map((guest, guestIndex) => guestIndex === index ? { ...guest, ...patch } : guest));
   const addGuest = () => { setGuests((current) => [...current, blankGuest()]); setSigned((current) => [...current, false]); setDocumentSides((current) => [...current, { front: false, back: false }]); };

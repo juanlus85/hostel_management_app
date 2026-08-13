@@ -1556,3 +1556,6 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 ## Escaneo doble de documentos
 - [x] Permitir capturar anverso y reverso para cada huésped.
 - [x] Combinar reconocimientos sin borrar los datos existentes válidos.
+
+## Usabilidad Tablet
+- [x] Añadir un botón de "Añadir otro huésped" al final de cada ficha de huésped.
