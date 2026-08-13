@@ -1552,3 +1552,7 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Usar entrada hoy y salida mañana automáticamente en el registro Tablet.
 - [x] Abrir la cámara del dispositivo para escanear documentos de forma opcional.
 - [x] Separar aceptación de términos y privacidad con enlaces legales obligatorios.
+
+## Escaneo doble de documentos
+- [x] Permitir capturar anverso y reverso para cada huésped.
+- [x] Combinar reconocimientos sin borrar los datos existentes válidos.

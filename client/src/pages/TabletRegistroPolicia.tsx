@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Building2, Camera, CheckCircle2, FileScan, Globe2, Loader2, Plus, Save, ShieldCheck, Signature, Trash2, UserRound, X } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { COUNTRIES } from "@/lib/countries";
+import { mergeRecognizedDocumentFields } from "@shared/documentRecognition";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -11,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 
 type Language = "es" | "en";
+type DocumentSide = "front" | "back";
 type GuestForm = {
   firstName: string; lastName: string; documentType: "NIF" | "NIE" | "PAS" | "OTRO"; documentNumber: string; documentSupport: string;
   nationality: string; gender: "Hombre" | "Mujer" | "Otro"; birthDate: string; documentExpiry: string; street: string; addressExtra: string;
@@ -27,6 +29,8 @@ export default function TabletRegistroPolicia() {
   const canvasRefs = useRef<Array<HTMLCanvasElement | null>>([]);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [cameraIndex, setCameraIndex] = useState<number | null>(null);
+  const [cameraSide, setCameraSide] = useState<DocumentSide>("front");
+  const [documentSides, setDocumentSides] = useState<Array<{ front: boolean; back: boolean }>>([{ front: false, back: false }]);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const [completed, setCompleted] = useState<number | null>(null);
   const { data: legalSettings } = trpc.checkin.tablet.getLegalSettings.useQuery();
@@ -50,26 +54,30 @@ export default function TabletRegistroPolicia() {
   useEffect(() => () => cameraStream?.getTracks().forEach((track) => track.stop()), [cameraStream]);
 
   const updateGuest = (index: number, patch: Partial<GuestForm>) => setGuests((current) => current.map((guest, guestIndex) => guestIndex === index ? { ...guest, ...patch } : guest));
-  const addGuest = () => { setGuests((current) => [...current, blankGuest()]); setSigned((current) => [...current, false]); };
-  const removeGuest = (index: number) => { setGuests((current) => current.filter((_, guestIndex) => guestIndex !== index)); setSigned((current) => current.filter((_, guestIndex) => guestIndex !== index)); canvasRefs.current.splice(index, 1); };
+  const addGuest = () => { setGuests((current) => [...current, blankGuest()]); setSigned((current) => [...current, false]); setDocumentSides((current) => [...current, { front: false, back: false }]); };
+  const removeGuest = (index: number) => { setGuests((current) => current.filter((_, guestIndex) => guestIndex !== index)); setSigned((current) => current.filter((_, guestIndex) => guestIndex !== index)); setDocumentSides((current) => current.filter((_, guestIndex) => guestIndex !== index)); canvasRefs.current.splice(index, 1); };
   const closeCamera = () => { cameraStream?.getTracks().forEach((track) => track.stop()); setCameraStream(null); setCameraIndex(null); };
   const openCamera = async (index: number) => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false });
+      const side = documentSides[index]?.front ? "back" : "front";
+      setCameraSide(side);
       setCameraIndex(index);
       setCameraStream(stream);
+      toast.info(side === "front" ? t(lang, "Vas a capturar el anverso del documento.", "You are about to capture the front side of the document.") : t(lang, "Vas a capturar el reverso del documento.", "You are about to capture the reverse side of the document."));
     } catch {
       toast.error(t(lang, "No se pudo abrir la cámara. Comprueba los permisos del navegador.", "The camera could not be opened. Check browser permissions."));
     }
   };
-  const scanImage = async (index: number, imageData: string) => {
+  const scanImage = async (index: number, side: DocumentSide, imageData: string) => {
     try {
       const result = await scanDocument.mutateAsync({ imageData, contentType: "image/jpeg" });
       const fields = result.fields as Partial<GuestForm>;
       const documentType = ["NIF", "NIE", "PAS", "OTRO"].includes(fields.documentType || "") ? fields.documentType as GuestForm["documentType"] : undefined;
       const gender = ["Hombre", "Mujer", "Otro"].includes(fields.gender || "") ? fields.gender as GuestForm["gender"] : undefined;
-      updateGuest(index, { ...fields, documentType, gender });
-      toast.success(t(lang, "Datos detectados. Revísalos antes de continuar.", "Details detected. Review them before continuing."));
+      setGuests((current) => current.map((guest, guestIndex) => guestIndex === index ? mergeRecognizedDocumentFields(guest, { ...fields, documentType, gender }) : guest));
+      setDocumentSides((current) => current.map((sides, guestIndex) => guestIndex === index ? { ...sides, [side]: true } : sides));
+      toast.success(side === "front" ? t(lang, "Anverso procesado. Puedes escanear ahora el reverso para completar los datos.", "Front side processed. You can now scan the reverse side to complete the details.") : t(lang, "Reverso procesado. Revisa los datos antes de continuar.", "Reverse side processed. Review the details before continuing."));
     } catch (error: any) { toast.error(error.message || t(lang, "No se pudo leer el documento", "The document could not be read")); }
   };
   const captureDocument = async () => {
@@ -80,8 +88,9 @@ export default function TabletRegistroPolicia() {
     canvas.getContext("2d")?.drawImage(videoRef.current, 0, 0);
     const imageData = canvas.toDataURL("image/jpeg", 0.9);
     const index = cameraIndex;
+    const side = cameraSide;
     closeCamera();
-    await scanImage(index, imageData);
+    await scanImage(index, side, imageData);
   };
   const point = (canvas: HTMLCanvasElement, event: React.PointerEvent<HTMLCanvasElement>) => {
     const rect = canvas.getBoundingClientRect();
