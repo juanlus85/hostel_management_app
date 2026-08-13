@@ -32,3 +32,9 @@ describe("invoices.create validation", () => {
     })).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 });
+
+describe("ocr.processInvoiceFile availability", () => {
+  it("is registered in the application router", () => {
+    expect(appRouter._def.procedures["ocr.processInvoiceFile"]).toBeDefined();
+  });
+});
