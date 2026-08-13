@@ -115,3 +115,4 @@ drizzle/.cache/
 
 # PM2
 .pm2/
+.project-config.json

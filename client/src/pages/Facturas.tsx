@@ -7,9 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
-import { Receipt, Plus, Camera, Upload, Check, AlertCircle, Search, Building2, Store, Loader2, Sparkles, Edit2, FileText, CheckCircle2, Trash2, FileDown } from "lucide-react";
+import { Receipt, Plus, Camera, Upload, Check, AlertCircle, Search, Building2, Store, Loader2, Sparkles, Edit2, FileText, CheckCircle2, Trash2, FileDown, UploadCloud } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useMemo, useState, useRef } from "react";
+import { useMemo, useState, useRef, type DragEvent } from "react";
 import { toast } from "sonner";
 
 // Helper para formatear fecha como YYYY-MM-DD sin conversión de timezone
@@ -51,12 +51,13 @@ export default function Facturas() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [isProcessingOCR, setIsProcessingOCR] = useState(false);
+  const [isDraggingInvoice, setIsDraggingInvoice] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [formBusinessId, setFormBusinessId] = useState<number | null>(null);
   
   // Filtro de mes/año
   const currentDate = new Date();
-  const [filterType, setFilterType] = useState<string>("last30"); // "last30" | "all" | "by_month"
+  const [filterType, setFilterType] = useState<string>("last30"); // "last30" | "last3months" | "all" | "by_month"
   const [selectedMonth, setSelectedMonth] = useState<string>("0"); // 0-11
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear().toString());
 
@@ -89,6 +90,14 @@ export default function Facturas() {
       const end = new Date();
       const start = new Date();
       start.setDate(start.getDate() - 30);
+      return {
+        startDate: formatDateLocal(start),
+        endDate: formatDateLocal(end)
+      };
+    } else if (filterType === "last3months") {
+      const end = new Date();
+      const start = new Date();
+      start.setMonth(start.getMonth() - 3);
       return {
         startDate: formatDateLocal(start),
         endDate: formatDateLocal(end)
@@ -168,24 +177,7 @@ export default function Facturas() {
     onError: (error) => toast.error("Error al subir archivo: " + error.message),
   });
 
-  const processOCR = trpc.ocr.processInvoice.useMutation({
-    onSuccess: (data) => {
-      if (data) {
-        if (data.supplier) setSupplier(data.supplier);
-        if (data.invoiceNumber) setInvoiceNumber(data.invoiceNumber);
-        if (data.invoiceDate) setInvoiceDate(data.invoiceDate);
-        if (data.totalAmount) setTotalAmount(data.totalAmount);
-        toast.success("Datos extraídos correctamente");
-      } else {
-        toast.error("No se pudieron extraer los datos");
-      }
-      setIsProcessingOCR(false);
-    },
-    onError: (error) => {
-      toast.error("Error en OCR: " + error.message);
-      setIsProcessingOCR(false);
-    },
-  });
+  const processInvoiceFile = trpc.ocr.processInvoiceFile.useMutation();
 
   const resetForm = () => {
     setSupplier("");
@@ -200,45 +192,95 @@ export default function Facturas() {
     setImagePreview(null);
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Check if it's an image or PDF
-      const isImage = file.type.startsWith('image/');
-      const isPDF = file.type === 'application/pdf';
-      
-      if (!isImage && !isPDF) {
-        toast.error("Solo se permiten imágenes o archivos PDF");
-        return;
-      }
+  const getSupportedContentType = (file: File): "application/pdf" | "image/jpeg" | "image/png" | "image/webp" | null => {
+    const name = file.name.toLowerCase();
+    if (file.type === "application/pdf" || name.endsWith(".pdf")) return "application/pdf";
+    if (file.type === "image/jpeg" || file.type === "image/jpg" || name.endsWith(".jpg") || name.endsWith(".jpeg")) return "image/jpeg";
+    if (file.type === "image/png" || name.endsWith(".png")) return "image/png";
+    if (file.type === "image/webp" || name.endsWith(".webp")) return "image/webp";
+    return null;
+  };
 
-      setImageFile(file);
-      
-      if (isImage) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const dataUrl = reader.result as string;
-          setImagePreview(dataUrl);
-        };
-        reader.readAsDataURL(file);
+  const readFileAsDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
+  const applyExtractedInvoiceData = (data: any) => {
+    if (!data) return;
+    if (data.supplier?.trim()) {
+      const recognisedSupplier = data.supplier.trim();
+      const savedSupplier = suppliers?.find((item) => item.name.toLocaleLowerCase() === recognisedSupplier.toLocaleLowerCase());
+      if (savedSupplier) {
+        setSupplier(savedSupplier.name);
+        setCustomSupplier("");
       } else {
-        // For PDF, just show a placeholder
-        setImagePreview("pdf:" + file.name);
+        setSupplier("_custom");
+        setCustomSupplier(recognisedSupplier);
       }
+    }
+    if (data.invoiceNumber?.trim()) setInvoiceNumber(data.invoiceNumber.trim());
+    if (/^\d{4}-\d{2}-\d{2}$/.test(data.invoiceDate || "")) setInvoiceDate(data.invoiceDate);
+    if (data.totalAmount?.trim()) setTotalAmount(data.totalAmount.trim());
+  };
+
+  const handleAttachedInvoice = async (file: File) => {
+    const contentType = getSupportedContentType(file);
+    if (!contentType) {
+      toast.error("Adjunta un PDF, JPG, PNG o WEBP de una factura");
+      return;
+    }
+
+    if (file.size > 15 * 1024 * 1024) {
+      toast.error("El archivo supera el límite de 15 MB");
+      return;
+    }
+
+    resetForm();
+    setInvoiceDate("");
+    setImageFile(file);
+    setImagePreview(contentType === "application/pdf" ? `pdf:${file.name}` : URL.createObjectURL(file));
+    setIsDialogOpen(true);
+    setIsProcessingOCR(true);
+
+    try {
+      const fileData = await readFileAsDataUrl(file);
+      const data = await processInvoiceFile.mutateAsync({ fileData, fileName: file.name, contentType });
+      applyExtractedInvoiceData(data);
+      toast.success(data ? "Datos detectados. Revísalos antes de registrar la factura." : "No se detectaron datos. Completa los campos manualmente.");
+    } catch (error: any) {
+      toast.error(error?.message || "No se pudo analizar la factura. Completa los campos manualmente.");
+    } finally {
+      setIsProcessingOCR(false);
     }
   };
 
-  const handleProcessOCR = () => {
-    if (!imagePreview) {
-      toast.error("Primero sube una imagen");
-      return;
-    }
-    if (imagePreview.startsWith("pdf:")) {
-      toast.error("OCR solo disponible para imágenes, no para PDF");
-      return;
-    }
-    setIsProcessingOCR(true);
-    processOCR.mutate({ imageUrl: imagePreview });
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleAttachedInvoice(file);
+    e.target.value = "";
+  };
+
+  const handleInvoiceDragOver = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDraggingInvoice(true);
+  };
+
+  const handleInvoiceDragLeave = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDraggingInvoice(false);
+  };
+
+  const handleInvoiceDrop = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDraggingInvoice(false);
+    const file = event.dataTransfer.files?.[0];
+    if (file) handleAttachedInvoice(file);
   };
 
   const handleCreateInvoice = async () => {
@@ -255,9 +297,8 @@ export default function Facturas() {
     const finalSupplier = supplier === "_custom" ? customSupplier.trim() : supplier;
     const total = totalAmount.trim();
     
-    // At least supplier or total should be provided
-    if (!finalSupplier && !total) {
-      toast.error("Indica al menos el proveedor o el total");
+    if (!finalSupplier) {
+      toast.error("El proveedor es obligatorio para registrar una factura");
       return;
     }
     
@@ -314,7 +355,7 @@ export default function Facturas() {
     
     createInvoice.mutate({
       businessId: businessIdToUse,
-      supplier: finalSupplier || undefined,
+      supplier: finalSupplier,
       invoiceNumber: invoiceNumber.trim() || undefined,
       invoiceDate: invoiceDate || undefined,
       totalAmount: total || undefined,
@@ -339,6 +380,10 @@ export default function Facturas() {
 
   const handleUpdateInvoice = () => {
     if (!selectedInvoice) return;
+    if (!editSupplier.trim()) {
+      toast.error("El proveedor es obligatorio");
+      return;
+    }
     updateInvoice.mutate({
       id: selectedInvoice.id,
       supplier: editSupplier,
@@ -495,19 +540,15 @@ export default function Facturas() {
                         Eliminar
                       </Button>
                     </div>
-                    {!imagePreview.startsWith("pdf:") && (
-                      <Button 
-                        type="button"
-                        onClick={handleProcessOCR}
-                        disabled={isProcessingOCR}
-                        className="w-full bg-gradient-to-r from-primary to-accent"
-                      >
-                        {isProcessingOCR ? (
-                          <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Procesando OCR...</>
-                        ) : (
-                          <><Sparkles className="h-4 w-4 mr-2" />Extraer datos automáticamente (OCR)</>
-                        )}
-                      </Button>
+                    {isProcessingOCR ? (
+                      <div className="flex items-center justify-center gap-2 rounded-md bg-primary/10 px-3 py-2 text-sm font-medium text-primary">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Analizando factura con IA…
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        Los datos reconocidos se muestran arriba. Revisa y confirma antes de guardar.
+                      </p>
                     )}
                   </div>
                 )}
@@ -515,7 +556,7 @@ export default function Facturas() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label>Proveedor</Label>
+                  <Label>Proveedor *</Label>
                   <Select value={supplier} onValueChange={setSupplier}>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccionar proveedor" />
@@ -535,6 +576,9 @@ export default function Facturas() {
                       className="mt-2"
                     />
                   )}
+                  <a href="/proveedores" className="text-xs text-primary hover:underline">
+                    Gestionar proveedores
+                  </a>
                 </div>
                 <div className="grid gap-2">
                   <Label>Nº Factura</Label>
@@ -605,6 +649,29 @@ export default function Facturas() {
         </Dialog>
       </div>
 
+      <div
+        onDragOver={handleInvoiceDragOver}
+        onDragLeave={handleInvoiceDragLeave}
+        onDrop={handleInvoiceDrop}
+        className={`rounded-xl border-2 border-dashed px-5 py-6 transition-colors ${
+          isDraggingInvoice
+            ? "border-primary bg-primary/10"
+            : "border-muted-foreground/30 bg-muted/20 hover:border-primary/60 hover:bg-primary/5"
+        }`}
+      >
+        <div className="flex flex-col items-center justify-center gap-2 text-center sm:flex-row sm:text-left">
+          <div className="rounded-full bg-primary/10 p-3 text-primary">
+            <UploadCloud className="h-6 w-6" />
+          </div>
+          <div>
+            <p className="font-semibold">Arrastra una factura aquí para registrarla</p>
+            <p className="text-sm text-muted-foreground">
+              Acepta PDF, JPG, PNG y WEBP. La IA intentará completar proveedor, fecha, número e importe antes de que confirmes.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Filtros */}
       <div className="flex flex-col sm:flex-row gap-4">
         {/* Selector de tipo de filtro */}
@@ -615,6 +682,7 @@ export default function Facturas() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="last30">Últimas 30 facturas</SelectItem>
+              <SelectItem value="last3months">Últimos 3 meses</SelectItem>
               <SelectItem value="all">Todas las facturas</SelectItem>
               <SelectItem value="by_month">Por mes específico</SelectItem>
             </SelectContent>
@@ -859,7 +927,7 @@ export default function Facturas() {
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label>Proveedor</Label>
+                <Label>Proveedor *</Label>
                 <Input value={editSupplier} onChange={e => setEditSupplier(e.target.value)} placeholder="Proveedor" />
               </div>
               <div className="grid gap-2">

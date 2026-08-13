@@ -408,7 +408,7 @@ export const appRouter = router({
     }),
     create: protectedProcedure.input(z.object({
       businessId: z.number(),
-      supplier: z.string().optional(),
+      supplier: z.string().trim().min(1, "El proveedor es obligatorio"),
       invoiceNumber: z.string().optional(),
       invoiceDate: z.string().optional(),
       baseAmount: z.string().optional(),
@@ -445,7 +445,7 @@ export const appRouter = router({
     }),
     update: protectedProcedure.input(z.object({
       id: z.number(),
-      supplier: z.string().optional(),
+      supplier: z.string().trim().min(1, "El proveedor es obligatorio").optional(),
       invoiceNumber: z.string().optional(),
       invoiceDate: z.string().optional(),
       baseAmount: z.string().optional(),
@@ -816,6 +816,101 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
         return null;
       }
     }),
+
+    processInvoiceFile: protectedProcedure.input(z.object({
+      fileData: z.string(),
+      fileName: z.string(),
+      contentType: z.enum(["application/pdf", "image/jpeg", "image/png", "image/webp"]),
+    })).mutation(async ({ input }) => {
+      const apiKeySetting = await db.getSetting("openai_api_key");
+      if (!apiKeySetting?.settingValue) {
+        throw new Error("API Key de OpenAI no configurada. Añádela en Configuración antes de analizar facturas.");
+      }
+
+      const apiKey = apiKeySetting.settingValue;
+      const base64Data = input.fileData.split(",")[1] || input.fileData;
+      const fileBuffer = Buffer.from(base64Data, "base64");
+      const safeFileName = input.fileName.replace(/[^a-zA-Z0-9._-]/g, "_") || "factura";
+
+      const fileForm = new FormData();
+      fileForm.append("purpose", "user_data");
+      fileForm.append("file", new Blob([fileBuffer], { type: input.contentType }), safeFileName);
+
+      const uploadResponse = await fetch("https://api.openai.com/v1/files", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}` },
+        body: fileForm,
+      });
+
+      if (!uploadResponse.ok) {
+        const error = await uploadResponse.text();
+        throw new Error(`No se pudo enviar el documento a OpenAI: ${error}`);
+      }
+
+      const uploadedFile: any = await uploadResponse.json();
+
+      try {
+        const analysisResponse = await fetch("https://api.openai.com/v1/responses", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: "gpt-4o",
+            input: [{
+              role: "user",
+              content: [
+                {
+                  type: "input_text",
+                  text: "Extrae los datos de esta factura. Devuelve proveedor, número de factura, fecha YYYY-MM-DD, base imponible, porcentaje de IVA, importe de IVA y total. No inventes datos: usa null cuando un campo no sea legible o no exista.",
+                },
+                { type: "input_file", file_id: uploadedFile.id },
+              ],
+            }],
+            text: {
+              format: {
+                type: "json_schema",
+                name: "invoice_data",
+                strict: true,
+                schema: {
+                  type: "object",
+                  properties: {
+                    supplier: { type: ["string", "null"] },
+                    invoiceNumber: { type: ["string", "null"] },
+                    invoiceDate: { type: ["string", "null"] },
+                    baseAmount: { type: ["string", "null"] },
+                    vatRate: { type: ["string", "null"] },
+                    vatAmount: { type: ["string", "null"] },
+                    totalAmount: { type: ["string", "null"] },
+                  },
+                  required: ["supplier", "invoiceNumber", "invoiceDate", "baseAmount", "vatRate", "vatAmount", "totalAmount"],
+                  additionalProperties: false,
+                },
+              },
+            },
+          }),
+        });
+
+        if (!analysisResponse.ok) {
+          const error = await analysisResponse.text();
+          throw new Error(`No se pudo analizar la factura: ${error}`);
+        }
+
+        const analysis: any = await analysisResponse.json();
+        const outputText = analysis.output_text || analysis.output
+          ?.flatMap((item: any) => item.content || [])
+          ?.find((item: any) => item.type === "output_text")?.text;
+
+        if (!outputText || typeof outputText !== "string") return null;
+        return JSON.parse(outputText);
+      } finally {
+        fetch(`https://api.openai.com/v1/files/${uploadedFile.id}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${apiKey}` },
+        }).catch(() => undefined);
+      }
+    }),
   }),
 
   // ==================== SUPPLIERS ====================
@@ -1180,6 +1275,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
     }),
     update: adminProcedure.input(z.object({
       id: z.number(),
+      businessId: z.number().optional(),
       type: z.enum(["gasto", "ingreso"]).optional(),
       concepto: z.string().optional(),
       categoria: z.enum(["sueldos", "seguridad_social", "impuestos", "seguros", "otros"]).optional(),

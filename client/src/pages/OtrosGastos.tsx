@@ -27,7 +27,7 @@ export default function OtrosGastos() {
   
   // Filtro de fecha
   const currentDate = new Date();
-  const [filterType, setFilterType] = useState<string>("last30"); // "last30" | "all" | "by_month"
+  const [filterType, setFilterType] = useState<string>("last30"); // "last30" | "last3months" | "all" | "by_month"
   const [selectedMonth, setSelectedMonth] = useState<string>("0"); // 0-11
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear().toString());
   const { data: businesses } = trpc.businesses.list.useQuery();
@@ -65,6 +65,14 @@ export default function OtrosGastos() {
         startDate: formatDateLocal(start),
         endDate: formatDateLocal(end)
       };
+    } else if (filterType === "last3months") {
+      const end = new Date();
+      const start = new Date();
+      start.setMonth(start.getMonth() - 3);
+      return {
+        startDate: formatDateLocal(start),
+        endDate: formatDateLocal(end)
+      };
     } else if (filterType === "all") {
       return { startDate: undefined, endDate: undefined };
     } else if (filterType === "by_month") {
@@ -85,13 +93,16 @@ export default function OtrosGastos() {
     if (!businesses) return;
     if (selectedBusiness === "hostel") {
       setCurrentBusinessId(hostelBusiness?.id || null);
+      if (!editingId) setFormBusinessId(hostelBusiness?.id || null);
     } else if (selectedBusiness === "tienda") {
       setCurrentBusinessId(tiendaBusiness?.id || null);
+      if (!editingId) setFormBusinessId(tiendaBusiness?.id || null);
     } else {
       // Para "all", usar hostel por defecto para crear nuevos gastos
       setCurrentBusinessId(hostelBusiness?.id || null);
+      if (!editingId) setFormBusinessId(hostelBusiness?.id || null);
     }
-  }, [selectedBusiness, businesses, hostelBusiness, tiendaBusiness]);
+  }, [selectedBusiness, businesses, hostelBusiness, tiendaBusiness, editingId]);
 
   // Queries - obtener datos según selección global
   
@@ -160,17 +171,15 @@ export default function OtrosGastos() {
     setFecha(new Date().toISOString().split('T')[0]);
     setNotas("");
     setEditingId(null);
+    setFormBusinessId(currentBusinessId);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Si estamos en modo "Ambos", usar el negocio seleccionado en el formulario
-    const businessIdToUse = selectedBusiness === "all" ? formBusinessId : currentBusinessId;
+    const businessIdToUse = formBusinessId || currentBusinessId;
     
     if (!businessIdToUse) {
-      toast.error(selectedBusiness === "all" 
-        ? "Selecciona para qué negocio es este gasto/ingreso" 
-        : "Selecciona un negocio");
+      toast.error("Selecciona para qué negocio es este gasto o ingreso");
       return;
     }
     if (!concepto || !importe || !fecha) {
@@ -199,6 +208,7 @@ export default function OtrosGastos() {
 
   const handleEdit = (gasto: any) => {
     setEditingId(gasto.id);
+    setFormBusinessId(gasto.businessId);
     setType(gasto.type || "gasto");
     setConcepto(gasto.concepto);
     setCategoria(gasto.categoria);
@@ -242,6 +252,12 @@ export default function OtrosGastos() {
     return labels[method] || method;
   };
 
+  const getBusinessLabel = (businessId: number) => {
+    if (businessId === hostelBusiness?.id) return "Hostel";
+    if (businessId === tiendaBusiness?.id) return "Tienda";
+    return "Sin negocio";
+  };
+
   if (!businesses || businesses.length === 0) {
     return (
       <div className="container mx-auto p-6">
@@ -275,27 +291,24 @@ export default function OtrosGastos() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Selector de negocio (solo cuando está en modo "Ambos") */}
-            {selectedBusiness === "all" && (
-              <div className="p-4 border-2 border-primary/30 rounded-lg bg-primary/5">
-                <Label className="text-base font-semibold">Negocio *</Label>
-                <Select 
-                  value={formBusinessId?.toString() || ""} 
-                  onValueChange={(v) => setFormBusinessId(parseInt(v))}
-                >
-                  <SelectTrigger className="mt-2">
-                    <SelectValue placeholder="Selecciona el negocio" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={hostelBusiness?.id.toString() || ""}>Hostel</SelectItem>
-                    <SelectItem value={tiendaBusiness?.id.toString() || ""}>Tienda</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Selecciona para qué negocio es este gasto/ingreso. No se puede crear para ambos a la vez.
-                </p>
-              </div>
-            )}
+            <div className="p-4 border-2 border-primary/30 rounded-lg bg-primary/5">
+              <Label className="text-base font-semibold">Asignar a negocio *</Label>
+              <Select 
+                value={formBusinessId?.toString() || ""} 
+                onValueChange={(v) => setFormBusinessId(parseInt(v))}
+              >
+                <SelectTrigger className="mt-2">
+                  <SelectValue placeholder="Selecciona el negocio" />
+                </SelectTrigger>
+                <SelectContent>
+                  {hostelBusiness && <SelectItem value={hostelBusiness.id.toString()}>Hostel</SelectItem>}
+                  {tiendaBusiness && <SelectItem value={tiendaBusiness.id.toString()}>Tienda</SelectItem>}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-2">
+                Cada gasto o ingreso se registra en un único negocio. Puedes cambiarlo también al editar.
+              </p>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -436,9 +449,10 @@ export default function OtrosGastos() {
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="last30">Últimos 30 días</SelectItem>
-                  <SelectItem value="all">Mostrar todos</SelectItem>
+                  <SelectContent>
+                    <SelectItem value="last30">Últimos 30 días</SelectItem>
+                    <SelectItem value="last3months">Últimos 3 meses</SelectItem>
+                    <SelectItem value="all">Mostrar todos</SelectItem>
                   <SelectItem value="by_month">Por mes específico</SelectItem>
                 </SelectContent>
               </Select>
@@ -514,6 +528,9 @@ export default function OtrosGastos() {
                       </span>
                       <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded">
                         {getCategoriaLabel(gasto.categoria, gasto.categoriaOtros || undefined)}
+                      </span>
+                      <span className="text-xs px-2 py-1 bg-secondary text-secondary-foreground rounded">
+                        {getBusinessLabel(gasto.businessId)}
                       </span>
                     </div>
                     <p className="text-sm text-muted-foreground">

@@ -1489,3 +1489,11 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Implementar generación automática de PDF al completar check-in (presencial/online/anticipado)
 - [x] Filtrar vista de Policía para mostrar solo check-ins completados
 - [x] Agregar botón de eliminar individual para cada registro en vista Policía
+
+## Mejoras de gastos, facturas y proveedores
+- [x] Permitir asignar cada otro gasto o ingreso al Hostel o a la Tienda.
+- [x] Hacer obligatorio el proveedor al registrar una factura.
+- [x] Crear menú de gestión de proveedores: añadir, editar y eliminar.
+- [x] Añadir el filtro "Últimos 3 meses" en Facturas y Otros gastos.
+- [x] Reconocer automáticamente los datos de facturas adjuntas y dejar campos vacíos cuando no se detecten.
+- [x] Permitir arrastrar y soltar documentos para crear una factura.
