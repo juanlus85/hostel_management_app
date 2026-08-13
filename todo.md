@@ -1565,3 +1565,8 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Permitir configurar los textos de ubicación, llave, Wi‑Fi, zonas comunes, normas y contacto.
 - [x] Incluir automáticamente nombre, habitación, planta, tipo de habitación y códigos de acceso.
 - [x] Incluir la guía de llegada también en el correo de confirmación.
+
+## Personalización y envío de guía de llegada
+- [x] Permitir etiquetas dinámicas de huésped, habitación y códigos en textos bilingües de bienvenida.
+- [x] Garantizar que cada huésped visualice la versión española o inglesa elegida al inicio.
+- [x] Añadir acciones para compartir las instrucciones por correo electrónico y WhatsApp.

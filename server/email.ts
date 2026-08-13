@@ -2,6 +2,7 @@ import nodemailer from "nodemailer";
 import { getDb } from "./db";
 import { systemSettings } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
+import { renderArrivalTemplate } from "@shared/arrivalTemplate";
 
 interface SMTPConfig {
   host: string;
@@ -452,6 +453,24 @@ export async function sendOnlineCheckinConfirmation(guestData: {
   houseRules?: string | null;
 }): Promise<{ success: boolean; error?: string }> {
   const isSpanish = guestData.language !== "en";
+  const templateContext = {
+    guestName: guestData.firstName,
+    roomNumber: guestData.roomNumber,
+    roomType: guestData.roomType,
+    floor: guestData.floor,
+    entranceCode: guestData.entranceCode,
+    roomCode: guestData.roomCode,
+    hostelAddress: guestData.hostelAddress,
+    wifiPassword: guestData.wifiPassword,
+    hostelPhone: guestData.hostelPhone,
+    hostelEmail: guestData.hostelEmail,
+    checkInDate: guestData.checkInDate,
+  };
+  const welcomeMessage = renderArrivalTemplate(guestData.welcomeMessage, templateContext);
+  const arrivalIntro = renderArrivalTemplate(guestData.arrivalIntro, templateContext);
+  const keyInstructions = renderArrivalTemplate(guestData.keyInstructions, templateContext);
+  const commonAreas = renderArrivalTemplate(guestData.commonAreas, templateContext);
+  const houseRules = renderArrivalTemplate(guestData.houseRules, templateContext);
   const subject = isSpanish
     ? "Check-in online completado · The Spot Central Hostel"
     : "Online check-in completed · The Spot Central Hostel";
@@ -461,7 +480,7 @@ export async function sendOnlineCheckinConfirmation(guestData: {
       <div style="background:#0f766e;color:white;padding:24px;border-radius:10px 10px 0 0"><h1 style="margin:0">¡Check-in completado!</h1></div>
       <div style="background:#f8fafc;padding:28px;border-radius:0 0 10px 10px">
         <p>Hola <strong>${guestData.firstName}</strong>, tu registro online se ha completado correctamente.</p>
-        ${guestData.welcomeMessage ? `<div style="background:#eff6ff;border-left:4px solid #2563eb;padding:14px;border-radius:6px;white-space:pre-line">${guestData.welcomeMessage}</div>` : ""}
+        ${welcomeMessage ? `<div style="background:#eff6ff;border-left:4px solid #2563eb;padding:14px;border-radius:6px;white-space:pre-line">${welcomeMessage}</div>` : ""}
         <p><strong>Llegada:</strong> ${arrivalDate}<br><strong>Habitación:</strong> ${guestData.roomNumber}</p>
         <div style="background:white;border-left:4px solid #0f766e;padding:18px;border-radius:6px">
           <h2 style="margin-top:0">Tus códigos de acceso</h2>
@@ -472,14 +491,14 @@ export async function sendOnlineCheckinConfirmation(guestData: {
         </div>
         <div style="margin-top:18px;background:white;padding:18px;border-radius:6px">
           <h2 style="margin-top:0">Guía de llegada</h2>
-          ${guestData.arrivalIntro ? `<p style="white-space:pre-line">${guestData.arrivalIntro}</p>` : ""}
+          ${arrivalIntro ? `<p style="white-space:pre-line">${arrivalIntro}</p>` : ""}
           ${guestData.hostelAddress ? `<p><strong>Dirección:</strong> ${guestData.hostelAddress}</p>` : ""}
           ${guestData.arrivalMapUrl ? `<p><a href="${guestData.arrivalMapUrl}" style="color:#0f766e;font-weight:bold">Ver mapa de llegada</a></p>` : ""}
           <p><strong>Habitación ${guestData.roomNumber}${guestData.roomType ? ` · ${guestData.roomType}` : ""}${guestData.floor ? ` · ${guestData.floor}` : ""}</strong></p>
-          ${guestData.keyInstructions ? `<p style="white-space:pre-line"><strong>Recogida de llave:</strong><br>${guestData.keyInstructions}</p>` : ""}
+          ${keyInstructions ? `<p style="white-space:pre-line"><strong>Recogida de llave:</strong><br>${keyInstructions}</p>` : ""}
           ${guestData.wifiPassword ? `<p><strong>Wi‑Fi:</strong> ${guestData.wifiPassword}</p>` : ""}
-          ${guestData.commonAreas ? `<p style="white-space:pre-line"><strong>Zonas comunes:</strong><br>${guestData.commonAreas}</p>` : ""}
-          ${guestData.houseRules ? `<p style="white-space:pre-line"><strong>Normas:</strong><br>${guestData.houseRules}</p>` : ""}
+          ${commonAreas ? `<p style="white-space:pre-line"><strong>Zonas comunes:</strong><br>${commonAreas}</p>` : ""}
+          ${houseRules ? `<p style="white-space:pre-line"><strong>Normas:</strong><br>${houseRules}</p>` : ""}
           ${(guestData.hostelPhone || guestData.hostelEmail) ? `<p><strong>Contacto:</strong> ${[guestData.hostelPhone, guestData.hostelEmail].filter(Boolean).join(" · ")}</p>` : ""}
         </div>
         <p>Conserva este correo y presenta tu documento original cuando sea necesario.</p>
@@ -489,7 +508,7 @@ export async function sendOnlineCheckinConfirmation(guestData: {
       <div style="background:#0f766e;color:white;padding:24px;border-radius:10px 10px 0 0"><h1 style="margin:0">Online check-in completed!</h1></div>
       <div style="background:#f8fafc;padding:28px;border-radius:0 0 10px 10px">
         <p>Hello <strong>${guestData.firstName}</strong>, your online registration has been completed successfully.</p>
-        ${guestData.welcomeMessage ? `<div style="background:#eff6ff;border-left:4px solid #2563eb;padding:14px;border-radius:6px;white-space:pre-line">${guestData.welcomeMessage}</div>` : ""}
+        ${welcomeMessage ? `<div style="background:#eff6ff;border-left:4px solid #2563eb;padding:14px;border-radius:6px;white-space:pre-line">${welcomeMessage}</div>` : ""}
         <p><strong>Arrival:</strong> ${arrivalDate}<br><strong>Room:</strong> ${guestData.roomNumber}</p>
         <div style="background:white;border-left:4px solid #0f766e;padding:18px;border-radius:6px">
           <h2 style="margin-top:0">Your access codes</h2>
@@ -500,14 +519,14 @@ export async function sendOnlineCheckinConfirmation(guestData: {
         </div>
         <div style="margin-top:18px;background:white;padding:18px;border-radius:6px">
           <h2 style="margin-top:0">Arrival guide</h2>
-          ${guestData.arrivalIntro ? `<p style="white-space:pre-line">${guestData.arrivalIntro}</p>` : ""}
+          ${arrivalIntro ? `<p style="white-space:pre-line">${arrivalIntro}</p>` : ""}
           ${guestData.hostelAddress ? `<p><strong>Address:</strong> ${guestData.hostelAddress}</p>` : ""}
           ${guestData.arrivalMapUrl ? `<p><a href="${guestData.arrivalMapUrl}" style="color:#0f766e;font-weight:bold">View arrival map</a></p>` : ""}
           <p><strong>Room ${guestData.roomNumber}${guestData.roomType ? ` · ${guestData.roomType}` : ""}${guestData.floor ? ` · ${guestData.floor}` : ""}</strong></p>
-          ${guestData.keyInstructions ? `<p style="white-space:pre-line"><strong>Key collection:</strong><br>${guestData.keyInstructions}</p>` : ""}
+          ${keyInstructions ? `<p style="white-space:pre-line"><strong>Key collection:</strong><br>${keyInstructions}</p>` : ""}
           ${guestData.wifiPassword ? `<p><strong>Wi‑Fi:</strong> ${guestData.wifiPassword}</p>` : ""}
-          ${guestData.commonAreas ? `<p style="white-space:pre-line"><strong>Common areas:</strong><br>${guestData.commonAreas}</p>` : ""}
-          ${guestData.houseRules ? `<p style="white-space:pre-line"><strong>House rules:</strong><br>${guestData.houseRules}</p>` : ""}
+          ${commonAreas ? `<p style="white-space:pre-line"><strong>Common areas:</strong><br>${commonAreas}</p>` : ""}
+          ${houseRules ? `<p style="white-space:pre-line"><strong>House rules:</strong><br>${houseRules}</p>` : ""}
           ${(guestData.hostelPhone || guestData.hostelEmail) ? `<p><strong>Contact:</strong> ${[guestData.hostelPhone, guestData.hostelEmail].filter(Boolean).join(" · ")}</p>` : ""}
         </div>
         <p>Please keep this email and present your original ID document whenever required.</p>

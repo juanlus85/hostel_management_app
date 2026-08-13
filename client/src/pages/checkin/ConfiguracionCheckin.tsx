@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
 import { Loader2, Save } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ARRIVAL_TEMPLATE_TAGS } from "@shared/arrivalTemplate";
 
 export default function ConfiguracionCheckin() {
   const { data: settings, isLoading } = trpc.checkin.settings.get.useQuery();
@@ -310,6 +311,11 @@ export default function ConfiguracionCheckin() {
 
           <TabsContent value="bienvenida" className="space-y-4 mt-6">
             <p className="text-sm text-muted-foreground">Este texto aparece al comienzo del enlace público de check-in online, según el idioma elegido por el huésped.</p>
+            <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">
+              <p className="font-medium">Etiquetas dinámicas disponibles</p>
+              <p className="mt-1 text-muted-foreground">Puedes incluirlas en los textos de bienvenida y guía de llegada. Se rellenan automáticamente con los datos de cada reserva.</p>
+              <div className="mt-2 flex flex-wrap gap-1.5">{ARRIVAL_TEMPLATE_TAGS.map((tag) => <code key={tag} className="rounded bg-background px-1.5 py-0.5 text-xs">{tag}</code>)}</div>
+            </div>
             <div>
               <Label htmlFor="welcomeEs">Instrucciones de bienvenida (Español)</Label>
               <Textarea id="welcomeEs" value={formData.welcomeMessageEs} onChange={(e) => setFormData({ ...formData, welcomeMessageEs: e.target.value })} placeholder="Te damos la bienvenida. Completa el formulario y recibirás tus códigos de acceso..." rows={6} />
