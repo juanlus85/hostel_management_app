@@ -1537,3 +1537,10 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 ## Confirmación e idioma de formularios públicos
 - [x] Mostrar el código de entrada al hostel también en la pantalla final de Check-in Online.
 - [x] Añadir selector visual ESPAÑOL / ENGLISH al Check-in Anticipado público.
+
+## Rol Tablet y registro policial
+- [x] Añadir rol Tablet con acceso restringido al registro policial.
+- [x] Crear formulario Tablet para registrar uno o varios huéspedes de una misma reserva.
+- [x] Validar los campos imprescindibles para Policía antes de guardar.
+- [x] Añadir escaneo opcional y temporal de DNI, ID o pasaporte para rellenar campos.
+- [x] Informar que las imágenes de documentos no se almacenan tras el reconocimiento.

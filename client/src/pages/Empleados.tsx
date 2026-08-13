@@ -31,7 +31,7 @@ export default function Empleados() {
   const isAdmin = currentUser?.role === "admin";
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [isRoleDialog, setIsRoleDialog] = useState(false);
-  const [newRole, setNewRole] = useState<"user" | "admin" | "housekeeping">("user");
+  const [newRole, setNewRole] = useState<"user" | "admin" | "housekeeping" | "tablet">("user");
   
   // Create employee form
   const [isCreateDialog, setIsCreateDialog] = useState(false);
@@ -39,7 +39,7 @@ export default function Empleados() {
   const [newEmail, setNewEmail] = useState("");
   const [newUsername, setNewUsername] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  const [newEmployeeRole, setNewEmployeeRole] = useState<"user" | "admin" | "housekeeping">("user");
+  const [newEmployeeRole, setNewEmployeeRole] = useState<"user" | "admin" | "housekeeping" | "tablet">("user");
   
   // Change password dialog
   const [isPasswordDialog, setIsPasswordDialog] = useState(false);
@@ -370,7 +370,7 @@ export default function Empleados() {
                 </div>
                 <div className="grid gap-2">
                   <Label>Rol</Label>
-                  <Select value={newEmployeeRole} onValueChange={(v: "user" | "admin" | "housekeeping") => setNewEmployeeRole(v)}>
+                  <Select value={newEmployeeRole} onValueChange={(v: "user" | "admin" | "housekeeping" | "tablet") => setNewEmployeeRole(v)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -378,6 +378,7 @@ export default function Empleados() {
                       <SelectItem value="user">Empleado</SelectItem>
                       <SelectItem value="admin">Administrador</SelectItem>
                       <SelectItem value="housekeeping">Housekeeping</SelectItem>
+                      <SelectItem value="tablet">Tablet · Registro Policía</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
@@ -385,6 +386,8 @@ export default function Empleados() {
                       ? "Acceso completo: gestión de empleados, turnos, caja y configuración"
                       : newEmployeeRole === "housekeeping"
                       ? "Acceso limitado: horarios, tareas, incidencias, inventario y gestión de habitaciones" 
+                      : newEmployeeRole === "tablet"
+                      ? "Acceso exclusivo al registro policial de huéspedes desde recepción"
                       : "Acceso básico: fichaje, registro de caja e incidencias"}
                   </p>
                 </div>
@@ -464,8 +467,8 @@ export default function Empleados() {
                         <div className="flex items-center gap-2">
                           <p className="font-medium">{user.name || 'Sin nombre'}</p>
                           {isCurrentUser && <Badge variant="outline">Tú</Badge>}
-                          <Badge className={user.role === "admin" ? "bg-primary" : "bg-muted text-muted-foreground"}>
-                            {user.role === "admin" ? "Admin" : "Empleado"}
+                          <Badge className={user.role === "admin" ? "bg-primary" : user.role === "tablet" ? "bg-teal-100 text-teal-800" : "bg-muted text-muted-foreground"}>
+                            {user.role === "admin" ? "Admin" : user.role === "tablet" ? "Tablet" : user.role === "housekeeping" ? "Housekeeping" : "Empleado"}
                           </Badge>
                           {configuredDays > 0 && (
                             <Badge variant="outline" className="text-green-600 border-green-200">
@@ -542,7 +545,7 @@ export default function Empleados() {
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <Select value={newRole} onValueChange={(v: "user" | "admin" | "housekeeping") => setNewRole(v)}>
+            <Select value={newRole} onValueChange={(v: "user" | "admin" | "housekeeping" | "tablet") => setNewRole(v)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -550,6 +553,7 @@ export default function Empleados() {
                 <SelectItem value="user">Empleado</SelectItem>
                 <SelectItem value="admin">Administrador</SelectItem>
                 <SelectItem value="housekeeping">Housekeeping</SelectItem>
+                <SelectItem value="tablet">Tablet · Registro Policía</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-sm text-muted-foreground mt-2">
@@ -557,6 +561,8 @@ export default function Empleados() {
                 ? "Los administradores pueden gestionar empleados, turnos y configuración." 
                 : newRole === "housekeeping"
                 ? "Housekeeping puede acceder a horarios, tareas, incidencias, inventario y gestión de habitaciones."
+                : newRole === "tablet"
+                ? "La Tablet solo puede acceder al registro policial de huéspedes."
                 : "Los empleados pueden registrar turnos, caja e incidencias."}
             </p>
           </div>

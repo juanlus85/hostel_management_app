@@ -28,6 +28,7 @@ import PedidosUnificado from "./pages/PedidosUnificado";
 import CheckinUnificado from "./pages/CheckinUnificado";
 import CheckinAnticipadoPublico from "./pages/CheckinAnticipadoPublico";
 import CheckinOnlinePublico from "./pages/CheckinOnlinePublico";
+import TabletRegistroPolicia from "./pages/TabletRegistroPolicia";
 
 function Router() {
   return (
@@ -60,6 +61,7 @@ function Router() {
         <Route path="/historico-cajas" component={HistoricoCajas} />
         <Route path="/pedidos" component={PedidosUnificado} />
         <Route path="/checkin" component={CheckinUnificado} />
+        <Route path="/tablet-registro" component={TabletRegistroPolicia} />
         <Route path="/404" component={NotFound} />
         <Route component={NotFound} />
             </Switch>

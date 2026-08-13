@@ -1,7 +1,7 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import { publicProcedure, protectedProcedure, router, tabletProcedure } from "./_core/trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { randomBytes } from "node:crypto";
@@ -77,7 +77,7 @@ export const appRouter = router({
       id: z.number(),
       name: z.string().optional(),
       email: z.string().optional(),
-      role: z.enum(["user", "admin", "housekeeping"]).optional(),
+      role: z.enum(["user", "admin", "housekeeping", "tablet"]).optional(),
       pin: z.string().max(6).optional(),
       isActive: z.boolean().optional(),
       scheduleTemplate: z.string().optional(), // JSON string with weekly schedule template
@@ -1022,7 +1022,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
       email: z.string().optional(),
       username: z.string(),
       password: z.string().min(4),
-      role: z.enum(["user", "admin", "housekeeping"]).default("user"),
+      role: z.enum(["user", "admin", "housekeeping", "tablet"]).default("user"),
     })).mutation(async ({ input }) => {
       const id = await db.createEmployeeWithCredentials(input.name, input.email, input.username, input.password, input.role);
       return { success: true, id };
@@ -1698,6 +1698,101 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
 
   // ==================== CHECK-IN ====================
   checkin: router({
+    tablet: router({
+      registerGroup: tabletProcedure.input(z.object({
+        reservationNumber: z.string().trim().optional(),
+        reservationOrigin: z.enum(["Walk In", "Booking.com", "Airbnb", "Expedia", "Website", "Phone", "Email", "Other"]).optional(),
+        checkInDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        checkOutDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        roomNumber: z.string().trim().min(1),
+        roomType: z.string().trim().optional(),
+        paymentType: z.enum(["EFECT", "TARJT", "TRANS", "PLATF", "MOVIL", "TREG", "DESTI", "OTRO"]).default("EFECT"),
+        amountPaid: z.string().optional(),
+        guests: z.array(z.object({
+          firstName: z.string().trim().min(1),
+          lastName: z.string().trim().min(1),
+          documentType: z.enum(["NIF", "NIE", "PAS", "OTRO"]),
+          documentNumber: z.string().trim().min(1),
+          documentSupport: z.string().trim().optional(),
+          nationality: z.string().trim().min(1),
+          gender: z.enum(["Hombre", "Mujer", "Otro"]),
+          birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+          documentExpiry: z.string().optional(),
+          street: z.string().trim().min(1),
+          addressExtra: z.string().trim().optional(),
+          postalCode: z.string().trim().min(1),
+          city: z.string().trim().min(1),
+          province: z.string().trim().optional(),
+          country: z.string().trim().min(1),
+          phone: z.string().trim().min(1),
+          email: z.string().email(),
+          acceptedPrivacy: z.literal(true),
+        })).min(1).max(12),
+      })).mutation(async ({ input, ctx }) => {
+        const groupId = `tablet-${randomBytes(12).toString("hex")}`;
+        const guestIds: number[] = [];
+        for (let index = 0; index < input.guests.length; index += 1) {
+          const guest = input.guests[index];
+          const guestId = await db.createGuest({
+            ...guest,
+            documentSupport: guest.documentSupport || null,
+            documentExpiry: guest.documentExpiry || null,
+            addressExtra: guest.addressExtra || null,
+            province: guest.province || null,
+            reservationNumber: input.reservationNumber || null,
+            reservationOrigin: input.reservationOrigin || "Walk In",
+            checkInDate: input.checkInDate,
+            checkOutDate: input.checkOutDate,
+            roomNumber: input.roomNumber,
+            roomType: input.roomType || null,
+            paymentType: input.paymentType,
+            amountPaid: input.amountPaid || "0",
+            amountPending: "0",
+            numberOfGuests: input.guests.length,
+            acceptedTerms: true,
+            acceptedPrivacy: true,
+            isMainGuest: index === 0,
+            groupId,
+            status: "completed",
+            checkinType: "presencial",
+            language: "es",
+            sendCodes: false,
+            createdBy: ctx.user.id,
+          });
+          guestIds.push(guestId);
+          const { generateGuestPDF } = await import("./generateGuestPDF");
+          await generateGuestPDF(guestId);
+        }
+        return { success: true, guestIds, groupId };
+      }),
+      scanDocument: tabletProcedure.input(z.object({
+        imageData: z.string().min(100).max(12_000_000),
+        contentType: z.enum(["image/jpeg", "image/png", "image/webp"]),
+      })).mutation(async ({ input }) => {
+        const apiKeySetting = await db.getSetting("openai_api_key");
+        if (!apiKeySetting?.settingValue) {
+          throw new TRPCError({ code: "PRECONDITION_FAILED", message: "La clave de OpenAI no está configurada" });
+        }
+        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKeySetting.settingValue}` },
+          body: JSON.stringify({
+            model: "gpt-4o",
+            response_format: { type: "json_object" },
+            messages: [
+              { role: "system", content: "Extract only legible guest-registration data from a Spanish DNI, NIE, passport, or national ID. Return valid JSON with fields firstName,lastName,documentType (NIF,NIE,PAS,OTRO),documentNumber,documentSupport,nationality (ISO 3),gender (Hombre,Mujer,Otro),birthDate (YYYY-MM-DD),documentExpiry (YYYY-MM-DD or empty),street,postalCode,city,province,country (ISO 3),phone,email. Never invent values: use an empty string when unavailable." },
+              { role: "user", content: [{ type: "text", text: "Read this identity document. The image is used only for this request and must not be retained." }, { type: "image_url", image_url: { url: input.imageData, detail: "high" } }] },
+            ],
+          }),
+        });
+        if (!response.ok) throw new TRPCError({ code: "BAD_GATEWAY", message: "No se pudo analizar el documento" });
+        const completion = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
+        const content = completion.choices?.[0]?.message?.content || "{}";
+        let extracted: Record<string, string> = {};
+        try { extracted = JSON.parse(content); } catch { throw new TRPCError({ code: "BAD_GATEWAY", message: "No se pudo interpretar el documento" }); }
+        return { fields: extracted };
+      }),
+    }),
     // Guests
     guests: router({
       list: protectedProcedure.query(async () => {

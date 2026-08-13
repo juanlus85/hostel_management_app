@@ -9,7 +9,7 @@ export const users = mysqlTable("users", {
   username: varchar("username", { length: 100 }), // Username for login
   passwordHash: varchar("passwordHash", { length: 255 }), // Hashed password
   loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin", "housekeeping"]).default("user").notNull(),
+  role: mysqlEnum("role", ["user", "admin", "housekeeping", "tablet"]).default("user").notNull(),
   pin: varchar("pin", { length: 6 }), // PIN for quick clock-in/out
   color: varchar("color", { length: 7 }).default("#3b82f6"), // Color for calendar display
   isActive: boolean("isActive").default(true).notNull(),

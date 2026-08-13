@@ -25,7 +25,26 @@ const requireUser = t.middleware(async opts => {
   });
 });
 
-export const protectedProcedure = t.procedure.use(requireUser);
+const disallowTablet = t.middleware(async opts => {
+  if (opts.ctx.user?.role === "tablet") {
+    throw new TRPCError({ code: "FORBIDDEN", message: "La Tablet solo puede acceder al registro policial" });
+  }
+  return opts.next({ ctx: { ...opts.ctx, user: opts.ctx.user! } });
+});
+
+export const protectedProcedure = t.procedure.use(requireUser).use(disallowTablet);
+
+export const tabletProcedure = t.procedure.use(
+  t.middleware(async opts => {
+    if (!opts.ctx.user) {
+      throw new TRPCError({ code: "UNAUTHORIZED", message: UNAUTHED_ERR_MSG });
+    }
+    if (opts.ctx.user.role !== "tablet" && opts.ctx.user.role !== "admin") {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Acceso exclusivo para registro de recepción" });
+    }
+    return opts.next({ ctx: { ...opts.ctx, user: opts.ctx.user } });
+  }),
+);
 
 export const adminProcedure = t.procedure.use(
   t.middleware(async opts => {

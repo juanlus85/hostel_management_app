@@ -81,6 +81,10 @@ const housekeepingMenuItems = [
   { icon: LayoutDashboard, label: "Housekeeping", path: "/housekeeping" },
 ];
 
+const tabletMenuItems = [
+  { icon: ClipboardList, label: "Registro Policía", path: "/tablet-registro" },
+];
+
 const adminMenuItems = [
   { icon: BarChart3, label: "Resumen Semanal", path: "/resumen-semanal" },
   { icon: History, label: "Histórico de Cajas", path: "/historico-cajas" },
@@ -243,17 +247,20 @@ function DashboardLayoutContent({
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const activeMenuItem = [...menuItems, ...adminMenuItems, ...housekeepingMenuItems].find(item => item.path === location);
+  const activeMenuItem = [...menuItems, ...adminMenuItems, ...housekeepingMenuItems, ...tabletMenuItems].find(item => item.path === location);
   const isMobile = useIsMobile();
   const { selectedBusiness, setSelectedBusiness } = useBusinessContext();
   const isAdmin = user?.role === "admin";
   const isHousekeeping = user?.role === "housekeeping";
   const isEmployee = user?.role === "user";
+  const isTablet = user?.role === "tablet";
   // Housekeeping solo ve su menú específico
   // Admin ve menú completo + opciones admin
   // Employee (user) ve menú completo sin opciones adminOnly pero sí staffOnly
   // Otros roles no ven ni adminOnly ni staffOnly
-  const currentMenuItems = isHousekeeping 
+  const currentMenuItems = isTablet
+    ? tabletMenuItems
+    : isHousekeeping 
     ? housekeepingMenuItems 
     : isAdmin
     ? [...menuItems, ...adminMenuItems]
@@ -266,6 +273,12 @@ function DashboardLayoutContent({
       setIsResizing(false);
     }
   }, [isCollapsed]);
+
+  useEffect(() => {
+    if (isTablet && location !== "/tablet-registro") {
+      setLocation("/tablet-registro");
+    }
+  }, [isTablet, location, setLocation]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -327,7 +340,7 @@ function DashboardLayoutContent({
           </SidebarHeader>
 
           {/* Business Selector */}
-          {!isCollapsed && (
+          {!isCollapsed && !isTablet && (
             <div className="px-3 py-3 border-b border-sidebar-border">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -397,7 +410,7 @@ function DashboardLayoutContent({
                       {user?.name || "Usuario"}
                     </p>
                     <p className="text-xs text-sidebar-foreground/60 truncate mt-1">
-                      {user?.role === "admin" ? "Administrador" : user?.role === "housekeeping" ? "Housekeeping" : "Empleado"}
+                      {user?.role === "admin" ? "Administrador" : user?.role === "housekeeping" ? "Housekeeping" : user?.role === "tablet" ? "Tablet · Registro Policía" : "Empleado"}
                     </p>
                   </div>
                 </button>
@@ -437,7 +450,7 @@ function DashboardLayoutContent({
                 {activeMenuItem?.label ?? "Gestión"}
               </span>
             </div>
-            <DropdownMenu>
+            {!isTablet && <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted text-sm">
                   <BusinessIcon className="h-3.5 w-3.5" />
@@ -459,8 +472,8 @@ function DashboardLayoutContent({
                   Ver ambos
                 </DropdownMenuItem>
               </DropdownMenuContent>
-            </DropdownMenu>
-            <NotificationBell />
+            </DropdownMenu>}
+            {!isTablet && <NotificationBell />}
           </div>
         )}
         <main className="flex-1 p-4 md:p-6 bg-muted/30 min-h-screen">{children}</main>

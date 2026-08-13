@@ -716,7 +716,7 @@ export async function createEmployeeWithCredentials(
   email: string | undefined, 
   username: string, 
   password: string, 
-  role: "user" | "admin" | "housekeeping" = "user"
+  role: "user" | "admin" | "housekeeping" | "tablet" = "user"
 ) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
