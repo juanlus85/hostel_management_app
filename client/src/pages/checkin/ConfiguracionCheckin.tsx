@@ -11,10 +11,12 @@ import { ARRIVAL_TEMPLATE_TAGS } from "@shared/arrivalTemplate";
 
 export default function ConfiguracionCheckin() {
   const { data: settings, isLoading } = trpc.checkin.settings.get.useQuery();
+  const utils = trpc.useUtils();
   const [saving, setSaving] = useState(false);
 
   const updateSettings = trpc.checkin.settings.update.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
+      await utils.checkin.settings.get.invalidate();
       alert("Configuración guardada correctamente");
     },
     onError: (error) => {

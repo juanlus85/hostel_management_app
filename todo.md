@@ -1570,3 +1570,6 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Permitir etiquetas dinámicas de huésped, habitación y códigos en textos bilingües de bienvenida.
 - [x] Garantizar que cada huésped visualice la versión española o inglesa elegida al inicio.
 - [x] Añadir acciones para compartir las instrucciones por correo electrónico y WhatsApp.
+
+## Corrección de persistencia de guía de llegada
+- [x] Corregir que los textos de guía de llegada se guarden y se recuperen al volver a Configuración.
