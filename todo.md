@@ -1577,3 +1577,6 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 ## Corrección de confirmación Check-in Online
 - [x] Ocultar el mensaje inicial de bienvenida después de completar el check-in.
 - [x] Mantener accesible la guía de llegada desde el enlace hasta el día siguiente.
+
+## Envío de enlace Check-in Online
+- [x] Añadir botón para compartir por WhatsApp al generar un enlace de Check-in Online.

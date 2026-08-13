@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Check, ClipboardCopy, Globe2, Link2, Loader2, Plus, Send, XCircle } from "lucide-react";
+import { Check, ClipboardCopy, Globe2, Link2, Loader2, MessageCircle, Plus, Send, XCircle } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -86,6 +86,11 @@ export default function CheckinOnline() {
     }
   };
 
+  const shareWhatsApp = (link: string) => {
+    const text = `Hola, puedes completar tu Check-in Online para The Spot Central Hostel desde este enlace seguro:\n\n${link}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
+  };
+
   return (
     <div className="space-y-6">
       <Card className="border-primary/20 bg-primary/5">
@@ -119,6 +124,7 @@ export default function CheckinOnline() {
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {link.status === "pending" && <Button size="sm" variant="outline" onClick={() => copy(publicLink)}><ClipboardCopy className="mr-2 h-4 w-4" />Copiar enlace</Button>}
+                      {link.status === "pending" && <Button size="sm" className="bg-[#25D366] text-white hover:bg-[#1da851]" onClick={() => shareWhatsApp(publicLink)}><MessageCircle className="mr-2 h-4 w-4" />WhatsApp</Button>}
                       {link.status === "pending" && <Button size="sm" variant="destructive" onClick={() => cancelLink.mutate({ id: link.id })}><XCircle className="mr-2 h-4 w-4" />Cancelar</Button>}
                     </div>
                   </div>
@@ -141,7 +147,7 @@ export default function CheckinOnline() {
                 <div className="mb-2 flex items-center gap-2 font-semibold"><Check className="h-5 w-5" />Enlace creado correctamente</div>
                 <p className="break-all text-sm">{latestLink}</p>
               </div>
-              <Button className="w-full" onClick={() => copy(latestLink)}><Link2 className="mr-2 h-4 w-4" />Copiar enlace para enviarlo al huésped</Button>
+              <div className="grid gap-3 sm:grid-cols-2"><Button onClick={() => copy(latestLink)}><Link2 className="mr-2 h-4 w-4" />Copiar enlace</Button><Button className="bg-[#25D366] text-white hover:bg-[#1da851]" onClick={() => shareWhatsApp(latestLink)}><MessageCircle className="mr-2 h-4 w-4" />Enviar por WhatsApp</Button></div>
               <DialogFooter><Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cerrar</Button></DialogFooter>
             </div>
           ) : (
