@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useMemo, useState, useRef, type DragEvent } from "react";
 import { toast } from "sonner";
 import { findCommercialSupplier } from "@shared/supplierMatching";
+import { getSupportedInvoiceContentType } from "@shared/invoiceUpload";
 
 // Helper para formatear fecha como YYYY-MM-DD sin conversión de timezone
 function formatDateLocal(date: Date): string {
@@ -54,6 +55,7 @@ export default function Facturas() {
   const [isProcessingOCR, setIsProcessingOCR] = useState(false);
   const [isDraggingInvoice, setIsDraggingInvoice] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dropZoneFileInputRef = useRef<HTMLInputElement>(null);
   const [formBusinessId, setFormBusinessId] = useState<number | null>(null);
   
   // Filtro de mes/año
@@ -193,15 +195,6 @@ export default function Facturas() {
     setImagePreview(null);
   };
 
-  const getSupportedContentType = (file: File): "application/pdf" | "image/jpeg" | "image/png" | "image/webp" | null => {
-    const name = file.name.toLowerCase();
-    if (file.type === "application/pdf" || name.endsWith(".pdf")) return "application/pdf";
-    if (file.type === "image/jpeg" || file.type === "image/jpg" || name.endsWith(".jpg") || name.endsWith(".jpeg")) return "image/jpeg";
-    if (file.type === "image/png" || name.endsWith(".png")) return "image/png";
-    if (file.type === "image/webp" || name.endsWith(".webp")) return "image/webp";
-    return null;
-  };
-
   const readFileAsDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onloadend = () => resolve(reader.result as string);
@@ -228,7 +221,7 @@ export default function Facturas() {
   };
 
   const handleAttachedInvoice = async (file: File) => {
-    const contentType = getSupportedContentType(file);
+    const contentType = getSupportedInvoiceContentType(file);
     if (!contentType) {
       toast.error("Adjunta un PDF, JPG, PNG o WEBP de una factura");
       return;
@@ -650,11 +643,29 @@ export default function Facturas() {
         </Dialog>
       </div>
 
+      <input
+        ref={dropZoneFileInputRef}
+        type="file"
+        accept="application/pdf,image/jpeg,image/png,image/webp"
+        onChange={handleFileChange}
+        className="hidden"
+        aria-hidden="true"
+      />
       <div
+        role="button"
+        tabIndex={0}
+        aria-label="Seleccionar una factura para analizar"
+        onClick={() => dropZoneFileInputRef.current?.click()}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            dropZoneFileInputRef.current?.click();
+          }
+        }}
         onDragOver={handleInvoiceDragOver}
         onDragLeave={handleInvoiceDragLeave}
         onDrop={handleInvoiceDrop}
-        className={`rounded-xl border-2 border-dashed px-5 py-6 transition-colors ${
+        className={`cursor-pointer rounded-xl border-2 border-dashed px-5 py-6 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
           isDraggingInvoice
             ? "border-primary bg-primary/10"
             : "border-muted-foreground/30 bg-muted/20 hover:border-primary/60 hover:bg-primary/5"
@@ -665,7 +676,7 @@ export default function Facturas() {
             <UploadCloud className="h-6 w-6" />
           </div>
           <div>
-            <p className="font-semibold">Arrastra una factura aquí para registrarla</p>
+            <p className="font-semibold">Arrastra una factura aquí o haz clic para seleccionarla</p>
             <p className="text-sm text-muted-foreground">
               Acepta PDF, JPG, PNG y WEBP. La IA intentará completar proveedor, fecha, número e importe antes de que confirmes.
             </p>

@@ -1513,3 +1513,6 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 
 ## Histórico diario de cajas
 - [x] Añadir una vista anual con ventas diarias separadas para Hostel y Tienda.
+
+## Carga manual de facturas
+- [x] Permitir abrir el selector de archivos al hacer clic en la zona de arrastrar factura.
