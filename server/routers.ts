@@ -1887,6 +1887,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
         }
 
         const entrance = accessCodeList.find((code) => code.roomNumber === "ENTRADA");
+        const hostelSettings = await db.getHostelSettings();
         const token = randomBytes(32).toString("hex");
         const linkId = await db.createOnlineCheckinLink({
           token,
@@ -1899,7 +1900,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           roomNumber: room.roomNumber,
           roomType: room.roomType,
           roomCode: room.roomCode,
-          entranceCode: room.entranceCode || entrance?.roomCode || null,
+          entranceCode: room.entranceCode || entrance?.roomCode || hostelSettings?.defaultEntranceCode || null,
           numberOfRooms: input.numberOfRooms,
           numberOfGuests: input.numberOfGuests,
           paymentType: input.paymentType,
@@ -1986,6 +1987,14 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           throw new TRPCError({ code: "BAD_REQUEST", message: "El email no coincide con el enlace de check-in" });
         }
 
+        let entranceCode = link.entranceCode;
+        if (!entranceCode) {
+          const accessCodeList = await db.getAllAccessCodes();
+          const entrance = accessCodeList.find((code) => code.roomNumber === "ENTRADA");
+          const hostelSettings = await db.getHostelSettings();
+          entranceCode = entrance?.roomCode || hostelSettings?.defaultEntranceCode || null;
+        }
+
         const guestId = await db.createGuest({
           firstName: input.firstName.trim(),
           lastName: input.lastName.trim(),
@@ -2010,7 +2019,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           roomNumber: link.roomNumber,
           roomType: link.roomType,
           roomCode: link.roomCode,
-          entranceCode: link.entranceCode,
+          entranceCode,
           numberOfRooms: link.numberOfRooms,
           reservationOrigin: link.reservationOrigin,
           paymentType: link.paymentType,
@@ -2028,7 +2037,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           createdBy: null,
         });
 
-        await db.updateOnlineCheckinLink(link.id, { status: "completed", guestId, completedAt: new Date() });
+        await db.updateOnlineCheckinLink(link.id, { status: "completed", guestId, completedAt: new Date(), entranceCode });
 
         const { generateGuestPDF } = await import("./generateGuestPDF");
         await generateGuestPDF(guestId);
@@ -2042,7 +2051,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           checkInDate: link.checkInDate,
           roomNumber: link.roomNumber,
           roomCode: link.roomCode,
-          entranceCode: link.entranceCode,
+          entranceCode,
           welcomeMessage: link.language === "en" ? settings?.welcomeMessageEn : settings?.welcomeMessageEs,
         });
 
@@ -2050,7 +2059,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           success: true,
           roomNumber: link.roomNumber,
           roomCode: link.roomCode,
-          entranceCode: link.entranceCode,
+          entranceCode,
           checkInDate: link.checkInDate,
         };
       }),

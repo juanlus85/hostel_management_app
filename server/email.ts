@@ -454,8 +454,10 @@ export async function sendOnlineCheckinConfirmation(guestData: {
         <p><strong>Llegada:</strong> ${arrivalDate}<br><strong>Habitación:</strong> ${guestData.roomNumber}</p>
         <div style="background:white;border-left:4px solid #0f766e;padding:18px;border-radius:6px">
           <h2 style="margin-top:0">Tus códigos de acceso</h2>
-          ${guestData.entranceCode ? `<p><strong>Entrada al hostel:</strong> <span style="font-size:20px;letter-spacing:2px">${guestData.entranceCode}</span></p>` : ""}
-          ${guestData.roomCode ? `<p><strong>Habitación ${guestData.roomNumber}:</strong> <span style="font-size:20px;letter-spacing:2px">${guestData.roomCode}</span></p>` : ""}
+          <p style="margin:16px 0 4px"><strong>1. Código de acceso al hostel</strong></p>
+          <p style="margin:0;font-size:24px;font-weight:bold;letter-spacing:3px;color:#0f766e">${guestData.entranceCode || "NO CONFIGURADO"}</p>
+          <p style="margin:18px 0 4px"><strong>2. Código de la habitación ${guestData.roomNumber}</strong></p>
+          <p style="margin:0;font-size:24px;font-weight:bold;letter-spacing:3px;color:#0f766e">${guestData.roomCode || "NO CONFIGURADO"}</p>
         </div>
         <p>Conserva este correo y presenta tu documento original cuando sea necesario.</p>
       </div>
@@ -468,8 +470,10 @@ export async function sendOnlineCheckinConfirmation(guestData: {
         <p><strong>Arrival:</strong> ${arrivalDate}<br><strong>Room:</strong> ${guestData.roomNumber}</p>
         <div style="background:white;border-left:4px solid #0f766e;padding:18px;border-radius:6px">
           <h2 style="margin-top:0">Your access codes</h2>
-          ${guestData.entranceCode ? `<p><strong>Hostel entrance:</strong> <span style="font-size:20px;letter-spacing:2px">${guestData.entranceCode}</span></p>` : ""}
-          ${guestData.roomCode ? `<p><strong>Room ${guestData.roomNumber}:</strong> <span style="font-size:20px;letter-spacing:2px">${guestData.roomCode}</span></p>` : ""}
+          <p style="margin:16px 0 4px"><strong>1. Hostel entrance code</strong></p>
+          <p style="margin:0;font-size:24px;font-weight:bold;letter-spacing:3px;color:#0f766e">${guestData.entranceCode || "NOT CONFIGURED"}</p>
+          <p style="margin:18px 0 4px"><strong>2. Room ${guestData.roomNumber} code</strong></p>
+          <p style="margin:0;font-size:24px;font-weight:bold;letter-spacing:3px;color:#0f766e">${guestData.roomCode || "NOT CONFIGURED"}</p>
         </div>
         <p>Please keep this email and present your original ID document whenever required.</p>
       </div>

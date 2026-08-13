@@ -1530,3 +1530,6 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Añadir instrucciones de bienvenida bilingües configurables para el check-in online.
 - [x] Añadir un selector visual ENGLISH / ESPAÑOL en la cabecera del enlace público.
 - [x] Permitir abrir, imprimir y guardar como PDF cada registro desde Policía.
+
+## Correo de Check-in Online
+- [x] Incluir de forma explícita el código de acceso al hostel y el código de habitación en el correo al huésped.
