@@ -56,6 +56,10 @@ export default function HistoricoCajas() {
     { enabled: selectedYear >= 2026 }
   );
 
+  const { data: currentYearDailyData, isLoading: isLoadingDailySales } = trpc.historicalCash.getCurrentYearDailyData.useQuery({
+    year: currentYear,
+  });
+
   // Get available years dynamically from database
   const { data: availableYears, isLoading: isLoadingYears } = trpc.utils.getAvailableYears.useQuery();
   const yearOptions = availableYears || [currentYear];
@@ -115,6 +119,21 @@ export default function HistoricoCajas() {
     hostelZ: acc.hostelZ + parseFloat(row.hostelZ),
     tiendaZ: acc.tiendaZ + parseFloat(row.tiendaZ),
   }), { hostelZ: 0, tiendaZ: 0 });
+
+  const dailySalesTotals = (currentYearDailyData || []).reduce((acc, row) => ({
+    hostelZ: acc.hostelZ + parseFloat(row.hostelZ),
+    tiendaZ: acc.tiendaZ + parseFloat(row.tiendaZ),
+  }), { hostelZ: 0, tiendaZ: 0 });
+
+  const formatDailyDate = (date: string) => {
+    const [year, month, day] = date.split("-").map(Number);
+    return new Intl.DateTimeFormat("es-ES", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      weekday: "short",
+    }).format(new Date(year, month - 1, day));
+  };
 
   // Export to CSV
   const exportToCSV = () => {
@@ -300,6 +319,10 @@ export default function HistoricoCajas() {
             <Calendar className="w-4 h-4 mr-2" />
             Vista Anual
           </TabsTrigger>
+          <TabsTrigger value="diario">
+            <Calendar className="w-4 h-4 mr-2" />
+            Ventas Diarias
+          </TabsTrigger>
         </TabsList>
 
         {/* Vista Anual */}
@@ -358,6 +381,81 @@ export default function HistoricoCajas() {
                       <TableCell className="text-right">€{totals.tiendaZ.toFixed(2)}</TableCell>
                       <TableCell className="text-right">€{(totals.hostelZ + totals.tiendaZ).toFixed(2)}</TableCell>
                     </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Ventas Diarias del Año en Curso */}
+        <TabsContent value="diario" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Ventas Diarias · {currentYear}</CardTitle>
+              <CardDescription>
+                Facturación diaria según el cierre Z, separada entre Hostel y Tienda.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-lg border bg-blue-50 p-4">
+                  <p className="text-sm text-muted-foreground">Hostel acumulado</p>
+                  <p className="text-2xl font-bold text-blue-700">€{dailySalesTotals.hostelZ.toFixed(2)}</p>
+                </div>
+                <div className="rounded-lg border bg-pink-50 p-4">
+                  <p className="text-sm text-muted-foreground">Tienda acumulado</p>
+                  <p className="text-2xl font-bold text-pink-700">€{dailySalesTotals.tiendaZ.toFixed(2)}</p>
+                </div>
+                <div className="rounded-lg border bg-green-50 p-4">
+                  <p className="text-sm text-muted-foreground">Total acumulado</p>
+                  <p className="text-2xl font-bold text-green-700">€{(dailySalesTotals.hostelZ + dailySalesTotals.tiendaZ).toFixed(2)}</p>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Fecha</TableHead>
+                      <TableHead className="text-right">Hostel · Ventas Z</TableHead>
+                      <TableHead className="text-right">Tienda · Ventas Z</TableHead>
+                      <TableHead className="text-right">Total diario</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {isLoadingDailySales ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="py-10 text-center text-muted-foreground">Cargando ventas diarias…</TableCell>
+                      </TableRow>
+                    ) : currentYearDailyData && currentYearDailyData.length > 0 ? (
+                      <>
+                        {currentYearDailyData.map((row) => {
+                          const hostelZ = parseFloat(row.hostelZ);
+                          const tiendaZ = parseFloat(row.tiendaZ);
+                          return (
+                            <TableRow key={row.date}>
+                              <TableCell className="font-medium capitalize">{formatDailyDate(row.date)}</TableCell>
+                              <TableCell className="text-right text-blue-700">€{hostelZ.toFixed(2)}</TableCell>
+                              <TableCell className="text-right text-pink-700">€{tiendaZ.toFixed(2)}</TableCell>
+                              <TableCell className="text-right font-semibold">€{(hostelZ + tiendaZ).toFixed(2)}</TableCell>
+                            </TableRow>
+                          );
+                        })}
+                        <TableRow className="bg-muted/50 font-bold">
+                          <TableCell>TOTAL {currentYear}</TableCell>
+                          <TableCell className="text-right">€{dailySalesTotals.hostelZ.toFixed(2)}</TableCell>
+                          <TableCell className="text-right">€{dailySalesTotals.tiendaZ.toFixed(2)}</TableCell>
+                          <TableCell className="text-right">€{(dailySalesTotals.hostelZ + dailySalesTotals.tiendaZ).toFixed(2)}</TableCell>
+                        </TableRow>
+                      </>
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={4} className="py-10 text-center text-muted-foreground">
+                          No hay cierres de caja cerrados registrados en {currentYear}.
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </div>

@@ -1528,6 +1528,9 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
     getCurrentYearData: adminProcedure.input(z.object({ year: z.number() })).query(async ({ input }) => {
       return db.getCurrentYearCashData(input.year);
     }),
+    getCurrentYearDailyData: adminProcedure.input(z.object({ year: z.number() })).query(async ({ input }) => {
+      return db.getCurrentYearDailyCashSales(input.year);
+    }),
   }),
 
   // ==================== INVENTORY PRODUCTS ====================

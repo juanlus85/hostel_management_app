@@ -1,5 +1,6 @@
 import { eq, and, gte, lte, desc, asc, sql, or, like } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
+import { aggregateDailyCashSales } from "../shared/dailyCashSales";
 import { 
   InsertUser, users, 
   businesses, InsertBusiness, Business,
@@ -1673,6 +1674,33 @@ export async function getCurrentYearCashData(year: number): Promise<{
   }
   
   return { hostel, tienda };
+}
+
+export async function getCurrentYearDailyCashSales(year: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const closings = await db.select().from(cashClosings)
+    .where(and(
+      gte(cashClosings.date, `${year}-01-01`),
+      lte(cashClosings.date, `${year}-12-31`),
+      eq(cashClosings.status, "closed"),
+    ));
+
+  const businessList = await db.select().from(businesses);
+  const hostelBusiness = businessList.find((business) => business.code === "hostel");
+  const tiendaBusiness = businessList.find((business) => business.code === "tienda");
+
+  return aggregateDailyCashSales(closings, hostelBusiness?.id, tiendaBusiness?.id)
+    .map((row) => ({
+      ...row,
+      hostelZ: row.hostelZ.toFixed(2),
+      hostelCash: row.hostelCash.toFixed(2),
+      hostelCards: row.hostelCards.toFixed(2),
+      tiendaZ: row.tiendaZ.toFixed(2),
+      tiendaCash: row.tiendaCash.toFixed(2),
+      tiendaCards: row.tiendaCards.toFixed(2),
+    }));
 }
 
 

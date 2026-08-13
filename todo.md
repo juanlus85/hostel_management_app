@@ -1510,3 +1510,6 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Añadir un campo opcional de nombre legal en la ficha de proveedor.
 - [x] Asociar automáticamente el nombre legal reconocido al proveedor comercial correspondiente.
 - [x] Mejorar la detección del importe total a pagar en facturas adjuntas.
+
+## Histórico diario de cajas
+- [x] Añadir una vista anual con ventas diarias separadas para Hostel y Tienda.
