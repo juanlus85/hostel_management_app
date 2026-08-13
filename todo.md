@@ -1505,3 +1505,8 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 ## Corrección gráfico de disponibilidad
 - [x] Restaurar el histórico de disponibilidad por semanas con fecha real en el eje horizontal.
 - [x] Corregir la agrupación anual para no mezclar ni omitir semanas de distintos años.
+
+## Mejora OCR y proveedores comerciales
+- [x] Añadir un campo opcional de nombre legal en la ficha de proveedor.
+- [x] Asociar automáticamente el nombre legal reconocido al proveedor comercial correspondiente.
+- [x] Mejorar la detección del importe total a pagar en facturas adjuntas.

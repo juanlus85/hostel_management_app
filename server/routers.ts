@@ -863,7 +863,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
               content: [
                 {
                   type: "input_text",
-                  text: "Extrae los datos de esta factura. Devuelve proveedor, número de factura, fecha YYYY-MM-DD, base imponible, porcentaje de IVA, importe de IVA y total. No inventes datos: usa null cuando un campo no sea legible o no exista.",
+                  text: "Extrae los datos de esta factura. Devuelve proveedor, número de factura, fecha YYYY-MM-DD, base imponible, porcentaje de IVA, importe de IVA y total. El campo totalAmount debe ser el IMPORTE TOTAL FINAL A PAGAR, normalmente etiquetado como TOTAL, TOTAL FACTURA, IMPORTE TOTAL o TOTAL A PAGAR, e incluir IVA cuando exista. Nunca uses la base imponible, el importe pendiente ni una cuota parcial como total. Devuelve los importes como texto decimal con punto y sin símbolo de moneda (ejemplo: 1234.56). Si un valor no aparece o no es legible, usa null; nunca uses 0 o 0.00 como relleno.",
                 },
                 { type: "input_file", file_id: uploadedFile.id },
               ],
@@ -903,7 +903,31 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           ?.find((item: any) => item.type === "output_text")?.text;
 
         if (!outputText || typeof outputText !== "string") return null;
-        return JSON.parse(outputText);
+
+        const extracted = JSON.parse(outputText) as Record<string, string | null>;
+        const parseMoney = (value: string | null | undefined) => {
+          if (!value) return null;
+          const compact = value.replace(/[^0-9,.-]/g, "");
+          const normalized = compact.includes(",") && compact.includes(".")
+            ? (compact.lastIndexOf(",") > compact.lastIndexOf(".")
+              ? compact.replace(/\./g, "").replace(",", ".")
+              : compact.replace(/,/g, ""))
+            : compact.replace(",", ".");
+          const amount = Number.parseFloat(normalized);
+          return Number.isFinite(amount) ? amount : null;
+        };
+
+        const total = parseMoney(extracted.totalAmount);
+        const base = parseMoney(extracted.baseAmount);
+        const vat = parseMoney(extracted.vatAmount);
+
+        if ((total === null || (total === 0 && (base || vat))) && base !== null && vat !== null) {
+          extracted.totalAmount = (base + vat).toFixed(2);
+        } else if (total !== null) {
+          extracted.totalAmount = total.toFixed(2);
+        }
+
+        return extracted;
       } finally {
         fetch(`https://api.openai.com/v1/files/${uploadedFile.id}`, {
           method: "DELETE",
@@ -920,6 +944,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
     }),
     create: adminProcedure.input(z.object({
       name: z.string(),
+      legalName: z.string().optional(),
       contactName: z.string().optional(),
       phone: z.string().optional(),
       email: z.string().optional(),
@@ -932,6 +957,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
     update: adminProcedure.input(z.object({
       id: z.number(),
       name: z.string().optional(),
+      legalName: z.string().optional(),
       contactName: z.string().optional(),
       phone: z.string().optional(),
       email: z.string().optional(),

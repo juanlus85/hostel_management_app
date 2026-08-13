@@ -11,6 +11,7 @@ import { Receipt, Plus, Camera, Upload, Check, AlertCircle, Search, Building2, S
 import { Checkbox } from "@/components/ui/checkbox";
 import { useMemo, useState, useRef, type DragEvent } from "react";
 import { toast } from "sonner";
+import { findCommercialSupplier } from "@shared/supplierMatching";
 
 // Helper para formatear fecha como YYYY-MM-DD sin conversión de timezone
 function formatDateLocal(date: Date): string {
@@ -212,7 +213,7 @@ export default function Facturas() {
     if (!data) return;
     if (data.supplier?.trim()) {
       const recognisedSupplier = data.supplier.trim();
-      const savedSupplier = suppliers?.find((item) => item.name.toLocaleLowerCase() === recognisedSupplier.toLocaleLowerCase());
+      const savedSupplier = findCommercialSupplier(suppliers, recognisedSupplier);
       if (savedSupplier) {
         setSupplier(savedSupplier.name);
         setCustomSupplier("");

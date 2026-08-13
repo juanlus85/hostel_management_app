@@ -249,6 +249,7 @@ export type InsertStockMovement = typeof stockMovements.$inferInsert;
 export const suppliers = mysqlTable("suppliers", {
   id: int("id").autoincrement().primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
+  legalName: varchar("legalName", { length: 255 }),
   contactName: varchar("contactName", { length: 255 }),
   phone: varchar("phone", { length: 50 }),
   email: varchar("email", { length: 320 }),

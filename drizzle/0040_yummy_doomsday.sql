@@ -1,0 +1,1 @@
+ALTER TABLE `suppliers` ADD `legalName` varchar(255);

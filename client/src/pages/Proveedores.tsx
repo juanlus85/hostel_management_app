@@ -19,6 +19,7 @@ export default function Proveedores() {
   
   // Create form
   const [name, setName] = useState("");
+  const [legalName, setLegalName] = useState("");
   const [contactName, setContactName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -27,6 +28,7 @@ export default function Proveedores() {
   
   // Edit form
   const [editName, setEditName] = useState("");
+  const [editLegalName, setEditLegalName] = useState("");
   const [editContactName, setEditContactName] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [editEmail, setEditEmail] = useState("");
@@ -67,6 +69,7 @@ export default function Proveedores() {
 
   const resetForm = () => {
     setName("");
+    setLegalName("");
     setContactName("");
     setPhone("");
     setEmail("");
@@ -79,12 +82,13 @@ export default function Proveedores() {
       toast.error("El nombre es obligatorio");
       return;
     }
-    createSupplier.mutate({ name, contactName, phone, email, address, notes });
+    createSupplier.mutate({ name, legalName, contactName, phone, email, address, notes });
   };
 
   const openEditDialog = (supplier: any) => {
     setSelectedSupplier(supplier);
     setEditName(supplier.name);
+    setEditLegalName(supplier.legalName || "");
     setEditContactName(supplier.contactName || "");
     setEditPhone(supplier.phone || "");
     setEditEmail(supplier.email || "");
@@ -101,6 +105,7 @@ export default function Proveedores() {
     updateSupplier.mutate({
       id: selectedSupplier.id,
       name: editName,
+      legalName: editLegalName,
       contactName: editContactName,
       phone: editPhone,
       email: editEmail,
@@ -157,6 +162,11 @@ export default function Proveedores() {
                 <Input value={name} onChange={e => setName(e.target.value)} placeholder="Ej: Coca Cola" />
               </div>
               <div className="grid gap-2">
+                <Label>Nombre legal o razón social</Label>
+                <Input value={legalName} onChange={e => setLegalName(e.target.value)} placeholder="Ej: Telefónica de España, S.A.U." />
+                <p className="text-xs text-muted-foreground">La IA usará este nombre para asociar la factura con el proveedor comercial.</p>
+              </div>
+              <div className="grid gap-2">
                 <Label>Persona de contacto</Label>
                 <Input value={contactName} onChange={e => setContactName(e.target.value)} placeholder="Nombre del contacto" />
               </div>
@@ -210,6 +220,9 @@ export default function Proveedores() {
               )}
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
+              {supplier.legalName && (
+                <p className="text-muted-foreground"><span className="font-medium text-foreground">Razón social:</span> {supplier.legalName}</p>
+              )}
               {supplier.phone && (
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Phone className="h-4 w-4" />
@@ -259,6 +272,10 @@ export default function Proveedores() {
             <div className="grid gap-2">
               <Label>Nombre del proveedor *</Label>
               <Input value={editName} onChange={e => setEditName(e.target.value)} placeholder="Nombre" />
+            </div>
+            <div className="grid gap-2">
+              <Label>Nombre legal o razón social</Label>
+              <Input value={editLegalName} onChange={e => setEditLegalName(e.target.value)} placeholder="Razón social que aparece en las facturas" />
             </div>
             <div className="grid gap-2">
               <Label>Persona de contacto</Label>
