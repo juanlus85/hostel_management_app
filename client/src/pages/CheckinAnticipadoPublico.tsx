@@ -250,17 +250,14 @@ export default function CheckinAnticipadoPublico() {
       <div className="max-w-3xl mx-auto">
         <Card>
           <CardHeader>
-            <div className="flex justify-between items-center">
+            <div className="mb-4 flex justify-center gap-2">
+              <Button type="button" size="sm" onClick={() => setLang("es")} className={`border-0 bg-gradient-to-r from-red-600 via-yellow-300 to-red-600 font-bold text-slate-950 shadow-sm hover:opacity-90 ${lang === "es" ? "ring-2 ring-slate-900 ring-offset-2" : "opacity-70"}`}>ESPAÑOL</Button>
+              <Button type="button" size="sm" onClick={() => setLang("en")} className={`border-0 bg-gradient-to-r from-blue-900 via-white to-red-600 font-bold text-slate-900 shadow-sm hover:opacity-90 ${lang === "en" ? "ring-2 ring-slate-900 ring-offset-2" : "opacity-70"}`}>ENGLISH</Button>
+            </div>
+            <div className="text-center">
               <CardTitle className="text-2xl">
-                {t("Check-in Anticipado", "Early Check-in")} / {t("Check-in Anticipado", "Early Check-in")}
+                {t("Check-in Anticipado", "Early Check-in")}
               </CardTitle>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setLang(lang === "es" ? "en" : "es")}
-              >
-                {lang === "es" ? "English" : "Español"}
-              </Button>
             </div>
             <p className="text-sm text-muted-foreground">
               {t(

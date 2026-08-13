@@ -1533,3 +1533,7 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 
 ## Correo de Check-in Online
 - [x] Incluir de forma explícita el código de acceso al hostel y el código de habitación en el correo al huésped.
+
+## Confirmación e idioma de formularios públicos
+- [x] Mostrar el código de entrada al hostel también en la pantalla final de Check-in Online.
+- [x] Añadir selector visual ESPAÑOL / ENGLISH al Check-in Anticipado público.
