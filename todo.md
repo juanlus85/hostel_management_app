@@ -1497,3 +1497,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Añadir el filtro "Últimos 3 meses" en Facturas y Otros gastos.
 - [x] Reconocer automáticamente los datos de facturas adjuntas y dejar campos vacíos cuando no se detecten.
 - [x] Permitir arrastrar y soltar documentos para crear una factura.
+- [x] Incluir script SQL seguro para crear app_settings si falta en el VPS.
