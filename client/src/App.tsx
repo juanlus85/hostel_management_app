@@ -27,12 +27,14 @@ import HistoricoCajas from "./pages/HistoricoCajas";
 import PedidosUnificado from "./pages/PedidosUnificado";
 import CheckinUnificado from "./pages/CheckinUnificado";
 import CheckinAnticipadoPublico from "./pages/CheckinAnticipadoPublico";
+import CheckinOnlinePublico from "./pages/CheckinOnlinePublico";
 
 function Router() {
   return (
     <Switch>
       {/* Rutas públicas sin layout */}
       <Route path="/checkin-anticipado-publico" component={CheckinAnticipadoPublico} />
+      <Route path="/checkin-online/:token" component={CheckinOnlinePublico} />
       
       {/* Rutas privadas con DashboardLayout */}
       <Route>

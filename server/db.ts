@@ -31,6 +31,7 @@ import {
   appSettings, InsertAppSetting, AppSetting,
   historicalCashData, InsertHistoricalCashData, HistoricalCashData,
   guests, InsertGuest, Guest,
+  onlineCheckinLinks, InsertOnlineCheckinLink, OnlineCheckinLink,
   hostelSettingsCheckin, InsertHostelSettingCheckin, HostelSettingCheckin
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
@@ -1701,6 +1702,33 @@ export async function getCurrentYearDailyCashSales(year: number) {
       tiendaCash: row.tiendaCash.toFixed(2),
       tiendaCards: row.tiendaCards.toFixed(2),
     }));
+}
+
+// ==================== ONLINE CHECK-IN LINKS ====================
+export async function getOnlineCheckinLinks(): Promise<OnlineCheckinLink[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(onlineCheckinLinks).orderBy(desc(onlineCheckinLinks.createdAt));
+}
+
+export async function createOnlineCheckinLink(data: InsertOnlineCheckinLink) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(onlineCheckinLinks).values(data);
+  return result[0].insertId;
+}
+
+export async function getOnlineCheckinLinkByToken(token: string): Promise<OnlineCheckinLink | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const [link] = await db.select().from(onlineCheckinLinks).where(eq(onlineCheckinLinks.token, token));
+  return link || null;
+}
+
+export async function updateOnlineCheckinLink(id: number, data: Partial<InsertOnlineCheckinLink>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(onlineCheckinLinks).set(data).where(eq(onlineCheckinLinks.id, id));
 }
 
 

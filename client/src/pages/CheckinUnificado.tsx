@@ -16,22 +16,7 @@ import ExportarPolicia from "./checkin/ExportarPolicia";
 import ConfiguracionCheckin from "./checkin/ConfiguracionCheckin";
 import CodigosAccesoReal from "./CodigosAcceso";
 import CheckinAnticipado from "./checkin/CheckinAnticipado";
-
-const CheckinOnline = () => (
-  <Card className="p-6">
-    <h2 className="text-2xl font-bold mb-4">Check-in Online</h2>
-    <p className="text-muted-foreground">
-      Generar link para check-in completamente online cuando recepción está cerrada.
-      <br />
-      <strong>SÍ se envían códigos de acceso automáticamente</strong> por email y en pantalla.
-    </p>
-    <p className="text-sm text-muted-foreground mt-4">
-      Funcionalidad en desarrollo - Próxima fase
-    </p>
-  </Card>
-);
-
-
+import CheckinOnline from "./checkin/CheckinOnline";
 
 export default function CheckinUnificado() {
   const [activeTab, setActiveTab] = useState("checkin");

@@ -683,6 +683,38 @@ export const guests = mysqlTable("guests", {
 export type Guest = typeof guests.$inferSelect;
 export type InsertGuest = typeof guests.$inferInsert;
 
+// ==================== ONLINE CHECK-IN LINKS ====================
+// Enlaces de un solo uso creados por recepción antes de que el huésped complete el registro.
+export const onlineCheckinLinks = mysqlTable("online_checkin_links", {
+  id: int("id").autoincrement().primaryKey(),
+  token: varchar("token", { length: 128 }).notNull().unique(),
+  status: mysqlEnum("status", ["pending", "completed", "cancelled", "expired"]).default("pending").notNull(),
+  email: varchar("email", { length: 320 }).notNull(),
+  language: mysqlEnum("language", ["es", "en"]).default("es").notNull(),
+  reservationNumber: varchar("reservationNumber", { length: 100 }),
+  reservationOrigin: mysqlEnum("reservationOrigin", ["Walk In", "Booking.com", "Airbnb", "Expedia", "Website", "Phone", "Email", "Other"]).default("Website").notNull(),
+  checkInDate: varchar("checkInDate", { length: 10 }).notNull(),
+  checkOutDate: varchar("checkOutDate", { length: 10 }).notNull(),
+  roomNumber: varchar("roomNumber", { length: 10 }).notNull(),
+  roomType: varchar("roomType", { length: 100 }),
+  roomCode: varchar("roomCode", { length: 20 }),
+  entranceCode: varchar("entranceCode", { length: 20 }),
+  numberOfRooms: int("numberOfRooms").default(1).notNull(),
+  numberOfGuests: int("numberOfGuests").default(1).notNull(),
+  paymentType: mysqlEnum("paymentType", ["EFECT", "TARJT", "TRANS", "PLATF", "MOVIL", "TREG", "DESTI", "OTRO"]).default("TRANS").notNull(),
+  amountPaid: decimal("amountPaid", { precision: 10, scale: 2 }).default("0").notNull(),
+  amountPending: decimal("amountPending", { precision: 10, scale: 2 }).default("0").notNull(),
+  createdBy: int("createdBy"),
+  guestId: int("guestId"),
+  expiresAt: varchar("expiresAt", { length: 10 }).notNull(),
+  completedAt: timestamp("completedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type OnlineCheckinLink = typeof onlineCheckinLinks.$inferSelect;
+export type InsertOnlineCheckinLink = typeof onlineCheckinLinks.$inferInsert;
+
 // ==================== HOSTEL SETTINGS (Configuración Check-in) ====================
 export const hostelSettingsCheckin = mysqlTable("hostel_settings_checkin", {
   id: int("id").autoincrement().primaryKey(),

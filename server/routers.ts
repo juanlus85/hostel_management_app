@@ -4,6 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+import { randomBytes } from "node:crypto";
 import * as db from "./db";
 
 // Admin-only procedure
@@ -1853,6 +1854,195 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
       delete: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
         await db.deleteGuest(input.id);
         return { success: true };
+      }),
+    }),
+
+    // Enlaces públicos de un solo uso para check-in completamente online.
+    online: router({
+      list: protectedProcedure.query(async () => {
+        return db.getOnlineCheckinLinks();
+      }),
+      createLink: protectedProcedure.input(z.object({
+        email: z.string().email(),
+        language: z.enum(["es", "en"]).default("es"),
+        reservationNumber: z.string().optional(),
+        reservationOrigin: z.enum(["Walk In", "Booking.com", "Airbnb", "Expedia", "Website", "Phone", "Email", "Other"]).default("Website"),
+        checkInDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        checkOutDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        roomNumber: z.string().min(1),
+        numberOfRooms: z.number().int().min(1).default(1),
+        numberOfGuests: z.number().int().min(1).default(1),
+        paymentType: z.enum(["EFECT", "TARJT", "TRANS", "PLATF", "MOVIL", "TREG", "DESTI", "OTRO"]).default("TRANS"),
+        amountPaid: z.string().default("0"),
+        amountPending: z.string().default("0"),
+      })).mutation(async ({ input, ctx }) => {
+        if (input.checkOutDate <= input.checkInDate) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "La fecha de salida debe ser posterior a la fecha de llegada" });
+        }
+
+        const accessCodeList = await db.getAllAccessCodes();
+        const room = accessCodeList.find((code) => code.roomNumber === input.roomNumber);
+        if (!room || room.roomNumber === "ENTRADA") {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Selecciona una habitación con códigos de acceso configurados" });
+        }
+
+        const entrance = accessCodeList.find((code) => code.roomNumber === "ENTRADA");
+        const token = randomBytes(32).toString("hex");
+        const linkId = await db.createOnlineCheckinLink({
+          token,
+          email: input.email.trim().toLowerCase(),
+          language: input.language,
+          reservationNumber: input.reservationNumber?.trim() || null,
+          reservationOrigin: input.reservationOrigin,
+          checkInDate: input.checkInDate,
+          checkOutDate: input.checkOutDate,
+          roomNumber: room.roomNumber,
+          roomType: room.roomType,
+          roomCode: room.roomCode,
+          entranceCode: room.entranceCode || entrance?.roomCode || null,
+          numberOfRooms: input.numberOfRooms,
+          numberOfGuests: input.numberOfGuests,
+          paymentType: input.paymentType,
+          amountPaid: input.amountPaid || "0",
+          amountPending: input.amountPending || "0",
+          createdBy: ctx.user.id,
+          // El enlace se invalida después del día de llegada.
+          expiresAt: input.checkInDate,
+        });
+
+        return { id: linkId, token };
+      }),
+      cancel: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
+        await db.updateOnlineCheckinLink(input.id, { status: "cancelled" });
+        return { success: true };
+      }),
+      getPublic: publicProcedure.input(z.object({ token: z.string().length(64) })).query(async ({ input }) => {
+        const link = await db.getOnlineCheckinLinkByToken(input.token);
+        if (!link) throw new TRPCError({ code: "NOT_FOUND", message: "El enlace de check-in no existe" });
+
+        const today = new Date().toISOString().slice(0, 10);
+        if (link.status === "pending" && link.expiresAt < today) {
+          await db.updateOnlineCheckinLink(link.id, { status: "expired" });
+          link.status = "expired";
+        }
+
+        if (link.status !== "pending") {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Este enlace ya no está disponible" });
+        }
+
+        return {
+          email: link.email,
+          language: link.language,
+          reservationNumber: link.reservationNumber,
+          checkInDate: link.checkInDate,
+          checkOutDate: link.checkOutDate,
+          roomType: link.roomType,
+          numberOfGuests: link.numberOfGuests,
+        };
+      }),
+      completePublic: publicProcedure.input(z.object({
+        token: z.string().length(64),
+        firstName: z.string().min(1),
+        lastName: z.string().min(1),
+        documentNumber: z.string().min(1),
+        documentSupport: z.string().optional(),
+        documentType: z.enum(["NIF", "NIE", "PAS", "OTRO"]),
+        gender: z.enum(["Hombre", "Mujer", "Otro"]),
+        nationality: z.string().min(1),
+        birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        documentExpiry: z.string().optional(),
+        street: z.string().min(1),
+        addressExtra: z.string().optional(),
+        postalCode: z.string().min(1),
+        city: z.string().min(1),
+        province: z.string().optional(),
+        country: z.string().min(1),
+        phone: z.string().min(1),
+        email: z.string().email(),
+        signature: z.string().min(10),
+        acceptedTerms: z.literal(true),
+        acceptedPrivacy: z.literal(true),
+      })).mutation(async ({ input }) => {
+        const link = await db.getOnlineCheckinLinkByToken(input.token);
+        if (!link) throw new TRPCError({ code: "NOT_FOUND", message: "El enlace de check-in no existe" });
+
+        const today = new Date().toISOString().slice(0, 10);
+        if (link.status === "pending" && link.expiresAt < today) {
+          await db.updateOnlineCheckinLink(link.id, { status: "expired" });
+          throw new TRPCError({ code: "BAD_REQUEST", message: "El enlace de check-in ha caducado" });
+        }
+        if (link.status !== "pending") {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Este enlace ya se utilizó o fue cancelado" });
+        }
+        if (input.email.trim().toLowerCase() !== link.email.trim().toLowerCase()) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "El email no coincide con el enlace de check-in" });
+        }
+
+        const guestId = await db.createGuest({
+          firstName: input.firstName.trim(),
+          lastName: input.lastName.trim(),
+          documentNumber: input.documentNumber.trim(),
+          documentSupport: input.documentSupport?.trim() || null,
+          documentType: input.documentType,
+          gender: input.gender,
+          nationality: input.nationality,
+          birthDate: input.birthDate,
+          documentExpiry: input.documentExpiry || null,
+          street: input.street.trim(),
+          addressExtra: input.addressExtra?.trim() || null,
+          postalCode: input.postalCode.trim(),
+          city: input.city.trim(),
+          province: input.province?.trim() || null,
+          country: input.country,
+          phone: input.phone.trim(),
+          email: input.email.trim().toLowerCase(),
+          reservationNumber: link.reservationNumber,
+          checkInDate: link.checkInDate,
+          checkOutDate: link.checkOutDate,
+          roomNumber: link.roomNumber,
+          roomType: link.roomType,
+          roomCode: link.roomCode,
+          entranceCode: link.entranceCode,
+          numberOfRooms: link.numberOfRooms,
+          reservationOrigin: link.reservationOrigin,
+          paymentType: link.paymentType,
+          amountPaid: link.amountPaid,
+          amountPending: link.amountPending,
+          numberOfGuests: link.numberOfGuests,
+          signature: input.signature,
+          acceptedTerms: true,
+          acceptedPrivacy: true,
+          status: "completed",
+          checkinType: "online",
+          language: link.language,
+          token: link.token,
+          sendCodes: true,
+          createdBy: null,
+        });
+
+        await db.updateOnlineCheckinLink(link.id, { status: "completed", guestId, completedAt: new Date() });
+
+        const { generateGuestPDF } = await import("./generateGuestPDF");
+        await generateGuestPDF(guestId);
+
+        const { sendOnlineCheckinConfirmation } = await import("./email");
+        await sendOnlineCheckinConfirmation({
+          firstName: input.firstName,
+          email: input.email,
+          language: link.language,
+          checkInDate: link.checkInDate,
+          roomNumber: link.roomNumber,
+          roomCode: link.roomCode,
+          entranceCode: link.entranceCode,
+        });
+
+        return {
+          success: true,
+          roomNumber: link.roomNumber,
+          roomCode: link.roomCode,
+          entranceCode: link.entranceCode,
+          checkInDate: link.checkInDate,
+        };
       }),
     }),
     

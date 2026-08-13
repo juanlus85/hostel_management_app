@@ -430,6 +430,51 @@ export async function sendCheckinAnticipadoConfirmation(
   return sendEmail(guestData.email, subject, html);
 }
 
+export async function sendOnlineCheckinConfirmation(guestData: {
+  firstName: string;
+  email: string;
+  language: string;
+  checkInDate: string;
+  roomNumber: string;
+  roomCode?: string | null;
+  entranceCode?: string | null;
+}): Promise<{ success: boolean; error?: string }> {
+  const isSpanish = guestData.language !== "en";
+  const subject = isSpanish
+    ? "Check-in online completado · The Spot Central Hostel"
+    : "Online check-in completed · The Spot Central Hostel";
+  const arrivalDate = new Date(`${guestData.checkInDate}T00:00:00`).toLocaleDateString(isSpanish ? "es-ES" : "en-GB");
+  const html = isSpanish ? `
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#1f2937;line-height:1.6">
+      <div style="background:#0f766e;color:white;padding:24px;border-radius:10px 10px 0 0"><h1 style="margin:0">¡Check-in completado!</h1></div>
+      <div style="background:#f8fafc;padding:28px;border-radius:0 0 10px 10px">
+        <p>Hola <strong>${guestData.firstName}</strong>, tu registro online se ha completado correctamente.</p>
+        <p><strong>Llegada:</strong> ${arrivalDate}<br><strong>Habitación:</strong> ${guestData.roomNumber}</p>
+        <div style="background:white;border-left:4px solid #0f766e;padding:18px;border-radius:6px">
+          <h2 style="margin-top:0">Tus códigos de acceso</h2>
+          ${guestData.entranceCode ? `<p><strong>Entrada al hostel:</strong> <span style="font-size:20px;letter-spacing:2px">${guestData.entranceCode}</span></p>` : ""}
+          ${guestData.roomCode ? `<p><strong>Habitación ${guestData.roomNumber}:</strong> <span style="font-size:20px;letter-spacing:2px">${guestData.roomCode}</span></p>` : ""}
+        </div>
+        <p>Conserva este correo y presenta tu documento original cuando sea necesario.</p>
+      </div>
+    </div>` : `
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#1f2937;line-height:1.6">
+      <div style="background:#0f766e;color:white;padding:24px;border-radius:10px 10px 0 0"><h1 style="margin:0">Online check-in completed!</h1></div>
+      <div style="background:#f8fafc;padding:28px;border-radius:0 0 10px 10px">
+        <p>Hello <strong>${guestData.firstName}</strong>, your online registration has been completed successfully.</p>
+        <p><strong>Arrival:</strong> ${arrivalDate}<br><strong>Room:</strong> ${guestData.roomNumber}</p>
+        <div style="background:white;border-left:4px solid #0f766e;padding:18px;border-radius:6px">
+          <h2 style="margin-top:0">Your access codes</h2>
+          ${guestData.entranceCode ? `<p><strong>Hostel entrance:</strong> <span style="font-size:20px;letter-spacing:2px">${guestData.entranceCode}</span></p>` : ""}
+          ${guestData.roomCode ? `<p><strong>Room ${guestData.roomNumber}:</strong> <span style="font-size:20px;letter-spacing:2px">${guestData.roomCode}</span></p>` : ""}
+        </div>
+        <p>Please keep this email and present your original ID document whenever required.</p>
+      </div>
+    </div>`;
+
+  return sendEmail(guestData.email, subject, html);
+}
+
 
 // Send notification to reception when early check-in is received
 export async function sendCheckinAnticipadoNotificationToReception(

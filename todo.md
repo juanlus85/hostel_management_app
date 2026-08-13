@@ -1516,3 +1516,10 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 
 ## Carga manual de facturas
 - [x] Permitir abrir el selector de archivos al hacer clic en la zona de arrastrar factura.
+
+## Check-in Online
+- [x] Auditar y completar el flujo de Check-in Online con enlace público.
+- [x] Permitir a recepción generar y gestionar enlaces de check-in online.
+- [x] Crear formulario público de check-in online con validaciones.
+- [x] Entregar códigos de acceso tras completar el check-in online.
+- [x] Integrar check-ins online con PDF, exportación de policía y limpieza manual.
