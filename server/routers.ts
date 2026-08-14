@@ -6,6 +6,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { randomBytes } from "node:crypto";
 import * as db from "./db";
+import { canBeScheduled } from "../shared/shiftEligibility";
 import { canAccessOnlineGuide, dayAfter, effectiveGuideExpiry } from "@shared/onlineGuideAccess";
 
 // Admin-only procedure
@@ -142,10 +143,14 @@ export const appRouter = router({
       scheduledEnd: z.string(),
       notes: z.string().optional(),
     })).mutation(async ({ input }) => {
+      const targetUser = await db.getUserById(input.userId);
+      if (targetUser && !canBeScheduled(targetUser.role)) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Los usuarios Tablet no pueden tener turnos asignados" });
+      }
       const id = await db.createShift(input);
       
       // Send notification and email
-      const user = await db.getUserById(input.userId);
+      const user = targetUser;
       if (user) {
         // Create in-app notification
         await db.createNotification({
@@ -278,6 +283,7 @@ export const appRouter = router({
       const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
       
       for (const user of users) {
+        if (!canBeScheduled(user.role)) continue;
         if (!user.scheduleTemplate) continue;
         
         try {

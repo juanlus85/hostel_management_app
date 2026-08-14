@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
+import { canBeScheduled } from "@shared/shiftEligibility";
 import { Calendar, Clock, Plus, Play, Square, ChevronLeft, ChevronRight, Edit2, Trash2, CalendarDays, CalendarRange, Wand2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -112,6 +113,7 @@ export default function Turnos() {
   }, [currentDate]);
 
   const { data: users } = trpc.users.list.useQuery();
+  const shiftUsers = (users || []).filter((user) => canBeScheduled(user.role));
   
   // Load shifts based on current view mode
   // Weekly view: load only the current week (including days from next/prev month)
@@ -271,23 +273,23 @@ export default function Turnos() {
 
   // Get user color (returns Tailwind classes for predefined colors or null for custom colors)
   const getUserColor = (userId: number) => {
-    const user = users?.find(u => u.id === userId);
+    const user = shiftUsers.find(u => u.id === userId);
     // If user has custom color, return null (we'll use inline styles)
     if (user?.color) return null;
     // Fallback to predefined Tailwind colors
-    const index = (users?.findIndex(u => u.id === userId) || 0) % COLORS.length;
+    const index = (shiftUsers.findIndex(u => u.id === userId) || 0) % COLORS.length;
     return COLORS[index];
   };
 
   // Get user custom color hex
   const getUserColorHex = (userId: number) => {
-    const user = users?.find(u => u.id === userId);
+    const user = shiftUsers.find(u => u.id === userId);
     return user?.color || null;
   };
 
   // Get user name
   const getUserName = (userId: number) => {
-    const u = users?.find(u => u.id === userId);
+    const u = shiftUsers.find(u => u.id === userId);
     return u?.name?.split(' ')[0] || 'Sin nombre';
   };
 
@@ -373,7 +375,7 @@ export default function Turnos() {
                       <SelectValue placeholder="Seleccionar empleado" />
                     </SelectTrigger>
                     <SelectContent>
-                      {users?.map(u => (
+                      {shiftUsers.map(u => (
                         <SelectItem key={u.id} value={u.id.toString()}>
                           {u.name || u.email}
                         </SelectItem>
@@ -498,7 +500,7 @@ export default function Turnos() {
                   </div>
 
                   {/* Rows */}
-                  {users?.map(u => {
+                  {shiftUsers.map(u => {
                     const userShifts = shiftsByUser.get(u.id) || [];
                     const colorClass = getUserColor(u.id);
                     const customColor = getUserColorHex(u.id);
@@ -658,7 +660,7 @@ export default function Turnos() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {users?.map(u => {
+            {shiftUsers.map(u => {
               const allUserShifts = shiftsByUser.get(u.id) || [];
               // Filter shifts based on current view mode
               const userShifts = viewMode === "week" 
@@ -706,7 +708,7 @@ export default function Turnos() {
           <DialogHeader>
             <DialogTitle>Editar turno</DialogTitle>
             <DialogDescription>
-              {selectedShift && users?.find(u => u.id === selectedShift.userId)?.name}
+              {selectedShift && shiftUsers.find(u => u.id === selectedShift.userId)?.name}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">

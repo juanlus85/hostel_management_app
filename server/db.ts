@@ -1,4 +1,4 @@
-import { eq, and, gte, lte, desc, asc, sql, or, like } from "drizzle-orm";
+import { eq, and, gte, lte, desc, asc, sql, or, like, notInArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { aggregateDailyCashSales } from "../shared/dailyCashSales";
 import { 
@@ -168,14 +168,17 @@ export async function initializeBusinesses() {
 export async function getShiftsByDateRange(startDate: string, endDate: string) {
   const db = await getDb();
   if (!db) return [];
+  const tabletUserIds = db.select({ id: users.id }).from(users).where(eq(users.role, "tablet"));
   return db.select().from(shifts)
-    .where(and(gte(shifts.scheduledDate, startDate), lte(shifts.scheduledDate, endDate)))
+    .where(and(gte(shifts.scheduledDate, startDate), lte(shifts.scheduledDate, endDate), notInArray(shifts.userId, tabletUserIds)))
     .orderBy(asc(shifts.scheduledDate), asc(shifts.scheduledStart));
 }
 
 export async function getShiftsByUser(userId: number, startDate?: string, endDate?: string) {
   const db = await getDb();
   if (!db) return [];
+  const user = await getUserById(userId);
+  if (user?.role === "tablet") return [];
   let conditions = [eq(shifts.userId, userId)];
   if (startDate) conditions.push(gte(shifts.scheduledDate, startDate));
   if (endDate) conditions.push(lte(shifts.scheduledDate, endDate));

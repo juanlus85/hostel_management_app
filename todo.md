@@ -1585,3 +1585,6 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Auditar y consolidar la base existente de productos, inventario y pedidos.
 - [x] Confirmar que ya existe una primera versión operativa de productos y pedidos a proveedor.
 - [x] Preparar la migración de guía de llegada para ejecutar en producción.
+
+## Corrección de rol Tablet
+- [x] Excluir usuarios Tablet de horarios, calendarios y selectores de turnos.
