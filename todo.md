@@ -1580,3 +1580,8 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 
 ## Envío de enlace Check-in Online
 - [x] Añadir botón para compartir por WhatsApp al generar un enlace de Check-in Online.
+
+## Prioridad activa: pedidos e inventario
+- [x] Auditar y consolidar la base existente de productos, inventario y pedidos.
+- [x] Confirmar que ya existe una primera versión operativa de productos y pedidos a proveedor.
+- [x] Preparar la migración de guía de llegada para ejecutar en producción.
