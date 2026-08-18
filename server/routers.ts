@@ -7,6 +7,7 @@ import { TRPCError } from "@trpc/server";
 import { randomBytes } from "node:crypto";
 import * as db from "./db";
 import { canBeScheduled } from "../shared/shiftEligibility";
+import { defaultGuestsForRoomType } from "../shared/roomCapacity";
 import { canAccessOnlineGuide, dayAfter, effectiveGuideExpiry } from "@shared/onlineGuideAccess";
 
 // Admin-only procedure
@@ -1909,7 +1910,22 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             documentNumber: input.documentNumber,
             nationality: input.nationality,
             checkInDate: input.checkInDate,
+            checkOutDate: input.checkOutDate,
             reservationNumber: input.reservationNumber,
+            documentType: input.documentType,
+            documentSupport: input.documentSupport,
+            gender: input.gender,
+            birthDate: input.birthDate,
+            street: input.street,
+            addressExtra: input.addressExtra,
+            postalCode: input.postalCode,
+            city: input.city,
+            province: input.province,
+            country: input.country,
+            roomNumber: input.roomNumber,
+            roomType: input.roomType,
+            reservationOrigin: input.reservationOrigin,
+            numberOfGuests: input.numberOfGuests,
           });
         }
         
@@ -2019,7 +2035,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           roomCode: room.roomCode,
           entranceCode: room.entranceCode || entrance?.roomCode || hostelSettings?.defaultEntranceCode || null,
           numberOfRooms: input.numberOfRooms,
-          numberOfGuests: input.numberOfGuests,
+          numberOfGuests: input.numberOfGuests || defaultGuestsForRoomType(room.roomType),
           paymentType: input.paymentType,
           amountPaid: input.amountPaid || "0",
           amountPending: input.amountPending || "0",
@@ -2113,6 +2129,28 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
         signature: z.string().min(10),
         acceptedTerms: z.literal(true),
         acceptedPrivacy: z.literal(true),
+        guests: z.array(z.object({
+          firstName: z.string().min(1),
+          lastName: z.string().min(1),
+          documentNumber: z.string().min(1),
+          documentSupport: z.string().optional(),
+          documentType: z.enum(["NIF", "NIE", "PAS", "OTRO"]),
+          gender: z.enum(["Hombre", "Mujer", "Otro"]),
+          nationality: z.string().min(1),
+          birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+          documentExpiry: z.string().optional(),
+          street: z.string().min(1),
+          addressExtra: z.string().optional(),
+          postalCode: z.string().min(1),
+          city: z.string().min(1),
+          province: z.string().optional(),
+          country: z.string().min(1),
+          phone: z.string().min(1),
+          email: z.string().email().optional(),
+          signature: z.string().min(10),
+          acceptedTerms: z.literal(true),
+          acceptedPrivacy: z.literal(true),
+        })).optional(),
       })).mutation(async ({ input }) => {
         const link = await db.getOnlineCheckinLinkByToken(input.token);
         if (!link) throw new TRPCError({ code: "NOT_FOUND", message: "El enlace de check-in no existe" });
@@ -2125,7 +2163,11 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
         if (link.status !== "pending") {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Este enlace ya se utilizó o fue cancelado" });
         }
-        if (input.email.trim().toLowerCase() !== link.email.trim().toLowerCase()) {
+        const submittedGuests = input.guests?.length ? input.guests : [input];
+        if (submittedGuests.length !== link.numberOfGuests) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: `Este enlace requiere los datos de ${link.numberOfGuests} huésped(es)` });
+        }
+        if ((submittedGuests[0].email || input.email).trim().toLowerCase() !== link.email.trim().toLowerCase()) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "El email no coincide con el enlace de check-in" });
         }
 
@@ -2137,52 +2179,31 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           entranceCode = entrance?.roomCode || hostelSettings?.defaultEntranceCode || null;
         }
 
-        const guestId = await db.createGuest({
-          firstName: input.firstName.trim(),
-          lastName: input.lastName.trim(),
-          documentNumber: input.documentNumber.trim(),
-          documentSupport: input.documentSupport?.trim() || null,
-          documentType: input.documentType,
-          gender: input.gender,
-          nationality: input.nationality,
-          birthDate: input.birthDate,
-          documentExpiry: input.documentExpiry || null,
-          street: input.street.trim(),
-          addressExtra: input.addressExtra?.trim() || null,
-          postalCode: input.postalCode.trim(),
-          city: input.city.trim(),
-          province: input.province?.trim() || null,
-          country: input.country,
-          phone: input.phone.trim(),
-          email: input.email.trim().toLowerCase(),
-          reservationNumber: link.reservationNumber,
-          checkInDate: link.checkInDate,
-          checkOutDate: link.checkOutDate,
-          roomNumber: link.roomNumber,
-          roomType: link.roomType,
-          roomCode: link.roomCode,
-          entranceCode,
-          numberOfRooms: link.numberOfRooms,
-          reservationOrigin: link.reservationOrigin,
-          paymentType: link.paymentType,
-          amountPaid: link.amountPaid,
-          amountPending: link.amountPending,
-          numberOfGuests: link.numberOfGuests,
-          signature: input.signature,
-          acceptedTerms: true,
-          acceptedPrivacy: true,
-          status: "completed",
-          checkinType: "online",
-          language: input.language,
-          token: link.token,
-          sendCodes: true,
-          createdBy: null,
-        });
+        const groupId = randomBytes(16).toString("hex");
+        const guestIds: number[] = [];
+        for (let index = 0; index < submittedGuests.length; index += 1) {
+          const guest = submittedGuests[index];
+          const guestId = await db.createGuest({
+            firstName: guest.firstName.trim(), lastName: guest.lastName.trim(), documentNumber: guest.documentNumber.trim(),
+            documentSupport: guest.documentSupport?.trim() || null, documentType: guest.documentType, gender: guest.gender,
+            nationality: guest.nationality, birthDate: guest.birthDate, documentExpiry: guest.documentExpiry || null,
+            street: guest.street.trim(), addressExtra: guest.addressExtra?.trim() || null, postalCode: guest.postalCode.trim(),
+            city: guest.city.trim(), province: guest.province?.trim() || null, country: guest.country, phone: guest.phone.trim(),
+            email: (guest.email || input.email).trim().toLowerCase(), reservationNumber: link.reservationNumber,
+            checkInDate: link.checkInDate, checkOutDate: link.checkOutDate, roomNumber: link.roomNumber, roomType: link.roomType,
+            roomCode: link.roomCode, entranceCode, numberOfRooms: link.numberOfRooms, reservationOrigin: link.reservationOrigin,
+            paymentType: link.paymentType, amountPaid: link.amountPaid, amountPending: link.amountPending, numberOfGuests: link.numberOfGuests,
+            signature: guest.signature, acceptedTerms: true, acceptedPrivacy: true, isMainGuest: index === 0, groupId,
+            status: "completed", checkinType: "online", language: input.language, token: link.token, sendCodes: true, createdBy: null,
+          });
+          guestIds.push(guestId);
+        }
+        const guestId = guestIds[0];
 
         await db.updateOnlineCheckinLink(link.id, { status: "completed", guestId, completedAt: new Date(), entranceCode, expiresAt: dayAfter(link.checkInDate), language: input.language });
 
         const { generateGuestPDF } = await import("./generateGuestPDF");
-        await generateGuestPDF(guestId);
+        await Promise.all(guestIds.map((id) => generateGuestPDF(id)));
 
         const settings = await db.getHostelSettings();
         const accessCodeList = await db.getAllAccessCodes();

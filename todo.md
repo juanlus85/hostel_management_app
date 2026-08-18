@@ -1588,3 +1588,9 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 
 ## Corrección de rol Tablet
 - [x] Excluir usuarios Tablet de horarios, calendarios y selectores de turnos.
+
+## Mejoras de Check-in Online y Anticipado
+- [x] Mejorar la usabilidad móvil del formulario de Check-in Online.
+- [x] Ajustar automáticamente los huéspedes al tipo de habitación y permitir completar todos los integrantes del grupo.
+- [x] Traducir al inglés el mensaje de WhatsApp cuando el huésped eligió inglés.
+- [x] Garantizar el email a recepción al completar un Check-in Anticipado, con todos los datos del huésped.

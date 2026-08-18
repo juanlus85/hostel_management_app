@@ -545,9 +545,24 @@ export async function sendCheckinAnticipadoNotificationToReception(
     email: string;
     phone?: string;
     documentNumber: string;
+    documentType?: string;
+    documentSupport?: string;
+    gender?: string;
     nationality?: string;
+    birthDate?: string;
+    street?: string;
+    addressExtra?: string;
+    postalCode?: string;
+    city?: string;
+    province?: string;
+    country?: string;
     checkInDate?: string;
+    checkOutDate?: string;
     reservationNumber?: string;
+    reservationOrigin?: string;
+    roomNumber?: string;
+    roomType?: string;
+    numberOfGuests?: number;
   }
 ): Promise<{ success: boolean; error?: string }> {
   const subject = `Nuevo Check-in Anticipado Recibido - ${guestData.firstName} ${guestData.lastName}`;
@@ -586,8 +601,10 @@ export async function sendCheckinAnticipadoNotificationToReception(
             </div>
             <div class="data-row">
               <span class="data-label">Documento:</span>
-              <span class="data-value">${guestData.documentNumber}</span>
+              <span class="data-value">${guestData.documentType || ''} ${guestData.documentNumber}${guestData.documentSupport ? ` · Soporte: ${guestData.documentSupport}` : ''}</span>
             </div>
+            ${guestData.gender ? `<div class="data-row"><span class="data-label">Sexo:</span><span class="data-value">${guestData.gender}</span></div>` : ''}
+            ${guestData.birthDate ? `<div class="data-row"><span class="data-label">Nacimiento:</span><span class="data-value">${guestData.birthDate}</span></div>` : ''}
             ${guestData.nationality ? `
             <div class="data-row">
               <span class="data-label">Nacionalidad:</span>
@@ -604,18 +621,23 @@ export async function sendCheckinAnticipadoNotificationToReception(
               <span class="data-value">${guestData.phone}</span>
             </div>
             ` : ''}
+            ${(guestData.street || guestData.city) ? `<div class="data-row"><span class="data-label">Dirección:</span><span class="data-value">${[guestData.street, guestData.addressExtra, guestData.postalCode, guestData.city, guestData.province, guestData.country].filter(Boolean).join(', ')}</span></div>` : ''}
             ${guestData.reservationNumber ? `
             <div class="data-row">
               <span class="data-label">Nº Reserva:</span>
               <span class="data-value">${guestData.reservationNumber}</span>
             </div>
             ` : ''}
+            ${guestData.reservationOrigin ? `<div class="data-row"><span class="data-label">Origen:</span><span class="data-value">${guestData.reservationOrigin}</span></div>` : ''}
             ${guestData.checkInDate ? `
             <div class="data-row">
               <span class="data-label">Fecha de llegada:</span>
               <span class="data-value">${new Date(guestData.checkInDate).toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
             </div>
             ` : ''}
+            ${guestData.checkOutDate ? `<div class="data-row"><span class="data-label">Fecha de salida:</span><span class="data-value">${guestData.checkOutDate}</span></div>` : ''}
+            ${guestData.roomNumber ? `<div class="data-row"><span class="data-label">Habitación:</span><span class="data-value">${guestData.roomNumber}${guestData.roomType ? ` · ${guestData.roomType}` : ''}</span></div>` : ''}
+            ${guestData.numberOfGuests ? `<div class="data-row"><span class="data-label">Huéspedes:</span><span class="data-value">${guestData.numberOfGuests}</span></div>` : ''}
           </div>
           
           <div class="action-needed">

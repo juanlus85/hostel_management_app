@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { defaultGuestsForRoomType } from "@shared/roomCapacity";
 
 const PAYMENT_TYPES = [
   ["TRANS", "Transferencia"], ["TARJT", "Tarjeta"], ["EFECT", "Efectivo"], ["PLATF", "Plataforma"],
@@ -26,6 +27,7 @@ export default function CheckinOnline() {
   const nextDate = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [latestLink, setLatestLink] = useState<string | null>(null);
+  const [latestLinkLanguage, setLatestLinkLanguage] = useState<"es" | "en">("es");
   const [form, setForm] = useState({
     email: "",
     language: "es" as "es" | "en",
@@ -50,6 +52,7 @@ export default function CheckinOnline() {
     onSuccess: ({ token }) => {
       const url = `${window.location.origin}/checkin-online/${token}`;
       setLatestLink(url);
+      setLatestLinkLanguage(form.language);
       utils.checkin.online.list.invalidate();
       toast.success("Enlace de check-in online creado");
     },
@@ -86,8 +89,10 @@ export default function CheckinOnline() {
     }
   };
 
-  const shareWhatsApp = (link: string) => {
-    const text = `Hola, puedes completar tu Check-in Online para The Spot Central Hostel desde este enlace seguro:\n\n${link}`;
+  const shareWhatsApp = (link: string, language: "es" | "en") => {
+    const text = language === "en"
+      ? `Hello, you can complete your online check-in for The Spot Central Hostel using this secure link:\n\n${link}`
+      : `Hola, puedes completar tu Check-in Online para The Spot Central Hostel desde este enlace seguro:\n\n${link}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
   };
 
@@ -124,7 +129,7 @@ export default function CheckinOnline() {
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {link.status === "pending" && <Button size="sm" variant="outline" onClick={() => copy(publicLink)}><ClipboardCopy className="mr-2 h-4 w-4" />Copiar enlace</Button>}
-                      {link.status === "pending" && <Button size="sm" className="bg-[#25D366] text-white hover:bg-[#1da851]" onClick={() => shareWhatsApp(publicLink)}><MessageCircle className="mr-2 h-4 w-4" />WhatsApp</Button>}
+                      {link.status === "pending" && <Button size="sm" className="bg-[#25D366] text-white hover:bg-[#1da851]" onClick={() => shareWhatsApp(publicLink, link.language)}><MessageCircle className="mr-2 h-4 w-4" />WhatsApp</Button>}
                       {link.status === "pending" && <Button size="sm" variant="destructive" onClick={() => cancelLink.mutate({ id: link.id })}><XCircle className="mr-2 h-4 w-4" />Cancelar</Button>}
                     </div>
                   </div>
@@ -147,7 +152,7 @@ export default function CheckinOnline() {
                 <div className="mb-2 flex items-center gap-2 font-semibold"><Check className="h-5 w-5" />Enlace creado correctamente</div>
                 <p className="break-all text-sm">{latestLink}</p>
               </div>
-              <div className="grid gap-3 sm:grid-cols-2"><Button onClick={() => copy(latestLink)}><Link2 className="mr-2 h-4 w-4" />Copiar enlace</Button><Button className="bg-[#25D366] text-white hover:bg-[#1da851]" onClick={() => shareWhatsApp(latestLink)}><MessageCircle className="mr-2 h-4 w-4" />Enviar por WhatsApp</Button></div>
+              <div className="grid gap-3 sm:grid-cols-2"><Button onClick={() => copy(latestLink)}><Link2 className="mr-2 h-4 w-4" />Copiar enlace</Button><Button className="bg-[#25D366] text-white hover:bg-[#1da851]" onClick={() => shareWhatsApp(latestLink, latestLinkLanguage)}><MessageCircle className="mr-2 h-4 w-4" />Enviar por WhatsApp</Button></div>
               <DialogFooter><Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cerrar</Button></DialogFooter>
             </div>
           ) : (
@@ -159,7 +164,7 @@ export default function CheckinOnline() {
                 <div className="space-y-2"><Label>Origen</Label><Select value={form.reservationOrigin} onValueChange={(value: typeof form.reservationOrigin) => setForm({ ...form, reservationOrigin: value })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["Booking.com", "Airbnb", "Expedia", "Website", "Phone", "Email", "Other", "Walk In"].map((source) => <SelectItem key={source} value={source}>{source}</SelectItem>)}</SelectContent></Select></div>
                 <div className="space-y-2"><Label>Fecha de llegada *</Label><Input type="date" value={form.checkInDate} onChange={(e) => setForm({ ...form, checkInDate: e.target.value })} /></div>
                 <div className="space-y-2"><Label>Fecha de salida *</Label><Input type="date" value={form.checkOutDate} onChange={(e) => setForm({ ...form, checkOutDate: e.target.value })} /></div>
-                <div className="space-y-2 sm:col-span-2"><Label>Habitación *</Label><Select value={form.roomNumber} onValueChange={(value) => setForm({ ...form, roomNumber: value })}><SelectTrigger><SelectValue placeholder="Selecciona habitación" /></SelectTrigger><SelectContent>{rooms.map((room) => <SelectItem key={room.id} value={room.roomNumber}>Habitación {room.roomNumber} · {room.roomType}</SelectItem>)}</SelectContent></Select></div>
+                <div className="space-y-2 sm:col-span-2"><Label>Habitación *</Label><Select value={form.roomNumber} onValueChange={(value) => { const room = rooms.find((item) => item.roomNumber === value); setForm({ ...form, roomNumber: value, numberOfGuests: defaultGuestsForRoomType(room?.roomType) }); }}><SelectTrigger><SelectValue placeholder="Selecciona habitación" /></SelectTrigger><SelectContent>{rooms.map((room) => <SelectItem key={room.id} value={room.roomNumber}>Habitación {room.roomNumber} · {room.roomType}</SelectItem>)}</SelectContent></Select></div>
                 <div className="space-y-2"><Label>N.º de huéspedes</Label><Input type="number" min={1} value={form.numberOfGuests} onChange={(e) => setForm({ ...form, numberOfGuests: Math.max(1, Number(e.target.value) || 1) })} /></div>
                 <div className="space-y-2"><Label>N.º de habitaciones</Label><Input type="number" min={1} value={form.numberOfRooms} onChange={(e) => setForm({ ...form, numberOfRooms: Math.max(1, Number(e.target.value) || 1) })} /></div>
                 <div className="space-y-2"><Label>Tipo de pago</Label><Select value={form.paymentType} onValueChange={(value: typeof form.paymentType) => setForm({ ...form, paymentType: value })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{PAYMENT_TYPES.map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select></div>
