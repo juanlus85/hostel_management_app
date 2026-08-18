@@ -1,6 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useBusinessContext } from "@/components/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import { 
   TrendingUp, 
@@ -13,14 +14,18 @@ import {
   Store,
   ArrowUpRight,
   ArrowDownRight,
-  CalendarDays
+  CalendarDays,
+  Download
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
 import { aggregateSupplierExpenses } from "@shared/supplierExpenses";
 import { mergeDashboardTrends } from "@shared/dashboardTrend";
 import { CategoryScale, Chart as ChartJS, Legend, LineElement, LinearScale, PointElement, Tooltip } from "chart.js";
 import { Line } from "react-chartjs-2";
+import * as XLSX from "xlsx";
+import { buildDashboardExportRows } from "@shared/dashboardExport";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend);
 
@@ -175,6 +180,19 @@ export default function Home() {
       { label: "Balance", data: trendRows.map((row) => row.balance), borderColor: "#2563eb", backgroundColor: "rgba(37,99,235,.12)", tension: .25 },
     ],
   }), [trendRows]);
+  const handleExportDashboard = () => {
+    try {
+      const rows = buildDashboardExportRows({ businessLabel, periodLabel, startDate: dateRange.startDate, endDate: dateRange.endDate, stats: stats || {}, suppliers: supplierExpenses, trend: trendRows });
+      const workbook = XLSX.utils.book_new();
+      const worksheet = XLSX.utils.aoa_to_sheet(rows);
+      worksheet["!cols"] = [{ wch: 28 }, { wch: 16 }, { wch: 16 }, { wch: 16 }];
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Dashboard");
+      XLSX.writeFile(workbook, `DASHBOARD_${dateRange.startDate}_${dateRange.endDate}.xlsx`);
+      toast.success("Informe XLSX exportado correctamente");
+    } catch {
+      toast.error("No se pudo exportar el informe XLSX");
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -220,6 +238,7 @@ export default function Home() {
               />
             </div>
           )}
+          {isAdmin && <Button variant="outline" size="sm" onClick={handleExportDashboard}><Download className="mr-2 h-4 w-4" />Exportar XLSX</Button>}
         </div>
       </div>
 

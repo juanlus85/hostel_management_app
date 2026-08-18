@@ -51,6 +51,7 @@
 - [x] Gastos por proveedor
 - [x] Gráficos de tendencias
 - [ ] Exportación a PDF/Excel
+- [x] Exportación XLSX del dashboard (resumen, proveedores y tendencias)
 
 ## Interfaz de Usuario
 - [x] Diseño responsivo móvil/desktop
@@ -253,6 +254,7 @@
 - [x] Gastos por proveedor
 - [x] Gráficos de tendencias
 - [ ] Exportación a PDF/Excel
+- [x] Exportación XLSX del dashboard (resumen, proveedores y tendencias)
 
 ### Documentación
 - [ ] Documentación de despliegue en VPS
