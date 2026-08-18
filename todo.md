@@ -314,9 +314,9 @@
 - [x] Permitir modificar nombre, email, rol y horarios habituales
 
 ### Corrección de Cálculos
-- [ ] Revisar y corregir cálculo de efectivo retirado en Dashboard
-- [ ] Revisar y corregir cálculo de tarjetas retiradas en Dashboard
-- [ ] Verificar que los totales coinciden con los cierres de caja
+- [x] Revisar y corregir cálculo de efectivo retirado en Dashboard
+- [x] Revisar y corregir cálculo de tarjetas retiradas en Dashboard
+- [x] Verificar que los totales coinciden con los cierres de caja
 
 
 ### Envío de Email con Facturas

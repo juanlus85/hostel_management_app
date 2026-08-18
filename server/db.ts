@@ -2,6 +2,7 @@ import { eq, and, gte, lte, desc, asc, sql, or, like, notInArray } from "drizzle
 import { drizzle } from "drizzle-orm/mysql2";
 import { aggregateDailyCashSales } from "../shared/dailyCashSales";
 import { aggregateDashboardTrend } from "../shared/dashboardTrend";
+import { aggregateClosedCashSummary } from "../shared/dashboardCashSummary";
 import { 
   InsertUser, users, 
   businesses, InsertBusiness, Business,
@@ -560,17 +561,8 @@ export async function getDashboardStats(businessId: number, startDate: string, e
   let withdrawnCards = 0;
   let prepaidBooking = 0;
   
-  // Sumar ingresos de cashClosings usando zReading (la Z de caja = ingresos reales)
-  // Solo contar cierres con status='closed' para consistencia con Cierre Trimestral
-  closings.forEach(c => {
-    if (c.status === 'closed') {
-      totalIncomeZ += parseFloat(c.zReading || "0");
-      totalDifference += parseFloat(c.difference || "0");
-      withdrawnCash += parseFloat(c.withdrawnCash || "0");
-      withdrawnCards += parseFloat(c.withdrawnCards || "0");
-      prepaidBooking += parseFloat(c.prepaidBooking || "0");
-    }
-  });
+  // Solo los cierres cerrados aportan ingresos y retiradas al dashboard.
+  ({ totalIncomeZ, totalDifference, withdrawnCash, withdrawnCards, prepaidBooking } = aggregateClosedCashSummary(closings));
   
   // Sumar gastos de facturas
   const invs = await db.select().from(invoices)
