@@ -309,9 +309,9 @@
 ## Mejoras Solicitadas (v15)
 
 ### Gestión de Empleados
-- [ ] Añadir botón para editar empleados existentes
-- [ ] Añadir botón para eliminar empleados (desactivar)
-- [ ] Permitir modificar nombre, email, rol y horarios habituales
+- [x] Añadir botón para editar empleados existentes
+- [x] Añadir botón para eliminar empleados (desactivar)
+- [x] Permitir modificar nombre, email, rol y horarios habituales
 
 ### Corrección de Cálculos
 - [ ] Revisar y corregir cálculo de efectivo retirado en Dashboard
