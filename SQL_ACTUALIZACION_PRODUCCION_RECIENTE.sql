@@ -2,6 +2,10 @@
 -- Ejecutar UNA VEZ en phpMyAdmin sobre la base de datos hostel_management.
 -- Las sentencias IF NOT EXISTS permiten ejecutarlo de forma segura si algunos campos ya existen.
 
+-- Avisos de checkout enviados a los usuarios de Housekeeping.
+ALTER TABLE `notifications`
+  MODIFY COLUMN `type` ENUM('shift_assigned','shift_modified','shift_deleted','room_checkout','general') NOT NULL;
+
 -- Configuración de OpenAI y ajustes globales.
 CREATE TABLE IF NOT EXISTS `app_settings` (
   `id` int NOT NULL AUTO_INCREMENT,

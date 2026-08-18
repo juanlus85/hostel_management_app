@@ -1,0 +1,1 @@
+ALTER TABLE `notifications` MODIFY COLUMN `type` enum('shift_assigned','shift_modified','shift_deleted','room_checkout','general') NOT NULL;

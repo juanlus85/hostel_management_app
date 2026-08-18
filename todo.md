@@ -481,10 +481,10 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 ## Sistema de Notificaciones (v35)
 
 ### Notificaciones de Checkout
-- [ ] Crear procedimiento tRPC para enviar notificaciones cuando se registra checkout
-- [ ] Integrar notificaciones en el flujo de actualización de estado en Housekeeping
-- [ ] Notificar a todos los usuarios con rol "housekeeping"
-- [ ] Incluir número de habitación y fecha en la notificación
+- [x] Crear procedimiento tRPC para enviar notificaciones cuando se registra checkout
+- [x] Integrar notificaciones en el flujo de actualización de estado en Housekeeping
+- [x] Notificar a todos los usuarios con rol "housekeeping"
+- [x] Incluir número de habitación y fecha en la notificación
 
 
 ## Mejora de Menú (v35)

@@ -10,6 +10,7 @@ import { canBeScheduled } from "../shared/shiftEligibility";
 import { defaultGuestsForRoomType } from "../shared/roomCapacity";
 import { canAccessOnlineGuide, dayAfter, effectiveGuideExpiry } from "@shared/onlineGuideAccess";
 import { hasInvitationEmail, onlineGuestToken } from "../shared/onlineCheckinGuests";
+import { checkoutNotificationContent, shouldCreateCheckoutNotification } from "../shared/roomCheckoutNotifications";
 
 // Admin-only procedure
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -1287,10 +1288,22 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
       beds: z.number().optional(),
       notes: z.string().optional(),
     })).mutation(async ({ input, ctx }) => {
-      return db.updateRoomStatus({
+      const statuses = await db.getRoomStatusByDate(input.date);
+      const previousStatus = statuses.find((room) => room.roomNumber === input.roomNumber)?.status;
+      const room = await db.updateRoomStatus({
         ...input,
         updatedBy: ctx.user.id,
       });
+      let notifiedUsers = 0;
+      if (shouldCreateCheckoutNotification(previousStatus, input.status)) {
+        const housekeepingUsers = (await db.getAllUsers()).filter((user) => user.role === "housekeeping");
+        const notification = checkoutNotificationContent(input.roomNumber, input.date);
+        await Promise.all(housekeepingUsers.map(async (user) => {
+          await db.createNotification({ userId: user.id, ...notification });
+        }));
+        notifiedUsers = housekeepingUsers.length;
+      }
+      return { room, notifiedUsers };
     }),
   }),
 

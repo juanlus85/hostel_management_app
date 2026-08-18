@@ -358,7 +358,7 @@ export type InsertWeeklySummary = typeof weeklySummaries.$inferInsert;
 export const notifications = mysqlTable("notifications", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(), // Usuario que recibe la notificación
-  type: mysqlEnum("type", ["shift_assigned", "shift_modified", "shift_deleted", "general"]).notNull(),
+  type: mysqlEnum("type", ["shift_assigned", "shift_modified", "shift_deleted", "room_checkout", "general"]).notNull(),
   title: varchar("title", { length: 255 }).notNull(),
   message: text("message").notNull(),
   relatedShiftId: int("relatedShiftId"), // ID del turno relacionado (opcional)
