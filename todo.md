@@ -73,7 +73,7 @@
 ### Calendario de Turnos
 - [x] Vista mensual de todos los turnos
 - [x] Calendario base/plantilla para crear turnos automáticamente
-- [ ] Cambiar turnos arrastrando (drag & drop)
+- [x] Cambiar turnos arrastrando (drag & drop)
 - [x] Cambiar turnos haciendo click
 
 ### Empleados
@@ -240,7 +240,7 @@
 ## Pendiente
 
 ### Calendario de Turnos
-- [ ] Cambiar turnos arrastrando (drag & drop)
+- [x] Cambiar turnos arrastrando (drag & drop)
 
 ### Empleados
 - [ ] Crear empleados iniciales: Ana y Juanlu

@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
 import { canBeScheduled } from "@shared/shiftEligibility";
-import { Calendar, Clock, Plus, Play, Square, ChevronLeft, ChevronRight, Edit2, Trash2, CalendarDays, CalendarRange, Wand2 } from "lucide-react";
+import { canRescheduleShift } from "@shared/shiftDragDrop";
+import { Calendar, Clock, Plus, Play, Square, ChevronLeft, ChevronRight, Edit2, Trash2, CalendarDays, CalendarRange, Wand2, GripVertical } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -40,6 +41,8 @@ export default function Turnos() {
   const [editStartTime, setEditStartTime] = useState("");
   const [editEndTime, setEditEndTime] = useState("");
   const [editDate, setEditDate] = useState("");
+  const [draggedShiftId, setDraggedShiftId] = useState<number | null>(null);
+  const [dragOverDate, setDragOverDate] = useState<string | null>(null);
   
   // Generate shifts dialog
   const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false);
@@ -224,6 +227,25 @@ export default function Turnos() {
     }
   };
 
+  const handleShiftDrop = (event: React.DragEvent<HTMLDivElement>, targetDate: string) => {
+    event.preventDefault();
+    setDragOverDate(null);
+    const shiftId = Number(event.dataTransfer.getData("text/plain"));
+    const shift = shifts?.find((item) => item.id === shiftId);
+    if (!shift || !canRescheduleShift(shift.status, shift.scheduledDate, targetDate)) {
+      if (shift && shift.status !== "scheduled") toast.error("Solo se pueden reprogramar turnos programados");
+      return;
+    }
+    updateShift.mutate({ id: shiftId, scheduledDate: targetDate });
+  };
+
+  const startShiftDrag = (event: React.DragEvent<HTMLDivElement>, shift: any) => {
+    if (!isAdmin || shift.status !== "scheduled") return;
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", String(shift.id));
+    setDraggedShiftId(shift.id);
+  };
+
   const navigateWeek = (direction: number) => {
     const newDate = new Date(currentDate);
     newDate.setDate(currentDate.getDate() + direction * 7);
@@ -319,6 +341,7 @@ export default function Turnos() {
             Turnos
           </h1>
           <p className="text-muted-foreground">Gestión de horarios y calendario de empleados</p>
+          {isAdmin && <p className="mt-1 text-xs text-muted-foreground">Arrastra un turno programado a otro día para reprogramarlo.</p>}
         </div>
         {isAdmin && (
           <div className="flex gap-2">
@@ -525,21 +548,27 @@ export default function Turnos() {
                           return (
                             <div 
                               key={i} 
-                              className={`p-1 min-h-[60px] rounded ${isAdmin ? 'cursor-pointer hover:bg-muted/50' : ''}`}
+                              className={`p-1 min-h-[60px] rounded transition-colors ${isAdmin ? 'cursor-pointer hover:bg-muted/50' : ''} ${dragOverDate === dateStr ? 'bg-primary/10 ring-2 ring-primary/40' : ''}`}
                               onClick={() => dayShifts.length === 0 && handleDayClick(day, u.id)}
+                              onDragOver={(event) => { if (isAdmin) { event.preventDefault(); event.dataTransfer.dropEffect = "move"; setDragOverDate(dateStr); } }}
+                              onDragLeave={() => setDragOverDate(null)}
+                              onDrop={(event) => isAdmin && handleShiftDrop(event, dateStr)}
                             >
                               {dayShifts.map((shift: any) => (
                                 <div 
                                   key={shift.id} 
-                                  className={`text-xs p-1.5 rounded mb-1 border cursor-pointer hover:opacity-80 group relative ${colorClass || ''}`}
+                                  draggable={isAdmin && shift.status === "scheduled"}
+                                  className={`text-xs p-1.5 rounded mb-1 border cursor-pointer hover:opacity-80 group relative ${isAdmin && shift.status === "scheduled" ? 'cursor-grab active:cursor-grabbing' : ''} ${draggedShiftId === shift.id ? 'opacity-40' : ''} ${colorClass || ''}`}
                                   style={customColor ? {
                                     backgroundColor: `${customColor}15`,
                                     color: customColor,
                                     borderColor: `${customColor}50`
                                   } : {}}
+                                  onDragStart={(event) => startShiftDrag(event, shift)}
+                                  onDragEnd={() => { setDraggedShiftId(null); setDragOverDate(null); }}
                                   onClick={(e) => { e.stopPropagation(); if (isAdmin) openEditDialog(shift); }}
                                 >
-                                  <div className="font-medium">{shift.scheduledStart}</div>
+                                  <div className="flex items-center gap-0.5 font-medium">{isAdmin && shift.status === "scheduled" && <GripVertical className="h-3 w-3 opacity-50" />}{shift.scheduledStart}</div>
                                   <div>{shift.scheduledEnd}</div>
                                   {isAdmin && (
                                     <button 
@@ -602,8 +631,11 @@ export default function Turnos() {
                       return (
                         <div 
                           key={dateStr} 
-                          className={`p-1 sm:p-2 min-h-[80px] sm:min-h-[100px] border rounded-lg ${isToday ? 'bg-primary/5 border-primary/20' : ''} ${isAdmin ? 'cursor-pointer hover:bg-muted/30' : ''}`}
+                          className={`p-1 sm:p-2 min-h-[80px] sm:min-h-[100px] border rounded-lg transition-colors ${isToday ? 'bg-primary/5 border-primary/20' : ''} ${isAdmin ? 'cursor-pointer hover:bg-muted/30' : ''} ${dragOverDate === dateStr ? 'bg-primary/10 ring-2 ring-primary/40' : ''}`}
                           onClick={() => handleDayClick(day)}
+                          onDragOver={(event) => { if (isAdmin) { event.preventDefault(); event.dataTransfer.dropEffect = "move"; setDragOverDate(dateStr); } }}
+                          onDragLeave={() => setDragOverDate(null)}
+                          onDrop={(event) => isAdmin && handleShiftDrop(event, dateStr)}
                         >
                           <div className={`text-xs sm:text-sm font-medium mb-1 ${isToday ? 'text-primary' : ''}`}>
                             {day.getDate()}
@@ -615,12 +647,15 @@ export default function Turnos() {
                               return (
                                 <div 
                                   key={shift.id}
-                                  className={`text-[10px] sm:text-xs px-1 py-0.5 rounded truncate group relative cursor-pointer hover:opacity-80 ${shiftColorClass || ''}`}
+                                  draggable={isAdmin && shift.status === "scheduled"}
+                                  className={`text-[10px] sm:text-xs px-1 py-0.5 rounded truncate group relative cursor-pointer hover:opacity-80 ${isAdmin && shift.status === "scheduled" ? 'cursor-grab active:cursor-grabbing' : ''} ${draggedShiftId === shift.id ? 'opacity-40' : ''} ${shiftColorClass || ''}`}
                                   style={shiftCustomColor ? {
                                     backgroundColor: `${shiftCustomColor}15`,
                                     color: shiftCustomColor,
                                     borderColor: `${shiftCustomColor}50`
                                   } : {}}
+                                  onDragStart={(event) => startShiftDrag(event, shift)}
+                                  onDragEnd={() => { setDraggedShiftId(null); setDragOverDate(null); }}
                                   onClick={(e) => { e.stopPropagation(); if (isAdmin) openEditDialog(shift); }}
                                 >
                                 <span className="hidden sm:inline">{getUserName(shift.userId)} </span>
