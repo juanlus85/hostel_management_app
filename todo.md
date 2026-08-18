@@ -1599,3 +1599,9 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Traducir tipo de habitación y planta correctamente en la guía en inglés.
 - [x] Mostrar la dirección completa con enlace a Google Maps.
 - [x] Corregir la copia de enlaces creados en dispositivos móviles.
+
+## Correcciones urgentes de Check-in Online
+- [x] Permitir crear enlace sin email y exigir que el huésped lo complete en el formulario público.
+- [x] Establecer Booking.com y Plataforma como valores predeterminados al crear enlace.
+- [x] Añadir el logotipo del hostel en la cabecera del formulario público.
+- [x] Corregir el error que impide completar reservas con varios huéspedes.

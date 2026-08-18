@@ -32,13 +32,13 @@ export default function CheckinOnline() {
     email: "",
     language: "es" as "es" | "en",
     reservationNumber: "",
-    reservationOrigin: "Website" as "Walk In" | "Booking.com" | "Airbnb" | "Expedia" | "Website" | "Phone" | "Email" | "Other",
+    reservationOrigin: "Booking.com" as "Walk In" | "Booking.com" | "Airbnb" | "Expedia" | "Website" | "Phone" | "Email" | "Other",
     checkInDate: currentDate,
     checkOutDate: nextDate,
     roomNumber: "",
     numberOfRooms: 1,
     numberOfGuests: 1,
-    paymentType: "TRANS" as "EFECT" | "TARJT" | "TRANS" | "PLATF" | "MOVIL" | "TREG" | "DESTI" | "OTRO",
+    paymentType: "PLATF" as "EFECT" | "TARJT" | "TRANS" | "PLATF" | "MOVIL" | "TREG" | "DESTI" | "OTRO",
     amountPaid: "0",
     amountPending: "0",
   });
@@ -68,13 +68,13 @@ export default function CheckinOnline() {
   });
 
   const resetForm = () => {
-    setForm({ ...form, email: "", reservationNumber: "", roomNumber: "", numberOfRooms: 1, numberOfGuests: 1, amountPaid: "0", amountPending: "0" });
+    setForm({ ...form, email: "", reservationNumber: "", reservationOrigin: "Booking.com", roomNumber: "", numberOfRooms: 1, numberOfGuests: 1, paymentType: "PLATF", amountPaid: "0", amountPending: "0" });
     setLatestLink(null);
   };
 
   const handleCreate = () => {
-    if (!form.email || !form.roomNumber) {
-      toast.error("Indica el email del huésped y la habitación");
+    if (!form.roomNumber) {
+      toast.error("Indica la habitación");
       return;
     }
     createLink.mutate(form);
@@ -137,7 +137,7 @@ export default function CheckinOnline() {
                 return (
                   <div key={link.id} className="flex flex-col gap-3 rounded-lg border p-4 lg:flex-row lg:items-center lg:justify-between">
                     <div className="min-w-0">
-                      <p className="font-semibold">Habitación {link.roomNumber} · {link.email}</p>
+                      <p className="font-semibold">Habitación {link.roomNumber} · {link.email || "El huésped indicará su email"}</p>
                       <p className="text-sm text-muted-foreground">Llegada: {link.checkInDate} · Salida: {link.checkOutDate} · {link.numberOfGuests} huésped(es)</p>
                       <p className="mt-1 text-xs font-medium">Estado: {statusLabels[link.status] || link.status}</p>
                     </div>
@@ -172,7 +172,7 @@ export default function CheckinOnline() {
           ) : (
             <div className="space-y-4 py-3">
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2"><Label>Email del huésped *</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="guest@email.com" /></div>
+                <div className="space-y-2"><Label>Email del huésped (opcional)</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="guest@email.com" /><p className="text-xs text-muted-foreground">Si lo dejas vacío, el huésped lo indicará al completar el formulario.</p></div>
                 <div className="space-y-2"><Label>Idioma</Label><Select value={form.language} onValueChange={(value: "es" | "en") => setForm({ ...form, language: value })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="es">Español</SelectItem><SelectItem value="en">English</SelectItem></SelectContent></Select></div>
                 <div className="space-y-2"><Label>Número de reserva</Label><Input value={form.reservationNumber} onChange={(e) => setForm({ ...form, reservationNumber: e.target.value })} /></div>
                 <div className="space-y-2"><Label>Origen</Label><Select value={form.reservationOrigin} onValueChange={(value: typeof form.reservationOrigin) => setForm({ ...form, reservationOrigin: value })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["Booking.com", "Airbnb", "Expedia", "Website", "Phone", "Email", "Other", "Walk In"].map((source) => <SelectItem key={source} value={source}>{source}</SelectItem>)}</SelectContent></Select></div>

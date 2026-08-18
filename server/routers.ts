@@ -9,6 +9,7 @@ import * as db from "./db";
 import { canBeScheduled } from "../shared/shiftEligibility";
 import { defaultGuestsForRoomType } from "../shared/roomCapacity";
 import { canAccessOnlineGuide, dayAfter, effectiveGuideExpiry } from "@shared/onlineGuideAccess";
+import { hasInvitationEmail, onlineGuestToken } from "../shared/onlineCheckinGuests";
 
 // Admin-only procedure
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -1996,7 +1997,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
         return db.getOnlineCheckinLinks();
       }),
       createLink: protectedProcedure.input(z.object({
-        email: z.string().email(),
+        email: z.string().trim().email().or(z.literal("")).optional().default(""),
         language: z.enum(["es", "en"]).default("es"),
         reservationNumber: z.string().optional(),
         reservationOrigin: z.enum(["Walk In", "Booking.com", "Airbnb", "Expedia", "Website", "Phone", "Email", "Other"]).default("Website"),
@@ -2167,7 +2168,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
         if (submittedGuests.length !== link.numberOfGuests) {
           throw new TRPCError({ code: "BAD_REQUEST", message: `Este enlace requiere los datos de ${link.numberOfGuests} huésped(es)` });
         }
-        if ((submittedGuests[0].email || input.email).trim().toLowerCase() !== link.email.trim().toLowerCase()) {
+        if (hasInvitationEmail(link.email) && (submittedGuests[0].email || input.email).trim().toLowerCase() !== link.email.trim().toLowerCase()) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "El email no coincide con el enlace de check-in" });
         }
 
@@ -2194,7 +2195,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             roomCode: link.roomCode, entranceCode, numberOfRooms: link.numberOfRooms, reservationOrigin: link.reservationOrigin,
             paymentType: link.paymentType, amountPaid: link.amountPaid, amountPending: link.amountPending, numberOfGuests: link.numberOfGuests,
             signature: guest.signature, acceptedTerms: true, acceptedPrivacy: true, isMainGuest: index === 0, groupId,
-            status: "completed", checkinType: "online", language: input.language, token: link.token, sendCodes: true, createdBy: null,
+            status: "completed", checkinType: "online", language: input.language, token: onlineGuestToken(link.token, index), sendCodes: true, createdBy: null,
           });
           guestIds.push(guestId);
         }
