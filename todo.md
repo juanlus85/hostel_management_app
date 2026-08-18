@@ -48,7 +48,7 @@
 - [x] Resumen de ingresos vs gastos (semanal/mensual)
 - [x] Horas trabajadas por empleado
 - [x] Descuadres acumulados
-- [ ] Gastos por proveedor
+- [x] Gastos por proveedor
 - [ ] Gráficos de tendencias
 - [ ] Exportación a PDF/Excel
 
@@ -250,7 +250,7 @@
 - [x] Historial de pedidos
 
 ### Dashboard
-- [ ] Gastos por proveedor
+- [x] Gastos por proveedor
 - [ ] Gráficos de tendencias
 - [ ] Exportación a PDF/Excel
 

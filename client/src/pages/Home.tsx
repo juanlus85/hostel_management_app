@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { aggregateSupplierExpenses } from "@shared/supplierExpenses";
 
 type PeriodType = "week" | "month" | "quarter" | "year" | "custom";
 
@@ -103,6 +104,15 @@ export default function Home() {
     { enabled: !!tiendaId && (selectedBusiness === "tienda" || selectedBusiness === "all") }
   );
 
+  const { data: hostelSupplierExpenses } = trpc.dashboard.supplierExpenses.useQuery(
+    { businessId: hostelId!, ...dateRange },
+    { enabled: !!hostelId && user?.role === "admin" && (selectedBusiness === "hostel" || selectedBusiness === "all") }
+  );
+  const { data: tiendaSupplierExpenses } = trpc.dashboard.supplierExpenses.useQuery(
+    { businessId: tiendaId!, ...dateRange },
+    { enabled: !!tiendaId && user?.role === "admin" && (selectedBusiness === "tienda" || selectedBusiness === "all") }
+  );
+
   const stats = useMemo(() => {
     if (selectedBusiness === "hostel") return hostelStats;
     if (selectedBusiness === "tienda") return tiendaStats;
@@ -131,6 +141,14 @@ export default function Home() {
                        selectedBusiness === "tienda" ? Store : Building2;
   
   const isAdmin = user?.role === "admin";
+  const supplierExpenses = useMemo(() => {
+    if (selectedBusiness === "hostel") return hostelSupplierExpenses || [];
+    if (selectedBusiness === "tienda") return tiendaSupplierExpenses || [];
+    return aggregateSupplierExpenses([
+      ...(hostelSupplierExpenses || []).map((expense) => ({ supplier: expense.supplier, totalAmount: expense.total })),
+      ...(tiendaSupplierExpenses || []).map((expense) => ({ supplier: expense.supplier, totalAmount: expense.total })),
+    ]);
+  }, [selectedBusiness, hostelSupplierExpenses, tiendaSupplierExpenses]);
 
   return (
     <div className="space-y-6">
@@ -260,6 +278,16 @@ export default function Home() {
           </Card>
         </div>
       )}
+
+      {isAdmin && <Card>
+        <CardHeader>
+          <CardTitle>Gastos por proveedor</CardTitle>
+          <CardDescription>Facturas registradas durante {periodLabel}, ordenadas de mayor a menor importe.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {supplierExpenses.length ? <div className="divide-y rounded-md border">{supplierExpenses.slice(0, 8).map((expense) => <div key={expense.supplier} className="flex items-center justify-between gap-4 p-3"><div className="min-w-0"><p className="truncate font-medium">{expense.supplier}</p><p className="text-xs text-muted-foreground">{expense.invoiceCount} factura{expense.invoiceCount !== 1 ? "s" : ""}</p></div><p className="shrink-0 font-semibold text-red-600">€{expense.total.toFixed(2)}</p></div>)}</div> : <p className="py-4 text-sm text-muted-foreground">No hay facturas registradas para este periodo.</p>}
+        </CardContent>
+      </Card>}
 
       {/* Alerts Section */}
       <div className="grid gap-4 md:grid-cols-3">

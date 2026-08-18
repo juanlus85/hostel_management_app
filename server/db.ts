@@ -35,6 +35,7 @@ import {
   hostelSettingsCheckin, InsertHostelSettingCheckin, HostelSettingCheckin
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
+import { aggregateSupplierExpenses } from "../shared/supplierExpenses";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -613,6 +614,18 @@ export async function getDashboardStats(businessId: number, startDate: string, e
     openIncidentsCount: openIncidents.length,
     pendingOrdersCount: pendingOrders.length
   };
+}
+
+export async function getSupplierExpenses(businessId: number, startDate: string, endDate: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const invs = await db.select({ supplier: invoices.supplier, totalAmount: invoices.totalAmount }).from(invoices)
+    .where(and(
+      eq(invoices.businessId, businessId),
+      gte(invoices.invoiceDate, startDate),
+      lte(invoices.invoiceDate, endDate),
+    ));
+  return aggregateSupplierExpenses(invs);
 }
 
 export async function getHoursWorkedByUser(userId: number, startDate: string, endDate: string) {
