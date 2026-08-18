@@ -434,7 +434,7 @@ export default function Facturas() {
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-2" />
               Nueva factura
             </Button>
@@ -480,7 +480,7 @@ export default function Facturas() {
               {/* Image/PDF Upload */}
               <div className="grid gap-2">
                 <Label>Foto del ticket/factura o PDF</Label>
-                <div className="flex gap-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
                   <input
                     type="file"
                     accept="image/*,application/pdf"
@@ -548,7 +548,7 @@ export default function Facturas() {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="grid gap-2">
                   <Label>Proveedor *</Label>
                   <Select value={supplier} onValueChange={setSupplier}>
@@ -580,7 +580,7 @@ export default function Facturas() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="grid gap-2">
                   <Label>Fecha</Label>
                   <Input type="date" value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} />
@@ -630,12 +630,12 @@ export default function Facturas() {
                 </Label>
               </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="flex-col gap-2 sm:flex-row">
               {!currentBusinessId && (
                 <p className="text-sm text-muted-foreground mr-auto">Selecciona un negocio para continuar</p>
               )}
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
-              <Button onClick={handleCreateInvoice} disabled={createInvoice.isPending || !currentBusinessId}>
+              <Button className="w-full sm:w-auto" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
+              <Button className="w-full sm:w-auto" onClick={handleCreateInvoice} disabled={createInvoice.isPending || !currentBusinessId}>
                 {createInvoice.isPending ? "Guardando..." : "Registrar factura"}
               </Button>
             </DialogFooter>

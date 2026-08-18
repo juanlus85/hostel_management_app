@@ -336,7 +336,7 @@
 - [x] Mejorar responsive del Dashboard (tarjetas en columna en móvil)
 - [x] Mejorar responsive del calendario de Turnos (scroll horizontal, vista compacta)
 - [x] Mejorar responsive de Caja (formulario en columna)
-- [ ] Mejorar responsive de Facturas (lista compacta en móvil)
+- [x] Mejorar responsive de Facturas (lista compacta en móvil)
 
 
 ## Bug Corregido (v17)
