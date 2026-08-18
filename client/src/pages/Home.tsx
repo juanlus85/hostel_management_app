@@ -18,6 +18,11 @@ import {
 import { useMemo, useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { aggregateSupplierExpenses } from "@shared/supplierExpenses";
+import { mergeDashboardTrends } from "@shared/dashboardTrend";
+import { CategoryScale, Chart as ChartJS, Legend, LineElement, LinearScale, PointElement, Tooltip } from "chart.js";
+import { Line } from "react-chartjs-2";
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend);
 
 type PeriodType = "week" | "month" | "quarter" | "year" | "custom";
 
@@ -112,6 +117,14 @@ export default function Home() {
     { businessId: tiendaId!, ...dateRange },
     { enabled: !!tiendaId && user?.role === "admin" && (selectedBusiness === "tienda" || selectedBusiness === "all") }
   );
+  const { data: hostelTrend } = trpc.dashboard.trend.useQuery(
+    { businessId: hostelId!, ...dateRange },
+    { enabled: !!hostelId && user?.role === "admin" && (selectedBusiness === "hostel" || selectedBusiness === "all") }
+  );
+  const { data: tiendaTrend } = trpc.dashboard.trend.useQuery(
+    { businessId: tiendaId!, ...dateRange },
+    { enabled: !!tiendaId && user?.role === "admin" && (selectedBusiness === "tienda" || selectedBusiness === "all") }
+  );
 
   const stats = useMemo(() => {
     if (selectedBusiness === "hostel") return hostelStats;
@@ -149,6 +162,19 @@ export default function Home() {
       ...(tiendaSupplierExpenses || []).map((expense) => ({ supplier: expense.supplier, totalAmount: expense.total })),
     ]);
   }, [selectedBusiness, hostelSupplierExpenses, tiendaSupplierExpenses]);
+  const trendRows = useMemo(() => {
+    if (selectedBusiness === "hostel") return hostelTrend || [];
+    if (selectedBusiness === "tienda") return tiendaTrend || [];
+    return mergeDashboardTrends(hostelTrend || [], tiendaTrend || []);
+  }, [selectedBusiness, hostelTrend, tiendaTrend]);
+  const trendData = useMemo(() => ({
+    labels: trendRows.map((row) => new Date(`${row.date}T00:00:00`).toLocaleDateString("es-ES", { day: "2-digit", month: "short" })),
+    datasets: [
+      { label: "Ingresos", data: trendRows.map((row) => row.income), borderColor: "#16a34a", backgroundColor: "rgba(22,163,74,.12)", tension: .25 },
+      { label: "Gastos", data: trendRows.map((row) => row.expenses), borderColor: "#dc2626", backgroundColor: "rgba(220,38,38,.12)", tension: .25 },
+      { label: "Balance", data: trendRows.map((row) => row.balance), borderColor: "#2563eb", backgroundColor: "rgba(37,99,235,.12)", tension: .25 },
+    ],
+  }), [trendRows]);
 
   return (
     <div className="space-y-6">
@@ -286,6 +312,16 @@ export default function Home() {
         </CardHeader>
         <CardContent>
           {supplierExpenses.length ? <div className="divide-y rounded-md border">{supplierExpenses.slice(0, 8).map((expense) => <div key={expense.supplier} className="flex items-center justify-between gap-4 p-3"><div className="min-w-0"><p className="truncate font-medium">{expense.supplier}</p><p className="text-xs text-muted-foreground">{expense.invoiceCount} factura{expense.invoiceCount !== 1 ? "s" : ""}</p></div><p className="shrink-0 font-semibold text-red-600">€{expense.total.toFixed(2)}</p></div>)}</div> : <p className="py-4 text-sm text-muted-foreground">No hay facturas registradas para este periodo.</p>}
+        </CardContent>
+      </Card>}
+
+      {isAdmin && <Card>
+        <CardHeader>
+          <CardTitle>Tendencia financiera</CardTitle>
+          <CardDescription>Evolución diaria de ingresos, gastos y balance durante {periodLabel}.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {trendRows.length ? <div className="h-72"><Line data={trendData} options={{ responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false }, plugins: { legend: { position: "bottom" } }, scales: { y: { ticks: { callback: (value) => `€${value}` } } } }} /></div> : <p className="py-4 text-sm text-muted-foreground">No hay movimientos registrados para mostrar una tendencia en este periodo.</p>}
         </CardContent>
       </Card>}
 

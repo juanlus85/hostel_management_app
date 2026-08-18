@@ -1080,6 +1080,13 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
     })).query(async ({ input }) => {
       return db.getSupplierExpenses(input.businessId, input.startDate, input.endDate);
     }),
+    trend: adminProcedure.input(z.object({
+      businessId: z.number(),
+      startDate: z.string(),
+      endDate: z.string(),
+    })).query(async ({ input }) => {
+      return db.getDashboardTrend(input.businessId, input.startDate, input.endDate);
+    }),
     hoursWorked: protectedProcedure.input(z.object({
       userId: z.number(),
       startDate: z.string(),

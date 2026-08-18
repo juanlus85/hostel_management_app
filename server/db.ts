@@ -1,6 +1,7 @@
 import { eq, and, gte, lte, desc, asc, sql, or, like, notInArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { aggregateDailyCashSales } from "../shared/dailyCashSales";
+import { aggregateDashboardTrend } from "../shared/dashboardTrend";
 import { 
   InsertUser, users, 
   businesses, InsertBusiness, Business,
@@ -626,6 +627,23 @@ export async function getSupplierExpenses(businessId: number, startDate: string,
       lte(invoices.invoiceDate, endDate),
     ));
   return aggregateSupplierExpenses(invs);
+}
+
+export async function getDashboardTrend(businessId: number, startDate: string, endDate: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const [closings, invs, others] = await Promise.all([
+    db.select({ date: cashClosings.date, amount: cashClosings.zReading, status: cashClosings.status }).from(cashClosings).where(and(eq(cashClosings.businessId, businessId), gte(cashClosings.date, startDate), lte(cashClosings.date, endDate))),
+    db.select({ date: invoices.invoiceDate, amount: invoices.totalAmount }).from(invoices).where(and(eq(invoices.businessId, businessId), gte(invoices.invoiceDate, startDate), lte(invoices.invoiceDate, endDate))),
+    db.select({ date: otrosGastos.fecha, amount: otrosGastos.importe, type: otrosGastos.type }).from(otrosGastos).where(and(eq(otrosGastos.businessId, businessId), gte(otrosGastos.fecha, startDate), lte(otrosGastos.fecha, endDate))),
+  ]);
+  return aggregateDashboardTrend([
+    ...closings.filter((closing) => closing.status === "closed").map((closing) => ({ date: closing.date, amount: closing.amount })),
+    ...others.filter((entry) => entry.type === "ingreso").map((entry) => ({ date: entry.date, amount: entry.amount })),
+  ], [
+    ...invs.filter((invoice) => Boolean(invoice.date)).map((invoice) => ({ date: invoice.date!, amount: invoice.amount })),
+    ...others.filter((entry) => entry.type === "gasto").map((entry) => ({ date: entry.date, amount: entry.amount })),
+  ]);
 }
 
 export async function getHoursWorkedByUser(userId: number, startDate: string, endDate: string) {

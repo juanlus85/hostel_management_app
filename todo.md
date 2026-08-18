@@ -49,7 +49,7 @@
 - [x] Horas trabajadas por empleado
 - [x] Descuadres acumulados
 - [x] Gastos por proveedor
-- [ ] Gráficos de tendencias
+- [x] Gráficos de tendencias
 - [ ] Exportación a PDF/Excel
 
 ## Interfaz de Usuario
@@ -251,7 +251,7 @@
 
 ### Dashboard
 - [x] Gastos por proveedor
-- [ ] Gráficos de tendencias
+- [x] Gráficos de tendencias
 - [ ] Exportación a PDF/Excel
 
 ### Documentación
