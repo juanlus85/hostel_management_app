@@ -224,10 +224,10 @@ export default function Home() {
             Bienvenido, {user?.name}. Resumen de {businessLabel} {periodLabel}.
           </p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex w-full items-center gap-2 flex-wrap sm:w-auto">
           <CalendarDays className="h-4 w-4 text-muted-foreground" />
           <Select value={period} onValueChange={(v: PeriodType) => setPeriod(v)}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -239,24 +239,24 @@ export default function Home() {
             </SelectContent>
           </Select>
           {period === "custom" && (
-            <div className="flex items-center gap-2">
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
               <input
                 type="date"
                 value={customStartDate}
                 onChange={(e) => setCustomStartDate(e.target.value)}
-                className="px-3 py-1.5 border rounded-md text-sm"
+                className="w-full px-3 py-1.5 border rounded-md text-sm sm:w-auto"
               />
-              <span className="text-sm text-muted-foreground">-</span>
+              <span className="hidden text-sm text-muted-foreground sm:inline">-</span>
               <input
                 type="date"
                 value={customEndDate}
                 onChange={(e) => setCustomEndDate(e.target.value)}
-                className="px-3 py-1.5 border rounded-md text-sm"
+                className="w-full px-3 py-1.5 border rounded-md text-sm sm:w-auto"
               />
             </div>
           )}
-          {isAdmin && <Button variant="outline" size="sm" onClick={handleExportDashboard}><Download className="mr-2 h-4 w-4" />Exportar XLSX</Button>}
-          {isAdmin && <Button variant="outline" size="sm" onClick={handleExportDashboardPdf}><FileText className="mr-2 h-4 w-4" />Exportar PDF</Button>}
+          {isAdmin && <Button variant="outline" size="sm" className="flex-1 sm:flex-none" onClick={handleExportDashboard}><Download className="mr-2 h-4 w-4" />Exportar XLSX</Button>}
+          {isAdmin && <Button variant="outline" size="sm" className="flex-1 sm:flex-none" onClick={handleExportDashboardPdf}><FileText className="mr-2 h-4 w-4" />Exportar PDF</Button>}
         </div>
       </div>
 
