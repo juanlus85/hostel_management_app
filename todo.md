@@ -257,7 +257,7 @@
 - [x] Exportación XLSX del dashboard (resumen, proveedores y tendencias)
 
 ### Documentación
-- [ ] Documentación de despliegue en VPS
+- [x] Documentación de despliegue en VPS
 
 
 ## Mejoras Solicitadas (v13)
