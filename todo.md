@@ -1594,3 +1594,8 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Ajustar automáticamente los huéspedes al tipo de habitación y permitir completar todos los integrantes del grupo.
 - [x] Traducir al inglés el mensaje de WhatsApp cuando el huésped eligió inglés.
 - [x] Garantizar el email a recepción al completar un Check-in Anticipado, con todos los datos del huésped.
+
+## Correcciones de guía y enlaces online
+- [x] Traducir tipo de habitación y planta correctamente en la guía en inglés.
+- [x] Mostrar la dirección completa con enlace a Google Maps.
+- [x] Corregir la copia de enlaces creados en dispositivos móviles.

@@ -82,7 +82,21 @@ export default function CheckinOnline() {
 
   const copy = async (link: string) => {
     try {
-      await navigator.clipboard.writeText(link);
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(link);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = link;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        textarea.setSelectionRange(0, textarea.value.length);
+        const copied = document.execCommand("copy");
+        document.body.removeChild(textarea);
+        if (!copied) throw new Error("copy failed");
+      }
       toast.success("Enlace copiado al portapapeles");
     } catch {
       toast.error("No se pudo copiar el enlace. Selecciónalo manualmente.");
