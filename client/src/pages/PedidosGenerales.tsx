@@ -10,6 +10,7 @@ import { Plus, Copy, Check, X, Calendar, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { filterOrderHistory, type OrderHistoryPeriod, type OrderHistoryStatus } from '@shared/orderHistory';
 
 const UNITS = ['unidades', 'packs', 'cajas', 'kg', 'litros'];
 
@@ -29,6 +30,9 @@ export default function PedidosGenerales() {
   const [customProductName, setCustomProductName] = useState('');
   const [quantity, setQuantity] = useState('');
   const [unit, setUnit] = useState('unidades');
+  const [orderView, setOrderView] = useState<'current' | 'history'>('current');
+  const [historyStatus, setHistoryStatus] = useState<OrderHistoryStatus>('all');
+  const [historyPeriod, setHistoryPeriod] = useState<OrderHistoryPeriod>('90');
 
   const { data: orders = [], refetch } = trpc.ordersPedidos.list.useQuery();
   const { data: products = [] } = trpc.inventoryProducts.list.useQuery();
@@ -262,6 +266,16 @@ ${order.notes ? `\nNotas: ${order.notes}` : ''}
     return 'pending';
   };
 
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' });
+  const currentOrders = orders.filter((order: any) => order.status === 'pending' || order.status === 'ordered');
+  const historicOrders = filterOrderHistory(
+    orders.filter((order: any) => order.status === 'delivered' || order.status === 'cancelled'),
+    historyStatus,
+    historyPeriod,
+    today,
+  );
+  const visibleOrders = orderView === 'current' ? currentOrders : historicOrders;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -375,7 +389,18 @@ ${order.notes ? `\nNotas: ${order.notes}` : ''}
       </div>
 
       <div className="grid gap-4">
-        {orders.map((order: any) => (
+        <div className="flex flex-col gap-3 rounded-lg border bg-muted/20 p-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="space-y-1">
+            <p className="text-sm font-medium">Consulta de pedidos</p>
+            <p className="text-xs text-muted-foreground">Los pedidos recibidos y cancelados permanecen disponibles para consulta.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant={orderView === 'current' ? 'default' : 'outline'} onClick={() => setOrderView('current')}>Pedidos activos ({currentOrders.length})</Button>
+            <Button size="sm" variant={orderView === 'history' ? 'default' : 'outline'} onClick={() => setOrderView('history')}>Historial</Button>
+          </div>
+        </div>
+        {orderView === 'history' && <div className="grid gap-3 rounded-lg border p-3 sm:grid-cols-2"><div className="space-y-2"><Label>Estado</Label><Select value={historyStatus} onValueChange={(value) => setHistoryStatus(value as OrderHistoryStatus)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Recibidos y cancelados</SelectItem><SelectItem value="delivered">Solo recibidos</SelectItem><SelectItem value="cancelled">Solo cancelados</SelectItem></SelectContent></Select></div><div className="space-y-2"><Label>Periodo</Label><Select value={historyPeriod} onValueChange={(value) => setHistoryPeriod(value as OrderHistoryPeriod)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="30">Últimos 30 días</SelectItem><SelectItem value="90">Últimos 90 días</SelectItem><SelectItem value="all">Todo el historial</SelectItem></SelectContent></Select></div></div>}
+        {visibleOrders.map((order: any) => (
           <Card key={order.id}>
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
@@ -398,10 +423,10 @@ ${order.notes ? `\nNotas: ${order.notes}` : ''}
                         </SelectItem>
                       </SelectContent>
                     </Select>
-                    {order.expectedDelivery && (
+                    {(order.actualDelivery || order.expectedDelivery) && (
                       <div className="flex items-center gap-1 text-sm text-muted-foreground">
                         <Calendar className="h-3 w-3" />
-                        {order.expectedDelivery}
+                        {order.status === 'delivered' ? `Recibido: ${order.actualDelivery || order.expectedDelivery}` : order.expectedDelivery}
                       </div>
                     )}
                   </div>
@@ -463,6 +488,7 @@ ${order.notes ? `\nNotas: ${order.notes}` : ''}
             </CardContent>
           </Card>
         ))}
+        {visibleOrders.length === 0 && <Card><CardContent className="py-10 text-center text-sm text-muted-foreground">{orderView === 'history' ? 'No hay pedidos que coincidan con los filtros seleccionados.' : 'No hay pedidos activos. Los pedidos recibidos se conservan en el historial.'}</CardContent></Card>}
       </div>
 
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>

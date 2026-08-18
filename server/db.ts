@@ -1937,10 +1937,15 @@ export async function updateOrderStatus(id: number, data: Partial<{
   if (data.notes !== undefined) updateData.notes = data.notes;
   
   // Map isOrdered and isReceived to status
-  if (data.isReceived) {
+  if (data.isReceived === true) {
     updateData.status = 'delivered';
-  } else if (data.isOrdered) {
+    updateData.actualDelivery = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Madrid" });
+  } else if (data.isOrdered === true) {
     updateData.status = 'ordered';
+    updateData.actualDelivery = null;
+  } else if (data.isOrdered === false) {
+    updateData.status = 'pending';
+    updateData.actualDelivery = null;
   }
   
   await db.update(orders).set(updateData).where(eq(orders.id, id));

@@ -35,7 +35,7 @@
 - [x] Lista de productos con stock actual y mínimo
 - [x] Alertas automáticas cuando stock < mínimo
 - [ ] Generación de lista de compra semanal
-- [ ] Historial de pedidos
+- [x] Historial de pedidos
 - [x] Seguimiento de proveedores
 
 ## Incidencias y Tareas
@@ -247,7 +247,7 @@
 
 ### Inventario
 - [ ] Generación de lista de compra semanal
-- [ ] Historial de pedidos
+- [x] Historial de pedidos
 
 ### Dashboard
 - [ ] Gastos por proveedor
