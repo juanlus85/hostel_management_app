@@ -290,7 +290,7 @@ export default function Caja() {
           </h1>
           <p className="text-muted-foreground capitalize">{formatDate(currentDate)}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
           <Button variant="outline" size="icon" onClick={() => navigateDate(-1)}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -298,7 +298,7 @@ export default function Caja() {
             type="date"
             value={currentDate}
             onChange={(e) => setCurrentDate(e.target.value)}
-            className="w-40"
+            className="min-w-0 flex-1 sm:w-40 sm:flex-none"
           />
           <Button variant="outline" size="icon" onClick={() => navigateDate(1)}>
             <ChevronRight className="h-4 w-4" />
@@ -507,7 +507,7 @@ export default function Caja() {
 
               <Separator className="my-4" />
 
-              <div className="flex justify-between items-center text-lg font-semibold">
+              <div className="flex flex-col gap-1 text-lg font-semibold sm:flex-row sm:items-center sm:justify-between">
                 <span>Total Efectivo:</span>
                 <span className="text-green-600">€{totalCashCalc.toFixed(2)}</span>
               </div>
@@ -516,7 +516,7 @@ export default function Caja() {
 
           {/* Movements */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <FileText className="h-5 w-5" />
@@ -527,7 +527,7 @@ export default function Caja() {
               {!isClosed && (
                 <Dialog open={showMovementDialog} onOpenChange={setShowMovementDialog}>
                   <DialogTrigger asChild>
-                    <Button size="sm">
+                    <Button size="sm" className="w-full sm:w-auto">
                       <Plus className="h-4 w-4 mr-1" /> Añadir
                     </Button>
                   </DialogTrigger>
