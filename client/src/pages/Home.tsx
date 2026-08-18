@@ -15,7 +15,8 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   CalendarDays,
-  Download
+  Download,
+  FileText
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -25,6 +26,7 @@ import { mergeDashboardTrends } from "@shared/dashboardTrend";
 import { CategoryScale, Chart as ChartJS, Legend, LineElement, LinearScale, PointElement, Tooltip } from "chart.js";
 import { Line } from "react-chartjs-2";
 import * as XLSX from "xlsx";
+import { jsPDF } from "jspdf";
 import { buildDashboardExportRows } from "@shared/dashboardExport";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend);
@@ -193,6 +195,21 @@ export default function Home() {
       toast.error("No se pudo exportar el informe XLSX");
     }
   };
+  const handleExportDashboardPdf = () => {
+    try {
+      const doc = new jsPDF();
+      let y = 18;
+      doc.setFontSize(17); doc.text(`Informe de Dashboard · ${businessLabel}`, 14, y); y += 9;
+      doc.setFontSize(10); doc.text(`Periodo: ${dateRange.startDate} — ${dateRange.endDate} (${periodLabel})`, 14, y); y += 12;
+      doc.setFontSize(12); doc.text("Resumen financiero", 14, y); y += 7;
+      doc.setFontSize(10);
+      [["Ingresos", stats?.totalIncome || 0], ["Gastos", stats?.totalExpenses || 0], ["Balance", stats?.netResult || 0], ["Descuadre", stats?.totalDifference || 0]].forEach(([label, value]) => { doc.text(`${label}: €${Number(value).toFixed(2)}`, 14, y); y += 6; });
+      y += 4; doc.setFontSize(12); doc.text("Gastos por proveedor", 14, y); y += 7; doc.setFontSize(10);
+      (supplierExpenses.slice(0, 12)).forEach((supplier) => { if (y > 280) { doc.addPage(); y = 18; } doc.text(`${supplier.supplier} · ${supplier.invoiceCount} factura(s): €${supplier.total.toFixed(2)}`, 14, y); y += 6; });
+      doc.save(`DASHBOARD_${dateRange.startDate}_${dateRange.endDate}.pdf`);
+      toast.success("Informe PDF exportado correctamente");
+    } catch { toast.error("No se pudo exportar el informe PDF"); }
+  };
 
   return (
     <div className="space-y-6">
@@ -239,6 +256,7 @@ export default function Home() {
             </div>
           )}
           {isAdmin && <Button variant="outline" size="sm" onClick={handleExportDashboard}><Download className="mr-2 h-4 w-4" />Exportar XLSX</Button>}
+          {isAdmin && <Button variant="outline" size="sm" onClick={handleExportDashboardPdf}><FileText className="mr-2 h-4 w-4" />Exportar PDF</Button>}
         </div>
       </div>
 

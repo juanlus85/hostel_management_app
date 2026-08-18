@@ -50,7 +50,7 @@
 - [x] Descuadres acumulados
 - [x] Gastos por proveedor
 - [x] Gráficos de tendencias
-- [ ] Exportación a PDF/Excel
+- [x] Exportación a PDF/Excel
 - [x] Exportación XLSX del dashboard (resumen, proveedores y tendencias)
 
 ## Interfaz de Usuario
@@ -253,7 +253,7 @@
 ### Dashboard
 - [x] Gastos por proveedor
 - [x] Gráficos de tendencias
-- [ ] Exportación a PDF/Excel
+- [x] Exportación a PDF/Excel
 - [x] Exportación XLSX del dashboard (resumen, proveedores y tendencias)
 
 ### Documentación
