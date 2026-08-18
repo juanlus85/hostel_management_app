@@ -492,13 +492,13 @@ export default function Turnos() {
         <TabsContent value="week">
           <Card>
             <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <CardTitle>Calendario semanal</CardTitle>
-                <div className="flex items-center gap-2">
+                <div className="flex w-full items-center justify-between gap-2 sm:w-auto">
                   <Button variant="outline" size="icon" onClick={() => navigateWeek(-1)}>
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
-                  <span className="text-sm font-medium min-w-[180px] text-center">{formatWeekRange()}</span>
+                  <span className="text-xs font-medium text-center sm:min-w-[180px] sm:text-sm">{formatWeekRange()}</span>
                   <Button variant="outline" size="icon" onClick={() => navigateWeek(1)}>
                     <ChevronRight className="h-4 w-4" />
                   </Button>
@@ -507,14 +507,14 @@ export default function Turnos() {
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
-                <div className="min-w-[700px]">
+                <div className="min-w-[640px] sm:min-w-[700px]">
                   {/* Header */}
                   <div className="grid grid-cols-8 gap-1 mb-2">
-                    <div className="p-2 text-sm font-medium text-muted-foreground">Empleado</div>
+                    <div className="p-1 text-xs font-medium text-muted-foreground sm:p-2 sm:text-sm">Empleado</div>
                     {weekDays.map((day, i) => {
                       const isToday = day.toDateString() === new Date().toDateString();
                       return (
-                        <div key={i} className={`p-2 text-center rounded-lg ${isToday ? 'bg-primary/10' : ''}`}>
+                        <div key={i} className={`p-1 text-center rounded-lg sm:p-2 ${isToday ? 'bg-primary/10' : ''}`}>
                           <div className="text-xs text-muted-foreground">{DAYS[i]}</div>
                           <div className={`text-sm font-medium ${isToday ? 'text-primary' : ''}`}>{day.getDate()}</div>
                         </div>
@@ -528,10 +528,10 @@ export default function Turnos() {
                     const colorClass = getUserColor(u.id);
                     const customColor = getUserColorHex(u.id);
                     return (
-                      <div key={u.id} className="grid grid-cols-8 gap-1 border-t py-2">
-                        <div className="p-2 flex items-center">
+                      <div key={u.id} className="grid grid-cols-8 gap-1 border-t py-1 sm:py-2">
+                        <div className="p-1 sm:p-2 flex items-center">
                           <span 
-                            className={`text-sm font-medium px-2 py-1 rounded border ${colorClass || ''}`}
+                            className={`text-xs font-medium px-1 py-1 rounded border sm:px-2 sm:text-sm ${colorClass || ''}`}
                             style={customColor ? {
                               backgroundColor: `${customColor}15`,
                               color: customColor,

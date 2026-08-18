@@ -334,7 +334,7 @@
 
 ## Mejoras Responsive (v17)
 - [x] Mejorar responsive del Dashboard (tarjetas en columna en móvil)
-- [ ] Mejorar responsive del calendario de Turnos (scroll horizontal, vista compacta)
+- [x] Mejorar responsive del calendario de Turnos (scroll horizontal, vista compacta)
 - [ ] Mejorar responsive de Caja (formulario en columna)
 - [ ] Mejorar responsive de Facturas (lista compacta en móvil)
 
