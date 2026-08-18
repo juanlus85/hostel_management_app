@@ -6,10 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { Package, Plus, Trash2, Edit2, Check, AlertTriangle } from "lucide-react";
+import { Package, Plus, Trash2, Edit2, Check, AlertTriangle, ClipboardList, Copy } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { buildWeeklyShoppingList } from "@shared/weeklyShoppingList";
 
 const CATEGORIES = ["Bebidas", "Alimentación", "Limpieza", "Papelería", "Bocatas", "Otros"];
 
@@ -26,6 +28,7 @@ export default function Inventario() {
   const [quantity, setQuantity] = useState("");
   const [unit, setUnit] = useState("unidad");
   const [searchTerm, setSearchTerm] = useState("");
+  const [isWeeklyListOpen, setIsWeeklyListOpen] = useState(false);
   
   // Edit states
   const [editName, setEditName] = useState("");
@@ -189,6 +192,16 @@ export default function Inventario() {
   }, [filteredInventory]);
 
   const businessLabel = selectedBusiness === "hostel" ? "Hostel" : selectedBusiness === "tienda" ? "Tienda" : "Ambos";
+  const weeklyShoppingList = useMemo(() => buildWeeklyShoppingList(inventory, businessLabel), [inventory, businessLabel]);
+
+  const copyWeeklyShoppingList = async () => {
+    try {
+      await navigator.clipboard.writeText(weeklyShoppingList);
+      toast.success("Lista semanal copiada al portapapeles");
+    } catch {
+      toast.error("No se pudo copiar la lista. Selecciónala manualmente.");
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -201,6 +214,10 @@ export default function Inventario() {
           </h1>
           <p className="text-muted-foreground">Lista de productos que faltan o hay que pedir</p>
         </div>
+        <Button variant="outline" onClick={() => setIsWeeklyListOpen(true)} disabled={inventory.length === 0}>
+          <ClipboardList className="h-4 w-4 mr-2" />
+          Lista semanal
+        </Button>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button>
@@ -311,6 +328,20 @@ export default function Inventario() {
           </DialogContent>
         </Dialog>
       </div>
+
+      <Dialog open={isWeeklyListOpen} onOpenChange={setIsWeeklyListOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Lista de compra semanal · {businessLabel}</DialogTitle>
+            <DialogDescription>Los productos pendientes se agrupan por proveedor para poder copiarlos y enviarlos fácilmente.</DialogDescription>
+          </DialogHeader>
+          <Textarea readOnly value={weeklyShoppingList} className="min-h-72 font-mono text-sm" />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsWeeklyListOpen(false)}>Cerrar</Button>
+            <Button onClick={copyWeeklyShoppingList}><Copy className="mr-2 h-4 w-4" />Copiar lista</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Alert if there are items */}
       {inventory && inventory.length > 0 && (

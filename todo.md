@@ -34,7 +34,7 @@
 ## Inventario y Pedidos
 - [x] Lista de productos con stock actual y mínimo
 - [x] Alertas automáticas cuando stock < mínimo
-- [ ] Generación de lista de compra semanal
+- [x] Generación de lista de compra semanal
 - [x] Historial de pedidos
 - [x] Seguimiento de proveedores
 
@@ -246,7 +246,7 @@
 - [ ] Crear empleados iniciales: Ana y Juanlu
 
 ### Inventario
-- [ ] Generación de lista de compra semanal
+- [x] Generación de lista de compra semanal
 - [x] Historial de pedidos
 
 ### Dashboard
