@@ -61,7 +61,7 @@
 
 ## Pruebas y Documentación
 - [x] Tests unitarios para funciones críticas
-- [ ] Documentación de despliegue en VPS
+- [x] Documentación de despliegue en VPS
 
 
 ## Mejoras Solicitadas (v2)
