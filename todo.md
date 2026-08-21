@@ -1607,3 +1607,6 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Establecer Booking.com y Plataforma como valores predeterminados al crear enlace.
 - [x] Añadir el logotipo del hostel en la cabecera del formulario público.
 - [x] Corregir el error que impide completar reservas con varios huéspedes.
+
+## Ajuste de correo Check-in Online
+- [x] Retirar el bloque azul de bienvenida del correo enviado tras completar el Check-in Online.
