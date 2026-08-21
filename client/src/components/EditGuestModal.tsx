@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { COUNTRIES, PAYMENT_TYPES } from "@/../../shared/countries";
 import { normalizeGuestGender } from "@shared/guestGender";
+import { toDatabaseDate, toDateTimeLocal } from "@shared/checkinDateInput";
 
 interface EditGuestModalProps {
   guest: any;
@@ -78,25 +79,25 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
   useEffect(() => {
     if (guest && open) {
       // Calcular fechas por defecto si el huésped dio fecha de llegada
-      let defaultCheckIn = guest.checkInDate || "";
-      let defaultCheckOut = guest.checkOutDate || "";
-      let defaultPaymentDate = guest.paymentDate || "";
+      let defaultCheckIn = toDateTimeLocal(guest.checkInDate);
+      let defaultCheckOut = toDateTimeLocal(guest.checkOutDate);
+      let defaultPaymentDate = toDatabaseDate(String(guest.paymentDate || "")) || "";
       
       if (guest.checkInDate && !guest.checkOutDate) {
         // Si tiene fecha de llegada pero no de salida, calcular +1 día a las 11:00
-        const checkInDate = new Date(guest.checkInDate);
-        checkInDate.setHours(11, 0, 0, 0);
-        defaultCheckIn = checkInDate.toISOString().slice(0, 16);
-        
-        const checkOutDate = new Date(checkInDate);
-        checkOutDate.setDate(checkOutDate.getDate() + 1);
-        checkOutDate.setHours(11, 0, 0, 0);
-        defaultCheckOut = checkOutDate.toISOString().slice(0, 16);
+        const checkInDate = new Date(defaultCheckIn);
+        if (!Number.isNaN(checkInDate.getTime())) {
+          checkInDate.setHours(11, 0, 0, 0);
+          defaultCheckIn = toDateTimeLocal(checkInDate);
+          const checkOutDate = new Date(checkInDate);
+          checkOutDate.setDate(checkOutDate.getDate() + 1);
+          defaultCheckOut = toDateTimeLocal(checkOutDate);
+        }
       }
       
       // Fecha de pago por defecto: fecha del check-in (solo fecha, sin hora)
       if (!defaultPaymentDate && guest.checkInDate) {
-        defaultPaymentDate = guest.checkInDate.slice(0, 10); // YYYY-MM-DD
+        defaultPaymentDate = toDatabaseDate(String(guest.checkInDate)) || "";
       }
       
       setFormData({
@@ -164,13 +165,6 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
     }
 
     // Convertir fechas datetime-local a formato YYYY-MM-DD para la base de datos
-    const formatDateForDB = (dateStr: string) => {
-      if (!dateStr) return undefined;
-      // Si ya está en formato YYYY-MM-DD, devolver tal cual
-      if (dateStr.length === 10) return dateStr;
-      // Si es datetime-local (YYYY-MM-DDTHH:mm), extraer solo la fecha
-      return dateStr.slice(0, 10);
-    };
     
     const updateData: any = {
       id: guest.id,
@@ -181,7 +175,7 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
       documentNumber: formData.documentNumber,
       documentSupport: formData.documentSupport || undefined,
       gender: normalizeGuestGender(formData.gender),
-      birthDate: formatDateForDB(formData.birthDate),
+      birthDate: toDatabaseDate(formData.birthDate),
       phone: formData.phone,
       email: formData.email,
       street: formData.street,
@@ -190,8 +184,8 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
       postalCode: formData.postalCode,
       country: formData.country,
       reservationNumber: formData.reservationNumber || undefined,
-      checkInDate: formatDateForDB(formData.checkInDate),
-      checkOutDate: formatDateForDB(formData.checkOutDate),
+      checkInDate: toDatabaseDate(formData.checkInDate),
+      checkOutDate: toDatabaseDate(formData.checkOutDate),
       roomNumber: formData.roomNumber || undefined,
       roomType: formData.roomType || undefined,
       roomCode: formData.roomCode || undefined,
@@ -201,7 +195,7 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
       accommodationType: formData.accommodationType as any,
       reservationOrigin: formData.reservationOrigin as any,
       paymentType: formData.paymentType as any,
-      paymentDate: formatDateForDB(formData.paymentDate),
+      paymentDate: toDatabaseDate(formData.paymentDate),
       paymentHolder: formData.paymentHolder || undefined,
       paymentMethod: formData.paymentMethod || undefined,
       amountPaid: formData.amountPaid || undefined,

@@ -58,6 +58,7 @@ import { Label } from "./ui/label";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { NotificationBell } from "./NotificationBell";
+import { APP_RELEASE_LABEL } from "@shared/appRelease";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
@@ -425,7 +426,7 @@ function DashboardLayoutContent({
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                  Versión v68 · 27/12/2025
+                  {APP_RELEASE_LABEL}
                 </div>
               </DropdownMenuContent>
             </DropdownMenu>
