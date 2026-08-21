@@ -1,5 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { useBusinessContext } from "@/components/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,7 @@ type PriorityValue = "low" | "medium" | "high" | "urgent";
 
 export default function Tareas() {
   const { user } = useAuth();
+  const { selectedBusiness } = useBusinessContext();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<any>(null);
@@ -47,7 +49,12 @@ export default function Tareas() {
   const utils = trpc.useUtils();
 
   const { data: users } = trpc.users.list.useQuery();
-  const { data: tasks, isLoading } = trpc.tasks.list.useQuery({});
+  const { data: businesses } = trpc.businesses.list.useQuery();
+  const currentBusinessId = businesses?.find((business) => business.code === selectedBusiness)?.id;
+  const { data: tasks, isLoading } = trpc.tasks.list.useQuery(
+    { businessId: selectedBusiness === "all" ? undefined : currentBusinessId },
+    { enabled: selectedBusiness === "all" || !!currentBusinessId }
+  );
 
   const createTask = trpc.tasks.create.useMutation({
     onSuccess: () => {
@@ -91,6 +98,7 @@ export default function Tareas() {
       return;
     }
     createTask.mutate({
+      businessId: selectedBusiness === "all" ? undefined : currentBusinessId,
       title,
       description,
       priority,

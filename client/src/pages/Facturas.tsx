@@ -689,7 +689,7 @@ export default function Facturas() {
         </Dialog>
       </div>
 
-      <Card>
+      <Card className="hidden" aria-hidden="true">
         <CardHeader>
           <div><CardTitle>Facturas emitidas</CardTitle><CardDescription>Documentos emitidos por The Spot Central Hostel, Sweet & Salty u Organizus.</CardDescription></div>
           <Dialog open={isIssuedDialogOpen} onOpenChange={setIsIssuedDialogOpen}>
@@ -994,6 +994,14 @@ export default function Facturas() {
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Facturas emitidas</CardTitle>
+          <CardDescription>Documentos emitidos por The Spot Central Hostel, Sweet & Salty u Organizus.</CardDescription>
+        </CardHeader>
+        <CardContent>{issuedInvoices?.length ? <div className="divide-y rounded-md border">{issuedInvoices.map((invoice) => <div key={invoice.id} className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-medium">{invoice.issuerBusiness} · {invoice.invoiceNumber || "Sin número"}</p><p className="text-sm text-muted-foreground">{invoice.invoiceDate}{invoice.recipient ? ` · ${invoice.recipient}` : ""}{invoice.totalAmount ? ` · €${invoice.totalAmount}` : ""}</p></div><div className="flex gap-2">{invoice.imageUrl && <Button size="sm" variant="outline" asChild><a href={invoice.imageUrl} target="_blank" rel="noreferrer"><FileDown className="mr-1 h-4 w-4" />Archivo</a></Button>}<Button size="sm" variant="outline" className="text-destructive" onClick={() => { if (confirm("¿Eliminar esta factura emitida?")) deleteIssuedInvoice.mutate({ id: invoice.id }); }}><Trash2 className="h-4 w-4" /></Button></div></div>)}</div> : <p className="py-3 text-sm text-muted-foreground">No hay facturas emitidas en el periodo seleccionado.</p>}</CardContent>
+      </Card>
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
