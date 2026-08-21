@@ -779,6 +779,7 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Agregar selector de datos (Hostel/Tienda/Total/Todos) en vista Acumulados
 - [x] Agregar vista de comparación multi-año superpuesta en Acumulados
 - [x] Agregar columna "Variación Anual %" en tablas de Vista Gráficas
+- [x] Corregir acumulados del año en curso y permitir seleccionar o deseleccionar años fácilmente.
 
 
 ## v82: Exportación XLSX en Cierre Trimestral

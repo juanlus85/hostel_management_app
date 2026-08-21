@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
+import { cumulativeMonthlySeries, toggleSelectedYear } from "@shared/historicalAccumulated";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -43,6 +44,7 @@ export default function HistoricoCajas() {
   const [dataToShow, setDataToShow] = useState<'hostel' | 'tienda' | 'total' | 'hostel_tienda' | 'all'>('all');
   const [acumuladosDataToShow, setAcumuladosDataToShow] = useState<'hostel' | 'tienda' | 'total' | 'all'>('all');
   const [acumuladosView, setAcumuladosView] = useState<'single' | 'multi'>('single'); // single year or multi-year comparison
+  const [selectedAccumulatedYears, setSelectedAccumulatedYears] = useState<number[]>([currentYear]);
 
   // Fetch historical data (2014-2025)
   const { data: historicalData } = trpc.historicalCash.getHistoricalData.useQuery();
@@ -195,6 +197,7 @@ export default function HistoricoCajas() {
   }, {} as { [year: number]: { [month: number]: string } }) || {};
 
   const years = Object.keys(hostelMonthlyTable).map(Number).sort();
+  const accumulatedYearOptions = Array.from(new Set([...yearOptions, ...years, currentYear])).sort((a, b) => a - b);
 
   // Combined chart data (Hostel + Tienda + Total)
   const allAnualDatasets = [
@@ -722,6 +725,7 @@ export default function HistoricoCajas() {
                     </SelectContent>
                   </Select>
                 </div>
+                {acumuladosView === 'multi' && <div className="rounded-lg border bg-muted/20 p-3"><div className="mb-2 flex items-center justify-between gap-3"><p className="text-sm font-medium">Años a comparar</p><div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => setSelectedAccumulatedYears(accumulatedYearOptions)}>Todos</Button><Button size="sm" variant="outline" onClick={() => setSelectedAccumulatedYears([])}>Ninguno</Button></div></div><div className="flex flex-wrap gap-2">{accumulatedYearOptions.slice().reverse().map((year) => <Button key={year} size="sm" variant={selectedAccumulatedYears.includes(year) ? "default" : "outline"} onClick={() => setSelectedAccumulatedYears((years) => toggleSelectedYear(years, year))}>{year}</Button>)}</div></div>}
 
                 {/* Gráfico de líneas acumulado */}
                 <div className="h-96">
@@ -790,17 +794,8 @@ export default function HistoricoCajas() {
                         
                         const datasets: any[] = [];
                         
-                        yearOptions.forEach((year, yearIdx) => {
-                          const yearData = historicalData?.filter(d => d.year === year) || [];
-                          const yearAnnualData = MONTHS.map((month, idx) => {
-                            const monthNum = idx + 1;
-                            const hostel = yearData.find(d => d.month === monthNum && d.businessType === 'hostel');
-                            const tienda = yearData.find(d => d.month === monthNum && d.businessType === 'tienda');
-                            return {
-                              hostelZ: hostel?.totalZ || "0.00",
-                              tiendaZ: tienda?.totalZ || "0.00",
-                            };
-                          });
+                        selectedAccumulatedYears.forEach((year, yearIdx) => {
+                          const yearAnnualData = MONTHS.map((_, idx) => ({ hostelZ: hostelMonthlyTable[year]?.[idx + 1] || "0.00", tiendaZ: tiendaMonthlyTable[year]?.[idx + 1] || "0.00" }));
                           
                           const color = colors[yearIdx % colors.length];
                           
@@ -808,11 +803,7 @@ export default function HistoricoCajas() {
                           if (acumuladosDataToShow === 'all' || acumuladosDataToShow === 'hostel') {
                             datasets.push({
                               label: `Hostel ${year}`,
-                              data: yearAnnualData.reduce((acc: number[], row, idx) => {
-                                const prev = idx > 0 ? acc[idx - 1] : 0;
-                                acc.push(prev + parseFloat(row.hostelZ));
-                                return acc;
-                              }, []),
+                              data: cumulativeMonthlySeries(yearAnnualData.map((row) => row.hostelZ)),
                               borderColor: color,
                               backgroundColor: color.replace('rgb', 'rgba').replace(')', ', 0.1)'),
                               tension: 0.4,
@@ -823,11 +814,7 @@ export default function HistoricoCajas() {
                           if (acumuladosDataToShow === 'all' || acumuladosDataToShow === 'tienda') {
                             datasets.push({
                               label: `Tienda ${year}`,
-                              data: yearAnnualData.reduce((acc: number[], row, idx) => {
-                                const prev = idx > 0 ? acc[idx - 1] : 0;
-                                acc.push(prev + parseFloat(row.tiendaZ));
-                                return acc;
-                              }, []),
+                              data: cumulativeMonthlySeries(yearAnnualData.map((row) => row.tiendaZ)),
                               borderColor: color,
                               backgroundColor: color.replace('rgb', 'rgba').replace(')', ', 0.1)'),
                               tension: 0.4,
@@ -839,12 +826,7 @@ export default function HistoricoCajas() {
                           if (acumuladosDataToShow === 'all' || acumuladosDataToShow === 'total') {
                             datasets.push({
                               label: `Total ${year}`,
-                              data: yearAnnualData.reduce((acc: number[], row, idx) => {
-                                const prev = idx > 0 ? acc[idx - 1] : 0;
-                                const total = parseFloat(row.hostelZ) + parseFloat(row.tiendaZ);
-                                acc.push(prev + total);
-                                return acc;
-                              }, []),
+                              data: cumulativeMonthlySeries(yearAnnualData.map((row) => parseFloat(row.hostelZ) + parseFloat(row.tiendaZ))),
                               borderColor: color,
                               backgroundColor: color.replace('rgb', 'rgba').replace(')', ', 0.1)'),
                               tension: 0.4,
