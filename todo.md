@@ -1026,9 +1026,9 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 ### Pestaña Huéspedes
 - [x] Búsqueda por nombre, documento, reserva, fechas
 - [x] Tarjetas de huéspedes con estados
-- [ ] Ver detalles completos - Próxima fase
-- [ ] Editar huésped existente - Próxima fase
-- [ ] Descargar PDF individual - Próxima fase
+- [x] Ver detalles completos - Próxima fase
+- [x] Editar huésped existente - Próxima fase
+- [x] Descargar PDF individual - Próxima fase
 - [x] Eliminar huésped
 
 ### Pestaña Check-in Anticipado
@@ -1330,10 +1330,10 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Check-in Anticipado: Formulario web público para que huéspedes completen datos antes de llegar
 - [x] Check-in Anticipado: Sin generación de códigos de acceso (solo recopilación de datos)
 - [x] Check-in Anticipado: Validación de campos obligatorios y guardado en base de datos
-- [ ] Check-in Online: Sistema de auto check-in con generación automática de códigos
-- [ ] Check-in Online: Envío de códigos por email/SMS al huésped
-- [ ] Check-in Online: Interfaz pública accesible sin login
-- [ ] Backend: Endpoints para ambos tipos de check-in
+- [x] Check-in Online: Sistema de auto check-in con generación automática de códigos
+- [x] Check-in Online: Envío de códigos por email/SMS al huésped
+- [x] Check-in Online: Interfaz pública accesible sin login
+- [x] Backend: Endpoints para ambos tipos de check-in
 - [ ] Frontend: Interfaces públicas y privadas para gestión
 
 
