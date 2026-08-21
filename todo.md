@@ -1620,6 +1620,9 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 ## Identificación de versión
 - [x] Mostrar una versión y fecha de compilación discretas en la interfaz de administración.
 
+## Orden de trabajadores en Turnos
+- [x] Permitir definir y guardar el orden de aparición de trabajadores en el calendario.
+
 ## Facturas emitidas
 - [x] Crear y subir facturas emitidas desde Facturas, de forma separada de las recibidas.
 - [x] Permitir seleccionar The Spot Central Hostel, Sweet & Salty u Organizus al registrar una factura emitida.

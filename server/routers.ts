@@ -100,6 +100,10 @@ export const appRouter = router({
       await db.updateUser(id, data);
       return { success: true };
     }),
+    reorder: adminProcedure.input(z.object({ userIds: z.array(z.number().int()).min(1) })).mutation(async ({ input }) => {
+      await db.updateUserDisplayOrders(input.userIds);
+      return { success: true };
+    }),
     delete: adminProcedure.input(z.object({ userId: z.number() })).mutation(async ({ input, ctx }) => {
       // Prevent deleting yourself
       if (ctx.user.id === input.userId) {

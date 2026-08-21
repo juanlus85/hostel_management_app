@@ -10,7 +10,8 @@ import { trpc } from "@/lib/trpc";
 import { canBeScheduled } from "@shared/shiftEligibility";
 import { canRescheduleShift } from "@shared/shiftDragDrop";
 import { monthlyReportHours, totalReportHours } from "@shared/hoursReport";
-import { Calendar, Clock, Plus, Play, Square, ChevronLeft, ChevronRight, Edit2, Trash2, CalendarDays, CalendarRange, Wand2, GripVertical, FileText } from "lucide-react";
+import { moveIdInOrder } from "@shared/workerDisplayOrder";
+import { Calendar, Clock, Plus, Play, Square, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Edit2, Trash2, CalendarDays, CalendarRange, Wand2, GripVertical, FileText, ListOrdered } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { jsPDF } from "jspdf";
@@ -51,6 +52,8 @@ export default function Turnos() {
   const [isHoursReportDialogOpen, setIsHoursReportDialogOpen] = useState(false);
   const [hoursReportMode, setHoursReportMode] = useState<"all" | "employee">("all");
   const [hoursReportUserId, setHoursReportUserId] = useState("");
+  const [isWorkerOrderDialogOpen, setIsWorkerOrderDialogOpen] = useState(false);
+  const [workerOrderDraft, setWorkerOrderDraft] = useState<number[]>([]);
   const initialReportDate = new Date();
   const [hoursReportStart, setHoursReportStart] = useState(`${initialReportDate.getFullYear()}-${String(initialReportDate.getMonth() + 1).padStart(2, "0")}-01`);
   const [hoursReportEnd, setHoursReportEnd] = useState(`${initialReportDate.getFullYear()}-${String(initialReportDate.getMonth() + 1).padStart(2, "0")}-${String(new Date(initialReportDate.getFullYear(), initialReportDate.getMonth() + 1, 0).getDate()).padStart(2, "0")}`);
@@ -124,7 +127,7 @@ export default function Turnos() {
   }, [currentDate]);
 
   const { data: users } = trpc.users.list.useQuery();
-  const shiftUsers = (users || []).filter((user) => canBeScheduled(user.role));
+  const shiftUsers = useMemo(() => (users || []).filter((user) => canBeScheduled(user.role)).sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0) || (a.name || "").localeCompare(b.name || "")), [users]);
   
   // Load shifts based on current view mode
   // Weekly view: load only the current week (including days from next/prev month)
@@ -190,6 +193,10 @@ export default function Turnos() {
     onError: (error) => {
       toast.error("Error al generar turnos: " + error.message);
     },
+  });
+  const reorderWorkers = trpc.users.reorder.useMutation({
+    onSuccess: () => { toast.success("Orden de trabajadores guardado"); utils.users.list.invalidate(); setIsWorkerOrderDialogOpen(false); },
+    onError: (error) => toast.error(`No se pudo guardar el orden: ${error.message}`),
   });
 
   const resetForm = () => {
@@ -380,6 +387,10 @@ export default function Turnos() {
         </div>
         {isAdmin && (
           <div className="flex gap-2">
+            <Dialog open={isWorkerOrderDialogOpen} onOpenChange={setIsWorkerOrderDialogOpen}>
+              <DialogTrigger asChild><Button variant="outline" onClick={() => setWorkerOrderDraft(shiftUsers.map((worker) => worker.id))}><ListOrdered className="mr-2 h-4 w-4" />Orden</Button></DialogTrigger>
+              <DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>Orden de trabajadores</DialogTitle><DialogDescription>Este orden se mostrará en el calendario semanal y mensual.</DialogDescription></DialogHeader><div className="space-y-2">{workerOrderDraft.map((id, index) => { const worker = shiftUsers.find((item) => item.id === id); if (!worker) return null; return <div key={id} className="flex items-center justify-between rounded-md border p-2"><span className="truncate">{index + 1}. {worker.name || worker.email}</span><div className="flex gap-1"><Button size="icon" variant="ghost" disabled={index === 0} onClick={() => setWorkerOrderDraft((ids) => moveIdInOrder(ids, id, -1))}><ChevronUp className="h-4 w-4" /></Button><Button size="icon" variant="ghost" disabled={index === workerOrderDraft.length - 1} onClick={() => setWorkerOrderDraft((ids) => moveIdInOrder(ids, id, 1))}><ChevronDown className="h-4 w-4" /></Button></div></div>; })}</div><DialogFooter><Button variant="outline" onClick={() => setIsWorkerOrderDialogOpen(false)}>Cancelar</Button><Button disabled={reorderWorkers.isPending} onClick={() => reorderWorkers.mutate({ userIds: workerOrderDraft })}>Guardar orden</Button></DialogFooter></DialogContent>
+            </Dialog>
             <Dialog open={isHoursReportDialogOpen} onOpenChange={setIsHoursReportDialogOpen}>
               <DialogTrigger asChild><Button variant="outline"><FileText className="mr-2 h-4 w-4" />Horas PDF</Button></DialogTrigger>
               <DialogContent>

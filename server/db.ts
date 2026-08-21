@@ -39,6 +39,7 @@ import {
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { aggregateSupplierExpenses } from "../shared/supplierExpenses";
+import { displayOrderUpdates } from "../shared/workerDisplayOrder";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -111,7 +112,7 @@ export async function getUserByOpenId(openId: string) {
 export async function getAllUsers() {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(users).where(eq(users.isActive, true)).orderBy(asc(users.name));
+  return db.select().from(users).where(eq(users.isActive, true)).orderBy(asc(users.displayOrder), asc(users.name));
 }
 
 export async function getUserById(id: number) {
@@ -125,6 +126,12 @@ export async function updateUser(id: number, data: Partial<InsertUser>) {
   const db = await getDb();
   if (!db) return;
   await db.update(users).set(data).where(eq(users.id, id));
+}
+
+export async function updateUserDisplayOrders(userIds: number[]) {
+  const db = await getDb();
+  if (!db) return;
+  await Promise.all(displayOrderUpdates(userIds).map(({ id, displayOrder }) => db.update(users).set({ displayOrder }).where(eq(users.id, id))));
 }
 
 export async function deleteUser(id: number) {
