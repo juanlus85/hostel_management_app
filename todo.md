@@ -1615,6 +1615,7 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Crear y subir facturas emitidas desde Facturas, de forma separada de las recibidas.
 - [x] Permitir seleccionar The Spot Central Hostel, Sweet & Salty u Organizus al registrar una factura emitida.
 - [x] Guardar el archivo local con el prefijo EMITIDA y el formato de negocio, trimestre y fecha indicado.
+- [x] Reorganizar los botones de nueva factura: recibida al 75% y emitida al 25%.
 
 ## Informes de horas en Turnos
 - [x] Exportar un PDF mensual con las horas de todos los trabajadores.

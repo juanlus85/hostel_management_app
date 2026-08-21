@@ -479,12 +479,12 @@ export default function Facturas() {
           <p className="text-muted-foreground">Gestión de facturas y gastos con captura de tickets</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="w-full sm:w-auto">
-              <Plus className="h-4 w-4 mr-2" />
-              Nueva factura
-            </Button>
-          </DialogTrigger>
+          <div className="grid w-full grid-cols-4 gap-2 sm:w-[460px]">
+            <DialogTrigger asChild>
+              <Button className="col-span-3 w-full"><Plus className="h-4 w-4 mr-2" />Nueva factura recibida</Button>
+            </DialogTrigger>
+            <Button className="col-span-1 w-full px-2 text-xs sm:text-sm" variant="outline" onClick={() => setIsIssuedDialogOpen(true)}><Plus className="mr-1 h-4 w-4" />Emitida</Button>
+          </div>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Registrar factura</DialogTitle>
@@ -690,10 +690,9 @@ export default function Facturas() {
       </div>
 
       <Card>
-        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <CardHeader>
           <div><CardTitle>Facturas emitidas</CardTitle><CardDescription>Documentos emitidos por The Spot Central Hostel, Sweet & Salty u Organizus.</CardDescription></div>
           <Dialog open={isIssuedDialogOpen} onOpenChange={setIsIssuedDialogOpen}>
-            <DialogTrigger asChild><Button className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" />Nueva factura emitida</Button></DialogTrigger>
             <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
               <DialogHeader><DialogTitle>Registrar factura emitida</DialogTitle><DialogDescription>El archivo se guarda localmente con el prefijo EMITIDA.</DialogDescription></DialogHeader>
               <div className="grid gap-4 py-3">
