@@ -1616,6 +1616,9 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Ampliar y adaptar el diálogo de editar/revisar para evitar solapamiento de campos.
 - [x] Corregir el guardado cuando el sexo del huésped está vacío o no seleccionado.
 
+## Identificación de versión
+- [ ] Mostrar una versión y fecha de compilación discretas en la interfaz de administración.
+
 ## Facturas emitidas
 - [x] Crear y subir facturas emitidas desde Facturas, de forma separada de las recibidas.
 - [x] Permitir seleccionar The Spot Central Hostel, Sweet & Salty u Organizus al registrar una factura emitida.
