@@ -49,6 +49,15 @@ For example:
 mysql -u DATABASE_USER -p hostel_management < SQL_ACTUALIZACION_PRODUCCION_RECIENTE.sql
 ```
 
+For the current version, apply the consolidated update first and then the issued-invoices migration, each **once** and only after making a backup:
+
+```bash
+mysql -u DATABASE_USER -p hostel_management < SQL_ACTUALIZACION_PRODUCCION_RECIENTE.sql
+mysql -u DATABASE_USER -p hostel_management < SQL_FACTURAS_EMITIDAS.sql
+```
+
+`SQL_FACTURAS_EMITIDAS.sql` creates the `issued_invoices` table required by the **Facturas emitidas** section. Keeping this script separate makes it easier to review and apply on production.
+
 Use real credentials only on the VPS. Never commit `.env`, database backups, API keys, guest documents, or generated police records.
 
 ## Required environment values

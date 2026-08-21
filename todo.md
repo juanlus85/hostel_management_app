@@ -1621,3 +1621,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 ## Informes de horas en Turnos
 - [x] Exportar un PDF mensual con las horas de todos los trabajadores.
 - [x] Exportar un PDF de un trabajador concreto para uno o varios meses seleccionados.
+- [x] Desglosar en el PDF las horas de cada mes y el total acumulado cuando se seleccionen varios meses.

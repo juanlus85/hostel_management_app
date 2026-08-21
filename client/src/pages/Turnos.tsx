@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
 import { canBeScheduled } from "@shared/shiftEligibility";
 import { canRescheduleShift } from "@shared/shiftDragDrop";
-import { totalReportHours } from "@shared/hoursReport";
+import { monthlyReportHours, totalReportHours } from "@shared/hoursReport";
 import { Calendar, Clock, Plus, Play, Square, ChevronLeft, ChevronRight, Edit2, Trash2, CalendarDays, CalendarRange, Wand2, GripVertical, FileText } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -351,10 +351,15 @@ export default function Turnos() {
     reportUsers.forEach((worker) => {
       const workerShifts = selectedShifts.filter((shift) => shift.userId === worker.id);
       if (y > 270) { doc.addPage(); y = 18; }
-      doc.setFontSize(12); doc.text(`${worker.name || worker.email || "Trabajador"} · ${totalReportHours(workerShifts).toFixed(2)} horas`, 14, y); y += 6;
+      doc.setFontSize(12); doc.text(`${worker.name || worker.email || "Trabajador"} · Total acumulado: ${totalReportHours(workerShifts).toFixed(2)} horas`, 14, y); y += 6;
       doc.setFontSize(9);
       if (!workerShifts.length) { doc.text("Sin turnos en este periodo", 18, y); y += 6; }
-      workerShifts.filter((shift) => shift.status !== "cancelled").forEach((shift) => { if (y > 280) { doc.addPage(); y = 18; } doc.text(`${shift.scheduledDate}   ${shift.scheduledStart} - ${shift.scheduledEnd}`, 18, y); y += 5; });
+      monthlyReportHours(workerShifts).forEach((month) => {
+        if (y > 270) { doc.addPage(); y = 18; }
+        const monthLabel = new Date(`${month.month}-01T00:00:00`).toLocaleDateString("es-ES", { month: "long", year: "numeric" });
+        doc.setFontSize(10); doc.text(`${monthLabel.charAt(0).toUpperCase()}${monthLabel.slice(1)}: ${month.hours.toFixed(2)} horas`, 18, y); y += 5;
+        doc.setFontSize(9); month.shifts.forEach((shift) => { if (y > 280) { doc.addPage(); y = 18; } doc.text(`${shift.scheduledDate}   ${shift.scheduledStart} - ${shift.scheduledEnd}`, 22, y); y += 5; });
+      });
       y += 5;
     });
     doc.save(`HORAS_${hoursReportStart}_${hoursReportEnd}${hoursReportMode === "employee" ? `_${hoursReportUserId}` : "_TODOS"}.pdf`);
