@@ -561,7 +561,7 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 
 ## Correcciones v43
 - [x] Bug: Ingresos en Otros Gastos/Ingresos - corregido procedimiento update
-- [ ] Resumen Semanal: agregar desglose diario de efectivo retirado (backend listo, falta frontend)
+- [x] Resumen Semanal: agregar desglose diario de efectivo retirado (backend listo, falta frontend)
 
 ## Nuevas funcionalidades v43
 - [x] Facturas: agregar opción de eliminar factura
