@@ -593,12 +593,12 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Cambiar descripción "Devoluciones, etc." a "Otros ingresos" en Dashboard y Cierre Trimestral
 
 ## Nueva Feature v51 - Cajas F
-- [ ] Crear tabla safe_boxes en schema (fecha, tipología, concepto, cantidad, acumulado, chequeo, businessId)
-- [ ] Crear procedimientos tRPC para listar, crear, actualizar y eliminar movimientos
-- [ ] Crear página CajasF.tsx con tabs (C.F. Hostel, C.F. Tienda)
-- [ ] Implementar formulario para agregar movimientos
-- [ ] Mostrar tabla con últimas 30 entradas
-- [ ] Agregar menú "Cajas F" solo visible para admin
+- [x] Crear tabla safe_boxes en schema (fecha, tipología, concepto, cantidad, acumulado, chequeo, businessId)
+- [x] Crear procedimientos tRPC para listar, crear, actualizar y eliminar movimientos
+- [x] Crear página CajasF.tsx con tabs (C.F. Hostel, C.F. Tienda)
+- [x] Implementar formulario para agregar movimientos
+- [x] Mostrar tabla con últimas 30 entradas
+- [x] Agregar menú "Cajas F" solo visible para admin
 
 
 ## Nueva Feature v51 - Cajas F
@@ -608,10 +608,10 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Agregar menú Cajas F (solo admin)
 
 ## Nueva Feature v52 - Códigos de Acceso
-- [ ] Crear tabla access_codes en schema
-- [ ] Crear procedimientos tRPC para CRUD de códigos
-- [ ] Crear página CodigosAcceso.tsx con tabla de habitaciones
-- [ ] Agregar menú Códigos de Acceso (visible para todos, editable solo admin)
+- [x] Crear tabla access_codes en schema
+- [x] Crear procedimientos tRPC para CRUD de códigos
+- [x] Crear página CodigosAcceso.tsx con tabla de habitaciones
+- [x] Agregar menú Códigos de Acceso (visible para todos, editable solo admin)
 
 
 ## Nueva Feature v51 - Cajas F
@@ -742,7 +742,7 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
   - El nombre del archivo se mantiene igual en servidor y en adjunto de correo
 
 ## Bug v78
-- [ ] Formato de fecha en nombre de archivo incorrecto
+- [x] Formato de fecha en nombre de archivo incorrecto
   - Actual: AAMMDD (251231)
   - Correcto: DDMMAA (311225)
   - Corregir en subida inicial y reemplazo de archivo
@@ -810,9 +810,9 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Ahora hostelClosings y tiendaClosings siempre tienen datos disponibles para exportar
 
 ## v82.4: Bug Dashboard suma datos de diciembre en lugar de enero
-- [ ] Dashboard muestra ingresos del 31 de diciembre cuando debería mostrar €0.00 (no hay cierres de enero todavía)
-- [ ] Revisar función getDashboardStats - filtrado de fechas incorrecto
-- [ ] Debe mostrar solo datos del período seleccionado (enero), no del mes anterior
+- [x] Dashboard muestra ingresos del 31 de diciembre cuando debería mostrar €0.00 (no hay cierres de enero todavía)
+- [x] Revisar función getDashboardStats - filtrado de fechas incorrecto
+- [x] Debe mostrar solo datos del período seleccionado (enero), no del mes anterior
 
 ## v82.3: Bugs Reportados en Producción
 - [x] Dashboard muestra ingresos del 31 de diciembre cuando debería mostrar €0.00 (no hay cierres de enero todavía)
