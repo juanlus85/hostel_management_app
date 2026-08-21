@@ -557,6 +557,23 @@ export const appRouter = router({
     }),
   }),
 
+  issuedInvoices: router({
+    list: protectedProcedure.input(z.object({ startDate: z.string().optional(), endDate: z.string().optional() })).query(async ({ input }) => {
+      return db.getIssuedInvoices(input.startDate, input.endDate);
+    }),
+    create: protectedProcedure.input(z.object({
+      issuerBusiness: z.enum(["The Spot Central Hostel", "Sweet & Salty", "Organizus"]),
+      recipient: z.string().optional(), invoiceNumber: z.string().optional(), invoiceDate: z.string(), totalAmount: z.string().optional(), imageUrl: z.string().optional(), imageKey: z.string().optional(), notes: z.string().optional(),
+    })).mutation(async ({ input, ctx }) => {
+      const id = await db.createIssuedInvoice({ ...input, userId: ctx.user.id });
+      return { success: true, id };
+    }),
+    delete: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
+      await db.deleteIssuedInvoice(input.id);
+      return { success: true };
+    }),
+  }),
+
   // ==================== INVENTORY ====================
   inventory: router({
     list: protectedProcedure.input(z.object({

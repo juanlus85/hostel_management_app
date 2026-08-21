@@ -9,9 +9,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
 import { canBeScheduled } from "@shared/shiftEligibility";
 import { canRescheduleShift } from "@shared/shiftDragDrop";
-import { Calendar, Clock, Plus, Play, Square, ChevronLeft, ChevronRight, Edit2, Trash2, CalendarDays, CalendarRange, Wand2, GripVertical } from "lucide-react";
+import { totalReportHours } from "@shared/hoursReport";
+import { Calendar, Clock, Plus, Play, Square, ChevronLeft, ChevronRight, Edit2, Trash2, CalendarDays, CalendarRange, Wand2, GripVertical, FileText } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { jsPDF } from "jspdf";
 
 const DAYS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 const DAYS_FULL = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
@@ -46,6 +48,12 @@ export default function Turnos() {
   
   // Generate shifts dialog
   const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false);
+  const [isHoursReportDialogOpen, setIsHoursReportDialogOpen] = useState(false);
+  const [hoursReportMode, setHoursReportMode] = useState<"all" | "employee">("all");
+  const [hoursReportUserId, setHoursReportUserId] = useState("");
+  const initialReportDate = new Date();
+  const [hoursReportStart, setHoursReportStart] = useState(`${initialReportDate.getFullYear()}-${String(initialReportDate.getMonth() + 1).padStart(2, "0")}-01`);
+  const [hoursReportEnd, setHoursReportEnd] = useState(`${initialReportDate.getFullYear()}-${String(initialReportDate.getMonth() + 1).padStart(2, "0")}-${String(new Date(initialReportDate.getFullYear(), initialReportDate.getMonth() + 1, 0).getDate()).padStart(2, "0")}`);
 
   const utils = trpc.useUtils();
 
@@ -126,6 +134,7 @@ export default function Turnos() {
     startDate: queryRange.startDate,
     endDate: queryRange.endDate,
   });
+  const { data: reportShifts } = trpc.shifts.list.useQuery({ startDate: hoursReportStart, endDate: hoursReportEnd }, { enabled: isAdmin && isHoursReportDialogOpen });
 
   const createShift = trpc.shifts.create.useMutation({
     onSuccess: () => {
@@ -331,6 +340,27 @@ export default function Turnos() {
     return currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
   };
 
+  const exportHoursPdf = () => {
+    if (hoursReportMode === "employee" && !hoursReportUserId) { toast.error("Selecciona un trabajador"); return; }
+    const selectedShifts = (reportShifts || []).filter((shift) => hoursReportMode === "all" || shift.userId === Number(hoursReportUserId));
+    const reportUsers = hoursReportMode === "all" ? shiftUsers : shiftUsers.filter((worker) => worker.id === Number(hoursReportUserId));
+    const doc = new jsPDF();
+    let y = 18;
+    doc.setFontSize(16); doc.text("Extracto de horas · The Spot Central Hostel", 14, y); y += 8;
+    doc.setFontSize(10); doc.text(`Periodo: ${hoursReportStart} — ${hoursReportEnd}`, 14, y); y += 10;
+    reportUsers.forEach((worker) => {
+      const workerShifts = selectedShifts.filter((shift) => shift.userId === worker.id);
+      if (y > 270) { doc.addPage(); y = 18; }
+      doc.setFontSize(12); doc.text(`${worker.name || worker.email || "Trabajador"} · ${totalReportHours(workerShifts).toFixed(2)} horas`, 14, y); y += 6;
+      doc.setFontSize(9);
+      if (!workerShifts.length) { doc.text("Sin turnos en este periodo", 18, y); y += 6; }
+      workerShifts.filter((shift) => shift.status !== "cancelled").forEach((shift) => { if (y > 280) { doc.addPage(); y = 18; } doc.text(`${shift.scheduledDate}   ${shift.scheduledStart} - ${shift.scheduledEnd}`, 18, y); y += 5; });
+      y += 5;
+    });
+    doc.save(`HORAS_${hoursReportStart}_${hoursReportEnd}${hoursReportMode === "employee" ? `_${hoursReportUserId}` : "_TODOS"}.pdf`);
+    toast.success("Extracto de horas descargado en PDF");
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -345,6 +375,18 @@ export default function Turnos() {
         </div>
         {isAdmin && (
           <div className="flex gap-2">
+            <Dialog open={isHoursReportDialogOpen} onOpenChange={setIsHoursReportDialogOpen}>
+              <DialogTrigger asChild><Button variant="outline"><FileText className="mr-2 h-4 w-4" />Horas PDF</Button></DialogTrigger>
+              <DialogContent>
+                <DialogHeader><DialogTitle>Extracto de horas</DialogTitle><DialogDescription>Descarga las horas de todos los trabajadores de un mes o las de un trabajador para el rango de meses que indiques.</DialogDescription></DialogHeader>
+                <div className="grid gap-4 py-3">
+                  <div className="grid gap-2"><Label>Informe</Label><Select value={hoursReportMode} onValueChange={(value) => setHoursReportMode(value as "all" | "employee")}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos los trabajadores</SelectItem><SelectItem value="employee">Un trabajador</SelectItem></SelectContent></Select></div>
+                  {hoursReportMode === "employee" && <div className="grid gap-2"><Label>Trabajador</Label><Select value={hoursReportUserId} onValueChange={setHoursReportUserId}><SelectTrigger><SelectValue placeholder="Seleccionar trabajador" /></SelectTrigger><SelectContent>{shiftUsers.map((worker) => <SelectItem key={worker.id} value={String(worker.id)}>{worker.name || worker.email}</SelectItem>)}</SelectContent></Select></div>}
+                  <div className="grid grid-cols-2 gap-4"><div className="grid gap-2"><Label>Desde</Label><Input type="date" value={hoursReportStart} onChange={(event) => setHoursReportStart(event.target.value)} /></div><div className="grid gap-2"><Label>Hasta</Label><Input type="date" value={hoursReportEnd} onChange={(event) => setHoursReportEnd(event.target.value)} /></div></div>
+                </div>
+                <DialogFooter><Button variant="outline" onClick={() => setIsHoursReportDialogOpen(false)}>Cancelar</Button><Button onClick={exportHoursPdf}><FileText className="mr-2 h-4 w-4" />Descargar PDF</Button></DialogFooter>
+              </DialogContent>
+            </Dialog>
             <Dialog open={isGenerateDialogOpen} onOpenChange={setIsGenerateDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline">

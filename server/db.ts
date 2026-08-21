@@ -10,6 +10,7 @@ import {
   cashRegisters, InsertCashRegister, CashRegister,
   transactions, InsertTransaction, Transaction,
   invoices, InsertInvoice, Invoice,
+  issuedInvoices, InsertIssuedInvoice, IssuedInvoice,
   inventoryItems, InsertInventoryItem, InventoryItem,
   orders, InsertOrder, Order,
   orderItems, InsertOrderItem, OrderItem,
@@ -364,6 +365,29 @@ export async function deleteInvoice(id: number) {
   const db = await getDb();
   if (!db) return;
   await db.delete(invoices).where(eq(invoices.id, id));
+}
+
+// ==================== ISSUED INVOICES ====================
+export async function getIssuedInvoices(startDate?: string, endDate?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [];
+  if (startDate) conditions.push(gte(issuedInvoices.invoiceDate, startDate));
+  if (endDate) conditions.push(lte(issuedInvoices.invoiceDate, endDate));
+  return db.select().from(issuedInvoices).where(conditions.length ? and(...conditions) : undefined).orderBy(desc(issuedInvoices.invoiceDate));
+}
+
+export async function createIssuedInvoice(data: InsertIssuedInvoice) {
+  const db = await getDb();
+  if (!db) return;
+  const result = await db.insert(issuedInvoices).values(data);
+  return result[0].insertId;
+}
+
+export async function deleteIssuedInvoice(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(issuedInvoices).where(eq(issuedInvoices.id, id));
 }
 
 // ==================== INVENTORY ====================

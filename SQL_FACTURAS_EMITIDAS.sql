@@ -1,0 +1,14 @@
+CREATE TABLE IF NOT EXISTS issued_invoices (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  userId INT NOT NULL,
+  issuerBusiness ENUM('The Spot Central Hostel', 'Sweet & Salty', 'Organizus') NOT NULL,
+  recipient VARCHAR(255) NULL,
+  invoiceNumber VARCHAR(100) NULL,
+  invoiceDate VARCHAR(10) NOT NULL,
+  totalAmount DECIMAL(10,2) NULL,
+  imageUrl TEXT NULL,
+  imageKey VARCHAR(255) NULL,
+  notes TEXT NULL,
+  createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);

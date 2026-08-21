@@ -1610,3 +1610,12 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 
 ## Ajuste de correo Check-in Online
 - [x] Retirar el bloque azul de bienvenida del correo enviado tras completar el Check-in Online.
+
+## Facturas emitidas
+- [x] Crear y subir facturas emitidas desde Facturas, de forma separada de las recibidas.
+- [x] Permitir seleccionar The Spot Central Hostel, Sweet & Salty u Organizus al registrar una factura emitida.
+- [x] Guardar el archivo local con el prefijo EMITIDA y el formato de negocio, trimestre y fecha indicado.
+
+## Informes de horas en Turnos
+- [x] Exportar un PDF mensual con las horas de todos los trabajadores.
+- [x] Exportar un PDF de un trabajador concreto para uno o varios meses seleccionados.

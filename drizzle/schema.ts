@@ -129,6 +129,25 @@ export const invoices = mysqlTable("invoices", {
 export type Invoice = typeof invoices.$inferSelect;
 export type InsertInvoice = typeof invoices.$inferInsert;
 
+// ==================== ISSUED INVOICES (Facturas Emitidas) ====================
+export const issuedInvoices = mysqlTable("issued_invoices", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  issuerBusiness: mysqlEnum("issuerBusiness", ["The Spot Central Hostel", "Sweet & Salty", "Organizus"]).notNull(),
+  recipient: varchar("recipient", { length: 255 }),
+  invoiceNumber: varchar("invoiceNumber", { length: 100 }),
+  invoiceDate: varchar("invoiceDate", { length: 10 }).notNull(),
+  totalAmount: decimal("totalAmount", { precision: 10, scale: 2 }),
+  imageUrl: text("imageUrl"),
+  imageKey: varchar("imageKey", { length: 255 }),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type IssuedInvoice = typeof issuedInvoices.$inferSelect;
+export type InsertIssuedInvoice = typeof issuedInvoices.$inferInsert;
+
 // ==================== INVENTORY ITEMS (Productos) ====================
 export const inventoryItems = mysqlTable("inventory_items", {
   id: int("id").autoincrement().primaryKey(),

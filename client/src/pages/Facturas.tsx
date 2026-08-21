@@ -13,6 +13,7 @@ import { useMemo, useState, useRef, type DragEvent } from "react";
 import { toast } from "sonner";
 import { findCommercialSupplier } from "@shared/supplierMatching";
 import { getSupportedInvoiceContentType } from "@shared/invoiceUpload";
+import { ISSUER_BUSINESSES, issuedInvoiceFileName, type IssuerBusiness } from "@shared/issuedInvoiceFileName";
 
 // Helper para formatear fecha como YYYY-MM-DD sin conversión de timezone
 function formatDateLocal(date: Date): string {
@@ -57,6 +58,15 @@ export default function Facturas() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneFileInputRef = useRef<HTMLInputElement>(null);
   const [formBusinessId, setFormBusinessId] = useState<number | null>(null);
+  const [isIssuedDialogOpen, setIsIssuedDialogOpen] = useState(false);
+  const [issuedIssuerBusiness, setIssuedIssuerBusiness] = useState<IssuerBusiness>("The Spot Central Hostel");
+  const [issuedRecipient, setIssuedRecipient] = useState("");
+  const [issuedInvoiceNumber, setIssuedInvoiceNumber] = useState("");
+  const [issuedInvoiceDate, setIssuedInvoiceDate] = useState(formatDateLocal(new Date()));
+  const [issuedTotalAmount, setIssuedTotalAmount] = useState("");
+  const [issuedNotes, setIssuedNotes] = useState("");
+  const [issuedFile, setIssuedFile] = useState<File | null>(null);
+  const issuedFileInputRef = useRef<HTMLInputElement>(null);
   
   // Filtro de mes/año
   const currentDate = new Date();
@@ -130,6 +140,7 @@ export default function Facturas() {
     { businessId: tiendaBusiness?.id!, startDate: dateRange.startDate, endDate: dateRange.endDate },
     { enabled: !!tiendaBusiness && (selectedBusiness === "tienda" || selectedBusiness === "all") }
   );
+  const { data: issuedInvoices } = trpc.issuedInvoices.list.useQuery({ startDate: dateRange.startDate, endDate: dateRange.endDate });
   
   // Combinar datos según selección
   const invoices = selectedBusiness === "all" 
@@ -154,6 +165,20 @@ export default function Facturas() {
       setIsDialogOpen(false);
       resetForm();
     },
+    onError: (error) => toast.error("Error: " + error.message),
+  });
+
+  const createIssuedInvoice = trpc.issuedInvoices.create.useMutation({
+    onSuccess: () => {
+      toast.success("Factura emitida registrada correctamente");
+      utils.issuedInvoices.list.invalidate();
+      setIsIssuedDialogOpen(false);
+      setIssuedRecipient(""); setIssuedInvoiceNumber(""); setIssuedTotalAmount(""); setIssuedNotes(""); setIssuedFile(null);
+    },
+    onError: (error) => toast.error("Error: " + error.message),
+  });
+  const deleteIssuedInvoice = trpc.issuedInvoices.delete.useMutation({
+    onSuccess: () => { toast.success("Factura emitida eliminada"); utils.issuedInvoices.list.invalidate(); },
     onError: (error) => toast.error("Error: " + error.message),
   });
 
@@ -359,6 +384,27 @@ export default function Facturas() {
       imageUrl: fileUrl,
       imageKey: fileKey,
     });
+  };
+
+  const handleCreateIssuedInvoice = async () => {
+    if (!issuedInvoiceDate) { toast.error("Indica la fecha de la factura emitida"); return; }
+    let imageUrl: string | undefined;
+    let imageKey: string | undefined;
+    if (issuedFile) {
+      const contentType = getSupportedInvoiceContentType(issuedFile);
+      if (!contentType) { toast.error("Adjunta un PDF, JPG, PNG o WEBP"); return; }
+      try {
+        const fileData = await readFileAsDataUrl(issuedFile);
+        const extension = issuedFile.name.split(".").pop() || "pdf";
+        const uploadResult = await uploadFile.mutateAsync({ fileData, fileName: issuedInvoiceFileName(issuedIssuerBusiness, issuedInvoiceDate, extension), contentType });
+        imageUrl = uploadResult.url;
+        imageKey = uploadResult.key;
+      } catch {
+        toast.error("No se pudo guardar el archivo de la factura emitida");
+        return;
+      }
+    }
+    createIssuedInvoice.mutate({ issuerBusiness: issuedIssuerBusiness, recipient: issuedRecipient.trim() || undefined, invoiceNumber: issuedInvoiceNumber.trim() || undefined, invoiceDate: issuedInvoiceDate, totalAmount: issuedTotalAmount.trim() || undefined, notes: issuedNotes.trim() || undefined, imageUrl, imageKey });
   };
 
   const openEditDialog = (invoice: any) => {
@@ -642,6 +688,27 @@ export default function Facturas() {
           </DialogContent>
         </Dialog>
       </div>
+
+      <Card>
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div><CardTitle>Facturas emitidas</CardTitle><CardDescription>Documentos emitidos por The Spot Central Hostel, Sweet & Salty u Organizus.</CardDescription></div>
+          <Dialog open={isIssuedDialogOpen} onOpenChange={setIsIssuedDialogOpen}>
+            <DialogTrigger asChild><Button className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" />Nueva factura emitida</Button></DialogTrigger>
+            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+              <DialogHeader><DialogTitle>Registrar factura emitida</DialogTitle><DialogDescription>El archivo se guarda localmente con el prefijo EMITIDA.</DialogDescription></DialogHeader>
+              <div className="grid gap-4 py-3">
+                <div className="grid gap-2"><Label>Negocio emisor *</Label><Select value={issuedIssuerBusiness} onValueChange={(value) => setIssuedIssuerBusiness(value as IssuerBusiness)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{ISSUER_BUSINESSES.map((business) => <SelectItem key={business} value={business}>{business}</SelectItem>)}</SelectContent></Select></div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2"><div className="grid gap-2"><Label>Cliente / destinatario</Label><Input value={issuedRecipient} onChange={(event) => setIssuedRecipient(event.target.value)} /></div><div className="grid gap-2"><Label>Nº de factura</Label><Input value={issuedInvoiceNumber} onChange={(event) => setIssuedInvoiceNumber(event.target.value)} /></div></div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2"><div className="grid gap-2"><Label>Fecha *</Label><Input type="date" value={issuedInvoiceDate} onChange={(event) => setIssuedInvoiceDate(event.target.value)} /></div><div className="grid gap-2"><Label>Total (€)</Label><Input type="number" step="0.01" value={issuedTotalAmount} onChange={(event) => setIssuedTotalAmount(event.target.value)} /></div></div>
+                <div className="grid gap-2"><Label>Archivo</Label><input ref={issuedFileInputRef} type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="hidden" onChange={(event) => setIssuedFile(event.target.files?.[0] || null)} /><Button type="button" variant="outline" onClick={() => issuedFileInputRef.current?.click()}><Upload className="mr-2 h-4 w-4" />{issuedFile?.name || "Seleccionar PDF o imagen"}</Button></div>
+                <div className="grid gap-2"><Label>Notas</Label><Textarea value={issuedNotes} onChange={(event) => setIssuedNotes(event.target.value)} /></div>
+              </div>
+              <DialogFooter className="flex-col gap-2 sm:flex-row"><Button className="w-full sm:w-auto" variant="outline" onClick={() => setIsIssuedDialogOpen(false)}>Cancelar</Button><Button className="w-full sm:w-auto" onClick={handleCreateIssuedInvoice} disabled={createIssuedInvoice.isPending}>{createIssuedInvoice.isPending ? "Guardando..." : "Registrar emitida"}</Button></DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </CardHeader>
+        <CardContent>{issuedInvoices?.length ? <div className="divide-y rounded-md border">{issuedInvoices.map((invoice) => <div key={invoice.id} className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-medium">{invoice.issuerBusiness} · {invoice.invoiceNumber || "Sin número"}</p><p className="text-sm text-muted-foreground">{invoice.invoiceDate}{invoice.recipient ? ` · ${invoice.recipient}` : ""}{invoice.totalAmount ? ` · €${invoice.totalAmount}` : ""}</p></div><div className="flex gap-2">{invoice.imageUrl && <Button size="sm" variant="outline" asChild><a href={invoice.imageUrl} target="_blank" rel="noreferrer"><FileDown className="mr-1 h-4 w-4" />Archivo</a></Button>}<Button size="sm" variant="outline" className="text-destructive" onClick={() => { if (confirm("¿Eliminar esta factura emitida?")) deleteIssuedInvoice.mutate({ id: invoice.id }); }}><Trash2 className="h-4 w-4" /></Button></div></div>)}</div> : <p className="py-3 text-sm text-muted-foreground">No hay facturas emitidas en el periodo seleccionado.</p>}</CardContent>
+      </Card>
 
       <input
         ref={dropZoneFileInputRef}
