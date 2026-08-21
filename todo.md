@@ -1404,8 +1404,8 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 
 
 ## Correcciones Check-in Anticipado v53 - EN PROGRESO
-- [ ] PDF incompleto: reorganizar campos en dos columnas para que quepa todo en un folio
-- [ ] Firma cortada en PDF: ajustar tamaño y posición
+- [x] PDF incompleto: reorganizar campos en dos columnas para que quepa todo en un folio
+- [x] Firma cortada en PDF: ajustar tamaño y posición
 - [x] Opciones de sexo: cambiar a "Hombre", "Mujer", "Otro" (en español)
 - [x] Firma desalineada: corregir offset del cursor en canvas (ajustada escala)
 - [ ] Email bilingüe: verificar que funciona correctamente (ya implementado)
