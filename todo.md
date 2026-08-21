@@ -633,7 +633,7 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Actualizar página ResumenSemanal.tsx con control de efectivo en sobres
 - [x] Agregar sección de disponibilidad en cuentas/cajas (cada lunes)
 - [x] Implementar navegación entre semanas
-- [ ] Agregar gráfico histórico de disponibilidad total (pendiente)
+- [x] Agregar gráfico histórico de disponibilidad total (pendiente)
 
 ## Bug v55
 - [x] Rol housekeeping no puede ver menú Códigos de Acceso (debería poder verlo en modo lectura)
@@ -1611,6 +1611,10 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 
 ## Ajuste de correo Check-in Online
 - [x] Retirar el bloque azul de bienvenida del correo enviado tras completar el Check-in Online.
+
+## Correcciones Check-in Anticipado
+- [x] Ampliar y adaptar el diálogo de editar/revisar para evitar solapamiento de campos.
+- [x] Corregir el guardado cuando el sexo del huésped está vacío o no seleccionado.
 
 ## Facturas emitidas
 - [x] Crear y subir facturas emitidas desde Facturas, de forma separada de las recibidas.

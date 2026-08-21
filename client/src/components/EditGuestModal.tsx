@@ -8,6 +8,7 @@ import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { COUNTRIES, PAYMENT_TYPES } from "@/../../shared/countries";
+import { normalizeGuestGender } from "@shared/guestGender";
 
 interface EditGuestModalProps {
   guest: any;
@@ -105,7 +106,7 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
         documentType: guest.documentType || "PAS",
         documentNumber: guest.documentNumber || "",
         documentSupport: guest.documentSupport || "",
-        gender: guest.gender || "Hombre",
+        gender: normalizeGuestGender(guest.gender),
         birthDate: guest.birthDate || "",
         phone: guest.phone || "",
         email: guest.email || "",
@@ -179,7 +180,7 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
       documentType: formData.documentType,
       documentNumber: formData.documentNumber,
       documentSupport: formData.documentSupport || undefined,
-      gender: formData.gender as "Hombre" | "Mujer" | "Otro",
+      gender: normalizeGuestGender(formData.gender),
       birthDate: formatDateForDB(formData.birthDate),
       phone: formData.phone,
       email: formData.email,
@@ -213,7 +214,7 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[calc(100vw-1rem)] max-w-none overflow-x-hidden sm:max-w-4xl lg:max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Editar Check-in Anticipado</DialogTitle>
         </DialogHeader>
@@ -222,7 +223,7 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
           {/* Datos Personales */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold border-b pb-2">Datos Personales</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 [&>*]:min-w-0">
               <div>
                 <Label htmlFor="firstName">Nombre *</Label>
                 <Input
@@ -297,9 +298,9 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="male">Hombre</SelectItem>
-                    <SelectItem value="female">Mujer</SelectItem>
-                    <SelectItem value="other">Otro</SelectItem>
+                    <SelectItem value="Hombre">Hombre</SelectItem>
+                    <SelectItem value="Mujer">Mujer</SelectItem>
+                    <SelectItem value="Otro">Otro</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -339,7 +340,7 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
           {/* Dirección */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold border-b pb-2">Dirección</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 [&>*]:min-w-0">
               <div className="md:col-span-2">
                 <Label htmlFor="street">Calle y Número *</Label>
                 <Input
@@ -395,7 +396,7 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
           {/* Datos de Reserva */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold border-b pb-2">Datos de Reserva</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 [&>*]:min-w-0">
               <div>
                 <Label htmlFor="reservationNumber">Número de Reserva</Label>
                 <Input
@@ -499,7 +500,7 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
           {/* Información de Pago */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold border-b pb-2">Información de Pago</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 [&>*]:min-w-0">
               <div>
                 <Label htmlFor="paymentType">Tipo de Pago *</Label>
                 <Select value={formData.paymentType} onValueChange={(v) => setFormData({ ...formData, paymentType: v })}>
