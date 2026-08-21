@@ -526,10 +526,10 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 ## Selector "Ambos" - Mostrar datos combinados
 - [x] Modificar Facturas para mostrar datos de ambos negocios cuando se selecciona "Ambos"
 - [x] Modificar Otros Gastos para mostrar datos de ambos negocios cuando se selecciona "Ambos"
-- [ ] Modificar Incidencias para mostrar datos de ambos negocios cuando se selecciona "Ambos"
-- [ ] Modificar Tareas para mostrar datos de ambos negocios cuando se selecciona "Ambos"
-- [ ] Modificar Inventario para mostrar datos de ambos negocios cuando se selecciona "Ambos"
-- [ ] Verificar que todas las páginas muestren correctamente datos combinados
+- [x] Modificar Incidencias para mostrar datos de ambos negocios cuando se selecciona "Ambos"
+- [x] Modificar Tareas para mostrar datos de ambos negocios cuando se selecciona "Ambos"
+- [x] Modificar Inventario para mostrar datos de ambos negocios cuando se selecciona "Ambos"
+- [x] Verificar que todas las páginas muestren correctamente datos combinados
 
 ## Método de pago en Otros Gastos
 - [x] Agregar campo paymentMethod a tabla otros_gastos en schema
