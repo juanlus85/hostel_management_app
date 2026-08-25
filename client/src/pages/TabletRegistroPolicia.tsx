@@ -3,6 +3,7 @@ import { Building2, Camera, CheckCircle2, FileScan, Globe2, Loader2, Plus, Save,
 import { trpc } from "@/lib/trpc";
 import { COUNTRIES } from "@/lib/countries";
 import { mergeRecognizedDocumentFields } from "@shared/documentRecognition";
+import { requiresDocumentSupport } from "@shared/documentSupport";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -129,7 +130,8 @@ export default function TabletRegistroPolicia() {
     if (!termsUrl || !privacyUrl) return toast.error(t(lang, "Faltan los enlaces legales. Pide a recepción que los configure antes de continuar.", "Legal links are missing. Ask reception to configure them before continuing."));
     if (signed.some((value) => !value)) return toast.error(t(lang, "Cada huésped debe firmar antes de continuar.", "Every guest must sign before continuing."));
     if (guests.some((guest) => !guest.acceptedTerms || !guest.acceptedPrivacy)) return toast.error(t(lang, "Cada huésped debe aceptar las condiciones y la privacidad.", "Every guest must accept the terms and privacy policy."));
-    const payload = guests.map((guest, index) => ({ ...guest, signature: canvasRefs.current[index]?.toDataURL("image/png") || "", acceptedTerms: true as const, acceptedPrivacy: true as const }));
+    if (guests.some((guest) => requiresDocumentSupport(guest.documentType) && !guest.documentSupport.trim())) return toast.error(t(lang, "El número de soporte es obligatorio para DNI/NIF y NIE", "The support number is required for Spanish ID and NIE"));
+    const payload = guests.map((guest, index) => ({ ...guest, documentSupport: requiresDocumentSupport(guest.documentType) ? guest.documentSupport : "", signature: canvasRefs.current[index]?.toDataURL("image/png") || "", acceptedTerms: true as const, acceptedPrivacy: true as const }));
     registerGroup.mutate({ language: lang, guests: payload });
   };
 

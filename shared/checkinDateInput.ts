@@ -15,3 +15,10 @@ export function toDatabaseDate(value: string): string | undefined {
   const date = new Date(`${match[0]}T12:00:00`);
   return Number.isNaN(date.getTime()) ? undefined : match[0];
 }
+
+export function parseCheckinDate(value: unknown): Date | null {
+  const normalized = toDateTimeLocal(value);
+  if (!normalized) return null;
+  const date = new Date(normalized);
+  return Number.isNaN(date.getTime()) ? null : date;
+}

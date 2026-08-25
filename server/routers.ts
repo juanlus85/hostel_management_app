@@ -11,6 +11,7 @@ import { defaultGuestsForRoomType } from "../shared/roomCapacity";
 import { canAccessOnlineGuide, dayAfter, effectiveGuideExpiry } from "@shared/onlineGuideAccess";
 import { hasInvitationEmail, onlineGuestToken } from "../shared/onlineCheckinGuests";
 import { checkoutNotificationContent, shouldCreateCheckoutNotification } from "../shared/roomCheckoutNotifications";
+import { normalizedDocumentSupport, requiresDocumentSupport } from "../shared/documentSupport";
 
 // Admin-only procedure
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -34,6 +35,12 @@ function getMadridStayDates() {
   const date = new Date(Date.UTC(Number(values.year), Number(values.month) - 1, Number(values.day)));
   const format = (value: Date) => value.toISOString().slice(0, 10);
   return { checkInDate: format(date), checkOutDate: format(new Date(date.getTime() + 86_400_000)) };
+}
+
+function assertRequiredDocumentSupport(documentType: string | null | undefined, support: string | null | undefined) {
+  if (requiresDocumentSupport(documentType) && !normalizedDocumentSupport(documentType, support)) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "El número de soporte es obligatorio para DNI/NIF y NIE" });
+  }
 }
 
 export const appRouter = router({
@@ -1799,6 +1806,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           acceptedPrivacy: z.literal(true),
         })).min(1).max(12),
       })).mutation(async ({ input, ctx }) => {
+        input.guests.forEach((guest) => assertRequiredDocumentSupport(guest.documentType, guest.documentSupport));
         const groupId = `tablet-${randomBytes(12).toString("hex")}`;
         const stayDates = getMadridStayDates();
         const guestIds: number[] = [];
@@ -1806,7 +1814,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           const guest = input.guests[index];
           const guestId = await db.createGuest({
             ...guest,
-            documentSupport: guest.documentSupport || null,
+            documentSupport: normalizedDocumentSupport(guest.documentType, guest.documentSupport) || null,
             documentExpiry: guest.documentExpiry || null,
             addressExtra: guest.addressExtra || null,
             province: guest.province || null,
@@ -1927,8 +1935,9 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
         checkinType: z.enum(["presencial", "anticipado", "online"]).optional(),
         language: z.enum(["es", "en"]).optional(),
       })).mutation(async ({ input, ctx }) => {
+        assertRequiredDocumentSupport(input.documentType, input.documentSupport);
         // Para check-ins públicos (anticipado), createdBy será null
-        const id = await db.createGuest({ ...input, createdBy: ctx.user?.id || null });
+        const id = await db.createGuest({ ...input, documentSupport: normalizedDocumentSupport(input.documentType, input.documentSupport), createdBy: ctx.user?.id || null });
         
         // Generar PDF automáticamente si el check-in está completado
         if (input.status === 'completed') {
@@ -2201,6 +2210,8 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           acceptedPrivacy: z.literal(true),
         })).optional(),
       })).mutation(async ({ input }) => {
+        const submittedGuests = input.guests?.length ? input.guests : [input];
+        submittedGuests.forEach((guest) => assertRequiredDocumentSupport(guest.documentType, guest.documentSupport));
         const link = await db.getOnlineCheckinLinkByToken(input.token);
         if (!link) throw new TRPCError({ code: "NOT_FOUND", message: "El enlace de check-in no existe" });
 
@@ -2212,7 +2223,6 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
         if (link.status !== "pending") {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Este enlace ya se utilizó o fue cancelado" });
         }
-        const submittedGuests = input.guests?.length ? input.guests : [input];
         if (submittedGuests.length !== link.numberOfGuests) {
           throw new TRPCError({ code: "BAD_REQUEST", message: `Este enlace requiere los datos de ${link.numberOfGuests} huésped(es)` });
         }
@@ -2234,7 +2244,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           const guest = submittedGuests[index];
           const guestId = await db.createGuest({
             firstName: guest.firstName.trim(), lastName: guest.lastName.trim(), documentNumber: guest.documentNumber.trim(),
-            documentSupport: guest.documentSupport?.trim() || null, documentType: guest.documentType, gender: guest.gender,
+            documentSupport: normalizedDocumentSupport(guest.documentType, guest.documentSupport) || null, documentType: guest.documentType, gender: guest.gender,
             nationality: guest.nationality, birthDate: guest.birthDate, documentExpiry: guest.documentExpiry || null,
             street: guest.street.trim(), addressExtra: guest.addressExtra?.trim() || null, postalCode: guest.postalCode.trim(),
             city: guest.city.trim(), province: guest.province?.trim() || null, country: guest.country, phone: guest.phone.trim(),

@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Eye, Printer, FileDown } from "lucide-react";
+import { parseCheckinDate } from "@shared/checkinDateInput";
 
 export default function ExportarPolicia() {
   // Inicializar con el primer y último día del mes actual
@@ -119,8 +120,8 @@ export default function ExportarPolicia() {
       xml += `        <referencia>${escapeXml(guest.reservationNumber || 'SIN-REF')}</referencia>\n`;
       
       // Fechas del contrato
-      const checkInDate = guest.checkInDate ? new Date(guest.checkInDate) : now;
-      const checkOutDate = guest.checkOutDate ? new Date(guest.checkOutDate) : new Date(checkInDate.getTime() + 86400000);
+      const checkInDate = parseCheckinDate(guest.checkInDate) || now;
+      const checkOutDate = parseCheckinDate(guest.checkOutDate) || new Date(checkInDate.getTime() + 86400000);
       
       xml += `        <fechaContrato>${checkInDate.toISOString().split('T')[0]}${timezone}</fechaContrato>\n`;
       xml += `        <fechaEntrada>${checkInDate.toISOString().replace('Z', timezone)}</fechaEntrada>\n`;
@@ -427,7 +428,7 @@ export default function ExportarPolicia() {
                       </div>
                       <div className="text-sm text-muted-foreground">
                         {guest.documentNumber} • {guest.reservationNumber || "Sin reserva"} • 
-                        {guest.checkInDate ? ` ${new Date(guest.checkInDate).toLocaleDateString()}` : " Sin fecha"}
+                        {parseCheckinDate(guest.checkInDate)?.toLocaleDateString() ? ` ${parseCheckinDate(guest.checkInDate)?.toLocaleDateString()}` : " Sin fecha"}
                       </div>
                     </div>
                   </div>

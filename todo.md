@@ -1617,6 +1617,10 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Corregir el guardado cuando el sexo del huésped está vacío o no seleccionado.
 - [x] Evitar que una fecha inválida bloquee la apertura del editor de Check-in Anticipado.
 
+## Validación de documentos de Check-in
+- [x] Exigir número de soporte para DNI/NIF y NIE en Tablet, Online y Check-in Anticipado.
+- [x] Ocultar y no validar número de soporte para Pasaporte y Otros en esos flujos.
+
 ## Identificación de versión
 - [x] Mostrar una versión y fecha de compilación discretas en la interfaz de administración.
 

@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { renderArrivalTemplate } from "@shared/arrivalTemplate";
 import { formatHostelAddress, googleMapsLink, translateFloor, translateRoomType } from "@shared/arrivalDisplay";
+import { requiresDocumentSupport } from "@shared/documentSupport";
 
 type Language = "es" | "en";
 type DocumentType = "NIF" | "NIE" | "PAS" | "OTRO";
@@ -67,8 +68,8 @@ export default function CheckinOnlinePublico() {
       toast.error(t("Cada huésped debe firmar y aceptar las condiciones y privacidad", "Every guest must sign and accept the terms and privacy policy"));
       return;
     }
-    if (guests.some((guest) => guest.documentType === "NIF" && guest.nationality === "ESP" && !guest.documentSupport)) {
-      toast.error(t("El número de soporte es obligatorio para DNI español", "The support number is required for Spanish ID"));
+    if (guests.some((guest) => requiresDocumentSupport(guest.documentType) && !guest.documentSupport.trim())) {
+      toast.error(t("El número de soporte es obligatorio para DNI/NIF y NIE", "The support number is required for Spanish ID and NIE"));
       return;
     }
     try {

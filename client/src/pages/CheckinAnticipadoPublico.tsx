@@ -9,6 +9,7 @@ import { CheckCircle2, Loader2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { COUNTRIES } from "@/lib/countries";
+import { requiresDocumentSupport } from "@shared/documentSupport";
 
 export default function CheckinAnticipadoPublico() {
   const [lang, setLang] = useState<"es" | "en">("es");
@@ -143,8 +144,8 @@ export default function CheckinAnticipadoPublico() {
     }
 
     // Validar número de soporte para DNI español
-    if (formData.documentType === "DNI" && formData.nationality === "ESP" && !formData.documentSupport) {
-      toast.error(t("El número de soporte es obligatorio para DNI español", "Support number is required for Spanish DNI"));
+    if (requiresDocumentSupport(formData.documentType) && !formData.documentSupport.trim()) {
+      toast.error(t("El número de soporte es obligatorio para DNI/NIF y NIE", "Support number is required for Spanish ID and NIE"));
       return;
     }
 
@@ -171,7 +172,7 @@ export default function CheckinAnticipadoPublico() {
         nationality: formData.nationality,
         documentType: formData.documentType,
         documentNumber: formData.documentNumber,
-        documentSupport: formData.documentSupport || undefined,
+        documentSupport: requiresDocumentSupport(formData.documentType) ? formData.documentSupport || undefined : undefined,
         gender: formData.gender as "Hombre" | "Mujer" | "Otro",
         birthDate: formData.birthDate,
         phone: formData.phone,
@@ -319,7 +320,7 @@ export default function CheckinAnticipadoPublico() {
                     <Label htmlFor="documentType">{t("Tipo de Documento", "Document Type")} *</Label>
                     <Select
                       value={formData.documentType}
-                      onValueChange={(value) => setFormData({ ...formData, documentType: value })}
+                      onValueChange={(value) => setFormData({ ...formData, documentType: value, documentSupport: requiresDocumentSupport(value) ? formData.documentSupport : "" })}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -327,6 +328,8 @@ export default function CheckinAnticipadoPublico() {
                       <SelectContent>
                         <SelectItem value="PAS">{t("Pasaporte", "Passport")}</SelectItem>
                         <SelectItem value="DNI">{t("DNI / ID", "DNI / ID")}</SelectItem>
+                        <SelectItem value="NIE">NIE</SelectItem>
+                        <SelectItem value="OTRO">{t("Otro documento", "Other document")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -342,7 +345,7 @@ export default function CheckinAnticipadoPublico() {
                   </div>
 
                   {/* Número de Soporte para DNI español */}
-                  {formData.documentType === "DNI" && formData.nationality === "ESP" && (
+                  {requiresDocumentSupport(formData.documentType) && (
                     <div>
                       <Label htmlFor="documentSupport">
                         {t("Número de Soporte", "Support Number")} *
