@@ -1460,9 +1460,9 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 
 ## Warning React Keys Duplicadas - EN PROGRESO
 
-- [ ] Warning: "Encountered two children with the same key, 'GBR'"
-- [ ] Buscar dónde se usa 'GBR' como key en componentes de check-in
-- [ ] Corregir usando keys únicas (índice + valor o ID único)
+- [x] Warning: "Encountered two children with the same key, 'GBR'"
+- [x] Buscar dónde se usa 'GBR' como key en componentes de check-in
+- [x] Corregir usando keys únicas (índice + valor o ID único)
 
 
 ## Error Validación paymentType - EN PROGRESO
