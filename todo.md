@@ -1004,12 +1004,12 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 ### Backend (tRPC)
 - [x] Endpoints CRUD para guests
 - [x] Endpoint para check-in presencial
-- [ ] Endpoint para check-in online (público) - Próxima fase
-- [ ] Endpoint para generar link personalizado - Próxima fase
+- [x] Endpoint para check-in online (público) - Próxima fase
+- [x] Endpoint para generar link personalizado - Próxima fase
 - [x] Endpoint para exportación XML policía
-- [ ] Endpoint para generación de PDF - Próxima fase
+- [x] Endpoint para generación de PDF - Próxima fase
 - [x] Endpoints para configuración del sistema
-- [ ] Endpoint para envío de emails - Próxima fase
+- [x] Endpoint para envío de emails - Próxima fase
 
 ### Frontend - Componente Principal
 - [x] Crear CheckinUnificado.tsx con pestañas
@@ -1032,26 +1032,26 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Eliminar huésped
 
 ### Pestaña Check-in Anticipado
-- [ ] Formulario para generar link personalizado (SIN códigos)
-- [ ] Campos: reserva, nombre, email, habitación, fecha llegada
-- [ ] Selección de idioma (ES/EN)
-- [ ] Generar link único con token
-- [ ] Copiar link al portapapeles
-- [ ] Enviar por email
-- [ ] Huésped rellena formulario pero NO recibe códigos
+- [x] Formulario para generar link personalizado (SIN códigos)
+- [x] Campos: reserva, nombre, email, habitación, fecha llegada
+- [x] Selección de idioma (ES/EN)
+- [x] Generar link único con token
+- [x] Copiar link al portapapeles
+- [x] Enviar por email
+- [x] Huésped rellena formulario pero NO recibe códigos
 
 ### Pestaña Check-in Online
-- [ ] Formulario para generar link personalizado (CON códigos)
-- [ ] Campos: reserva, nombre, email, habitación, códigos de acceso
-- [ ] Selección de idioma (ES/EN)
-- [ ] Generar link único con token
-- [ ] Copiar link al portapapeles
-- [ ] Enviar por email
-- [ ] Huésped rellena formulario y recibe códigos automáticamente
+- [x] Formulario para generar link personalizado (CON códigos)
+- [x] Campos: reserva, nombre, email, habitación, códigos de acceso
+- [x] Selección de idioma (ES/EN)
+- [x] Generar link único con token
+- [x] Copiar link al portapapeles
+- [x] Enviar por email
+- [x] Huésped rellena formulario y recibe códigos automáticamente
 
 ### Pestaña Códigos de Acceso
-- [ ] Reutilizar componente existente de room_codes
-- [ ] Integración con asignación automática
+- [x] Reutilizar componente existente de room_codes
+- [x] Integración con asignación automática
 
 ### Pestaña Exportar Policía
 - [x] Selector de rango de fechas
@@ -1064,18 +1064,18 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Datos del hostel (nombre, dirección, RTA)
 - [x] Código establecimiento policía
 - [x] Términos y condiciones (ES/EN)
-- [ ] Política de privacidad (ES/EN) - Próxima fase
-- [ ] Mensajes de bienvenida (ES/EN) - Próxima fase
+- [x] Política de privacidad (ES/EN) - Próxima fase
+- [x] Mensajes de bienvenida (ES/EN) - Próxima fase
 - [x] Configuración SMTP
-- [ ] Tipos de habitación - Próxima fase
+- [x] Tipos de habitación - Próxima fase
 
 ### Ruta Pública
-- [ ] Crear ruta /public/checkin/:token
-- [ ] Formulario público sin autenticación
-- [ ] Cargar datos pre-rellenados desde token
-- [ ] Permitir completar check-in
-- [ ] Mostrar información de acceso al finalizar
-- [ ] Enviar email de confirmación
+- [x] Crear ruta /public/checkin/:token
+- [x] Formulario público sin autenticación
+- [x] Cargar datos pre-rellenados desde token
+- [x] Permitir completar check-in
+- [x] Mostrar información de acceso al finalizar
+- [x] Enviar email de confirmación
 
 ### Componentes Auxiliares
 - [ ] SignaturePad para firma digital
