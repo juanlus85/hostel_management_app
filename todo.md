@@ -883,11 +883,11 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 
 ## Sistema de Gestión de Pedidos (v83)
 ### Inventario
-- [ ] Tabla de productos con campos: nombre, categoría, en_inventario, precio, coste
-- [ ] Vista tipo Excel con todos los productos
-- [ ] Importación CSV (vacía BD y actualiza con nuevo CSV)
-- [ ] Añadir artículo manualmente
-- [ ] Modificar artículo existente
+- [x] Tabla de productos con campos: nombre, categoría, en_inventario, precio, coste
+- [x] Vista tipo Excel con todos los productos
+- [x] Importación CSV (vacía BD y actualiza con nuevo CSV)
+- [x] Añadir artículo manualmente
+- [x] Modificar artículo existente
 
 ### Pedidos Generales
 - [ ] Crear pedido con proveedor, fecha estimada
