@@ -1408,9 +1408,9 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Firma cortada en PDF: ajustar tamaño y posición
 - [x] Opciones de sexo: cambiar a "Hombre", "Mujer", "Otro" (en español)
 - [x] Firma desalineada: corregir offset del cursor en canvas (ajustada escala)
-- [ ] Email bilingüe: verificar que funciona correctamente (ya implementado)
+- [x] Email bilingüe: verificar que funciona correctamente (ya implementado)
 - [x] Filtrado check-ins: los no completados solo en "Anticipado", no en "Huéspedes"
-- [ ] Origen de reserva: verificar que aparece Booking.com por defecto
+- [x] Origen de reserva: verificar que aparece Booking.com por defecto
 - [x] Código municipio INE: usar código postal del huésped (ya no necesita configuración)
 
 
