@@ -15,7 +15,7 @@ import { toast } from "sonner";
 type Language = "es" | "en";
 type DocumentSide = "front" | "back";
 type GuestForm = {
-  firstName: string; lastName: string; documentType: "NIF" | "NIE" | "PAS" | "OTRO"; documentNumber: string; documentSupport: string;
+  firstName: string; lastName: string; documentType: "NIF" | "NIE" | "CAR" | "PAS" | "OTRO"; documentNumber: string; documentSupport: string;
   nationality: string; gender: "Hombre" | "Mujer" | "Otro"; birthDate: string; documentExpiry: string; street: string; addressExtra: string;
   postalCode: string; city: string; province: string; country: string; phone: string; email: string; acceptedTerms: boolean; acceptedPrivacy: boolean;
 };
@@ -94,7 +94,7 @@ export default function TabletRegistroPolicia() {
     try {
       const result = await scanDocument.mutateAsync({ imageData, contentType: "image/jpeg" });
       const fields = result.fields as Partial<GuestForm>;
-      const documentType = ["NIF", "NIE", "PAS", "OTRO"].includes(fields.documentType || "") ? fields.documentType as GuestForm["documentType"] : undefined;
+      const documentType = ["NIF", "NIE", "CAR", "PAS", "OTRO"].includes(fields.documentType || "") ? fields.documentType as GuestForm["documentType"] : undefined;
       const gender = ["Hombre", "Mujer", "Otro"].includes(fields.gender || "") ? fields.gender as GuestForm["gender"] : undefined;
       setGuests((current) => current.map((guest, guestIndex) => guestIndex === index ? normalizeGuestDocumentSupport(mergeRecognizedDocumentFields(guest, { ...fields, documentType, gender })) : guest));
       setDocumentSides((current) => current.map((sides, guestIndex) => guestIndex === index ? { ...sides, [side]: true } : sides));

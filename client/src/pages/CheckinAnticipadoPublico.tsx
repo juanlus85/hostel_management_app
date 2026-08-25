@@ -329,6 +329,7 @@ export default function CheckinAnticipadoPublico() {
                         <SelectItem value="PAS">{t("Pasaporte", "Passport")}</SelectItem>
                         <SelectItem value="DNI">{t("DNI / ID", "DNI / ID")}</SelectItem>
                         <SelectItem value="NIE">NIE</SelectItem>
+                        <SelectItem value="CAR">{t("Carnet de conducir", "Driving licence")}</SelectItem>
                         <SelectItem value="OTRO">{t("Otro documento", "Other document")}</SelectItem>
                       </SelectContent>
                     </Select>

@@ -177,7 +177,7 @@ export default function ExportarPolicia() {
       }
       
       // Documento
-      const docType = guest.documentType === 'DNI' ? 'NIF' : guest.documentType || 'PAS';
+      const docType = guest.documentType === 'DNI' ? 'NIF' : guest.documentType === 'CAR' ? 'OTRO' : guest.documentType || 'PAS';
       xml += `        <tipoDocumento>${docType}</tipoDocumento>\n`;
       xml += `        <numeroDocumento>${escapeXml(guest.documentNumber)}</numeroDocumento>\n`;
       

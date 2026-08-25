@@ -106,6 +106,7 @@ export const COUNTRIES = [
 export const DOCUMENT_TYPES = [
   { code: "NIF", label: "DNI (NIF)", allowedFor: ["ESP"] },
   { code: "NIE", label: "NIE", allowedFor: "EU" }, // Solo europeos
+  { code: "CAR", label: "Carnet de conducir", allowedFor: ["ESP"] },
   { code: "PAS", label: "Pasaporte", allowedFor: "ALL" },
   { code: "OTRO", label: "Otro", allowedFor: "ALL" },
 ];
@@ -141,8 +142,8 @@ export function getAllowedDocumentTypes(nationalityCode: string): typeof DOCUMEN
   }
   
   if (nationalityCode === "ESP") {
-    // Españoles: NIF, PAS
-    return DOCUMENT_TYPES.filter(d => d.code === "NIF" || d.code === "PAS" || d.code === "OTRO");
+    // Españoles: DNI/NIF, NIE, carnet de conducir y pasaporte.
+    return DOCUMENT_TYPES.filter(d => d.code === "NIF" || d.code === "NIE" || d.code === "CAR" || d.code === "PAS" || d.code === "OTRO");
   }
   
   if (country.isEU) {

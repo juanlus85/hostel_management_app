@@ -759,7 +759,7 @@ export default function CheckinPresencial() {
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {isSpanish && "Españoles: DNI o Pasaporte"}
+                  {isSpanish && "Españoles: DNI/NIF, NIE, carnet de conducir o Pasaporte"}
                   {isEU && !isSpanish && "Europeos: NIE o Pasaporte"}
                   {!isEU && !isSpanish && "No europeos: Solo Pasaporte"}
                 </p>

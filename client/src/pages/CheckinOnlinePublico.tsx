@@ -15,7 +15,7 @@ import { formatHostelAddress, googleMapsLink, translateFloor, translateRoomType 
 import { requiresDocumentSupport as requiresDocumentSupportForNationality } from "@shared/documentSupport";
 
 type Language = "es" | "en";
-type DocumentType = "NIF" | "NIE" | "PAS" | "OTRO";
+type DocumentType = "NIF" | "NIE" | "CAR" | "PAS" | "OTRO";
 type Gender = "Hombre" | "Mujer" | "Otro";
 type GuestForm = {
   firstName: string; lastName: string; documentNumber: string; documentSupport: string; documentType: DocumentType;
