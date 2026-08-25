@@ -1084,108 +1084,108 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [ ] EditGuestModal para edición
 
 ### Funcionalidades Adicionales
-- [ ] Generación de PDF con todos los datos y firma
-- [ ] Sistema de notificaciones para check-ins online
-- [ ] Dashboard de estadísticas de check-ins
-- [ ] Integración con sistema de reservas existente
+- [x] Generación de PDF con todos los datos y firma
+- [x] Sistema de notificaciones para check-ins online
+- [x] Dashboard de estadísticas de check-ins
+- [x] Integración con sistema de reservas existente
 
 
 ## Mejoras Check-in Presencial v89
 
 ### Formulario Completo
-- [ ] Añadir todos los campos obligatorios para policía
-- [ ] Desplegable de nacionalidades (países)
-- [ ] Desplegable de género (Masculino/Femenino/Otro)
-- [ ] Desplegable de tipo documento (Passport/DNI/NIE/Driving License)
-- [ ] Campos de dirección completa (calle, piso, código postal, ciudad, provincia)
-- [ ] Teléfonos y email
+- [x] Añadir todos los campos obligatorios para policía
+- [x] Desplegable de nacionalidades (países)
+- [x] Desplegable de género (Masculino/Femenino/Otro)
+- [x] Desplegable de tipo documento (Passport/DNI/NIE/Driving License)
+- [x] Campos de dirección completa (calle, piso, código postal, ciudad, provincia)
+- [x] Teléfonos y email
 
 ### Firma Digital
-- [ ] Crear componente SignaturePad con canvas
-- [ ] Botón "Borrar firma" para limpiar canvas
-- [ ] Guardar firma como imagen base64 en base de datos
-- [ ] Mostrar firma guardada en vista de huéspedes
+- [x] Crear componente SignaturePad con canvas
+- [x] Botón "Borrar firma" para limpiar canvas
+- [x] Guardar firma como imagen base64 en base de datos
+- [x] Mostrar firma guardada en vista de huéspedes
 
 ### Múltiples Huéspedes
-- [ ] Botón "Añadir Huésped (1/3)" para agregar segundo/tercer huésped
-- [ ] Cada huésped tiene su propio formulario completo
-- [ ] Indicar huésped principal con badge "Principal"
-- [ ] Todos los huéspedes comparten la misma reserva
-- [ ] Guardar todos los huéspedes en una sola transacción
+- [x] Botón "Añadir Huésped (1/3)" para agregar segundo/tercer huésped
+- [x] Cada huésped tiene su propio formulario completo
+- [x] Indicar huésped principal con badge "Principal"
+- [x] Todos los huéspedes comparten la misma reserva
+- [x] Guardar todos los huéspedes en una sola transacción
 
 
 ## Mejoras Check-in Presencial (v89)
 
 ### Formulario Completo según Normativa Policial
-- [ ] Campos obligatorios de policía española (Real Decreto 933/2021):
-  - [ ] Nombre y apellidos
-  - [ ] Número de documento
-  - [ ] Tipo de documento (Passport, DNI, NIE, Driving License)
-  - [ ] Género (Masculino, Femenino, Otro)
-  - [ ] Nacionalidad con desplegable + opción "Otro" (campo de texto libre)
-  - [ ] Fecha de nacimiento
-  - [ ] Fecha de expedición del documento
-  - [ ] Dirección completa (compartida por todos los huéspedes de la reserva)
-  - [ ] Teléfono y email
+- [x] Campos obligatorios de policía española (Real Decreto 933/2021):
+- [x] Nombre y apellidos
+- [x] Número de documento
+- [x] Tipo de documento (Passport, DNI, NIE, Driving License)
+- [x] Género (Masculino, Femenino, Otro)
+- [x] Nacionalidad con desplegable + opción "Otro" (campo de texto libre)
+- [x] Fecha de nacimiento
+- [x] Fecha de expedición del documento
+- [x] Dirección completa (compartida por todos los huéspedes de la reserva)
+- [x] Teléfono y email
 
 ### Información de Reserva
-- [ ] Selector de habitación (desplegable con habitaciones existentes)
-- [ ] Auto-completar tipo de habitación al seleccionar número
-- [ ] Fecha entrada y salida
-- [ ] Número de reserva
-- [ ] Código hostel y código habitación
-- [ ] Número de habitaciones
-- [ ] Internet (Sí/No)
-- [ ] Régimen (S.A., A.D., M.P., P.C.)
-- [ ] Origen de reserva (Walk In, Booking.com, Airbnb, etc.)
+- [x] Selector de habitación (desplegable con habitaciones existentes)
+- [x] Auto-completar tipo de habitación al seleccionar número
+- [x] Fecha entrada y salida
+- [x] Número de reserva
+- [x] Código hostel y código habitación
+- [x] Número de habitaciones
+- [x] Internet (Sí/No)
+- [x] Régimen (S.A., A.D., M.P., P.C.)
+- [x] Origen de reserva (Walk In, Booking.com, Airbnb, etc.)
 
 ### Información de Pago (Obligatoria)
-- [ ] Tipo de pago (Efectivo, Tarjeta, Transferencia, etc.)
-- [ ] Fecha de pago
-- [ ] Cantidad abonada
-- [ ] Cantidad pendiente
-- [ ] Medio de pago (Visa, Mastercard, PayPal, etc.)
-- [ ] Titular del pago
+- [x] Tipo de pago (Efectivo, Tarjeta, Transferencia, etc.)
+- [x] Fecha de pago
+- [x] Cantidad abonada
+- [x] Cantidad pendiente
+- [x] Medio de pago (Visa, Mastercard, PayPal, etc.)
+- [x] Titular del pago
 
 ### Múltiples Huéspedes
-- [ ] Permitir añadir hasta 3 huéspedes por reserva
-- [ ] Botón "Añadir Huésped (1/3)"
-- [ ] Cada huésped con sus datos personales completos
-- [ ] Dirección compartida entre todos los huéspedes
-- [ ] Solo el huésped principal firma
+- [x] Permitir añadir hasta 3 huéspedes por reserva
+- [x] Botón "Añadir Huésped (1/3)"
+- [x] Cada huésped con sus datos personales completos
+- [x] Dirección compartida entre todos los huéspedes
+- [x] Solo el huésped principal firma
 
 ### Firma Digital
-- [ ] Componente SignaturePad con canvas HTML5
-- [ ] Captura de firma con ratón o táctil
-- [ ] Botón "Borrar firma"
-- [ ] Guardar firma como base64 en BD
-- [ ] Solo el huésped principal debe firmar
+- [x] Componente SignaturePad con canvas HTML5
+- [x] Captura de firma con ratón o táctil
+- [x] Botón "Borrar firma"
+- [x] Guardar firma como base64 en BD
+- [x] Solo el huésped principal debe firmar
 
 ### Header Informativo
-- [ ] Mostrar nombre del hostel
-- [ ] Mostrar RTA del hostel
-- [ ] Diseño "Welcome to our Home" según referencia
+- [x] Mostrar nombre del hostel
+- [x] Mostrar RTA del hostel
+- [x] Diseño "Welcome to our Home" según referencia
 
 ### Validación
-- [ ] Validar campos obligatorios antes de guardar
-- [ ] Validar que el huésped principal haya firmado
-- [ ] Validar fechas (entrada < salida)
-- [ ] Mensaje de error claro si falta información
+- [x] Validar campos obligatorios antes de guardar
+- [x] Validar que el huésped principal haya firmado
+- [x] Validar fechas (entrada < salida)
+- [x] Mensaje de error claro si falta información
 
 ### Backend
-- [ ] Verificar que schema tiene todos los campos necesarios
-- [ ] Ajustar procedimiento create para aceptar múltiples huéspedes
-- [ ] Guardar groupId para vincular huéspedes de la misma reserva
-- [ ] Marcar isPrincipal = true solo para el primer huésped
+- [x] Verificar que schema tiene todos los campos necesarios
+- [x] Ajustar procedimiento create para aceptar múltiples huéspedes
+- [x] Guardar groupId para vincular huéspedes de la misma reserva
+- [x] Marcar isPrincipal = true solo para el primer huésped
 
 ### Validación de Documentos según Nacionalidad
-- [ ] DNI: Solo para españoles
-- [ ] NIE: Solo para europeos
-- [ ] Carnet de conducir: Solo para españoles
-- [ ] ID Card: Solo para europeos
-- [ ] Pasaporte: Todos (obligatorio para no europeos)
-- [ ] Deshabilitar opciones de documento según nacionalidad seleccionada
-- [ ] Mostrar mensaje de ayuda cuando se selecciona nacionalidad
+- [x] DNI: Solo para españoles
+- [x] NIE: Solo para europeos
+- [x] Carnet de conducir: Solo para españoles
+- [x] ID Card: Solo para europeos
+- [x] Pasaporte: Todos (obligatorio para no europeos)
+- [x] Deshabilitar opciones de documento según nacionalidad seleccionada
+- [x] Mostrar mensaje de ayuda cuando se selecciona nacionalidad
 
 
 ## Mejoras Check-in Presencial (v31) - COMPLETADAS
