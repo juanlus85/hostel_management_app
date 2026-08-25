@@ -744,7 +744,6 @@ export default function CheckinPresencial() {
                   value={guest.documentType}
                   onValueChange={(value) => {
                     updateGuest(index, "documentType", value);
-                    if (!requiresDocumentSupport(value, guest.nationality)) updateGuest(index, "supportNumber", "");
                   }}
                 >
                   <SelectTrigger>
