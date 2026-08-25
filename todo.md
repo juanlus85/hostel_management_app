@@ -1620,6 +1620,7 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 ## Validación de documentos de Check-in
 - [x] Exigir número de soporte para DNI/NIF y NIE en Tablet, Online y Check-in Anticipado.
 - [x] Ocultar y no validar número de soporte para Pasaporte y Otros en esos flujos.
+- [x] Corregir el campo de soporte que no aparece al seleccionar NIE.
 
 ## Identificación de versión
 - [x] Mostrar una versión y fecha de compilación discretas en la interfaz de administración.
