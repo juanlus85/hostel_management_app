@@ -11,7 +11,9 @@ describe("número de soporte documental", () => {
   });
   it("elimina el soporte de pasaportes y otros documentos", () => {
     expect(normalizedDocumentSupport("PAS", "FRA", "ABC123")).toBeUndefined();
+    expect(normalizedDocumentSupport("OTRO", "ESP", "ABC123")).toBeUndefined();
     expect(normalizedDocumentSupport("NIE", "FRA", "  ABC123  ")).toBe("ABC123");
     expect(normalizedDocumentSupport("NIE", "USA", "ABC123")).toBeUndefined();
+    expect(normalizedDocumentSupport("NIF", "USA", "  DNI-123  ")).toBe("DNI-123");
   });
 });

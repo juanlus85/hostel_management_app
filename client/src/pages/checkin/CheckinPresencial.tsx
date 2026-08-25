@@ -269,7 +269,10 @@ export default function CheckinPresencial() {
 
   const updateGuest = (index: number, field: keyof GuestData, value: string) => {
     const newGuests = [...guests];
-    newGuests[index] = { ...newGuests[index], [field]: value };
+    const updatedGuest = { ...newGuests[index], [field]: value };
+    newGuests[index] = requiresDocumentSupport(updatedGuest.documentType, updatedGuest.nationality)
+      ? updatedGuest
+      : { ...updatedGuest, supportNumber: "" };
     setGuests(newGuests);
   };
 

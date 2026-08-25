@@ -1187,6 +1187,9 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Deshabilitar opciones de documento según nacionalidad seleccionada
 - [x] Mostrar mensaje de ayuda cuando se selecciona nacionalidad
 
+### Corrección de soporte documental
+- [x] Limpiar el número de soporte en todos los formularios cuando un cambio de nacionalidad o tipo de documento deje de requerirlo
+
 
 ## Mejoras Check-in Presencial (v31) - COMPLETADAS
 - [x] Agregar campo issueDate (fecha de expedición) a schema de guests

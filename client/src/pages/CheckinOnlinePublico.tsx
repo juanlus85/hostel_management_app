@@ -36,6 +36,7 @@ const emptyGuest = (email = ""): GuestForm => ({
   nationality: "ESP", birthDate: "", documentExpiry: "", street: "", addressExtra: "", postalCode: "", city: "",
   province: "", country: "ESP", phone: "", email, signature: "", acceptedTerms: false, acceptedPrivacy: false,
 });
+const normalizeGuestDocumentSupport = (guest: GuestForm): GuestForm => requiresDocumentSupportForNationality(guest.documentType, guest.nationality) ? guest : { ...guest, documentSupport: "" };
 const inputClass = "min-h-12 text-base";
 const hostelLogo = import.meta.env.VITE_APP_LOGO;
 
@@ -59,7 +60,7 @@ export default function CheckinOnlinePublico() {
   }, [invitation?.email, invitation?.numberOfGuests, invitation?.language]);
 
   const updateGuest = (index: number, patch: Partial<GuestForm>) => {
-    setGuests((current) => current.map((guest, guestIndex) => guestIndex === index ? { ...guest, ...patch } : guest));
+    setGuests((current) => current.map((guest, guestIndex) => guestIndex === index ? normalizeGuestDocumentSupport({ ...guest, ...patch }) : guest));
   };
 
   const submit = async (event: React.FormEvent) => {

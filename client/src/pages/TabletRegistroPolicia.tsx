@@ -21,6 +21,7 @@ type GuestForm = {
 };
 
 const blankGuest = (): GuestForm => ({ firstName: "", lastName: "", documentType: "PAS", documentNumber: "", documentSupport: "", nationality: "ESP", gender: "Hombre", birthDate: "", documentExpiry: "", street: "", addressExtra: "", postalCode: "", city: "", province: "", country: "ESP", phone: "", email: "", acceptedTerms: false, acceptedPrivacy: false });
+const normalizeGuestDocumentSupport = (guest: GuestForm): GuestForm => requiresDocumentSupportForNationality(guest.documentType, guest.nationality) ? guest : { ...guest, documentSupport: "" };
 
 export default function TabletRegistroPolicia() {
   const [lang, setLang] = useState<Language>("es");
@@ -73,7 +74,7 @@ export default function TabletRegistroPolicia() {
     return () => { button.onclick = null; };
   }, [guests.length, lang]);
 
-  const updateGuest = (index: number, patch: Partial<GuestForm>) => setGuests((current) => current.map((guest, guestIndex) => guestIndex === index ? { ...guest, ...patch } : guest));
+  const updateGuest = (index: number, patch: Partial<GuestForm>) => setGuests((current) => current.map((guest, guestIndex) => guestIndex === index ? normalizeGuestDocumentSupport({ ...guest, ...patch }) : guest));
   const addGuest = () => { setGuests((current) => [...current, blankGuest()]); setSigned((current) => [...current, false]); setDocumentSides((current) => [...current, { front: false, back: false }]); };
   const removeGuest = (index: number) => { setGuests((current) => current.filter((_, guestIndex) => guestIndex !== index)); setSigned((current) => current.filter((_, guestIndex) => guestIndex !== index)); setDocumentSides((current) => current.filter((_, guestIndex) => guestIndex !== index)); canvasRefs.current.splice(index, 1); };
   const closeCamera = () => { cameraStream?.getTracks().forEach((track) => track.stop()); setCameraStream(null); setCameraIndex(null); };
@@ -95,7 +96,7 @@ export default function TabletRegistroPolicia() {
       const fields = result.fields as Partial<GuestForm>;
       const documentType = ["NIF", "NIE", "PAS", "OTRO"].includes(fields.documentType || "") ? fields.documentType as GuestForm["documentType"] : undefined;
       const gender = ["Hombre", "Mujer", "Otro"].includes(fields.gender || "") ? fields.gender as GuestForm["gender"] : undefined;
-      setGuests((current) => current.map((guest, guestIndex) => guestIndex === index ? mergeRecognizedDocumentFields(guest, { ...fields, documentType, gender }) : guest));
+      setGuests((current) => current.map((guest, guestIndex) => guestIndex === index ? normalizeGuestDocumentSupport(mergeRecognizedDocumentFields(guest, { ...fields, documentType, gender })) : guest));
       setDocumentSides((current) => current.map((sides, guestIndex) => guestIndex === index ? { ...sides, [side]: true } : sides));
       toast.success(side === "front" ? t(lang, "Anverso procesado. Puedes escanear ahora el reverso para completar los datos.", "Front side processed. You can now scan the reverse side to complete the details.") : t(lang, "Reverso procesado. Revisa los datos antes de continuar.", "Reverse side processed. Review the details before continuing."));
     } catch (error: any) { toast.error(error.message || t(lang, "No se pudo leer el documento", "The document could not be read")); }

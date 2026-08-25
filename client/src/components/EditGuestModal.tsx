@@ -10,6 +10,7 @@ import { Loader2 } from "lucide-react";
 import { COUNTRIES, PAYMENT_TYPES } from "@/../../shared/countries";
 import { normalizeGuestGender } from "@shared/guestGender";
 import { toDatabaseDate, toDateTimeLocal } from "@shared/checkinDateInput";
+import { normalizedDocumentSupport, requiresDocumentSupport } from "@shared/documentSupport";
 
 interface EditGuestModalProps {
   guest: any;
@@ -173,7 +174,7 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
       nationality: formData.nationality,
       documentType: formData.documentType,
       documentNumber: formData.documentNumber,
-      documentSupport: formData.documentSupport || undefined,
+      documentSupport: normalizedDocumentSupport(formData.documentType, formData.nationality, formData.documentSupport),
       gender: normalizeGuestGender(formData.gender),
       birthDate: toDatabaseDate(formData.birthDate),
       phone: formData.phone,
@@ -238,7 +239,7 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
               </div>
               <div>
                 <Label htmlFor="nationality">Nacionalidad *</Label>
-                <Select value={formData.nationality} onValueChange={(v) => setFormData({ ...formData, nationality: v })}>
+                <Select value={formData.nationality} onValueChange={(v) => setFormData({ ...formData, nationality: v, documentSupport: requiresDocumentSupport(formData.documentType, v) ? formData.documentSupport : "" })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -253,7 +254,7 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
               </div>
               <div>
                 <Label htmlFor="documentType">Tipo de Documento *</Label>
-                <Select value={formData.documentType} onValueChange={(v) => setFormData({ ...formData, documentType: v })}>
+                <Select value={formData.documentType} onValueChange={(v) => setFormData({ ...formData, documentType: v, documentSupport: requiresDocumentSupport(v, formData.nationality) ? formData.documentSupport : "" })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -274,14 +275,15 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
                   required
                 />
               </div>
-              {formData.documentType === "NIF" && (
+              {requiresDocumentSupport(formData.documentType, formData.nationality) && (
                 <div>
-                  <Label htmlFor="documentSupport">Número de Soporte (DNI)</Label>
+                  <Label htmlFor="documentSupport">Número de Soporte ({formData.documentType === "NIE" ? "NIE" : "DNI"}) *</Label>
                   <Input
                     id="documentSupport"
                     value={formData.documentSupport}
                     onChange={(e) => setFormData({ ...formData, documentSupport: e.target.value })}
                     placeholder="Aparece en el frontal del DNI"
+                    required
                   />
                 </div>
               )}
