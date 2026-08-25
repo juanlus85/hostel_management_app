@@ -1189,6 +1189,7 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 
 ### Corrección de soporte documental
 - [x] Limpiar el número de soporte en todos los formularios cuando un cambio de nacionalidad o tipo de documento deje de requerirlo
+- [x] Eliminar la definición duplicada de Reino Unido para aplicar correctamente la regla de NIE solo europeo
 
 
 ## Mejoras Check-in Presencial (v31) - COMPLETADAS
@@ -1290,12 +1291,12 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Documentar códigos oficiales de parentesco (HJ, NI, SB, PM, AB, HR, TU, OT)
 
 ## Funcionalidades CRUD Check-in
-- [ ] Implementar vista de detalles del check-in (modal con Dialog)
-- [ ] Implementar edición de check-in existente (reutilizar formulario)
-- [ ] Implementar exportación a PDF con todos los datos y firma
-- [ ] Implementar descarga de XML individual para subir a policía
+- [x] Implementar vista de detalles del check-in (modal con Dialog)
+- [x] Implementar edición de check-in existente (reutilizar formulario)
+- [x] Implementar exportación a PDF con todos los datos y firma
+- [x] Implementar descarga de XML individual para subir a policía
 - [x] Eliminación con diálogo de confirmación (ya implementado)
-- [ ] Conectar botones de acción en lista de check-ins (Ver, Editar, PDF, XML, Eliminar)
+- [x] Conectar botones de acción en lista de check-ins (Ver, Editar, PDF, XML, Eliminar)
 
 
 ## Bugs Reportados (v40) - EN PROGRESO
@@ -1337,7 +1338,7 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Check-in Online: Envío de códigos por email/SMS al huésped
 - [x] Check-in Online: Interfaz pública accesible sin login
 - [x] Backend: Endpoints para ambos tipos de check-in
-- [ ] Frontend: Interfaces públicas y privadas para gestión
+- [x] Frontend: Interfaces públicas y privadas para gestión
 
 
 ## Bug Código Municipio XML (v44) - COMPLETADO
@@ -1484,11 +1485,11 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 
 ## Problemas Check-in Online y PDFs - EN PROGRESO
 
-- [ ] Check-in online no aparece en la vista "Exportar Policía"
-- [ ] No se generan PDFs automáticamente al completar check-in (ni presencial ni online)
-- [ ] Investigar filtro en consulta de Exportar Policía
-- [ ] Investigar si la función de generación de PDF se está llamando
-- [ ] Corregir ambos problemas
+- [x] Check-in online no aparece en la vista "Exportar Policía"
+- [x] No se generan PDFs automáticamente al completar check-in (ni presencial ni online)
+- [x] Investigar filtro en consulta de Exportar Policía
+- [x] Investigar si la función de generación de PDF se está llamando
+- [x] Corregir ambos problemas
 
 
 ## Bugs y Mejoras Check-in (v57)

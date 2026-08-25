@@ -6,6 +6,7 @@ describe("número de soporte documental", () => {
     expect(requiresDocumentSupport("NIF", "ESP")).toBe(true);
     expect(requiresDocumentSupport("DNI", "ESP")).toBe(true);
     expect(requiresDocumentSupport("NIE", "FRA")).toBe(true);
+    expect(requiresDocumentSupport("NIE", "GBR")).toBe(false);
     expect(requiresDocumentSupport("NIE", "USA")).toBe(false);
     expect(requiresDocumentSupport("PAS", "FRA")).toBe(false);
   });

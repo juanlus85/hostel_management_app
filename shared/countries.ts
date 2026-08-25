@@ -6,7 +6,6 @@ export const COUNTRIES = [
   { code: "FRA", name: "Francia", isEU: true },
   { code: "DEU", name: "Alemania", isEU: true },
   { code: "ITA", name: "Italia", isEU: true },
-  { code: "GBR", name: "Reino Unido", isEU: true },
   { code: "PRT", name: "Portugal", isEU: true },
   { code: "NLD", name: "Países Bajos", isEU: true },
   { code: "BEL", name: "Bélgica", isEU: true },
