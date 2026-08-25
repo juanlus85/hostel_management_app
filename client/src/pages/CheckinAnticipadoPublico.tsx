@@ -10,6 +10,7 @@ import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { COUNTRIES } from "@/lib/countries";
 import { requiresDocumentSupport } from "@shared/documentSupport";
+import { getAllowedDocumentTypes } from "@shared/countries";
 
 export default function CheckinAnticipadoPublico() {
   const [lang, setLang] = useState<"es" | "en">("es");
@@ -47,6 +48,14 @@ export default function CheckinAnticipadoPublico() {
   const createGuestMutation = trpc.checkin.guests.create.useMutation();
 
   const t = (es: string, en: string) => (lang === "es" ? es : en);
+  const allowedDocumentTypes = getAllowedDocumentTypes(formData.nationality);
+  const documentLabel = (code: string) => ({
+    NIF: t("DNI / NIF", "Spanish ID / NIF"),
+    NIE: "NIE",
+    CAR: t("Carnet de conducir", "Driving licence"),
+    ID: t("Documento de identidad", "National ID"),
+    PAS: t("Pasaporte", "Passport"),
+  }[code] || code);
 
   // Inicializar canvas de firma
   useEffect(() => {
@@ -326,11 +335,9 @@ export default function CheckinAnticipadoPublico() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="PAS">{t("Pasaporte", "Passport")}</SelectItem>
-                        <SelectItem value="DNI">{t("DNI / ID", "DNI / ID")}</SelectItem>
-                        <SelectItem value="NIE">NIE</SelectItem>
-                        <SelectItem value="CAR">{t("Carnet de conducir", "Driving licence")}</SelectItem>
-                        <SelectItem value="OTRO">{t("Otro documento", "Other document")}</SelectItem>
+                        {allowedDocumentTypes.map((document) => (
+                          <SelectItem key={document.code} value={document.code}>{documentLabel(document.code)}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>

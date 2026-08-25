@@ -12,6 +12,7 @@ import { canAccessOnlineGuide, dayAfter, effectiveGuideExpiry } from "@shared/on
 import { hasInvitationEmail, onlineGuestToken } from "../shared/onlineCheckinGuests";
 import { checkoutNotificationContent, shouldCreateCheckoutNotification } from "../shared/roomCheckoutNotifications";
 import { normalizedDocumentSupport, requiresDocumentSupport } from "../shared/documentSupport";
+import { isAllowedDocumentType } from "../shared/countries";
 
 // Admin-only procedure
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -38,6 +39,9 @@ function getMadridStayDates() {
 }
 
 function assertRequiredDocumentSupport(documentType: string | null | undefined, nationality: string | null | undefined, support: string | null | undefined) {
+  if (!isAllowedDocumentType(nationality, documentType)) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "El tipo de documento no está permitido para la nacionalidad indicada" });
+  }
   if (requiresDocumentSupport(documentType, nationality) && !normalizedDocumentSupport(documentType, nationality, support)) {
     throw new TRPCError({ code: "BAD_REQUEST", message: "El número de soporte es obligatorio para DNI/NIF y NIE europeo" });
   }
@@ -1786,7 +1790,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
         guests: z.array(z.object({
           firstName: z.string().trim().min(1),
           lastName: z.string().trim().min(1),
-          documentType: z.enum(["NIF", "NIE", "CAR", "PAS", "OTRO"]),
+          documentType: z.enum(["NIF", "NIE", "CAR", "ID", "PAS", "OTRO"]),
           documentNumber: z.string().trim().min(1),
           documentSupport: z.string().trim().optional(),
           nationality: z.string().trim().min(1),
@@ -2171,7 +2175,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
         lastName: z.string().min(1),
         documentNumber: z.string().min(1),
         documentSupport: z.string().optional(),
-        documentType: z.enum(["NIF", "NIE", "CAR", "PAS", "OTRO"]),
+        documentType: z.enum(["NIF", "NIE", "CAR", "ID", "PAS", "OTRO"]),
         gender: z.enum(["Hombre", "Mujer", "Otro"]),
         nationality: z.string().min(1),
         birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -2192,7 +2196,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           lastName: z.string().min(1),
           documentNumber: z.string().min(1),
           documentSupport: z.string().optional(),
-          documentType: z.enum(["NIF", "NIE", "CAR", "PAS", "OTRO"]),
+          documentType: z.enum(["NIF", "NIE", "CAR", "ID", "PAS", "OTRO"]),
           gender: z.enum(["Hombre", "Mujer", "Otro"]),
           nationality: z.string().min(1),
           birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),

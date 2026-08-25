@@ -107,6 +107,7 @@ export const DOCUMENT_TYPES = [
   { code: "NIF", label: "DNI (NIF)", allowedFor: ["ESP"] },
   { code: "NIE", label: "NIE", allowedFor: "EU" }, // Solo europeos
   { code: "CAR", label: "Carnet de conducir", allowedFor: ["ESP"] },
+  { code: "ID", label: "Documento de identidad", allowedFor: "EU" },
   { code: "PAS", label: "Pasaporte", allowedFor: "ALL" },
   { code: "OTRO", label: "Otro", allowedFor: "ALL" },
 ];
@@ -143,14 +144,19 @@ export function getAllowedDocumentTypes(nationalityCode: string): typeof DOCUMEN
   
   if (nationalityCode === "ESP") {
     // Españoles: DNI/NIF, NIE, carnet de conducir y pasaporte.
-    return DOCUMENT_TYPES.filter(d => d.code === "NIF" || d.code === "NIE" || d.code === "CAR" || d.code === "PAS" || d.code === "OTRO");
+    return DOCUMENT_TYPES.filter(d => d.code === "NIF" || d.code === "NIE" || d.code === "CAR" || d.code === "PAS");
   }
   
   if (country.isEU) {
-    // Europeos: NIE, PAS
-    return DOCUMENT_TYPES.filter(d => d.code === "NIE" || d.code === "PAS" || d.code === "OTRO");
+    // Europeos: NIE, documento nacional de identidad o pasaporte.
+    return DOCUMENT_TYPES.filter(d => d.code === "NIE" || d.code === "ID" || d.code === "PAS");
   }
   
-  // No europeos: solo PAS
-  return DOCUMENT_TYPES.filter(d => d.code === "PAS" || d.code === "OTRO");
+  // Terceros países: solo pasaporte.
+  return DOCUMENT_TYPES.filter(d => d.code === "PAS");
+}
+
+export function isAllowedDocumentType(nationalityCode: string | null | undefined, documentType: string | null | undefined): boolean {
+  const normalizedType = documentType?.trim().toUpperCase();
+  return getAllowedDocumentTypes(nationalityCode?.trim().toUpperCase() || "").some((document) => document.code === normalizedType);
 }

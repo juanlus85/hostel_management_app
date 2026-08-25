@@ -13,9 +13,10 @@ import { toast } from "sonner";
 import { renderArrivalTemplate } from "@shared/arrivalTemplate";
 import { formatHostelAddress, googleMapsLink, translateFloor, translateRoomType } from "@shared/arrivalDisplay";
 import { requiresDocumentSupport as requiresDocumentSupportForNationality } from "@shared/documentSupport";
+import { isAllowedDocumentType } from "@shared/countries";
 
 type Language = "es" | "en";
-type DocumentType = "NIF" | "NIE" | "CAR" | "PAS" | "OTRO";
+type DocumentType = "NIF" | "NIE" | "CAR" | "ID" | "PAS" | "OTRO";
 type Gender = "Hombre" | "Mujer" | "Otro";
 type GuestForm = {
   firstName: string; lastName: string; documentNumber: string; documentSupport: string; documentType: DocumentType;
@@ -36,7 +37,11 @@ const emptyGuest = (email = ""): GuestForm => ({
   nationality: "ESP", birthDate: "", documentExpiry: "", street: "", addressExtra: "", postalCode: "", city: "",
   province: "", country: "ESP", phone: "", email, signature: "", acceptedTerms: false, acceptedPrivacy: false,
 });
-const normalizeGuestDocumentSupport = (guest: GuestForm): GuestForm => requiresDocumentSupportForNationality(guest.documentType, guest.nationality) ? guest : { ...guest, documentSupport: "" };
+const normalizeGuestDocumentSupport = (guest: GuestForm): GuestForm => {
+  const documentType = isAllowedDocumentType(guest.nationality, guest.documentType) ? guest.documentType : "PAS";
+  const normalizedGuest = { ...guest, documentType };
+  return requiresDocumentSupportForNationality(documentType, normalizedGuest.nationality) ? normalizedGuest : { ...normalizedGuest, documentSupport: "" };
+};
 const inputClass = "min-h-12 text-base";
 const hostelLogo = import.meta.env.VITE_APP_LOGO;
 

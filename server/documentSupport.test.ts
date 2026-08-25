@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { normalizedDocumentSupport, requiresDocumentSupport } from "../shared/documentSupport";
-import { getAllowedDocumentTypes } from "../shared/countries";
+import { getAllowedDocumentTypes, isAllowedDocumentType } from "../shared/countries";
 
 describe("número de soporte documental", () => {
   it("es obligatorio para DNI/NIF y solo para NIE europeo", () => {
@@ -14,7 +14,12 @@ describe("número de soporte documental", () => {
   });
 
   it("incluye DNI/NIF, NIE, carnet de conducir y pasaporte para españoles", () => {
-    expect(getAllowedDocumentTypes("ESP").map((document) => document.code)).toEqual(["NIF", "NIE", "CAR", "PAS", "OTRO"]);
+    expect(getAllowedDocumentTypes("ESP").map((document) => document.code)).toEqual(["NIF", "NIE", "CAR", "PAS"]);
+    expect(getAllowedDocumentTypes("FRA").map((document) => document.code)).toEqual(["NIE", "ID", "PAS"]);
+    expect(getAllowedDocumentTypes("USA").map((document) => document.code)).toEqual(["PAS"]);
+    expect(isAllowedDocumentType("ESP", "CAR")).toBe(true);
+    expect(isAllowedDocumentType("FRA", "ID")).toBe(true);
+    expect(isAllowedDocumentType("USA", "NIE")).toBe(false);
   });
   it("elimina el soporte de pasaportes y otros documentos", () => {
     expect(normalizedDocumentSupport("PAS", "FRA", "ABC123")).toBeUndefined();

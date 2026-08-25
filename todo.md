@@ -1192,6 +1192,7 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Eliminar la definición duplicada de Reino Unido para aplicar correctamente la regla de NIE solo europeo
 - [x] Permitir para nacionalidad española DNI/NIF, NIE, carnet de conducir y pasaporte en todos los formularios de Check-in
 - [x] Corregir el selector para que el carnet de conducir sea seleccionable en los formularios de Check-in
+- [x] Aplicar en todos los Check-in Online: España con DNI/NIF, NIE, pasaporte y carnet; Europa con NIE, documento de identidad y pasaporte; terceros países solo con pasaporte
 
 
 ## Mejoras Check-in Presencial (v31) - COMPLETADAS
