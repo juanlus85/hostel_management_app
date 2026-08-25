@@ -890,26 +890,26 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Modificar artículo existente
 
 ### Pedidos Generales
-- [ ] Crear pedido con proveedor, fecha estimada
-- [ ] Marcar pedido como "pedido realizado"
-- [ ] Marcar pedido como "pedido recibido"
-- [ ] Añadir artículos al pedido con unidades/packs
-- [ ] Selector desplegable de artículos con autocompletado
-- [ ] Funcionalidad de copia al portapapeles
+- [x] Crear pedido con proveedor, fecha estimada
+- [x] Marcar pedido como "pedido realizado"
+- [x] Marcar pedido como "pedido recibido"
+- [x] Añadir artículos al pedido con unidades/packs
+- [x] Selector desplegable de artículos con autocompletado
+- [x] Funcionalidad de copia al portapapeles
 
 ### Pedidos Bocatas del Chef
-- [ ] Lista predefinida de artículos (Burguer, Mojo, Serranito, etc.)
-- [ ] Campo "Pedir" para número de cajas
-- [ ] Campo "Hay" para unidades actuales (editable)
-- [ ] Campo "Total" calculado automáticamente (no editable)
-- [ ] Baguettes/Tostas: 6 unidades por caja
-- [ ] Baguepizzas: 16 unidades por caja
-- [ ] Total de cajas con formato especial (25 = "21+4", 50 = "42+8")
-- [ ] Funcionalidad de copia al portapapeles (solo artículos > 0)
+- [x] Lista predefinida de artículos (Burguer, Mojo, Serranito, etc.)
+- [x] Campo "Pedir" para número de cajas
+- [x] Campo "Hay" para unidades actuales (editable)
+- [x] Campo "Total" calculado automáticamente (no editable)
+- [x] Baguettes/Tostas: 6 unidades por caja
+- [x] Baguepizzas: 16 unidades por caja
+- [x] Total de cajas con formato especial (25 = "21+4", 50 = "42+8")
+- [x] Funcionalidad de copia al portapapeles (solo artículos > 0)
 
 ### General
-- [ ] Solo visible para administradores
-- [ ] Menú "Pedidos" en la navegación
+- [x] Solo visible para administradores
+- [x] Menú "Pedidos" en la navegación
 
 
 ## Mejoras Sistema de Pedidos v84
