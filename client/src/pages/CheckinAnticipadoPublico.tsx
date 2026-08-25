@@ -144,7 +144,7 @@ export default function CheckinAnticipadoPublico() {
     }
 
     // Validar número de soporte para DNI español
-    if (requiresDocumentSupport(formData.documentType) && !formData.documentSupport.trim()) {
+    if (requiresDocumentSupport(formData.documentType, formData.nationality) && !formData.documentSupport.trim()) {
       toast.error(t("El número de soporte es obligatorio para DNI/NIF y NIE", "Support number is required for Spanish ID and NIE"));
       return;
     }
@@ -172,7 +172,7 @@ export default function CheckinAnticipadoPublico() {
         nationality: formData.nationality,
         documentType: formData.documentType,
         documentNumber: formData.documentNumber,
-        documentSupport: requiresDocumentSupport(formData.documentType) ? formData.documentSupport || undefined : undefined,
+        documentSupport: requiresDocumentSupport(formData.documentType, formData.nationality) ? formData.documentSupport || undefined : undefined,
         gender: formData.gender as "Hombre" | "Mujer" | "Otro",
         birthDate: formData.birthDate,
         phone: formData.phone,
@@ -301,7 +301,7 @@ export default function CheckinAnticipadoPublico() {
                     <Label htmlFor="nationality">{t("Nacionalidad", "Nationality")} *</Label>
                     <Select
                       value={formData.nationality}
-                      onValueChange={(value) => setFormData({ ...formData, nationality: value })}
+                      onValueChange={(value) => setFormData({ ...formData, nationality: value, documentSupport: requiresDocumentSupport(formData.documentType, value) ? formData.documentSupport : "" })}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -320,7 +320,7 @@ export default function CheckinAnticipadoPublico() {
                     <Label htmlFor="documentType">{t("Tipo de Documento", "Document Type")} *</Label>
                     <Select
                       value={formData.documentType}
-                      onValueChange={(value) => setFormData({ ...formData, documentType: value, documentSupport: requiresDocumentSupport(value) ? formData.documentSupport : "" })}
+                      onValueChange={(value) => setFormData({ ...formData, documentType: value, documentSupport: requiresDocumentSupport(value, formData.nationality) ? formData.documentSupport : "" })}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -345,7 +345,7 @@ export default function CheckinAnticipadoPublico() {
                   </div>
 
                   {/* Número de Soporte para DNI español */}
-                  {requiresDocumentSupport(formData.documentType) && (
+                  {requiresDocumentSupport(formData.documentType, formData.nationality) && (
                     <div>
                       <Label htmlFor="documentSupport">
                         {t("Número de Soporte", "Support Number")} *

@@ -37,9 +37,9 @@ function getMadridStayDates() {
   return { checkInDate: format(date), checkOutDate: format(new Date(date.getTime() + 86_400_000)) };
 }
 
-function assertRequiredDocumentSupport(documentType: string | null | undefined, support: string | null | undefined) {
-  if (requiresDocumentSupport(documentType) && !normalizedDocumentSupport(documentType, support)) {
-    throw new TRPCError({ code: "BAD_REQUEST", message: "El número de soporte es obligatorio para DNI/NIF y NIE" });
+function assertRequiredDocumentSupport(documentType: string | null | undefined, nationality: string | null | undefined, support: string | null | undefined) {
+  if (requiresDocumentSupport(documentType, nationality) && !normalizedDocumentSupport(documentType, nationality, support)) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "El número de soporte es obligatorio para DNI/NIF y NIE europeo" });
   }
 }
 
@@ -1806,7 +1806,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           acceptedPrivacy: z.literal(true),
         })).min(1).max(12),
       })).mutation(async ({ input, ctx }) => {
-        input.guests.forEach((guest) => assertRequiredDocumentSupport(guest.documentType, guest.documentSupport));
+        input.guests.forEach((guest) => assertRequiredDocumentSupport(guest.documentType, guest.nationality, guest.documentSupport));
         const groupId = `tablet-${randomBytes(12).toString("hex")}`;
         const stayDates = getMadridStayDates();
         const guestIds: number[] = [];
@@ -1814,7 +1814,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           const guest = input.guests[index];
           const guestId = await db.createGuest({
             ...guest,
-            documentSupport: normalizedDocumentSupport(guest.documentType, guest.documentSupport) || null,
+            documentSupport: normalizedDocumentSupport(guest.documentType, guest.nationality, guest.documentSupport) || null,
             documentExpiry: guest.documentExpiry || null,
             addressExtra: guest.addressExtra || null,
             province: guest.province || null,
@@ -1935,9 +1935,9 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
         checkinType: z.enum(["presencial", "anticipado", "online"]).optional(),
         language: z.enum(["es", "en"]).optional(),
       })).mutation(async ({ input, ctx }) => {
-        assertRequiredDocumentSupport(input.documentType, input.documentSupport);
+        assertRequiredDocumentSupport(input.documentType, input.nationality, input.documentSupport);
         // Para check-ins públicos (anticipado), createdBy será null
-        const id = await db.createGuest({ ...input, documentSupport: normalizedDocumentSupport(input.documentType, input.documentSupport), createdBy: ctx.user?.id || null });
+        const id = await db.createGuest({ ...input, documentSupport: normalizedDocumentSupport(input.documentType, input.nationality, input.documentSupport), createdBy: ctx.user?.id || null });
         
         // Generar PDF automáticamente si el check-in está completado
         if (input.status === 'completed') {
@@ -2211,7 +2211,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
         })).optional(),
       })).mutation(async ({ input }) => {
         const submittedGuests = input.guests?.length ? input.guests : [input];
-        submittedGuests.forEach((guest) => assertRequiredDocumentSupport(guest.documentType, guest.documentSupport));
+        submittedGuests.forEach((guest) => assertRequiredDocumentSupport(guest.documentType, guest.nationality, guest.documentSupport));
         const link = await db.getOnlineCheckinLinkByToken(input.token);
         if (!link) throw new TRPCError({ code: "NOT_FOUND", message: "El enlace de check-in no existe" });
 
@@ -2244,7 +2244,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           const guest = submittedGuests[index];
           const guestId = await db.createGuest({
             firstName: guest.firstName.trim(), lastName: guest.lastName.trim(), documentNumber: guest.documentNumber.trim(),
-            documentSupport: normalizedDocumentSupport(guest.documentType, guest.documentSupport) || null, documentType: guest.documentType, gender: guest.gender,
+            documentSupport: normalizedDocumentSupport(guest.documentType, guest.nationality, guest.documentSupport) || null, documentType: guest.documentType, gender: guest.gender,
             nationality: guest.nationality, birthDate: guest.birthDate, documentExpiry: guest.documentExpiry || null,
             street: guest.street.trim(), addressExtra: guest.addressExtra?.trim() || null, postalCode: guest.postalCode.trim(),
             city: guest.city.trim(), province: guest.province?.trim() || null, country: guest.country, phone: guest.phone.trim(),

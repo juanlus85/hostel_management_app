@@ -15,6 +15,7 @@ import { trpc } from "@/lib/trpc";
 import { Loader2, Plus, Trash2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { COUNTRIES, getAllowedDocumentTypes, PAYMENT_TYPES, GENDER_CODES } from "@/../../shared/countries";
+import { requiresDocumentSupport } from "@shared/documentSupport";
 
 interface GuestData {
   firstName: string;
@@ -312,6 +313,11 @@ export default function CheckinPresencial() {
         return;
       }
 
+      if (requiresDocumentSupport(guest.documentType, guest.nationality) && !guest.supportNumber.trim()) {
+        toast.error(`El número de soporte del huésped ${i + 1} es obligatorio para DNI/NIF y NIE`);
+        return;
+      }
+
       if (guest.nationality === "OTRO" && !guest.nationalityOther) {
         toast.error(`Especifique la nacionalidad del huésped ${i + 1}`);
         return;
@@ -351,6 +357,7 @@ export default function CheckinPresencial() {
           lastName: guest.lastName,
           documentNumber: guest.documentNumber,
           documentType: guest.documentType,
+          documentSupport: requiresDocumentSupport(guest.documentType, guest.nationality) ? guest.supportNumber.trim() : undefined,
           gender: guest.gender as "Hombre" | "Mujer" | "Otro",
           nationality: guest.nationality === "OTRO" ? guest.nationalityOther : guest.nationality,
           birthDate: guest.birthDate,
@@ -732,7 +739,10 @@ export default function CheckinPresencial() {
                 <Label htmlFor={`documentType-${index}`}>Tipo de Documento *</Label>
                 <Select
                   value={guest.documentType}
-                  onValueChange={(value) => updateGuest(index, "documentType", value)}
+                  onValueChange={(value) => {
+                    updateGuest(index, "documentType", value);
+                    if (!requiresDocumentSupport(value, guest.nationality)) updateGuest(index, "supportNumber", "");
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -761,14 +771,14 @@ export default function CheckinPresencial() {
                 />
               </div>
 
-              {guest.documentType === "NIF" && (
+              {requiresDocumentSupport(guest.documentType, guest.nationality) && (
                 <div>
-                  <Label htmlFor={`supportNumber-${index}`}>Número de Soporte</Label>
+                  <Label htmlFor={`supportNumber-${index}`}>Número de Soporte *</Label>
                   <Input
                     id={`supportNumber-${index}`}
                     value={guest.supportNumber}
                     onChange={(e) => updateGuest(index, "supportNumber", e.target.value)}
-                    placeholder="Número de soporte del DNI"
+                    placeholder="Número de soporte del documento"
                   />
                 </div>
               )}
