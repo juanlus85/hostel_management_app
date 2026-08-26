@@ -12,7 +12,7 @@ import { canAccessOnlineGuide, dayAfter, effectiveGuideExpiry } from "@shared/on
 import { hasInvitationEmail, onlineGuestToken } from "../shared/onlineCheckinGuests";
 import { checkoutNotificationContent, shouldCreateCheckoutNotification } from "../shared/roomCheckoutNotifications";
 import { normalizedDocumentSupport, requiresDocumentSupport } from "../shared/documentSupport";
-import { loyverseShiftDate, normalizeLoyverseShift } from "../shared/loyverseDailyCash";
+import { aggregateLoyverseShiftsByOperationalDay, loyverseShiftDate } from "../shared/loyverseDailyCash";
 import { isAllowedDocumentType } from "../shared/countries";
 import { compareCashByDate } from "../shared/externalCashComparison";
 
@@ -2374,6 +2374,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
 
     externalImports: router({
       overview: adminProcedure.query(async () => {
+        await db.failStaleExternalImportRuns();
         const [runs, dailyCash] = await Promise.all([
           db.getExternalImportRuns(),
           db.getExternalDailyCashRecords(),
@@ -2435,22 +2436,44 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
         });
 
         try {
-          const response = await fetch("https://api.loyverse.com/v1.0/shifts?limit=250", {
-            headers: { Authorization: `Bearer ${accessToken}`, Accept: "application/json" },
-          });
-          const payload = await response.json() as { shifts?: Array<Record<string, unknown>>; errors?: Array<{ details?: string }> };
-          if (!response.ok) {
-            throw new Error(payload.errors?.map((error) => error.details).filter(Boolean).join(" · ") || `Loyverse respondió ${response.status}`);
+          type LoyversePayload = { shifts?: Array<Record<string, unknown>>; cursor?: string; errors?: Array<{ details?: string }> };
+          const allShifts: Array<Record<string, unknown>> = [];
+          let cursor: string | undefined;
+          for (let page = 0; page < 10; page += 1) {
+            const url = new URL("https://api.loyverse.com/v1.0/shifts");
+            url.searchParams.set("limit", "250");
+            if (cursor) url.searchParams.set("cursor", cursor);
+            const response = await fetch(url, {
+              headers: { Authorization: `Bearer ${accessToken}`, Accept: "application/json" },
+              redirect: "manual",
+            });
+            const responseText = await response.text();
+            let payload: LoyversePayload;
+            try {
+              payload = JSON.parse(responseText) as LoyversePayload;
+            } catch {
+              const contentType = response.headers.get("content-type") || "desconocido";
+              throw new Error(`Loyverse devolvió una respuesta no JSON (HTTP ${response.status}, ${contentType}). Revisa la conectividad del servidor y el token.`);
+            }
+            if (!response.ok) {
+              throw new Error(payload.errors?.map((error) => error.details).filter(Boolean).join(" · ") || `Loyverse respondió HTTP ${response.status}`);
+            }
+            const pageShifts = payload.shifts || [];
+            allShifts.push(...pageShifts);
+            const operationalDates = pageShifts.map(loyverseShiftDate).filter(Boolean);
+            if (!payload.cursor || !operationalDates.length || operationalDates.some((date) => date < input.dateFrom)) break;
+            cursor = payload.cursor;
           }
 
-          const records = (payload.shifts || [])
-            .filter((shift) => {
+          const records = aggregateLoyverseShiftsByOperationalDay(
+            allShifts.filter((shift) => {
               const date = loyverseShiftDate(shift);
               return Boolean(date && date >= input.dateFrom && date <= input.dateTo);
-            })
-            .map((shift) => normalizeLoyverseShift(shift, runId));
+            }),
+            runId,
+          );
 
-          await db.createExternalDailyCashRecords(records);
+          await db.replaceLoyverseDailyCashRecords(input.dateFrom, input.dateTo, records);
           const totalAmount = records.reduce((total, record) => total + Number(record.totalSales), 0);
           await db.updateExternalImportRun(runId, {
             status: "completed",

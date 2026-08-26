@@ -1,4 +1,4 @@
-import { eq, and, gte, lte, desc, asc, sql, or, like, notInArray } from "drizzle-orm";
+import { eq, and, gte, lte, lt, desc, asc, sql, or, like, notInArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { aggregateDailyCashSales } from "../shared/dailyCashSales";
 import { aggregateDashboardTrend } from "../shared/dashboardTrend";
@@ -2266,9 +2266,29 @@ export async function updateExternalImportRun(id: number, data: Partial<InsertEx
   await db.update(externalImportRuns).set(data).where(eq(externalImportRuns.id, id));
 }
 
+export async function failStaleExternalImportRuns() {
+  const db = await getDb();
+  if (!db) return;
+  const staleBefore = new Date(Date.now() - 15 * 60 * 1000);
+  await db.update(externalImportRuns)
+    .set({ status: "failed", errorMessage: "La ejecución no terminó antes de que se reiniciara el servidor", finishedAt: new Date() })
+    .where(and(eq(externalImportRuns.status, "running"), lt(externalImportRuns.startedAt, staleBefore)));
+}
+
 export async function createExternalDailyCashRecords(records: InsertExternalDailyCashRecord[]) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   if (!records.length) return;
   await db.insert(externalDailyCashRecords).values(records);
+}
+
+export async function replaceLoyverseDailyCashRecords(dateFrom: string, dateTo: string, records: InsertExternalDailyCashRecord[]) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(externalDailyCashRecords).where(and(
+    eq(externalDailyCashRecords.provider, "loyverse"),
+    gte(externalDailyCashRecords.businessDate, dateFrom),
+    lte(externalDailyCashRecords.businessDate, dateTo),
+  ));
+  if (records.length) await db.insert(externalDailyCashRecords).values(records);
 }
