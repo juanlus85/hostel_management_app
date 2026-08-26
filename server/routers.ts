@@ -12,7 +12,7 @@ import { canAccessOnlineGuide, dayAfter, effectiveGuideExpiry } from "@shared/on
 import { hasInvitationEmail, onlineGuestToken } from "../shared/onlineCheckinGuests";
 import { checkoutNotificationContent, shouldCreateCheckoutNotification } from "../shared/roomCheckoutNotifications";
 import { normalizedDocumentSupport, requiresDocumentSupport } from "../shared/documentSupport";
-import { aggregateLoyverseShiftsByOperationalDay, loyverseShiftDate } from "../shared/loyverseDailyCash";
+import { aggregateLoyverseReceiptsByOperationalDay, loyverseReceiptDate } from "../shared/loyverseDailyCash";
 import { isAllowedDocumentType } from "../shared/countries";
 import { compareCashByDate } from "../shared/externalCashComparison";
 
@@ -2432,15 +2432,15 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           dateTo: input.dateTo,
           createdBy: ctx.user.id,
           startedAt: new Date(),
-          metadata: JSON.stringify({ source: "Loyverse shifts API", isolated: true }),
+          metadata: JSON.stringify({ source: "Loyverse receipts API", operationalDayStart: "07:00 Europe/Madrid", isolated: true }),
         });
 
         try {
-          type LoyversePayload = { shifts?: Array<Record<string, unknown>>; cursor?: string; errors?: Array<{ details?: string }> };
-          const allShifts: Array<Record<string, unknown>> = [];
+          type LoyversePayload = { receipts?: Array<Record<string, unknown>>; cursor?: string; errors?: Array<{ details?: string }> };
+          const allReceipts: Array<Record<string, unknown>> = [];
           let cursor: string | undefined;
           for (let page = 0; page < 10; page += 1) {
-            const url = new URL("https://api.loyverse.com/v1.0/shifts");
+            const url = new URL("https://api.loyverse.com/v1.0/receipts");
             url.searchParams.set("limit", "250");
             if (cursor) url.searchParams.set("cursor", cursor);
             const response = await fetch(url, {
@@ -2458,16 +2458,16 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             if (!response.ok) {
               throw new Error(payload.errors?.map((error) => error.details).filter(Boolean).join(" · ") || `Loyverse respondió HTTP ${response.status}`);
             }
-            const pageShifts = payload.shifts || [];
-            allShifts.push(...pageShifts);
-            const operationalDates = pageShifts.map(loyverseShiftDate).filter(Boolean);
+            const pageReceipts = payload.receipts || [];
+            allReceipts.push(...pageReceipts);
+            const operationalDates = pageReceipts.map(loyverseReceiptDate).filter(Boolean);
             if (!payload.cursor || !operationalDates.length || operationalDates.some((date) => date < input.dateFrom)) break;
             cursor = payload.cursor;
           }
 
-          const records = aggregateLoyverseShiftsByOperationalDay(
-            allShifts.filter((shift) => {
-              const date = loyverseShiftDate(shift);
+          const records = aggregateLoyverseReceiptsByOperationalDay(
+            allReceipts.filter((receipt) => {
+              const date = loyverseReceiptDate(receipt);
               return Boolean(date && date >= input.dateFrom && date <= input.dateTo);
             }),
             runId,

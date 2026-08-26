@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aggregateLoyverseShiftsByOperationalDay, loyverseShiftDate, normalizeLoyverseShift } from "../shared/loyverseDailyCash";
+import { aggregateLoyverseReceiptsByOperationalDay, aggregateLoyverseShiftsByOperationalDay, loyverseShiftDate, normalizeLoyverseShift } from "../shared/loyverseDailyCash";
 
 describe("normalización de cierres de Loyverse", () => {
   it("convierte un turno cerrado a un registro externo aislado", () => {
@@ -18,5 +18,14 @@ describe("normalización de cierres de Loyverse", () => {
     ], 1);
     expect(result).toHaveLength(2);
     expect(result.map((row) => row.businessDate)).toEqual(["2026-08-25", "2026-08-26"]);
+  });
+
+  it("suma recibos de ventas por jornada operativa", () => {
+    const result = aggregateLoyverseReceiptsByOperationalDay([
+      { id: "r1", store_id: "store-1", created_at: "2026-08-26T08:00:00.000Z", total_money: 12.5 },
+      { id: "r2", store_id: "store-1", created_at: "2026-08-26T14:00:00.000Z", total_money: 7.5 },
+    ], 5);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ businessDate: "2026-08-26", totalSales: "20", businessLabel: "Loyverse (recibos)" });
   });
 });

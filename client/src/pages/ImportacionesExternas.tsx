@@ -53,8 +53,8 @@ export default function ImportacionesExternas() {
     <div className="grid gap-4 xl:grid-cols-2">
       <Card className="border-orange-200 shadow-sm">
         <CardHeader className="space-y-3">
-          <div className="flex items-start justify-between gap-3"><div className="flex items-center gap-3"><div className="rounded-xl bg-orange-100 p-2.5 text-orange-700"><Store className="h-6 w-6" /></div><div><CardTitle>Loyverse</CardTitle><CardDescription>Cajas diarias y cierres de turnos</CardDescription></div></div><ConnectionBadge ready={Boolean(overview.data?.connections.loyverse)} /></div>
-          <p className="text-sm text-muted-foreground">Por defecto consulta y agrupa las cajas de los últimos 30 días. Cada jornada se calcula de <strong>07:00 a 07:00</strong> (hora de Sevilla) y queda aislada del módulo de Caja.</p>
+          <div className="flex items-start justify-between gap-3"><div className="flex items-center gap-3"><div className="rounded-xl bg-orange-100 p-2.5 text-orange-700"><Store className="h-6 w-6" /></div><div><CardTitle>Loyverse</CardTitle><CardDescription>Ventas diarias agrupadas desde recibos</CardDescription></div></div><ConnectionBadge ready={Boolean(overview.data?.connections.loyverse)} /></div>
+          <p className="text-sm text-muted-foreground">Consulta los recibos reales y agrupa las ventas de los últimos 30 días. Cada jornada se calcula de <strong>07:00 a 07:00</strong> (hora de Sevilla) y queda aislada del módulo de Caja.</p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2"><div className="space-y-2"><Label htmlFor="loyverse-from">Desde</Label><Input id="loyverse-from" type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} /></div><div className="space-y-2"><Label htmlFor="loyverse-to">Hasta</Label><Input id="loyverse-to" type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} /></div></div>
