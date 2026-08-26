@@ -1201,6 +1201,7 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Crear almacenamiento aislado para ejecuciones y datos importados
 - [x] Implementar importación manual inicial de cajas diarias de Loyverse
 - [x] Preparar Cloudbeds como conexión OAuth inactiva y una estructura extensible para futuras importaciones
+- [x] Crear una vista comparativa de cajas externas importadas y cierres internos sin fusionar los datos
 - [ ] Crear las credenciales OAuth de Cloudbeds y configurar su conexión segura
 - [ ] Ejecutar `SQL_IMPORTACIONES_EXTERNAS.sql` en el VPS antes de activar el módulo allí
 

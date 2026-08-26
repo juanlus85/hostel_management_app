@@ -14,6 +14,7 @@ import { checkoutNotificationContent, shouldCreateCheckoutNotification } from ".
 import { normalizedDocumentSupport, requiresDocumentSupport } from "../shared/documentSupport";
 import { loyverseShiftDate, normalizeLoyverseShift } from "../shared/loyverseDailyCash";
 import { isAllowedDocumentType } from "../shared/countries";
+import { compareCashByDate } from "../shared/externalCashComparison";
 
 // Admin-only procedure
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -2384,6 +2385,30 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             loyverse: Boolean(process.env.LOYVERSE_ACCESS_TOKEN),
             cloudbeds: Boolean(process.env.CLOUDBEDS_CLIENT_ID && process.env.CLOUDBEDS_CLIENT_SECRET),
           },
+        };
+      }),
+      comparison: adminProcedure.input(z.object({
+        dateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        dateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        businessId: z.number().nullable().optional(),
+      })).query(async ({ input }) => {
+        if (input.dateFrom > input.dateTo) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "La fecha inicial no puede ser posterior a la final" });
+        }
+        const businesses = await db.getAllBusinesses();
+        const selectedBusinesses = input.businessId ? businesses.filter((business) => business.id === input.businessId) : businesses;
+        const [externalRecords, closingGroups] = await Promise.all([
+          db.getExternalDailyCashRecordsByDateRange(input.dateFrom, input.dateTo),
+          Promise.all(selectedBusinesses.map((business) => db.getCashClosingsByBusiness(business.id, input.dateFrom, input.dateTo))),
+        ]);
+        const internalClosings = closingGroups.flat().filter((closing) => closing.status === "closed");
+        return {
+          rows: compareCashByDate(
+            externalRecords.map((record) => ({ date: record.businessDate, amount: record.totalSales })),
+            internalClosings.map((closing) => ({ date: closing.date, amount: closing.zReading })),
+          ),
+          businesses: businesses.map((business) => ({ id: business.id, name: business.name, code: business.code })),
+          scope: input.businessId ? selectedBusinesses[0]?.name || "Negocio no encontrado" : "Hostel y Tienda",
         };
       }),
       importLoyverseDailyCash: adminProcedure.input(z.object({

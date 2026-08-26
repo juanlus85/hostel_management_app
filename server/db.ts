@@ -2245,6 +2245,14 @@ export async function getExternalDailyCashRecords(limit = 200): Promise<External
   return db.select().from(externalDailyCashRecords).orderBy(desc(externalDailyCashRecords.businessDate), desc(externalDailyCashRecords.id)).limit(limit);
 }
 
+export async function getExternalDailyCashRecordsByDateRange(dateFrom: string, dateTo: string): Promise<ExternalDailyCashRecord[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(externalDailyCashRecords)
+    .where(and(gte(externalDailyCashRecords.businessDate, dateFrom), lte(externalDailyCashRecords.businessDate, dateTo)))
+    .orderBy(desc(externalDailyCashRecords.businessDate));
+}
+
 export async function createExternalImportRun(data: InsertExternalImportRun) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
