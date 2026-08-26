@@ -261,6 +261,7 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
                   <SelectContent>
                     <SelectItem value="NIF">DNI (NIF)</SelectItem>
                     <SelectItem value="NIE">NIE</SelectItem>
+                    <SelectItem value="CAR">Carnet de conducir</SelectItem>
                     <SelectItem value="PAS">Pasaporte</SelectItem>
                     <SelectItem value="OTRO">Otro</SelectItem>
                   </SelectContent>

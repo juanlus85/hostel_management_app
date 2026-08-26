@@ -744,7 +744,6 @@ export default function CheckinPresencial() {
                   value={guest.documentType}
                   onValueChange={(value) => {
                     updateGuest(index, "documentType", value);
-                    if (!requiresDocumentSupport(value, guest.nationality)) updateGuest(index, "supportNumber", "");
                   }}
                 >
                   <SelectTrigger>
@@ -759,7 +758,7 @@ export default function CheckinPresencial() {
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {isSpanish && "Españoles: DNI o Pasaporte"}
+                  {isSpanish && "Españoles: DNI/NIF, NIE, carnet de conducir o Pasaporte"}
                   {isEU && !isSpanish && "Europeos: NIE o Pasaporte"}
                   {!isEU && !isSpanish && "No europeos: Solo Pasaporte"}
                 </p>

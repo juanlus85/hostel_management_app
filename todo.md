@@ -1190,6 +1190,10 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 ### Corrección de soporte documental
 - [x] Limpiar el número de soporte en todos los formularios cuando un cambio de nacionalidad o tipo de documento deje de requerirlo
 - [x] Eliminar la definición duplicada de Reino Unido para aplicar correctamente la regla de NIE solo europeo
+- [x] Permitir para nacionalidad española DNI/NIF, NIE, carnet de conducir y pasaporte en todos los formularios de Check-in
+- [x] Corregir el selector para que el carnet de conducir sea seleccionable en los formularios de Check-in
+- [x] Aplicar en todos los Check-in Online: España con DNI/NIF, NIE, pasaporte y carnet; Europa con NIE, documento de identidad y pasaporte; terceros países solo con pasaporte
+- [x] Ocultar DNI/NIF y NIE en el selector visual de Check-in Online para terceros países
 
 ## Importaciones externas
 - [x] Crear menú administrativo de importaciones externas, independiente de los datos operativos actuales
