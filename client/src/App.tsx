@@ -29,6 +29,7 @@ import CheckinUnificado from "./pages/CheckinUnificado";
 import CheckinAnticipadoPublico from "./pages/CheckinAnticipadoPublico";
 import CheckinOnlinePublico from "./pages/CheckinOnlinePublico";
 import TabletRegistroPolicia from "./pages/TabletRegistroPolicia";
+import ImportacionesExternas from "./pages/ImportacionesExternas";
 
 function Router() {
   return (
@@ -62,6 +63,7 @@ function Router() {
         <Route path="/pedidos" component={PedidosUnificado} />
         <Route path="/checkin" component={CheckinUnificado} />
         <Route path="/tablet-registro" component={TabletRegistroPolicia} />
+        <Route path="/importaciones-externas" component={ImportacionesExternas} />
         <Route path="/404" component={NotFound} />
         <Route component={NotFound} />
             </Switch>

@@ -1191,6 +1191,15 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Limpiar el número de soporte en todos los formularios cuando un cambio de nacionalidad o tipo de documento deje de requerirlo
 - [x] Eliminar la definición duplicada de Reino Unido para aplicar correctamente la regla de NIE solo europeo
 
+## Importaciones externas
+- [x] Crear menú administrativo de importaciones externas, independiente de los datos operativos actuales
+- [x] Añadir configuración segura de Loyverse mediante secreto de entorno y validar la conexión
+- [x] Crear almacenamiento aislado para ejecuciones y datos importados
+- [x] Implementar importación manual inicial de cajas diarias de Loyverse
+- [x] Preparar Cloudbeds como conexión OAuth inactiva y una estructura extensible para futuras importaciones
+- [ ] Crear las credenciales OAuth de Cloudbeds y configurar su conexión segura
+- [ ] Ejecutar `SQL_IMPORTACIONES_EXTERNAS.sql` en el VPS antes de activar el módulo allí
+
 
 ## Mejoras Check-in Presencial (v31) - COMPLETADAS
 - [x] Agregar campo issueDate (fecha de expedición) a schema de guests

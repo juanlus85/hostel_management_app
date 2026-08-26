@@ -337,6 +337,13 @@
       "when": 1787286578727,
       "tag": "0047_light_virginia_dare",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "5",
+      "when": 1787762723294,
+      "tag": "0048_kind_mattie_franklin",
+      "breakpoints": true
     }
   ]
 }

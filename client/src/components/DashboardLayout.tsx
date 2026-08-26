@@ -46,7 +46,8 @@ import {
   History,
   ShoppingCart,
   ClipboardList,
-  Sandwich
+  Sandwich,
+  DatabaseZap
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState, createContext, useContext } from "react";
 import { useLocation } from "wouter";
@@ -93,6 +94,7 @@ const adminMenuItems = [
   { icon: Users, label: "Empleados", path: "/empleados" },
   { icon: Truck, label: "Proveedores", path: "/proveedores" },
   { icon: FileArchive, label: "Cierre Trimestral", path: "/cierre-trimestral" },
+  { icon: DatabaseZap, label: "Importaciones externas", path: "/importaciones-externas" },
   { icon: Settings, label: "Configuracion", path: "/configuracion" },
 ];
 

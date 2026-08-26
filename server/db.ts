@@ -35,7 +35,9 @@ import {
   historicalCashData, InsertHistoricalCashData, HistoricalCashData,
   guests, InsertGuest, Guest,
   onlineCheckinLinks, InsertOnlineCheckinLink, OnlineCheckinLink,
-  hostelSettingsCheckin, InsertHostelSettingCheckin, HostelSettingCheckin
+  hostelSettingsCheckin, InsertHostelSettingCheckin, HostelSettingCheckin,
+  externalImportRuns, InsertExternalImportRun, ExternalImportRun,
+  externalDailyCashRecords, InsertExternalDailyCashRecord, ExternalDailyCashRecord
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { aggregateSupplierExpenses } from "../shared/supplierExpenses";
@@ -2228,4 +2230,37 @@ export async function upsertHostelSettings(data: Partial<InsertHostelSettingChec
     const result = await db.insert(hostelSettingsCheckin).values(data as InsertHostelSettingCheckin);
     return result[0].insertId;
   }
+}
+
+// ==================== EXTERNAL IMPORTS (aislado de la operación diaria) ====================
+export async function getExternalImportRuns(): Promise<ExternalImportRun[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(externalImportRuns).orderBy(desc(externalImportRuns.createdAt));
+}
+
+export async function getExternalDailyCashRecords(limit = 200): Promise<ExternalDailyCashRecord[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(externalDailyCashRecords).orderBy(desc(externalDailyCashRecords.businessDate), desc(externalDailyCashRecords.id)).limit(limit);
+}
+
+export async function createExternalImportRun(data: InsertExternalImportRun) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(externalImportRuns).values(data);
+  return result[0].insertId;
+}
+
+export async function updateExternalImportRun(id: number, data: Partial<InsertExternalImportRun>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(externalImportRuns).set(data).where(eq(externalImportRuns.id, id));
+}
+
+export async function createExternalDailyCashRecords(records: InsertExternalDailyCashRecord[]) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  if (!records.length) return;
+  await db.insert(externalDailyCashRecords).values(records);
 }

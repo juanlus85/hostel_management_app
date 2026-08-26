@@ -792,3 +792,45 @@ export const hostelSettingsCheckin = mysqlTable("hostel_settings_checkin", {
 
 export type HostelSettingCheckin = typeof hostelSettingsCheckin.$inferSelect;
 export type InsertHostelSettingCheckin = typeof hostelSettingsCheckin.$inferInsert;
+
+// ==================== EXTERNAL IMPORTS (aislado de la operación diaria) ====================
+export const externalImportRuns = mysqlTable("external_import_runs", {
+  id: int("id").autoincrement().primaryKey(),
+  provider: mysqlEnum("provider", ["loyverse", "cloudbeds"]).notNull(),
+  importType: mysqlEnum("importType", ["daily_cash", "future"]).default("daily_cash").notNull(),
+  status: mysqlEnum("status", ["pending", "running", "completed", "failed"]).default("pending").notNull(),
+  dateFrom: varchar("dateFrom", { length: 10 }),
+  dateTo: varchar("dateTo", { length: 10 }),
+  recordsImported: int("recordsImported").default(0).notNull(),
+  totalAmount: decimal("totalAmount", { precision: 12, scale: 2 }).default("0").notNull(),
+  errorMessage: text("errorMessage"),
+  metadata: text("metadata"),
+  createdBy: int("createdBy").notNull(),
+  startedAt: timestamp("startedAt"),
+  finishedAt: timestamp("finishedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export const externalDailyCashRecords = mysqlTable("external_daily_cash_records", {
+  id: int("id").autoincrement().primaryKey(),
+  importRunId: int("importRunId").notNull(),
+  provider: mysqlEnum("provider", ["loyverse", "cloudbeds"]).notNull(),
+  sourceStoreId: varchar("sourceStoreId", { length: 100 }),
+  sourceStoreName: varchar("sourceStoreName", { length: 255 }),
+  sourceShiftId: varchar("sourceShiftId", { length: 100 }),
+  businessLabel: varchar("businessLabel", { length: 255 }),
+  businessDate: varchar("businessDate", { length: 10 }).notNull(),
+  currency: varchar("currency", { length: 10 }).default("EUR").notNull(),
+  openingCash: decimal("openingCash", { precision: 12, scale: 2 }).default("0").notNull(),
+  closingCash: decimal("closingCash", { precision: 12, scale: 2 }).default("0").notNull(),
+  cashSales: decimal("cashSales", { precision: 12, scale: 2 }).default("0").notNull(),
+  cardSales: decimal("cardSales", { precision: 12, scale: 2 }).default("0").notNull(),
+  totalSales: decimal("totalSales", { precision: 12, scale: 2 }).default("0").notNull(),
+  rawData: text("rawData"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ExternalImportRun = typeof externalImportRuns.$inferSelect;
+export type InsertExternalImportRun = typeof externalImportRuns.$inferInsert;
+export type ExternalDailyCashRecord = typeof externalDailyCashRecords.$inferSelect;
+export type InsertExternalDailyCashRecord = typeof externalDailyCashRecords.$inferInsert;

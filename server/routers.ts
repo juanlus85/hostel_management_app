@@ -12,6 +12,7 @@ import { canAccessOnlineGuide, dayAfter, effectiveGuideExpiry } from "@shared/on
 import { hasInvitationEmail, onlineGuestToken } from "../shared/onlineCheckinGuests";
 import { checkoutNotificationContent, shouldCreateCheckoutNotification } from "../shared/roomCheckoutNotifications";
 import { normalizedDocumentSupport, requiresDocumentSupport } from "../shared/documentSupport";
+import { loyverseShiftDate, normalizeLoyverseShift } from "../shared/loyverseDailyCash";
 
 // Admin-only procedure
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -1769,7 +1770,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
   }),
 
   // ==================== CHECK-IN ====================
-  checkin: router({
+    checkin: router({
     tablet: router({
       getLegalSettings: tabletProcedure.query(async () => {
         const settings = await db.getHostelSettings();
@@ -2363,6 +2364,77 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
       })).mutation(async ({ input }) => {
         await db.upsertHostelSettings(input);
         return { success: true };
+      }),
+    }),
+
+    externalImports: router({
+      overview: adminProcedure.query(async () => {
+        const [runs, dailyCash] = await Promise.all([
+          db.getExternalImportRuns(),
+          db.getExternalDailyCashRecords(),
+        ]);
+        return {
+          runs,
+          dailyCash,
+          connections: {
+            loyverse: Boolean(process.env.LOYVERSE_ACCESS_TOKEN),
+            cloudbeds: Boolean(process.env.CLOUDBEDS_CLIENT_ID && process.env.CLOUDBEDS_CLIENT_SECRET),
+          },
+        };
+      }),
+      importLoyverseDailyCash: adminProcedure.input(z.object({
+        dateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        dateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      })).mutation(async ({ input, ctx }) => {
+        const accessToken = process.env.LOYVERSE_ACCESS_TOKEN;
+        if (!accessToken) {
+          throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Falta configurar el token de acceso de Loyverse" });
+        }
+        if (input.dateFrom > input.dateTo) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "La fecha inicial no puede ser posterior a la final" });
+        }
+
+        const runId = await db.createExternalImportRun({
+          provider: "loyverse",
+          importType: "daily_cash",
+          status: "running",
+          dateFrom: input.dateFrom,
+          dateTo: input.dateTo,
+          createdBy: ctx.user.id,
+          startedAt: new Date(),
+          metadata: JSON.stringify({ source: "Loyverse shifts API", isolated: true }),
+        });
+
+        try {
+          const response = await fetch("https://api.loyverse.com/v1.0/shifts?limit=250", {
+            headers: { Authorization: `Bearer ${accessToken}`, Accept: "application/json" },
+          });
+          const payload = await response.json() as { shifts?: Array<Record<string, unknown>>; errors?: Array<{ details?: string }> };
+          if (!response.ok) {
+            throw new Error(payload.errors?.map((error) => error.details).filter(Boolean).join(" · ") || `Loyverse respondió ${response.status}`);
+          }
+
+          const records = (payload.shifts || [])
+            .filter((shift) => {
+              const date = loyverseShiftDate(shift);
+              return Boolean(date && date >= input.dateFrom && date <= input.dateTo);
+            })
+            .map((shift) => normalizeLoyverseShift(shift, runId));
+
+          await db.createExternalDailyCashRecords(records);
+          const totalAmount = records.reduce((total, record) => total + Number(record.totalSales), 0);
+          await db.updateExternalImportRun(runId, {
+            status: "completed",
+            recordsImported: records.length,
+            totalAmount: totalAmount.toFixed(2),
+            finishedAt: new Date(),
+          });
+          return { success: true, runId, recordsImported: records.length };
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Error no identificado al importar Loyverse";
+          await db.updateExternalImportRun(runId, { status: "failed", errorMessage: message, finishedAt: new Date() });
+          throw new TRPCError({ code: "BAD_GATEWAY", message });
+        }
       }),
     }),
     
