@@ -14,6 +14,11 @@ const thirtyDaysStart = (() => {
   start.setDate(start.getDate() - 29);
   return start.toLocaleDateString("en-CA", { timeZone: "Europe/Madrid" });
 })();
+const loyverseMinimumDate = (() => {
+  const start = new Date(`${today}T12:00:00`);
+  start.setDate(start.getDate() - 30);
+  return start.toLocaleDateString("en-CA", { timeZone: "Europe/Madrid" });
+})();
 
 const money = (value: string | number | null | undefined) => new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(Number(value || 0));
 const dateTime = (value: Date | string | null | undefined) => value ? new Date(value).toLocaleString("es-ES") : "—";
@@ -54,10 +59,10 @@ export default function ImportacionesExternas() {
       <Card className="border-orange-200 shadow-sm">
         <CardHeader className="space-y-3">
           <div className="flex items-start justify-between gap-3"><div className="flex items-center gap-3"><div className="rounded-xl bg-orange-100 p-2.5 text-orange-700"><Store className="h-6 w-6" /></div><div><CardTitle>Loyverse</CardTitle><CardDescription>Ventas diarias agrupadas desde recibos</CardDescription></div></div><ConnectionBadge ready={Boolean(overview.data?.connections.loyverse)} /></div>
-          <p className="text-sm text-muted-foreground">Consulta los recibos reales y agrupa las ventas de los últimos 30 días. Cada jornada se calcula de <strong>07:00 a 07:00</strong> (hora de Sevilla) y queda aislada del módulo de Caja.</p>
+          <p className="text-sm text-muted-foreground">Consulta los recibos reales y agrupa las ventas de los últimos 30 días. Cada jornada se calcula de <strong>07:00 a 07:00</strong> (hora de Sevilla) y queda aislada del módulo de Caja.</p><p className="text-xs text-amber-700">Tu cuenta permite consultar hasta 31 días de historial; no selecciones una fecha anterior a {loyverseMinimumDate}.</p>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2"><div className="space-y-2"><Label htmlFor="loyverse-from">Desde</Label><Input id="loyverse-from" type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} /></div><div className="space-y-2"><Label htmlFor="loyverse-to">Hasta</Label><Input id="loyverse-to" type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} /></div></div>
+          <div className="grid gap-3 sm:grid-cols-2"><div className="space-y-2"><Label htmlFor="loyverse-from">Desde</Label><Input id="loyverse-from" type="date" value={dateFrom} min={loyverseMinimumDate} max={dateTo} onChange={(event) => setDateFrom(event.target.value)} /></div><div className="space-y-2"><Label htmlFor="loyverse-to">Hasta</Label><Input id="loyverse-to" type="date" value={dateTo} min={dateFrom} max={today} onChange={(event) => setDateTo(event.target.value)} /></div></div>
           <Button className="w-full bg-orange-600 hover:bg-orange-700" disabled={!overview.data?.connections.loyverse || importLoyverse.isPending} onClick={() => importLoyverse.mutate({ dateFrom, dateTo })}>{importLoyverse.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}{overview.data?.connections.loyverse ? "Importar cierres de Loyverse" : "Pendiente de token de Loyverse"}</Button>
           {!overview.data?.connections.loyverse && <p className="text-xs text-muted-foreground">Para activarlo, añade un token personal de Loyverse con permisos de lectura de turnos y métodos de pago.</p>}
         </CardContent>

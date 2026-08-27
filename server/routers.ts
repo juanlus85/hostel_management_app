@@ -2423,6 +2423,12 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
         if (input.dateFrom > input.dateTo) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "La fecha inicial no puede ser posterior a la final" });
         }
+        const minimumDate = new Date();
+        minimumDate.setUTCDate(minimumDate.getUTCDate() - 30);
+        const minimumDateString = minimumDate.toISOString().slice(0, 10);
+        if (input.dateFrom < minimumDateString) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: `Tu plan de Loyverse permite importar recibos desde ${minimumDateString}. Selecciona un período de hasta 31 días.` });
+        }
 
         const runId = await db.createExternalImportRun({
           provider: "loyverse",
@@ -2442,6 +2448,8 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           for (let page = 0; page < 10; page += 1) {
             const url = new URL("https://api.loyverse.com/v1.0/receipts");
             url.searchParams.set("limit", "250");
+            url.searchParams.set("created_at_min", `${input.dateFrom}T00:00:00.000Z`);
+            url.searchParams.set("created_at_max", `${input.dateTo}T23:59:59.999Z`);
             if (cursor) url.searchParams.set("cursor", cursor);
             const response = await fetch(url, {
               headers: { Authorization: `Bearer ${accessToken}`, Accept: "application/json" },
