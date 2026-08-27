@@ -1210,8 +1210,10 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Comparar siempre Loyverse solo con la caja de Tienda y eliminar el selector interno innecesario
 - [x] Preparar la comparación futura de Cloudbeds con la caja de Hostel y su diferencia diaria
 - [x] Añadir un botón en Caja de Tienda para importar la Z de Loyverse del día operativo 07:00–07:00
-- [ ] Configurar las credenciales de entorno OAuth de Cloudbeds cuando se faciliten
-- [ ] Crear las credenciales OAuth de Cloudbeds y configurar su conexión segura
+- [ ] Configurar la variable privada `CLOUDBEDS_API_KEY` cuando se genere en la propiedad
+- [ ] Generar una API key de Cloudbeds con permisos mínimos de lectura y configurar su conexión segura
+- [x] Implementar una importación aislada de la caja diaria de Cloudbeds y compararla con Hostel
+- [ ] Verificar la primera importación real de Cloudbeds con la API key y Property ID activos
 - [ ] Ejecutar `SQL_IMPORTACIONES_EXTERNAS.sql` en el VPS antes de activar el módulo allí
 
 

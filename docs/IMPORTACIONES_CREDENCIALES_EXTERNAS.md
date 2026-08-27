@@ -2,9 +2,11 @@
 
 ## Cloudbeds
 
-Cloudbeds usa credenciales OAuth gestionadas desde **Integraciones de API y Credenciales** de la propiedad. Tras crear una credencial OAuth, deben conservarse el identificador y el secreto de cliente. La aplicación utiliza las variables privadas de proceso `CLOUDBEDS_CLIENT_ID` y `CLOUDBEDS_CLIENT_SECRET`; no deben incorporarse al repositorio ni a la base de datos.
+Para esta propiedad, la integración debe usar una **API key de Cloudbeds**. En **Integraciones de API y Credenciales**, crea o abre la credencial, accede a su columna **API Key** y pulsa **Create**. Selecciona solo los permisos de lectura necesarios para las futuras consultas de reservas, pagos o informes. Cloudbeds mostrará la clave una única vez; debe guardarse como variable privada de proceso con el nombre `CLOUDBEDS_API_KEY`.
 
-La conexión está preparada, pero su autorización y la primera importación de Hostel se implementarán después de disponer de esas credenciales. Referencias: [Cloudbeds API Authentication](https://developers.cloudbeds.com/reference/authentication) y [Cloudbeds PMS API](https://developers.cloudbeds.com/reference/about-pms-api).
+No se debe guardar la clave en el repositorio, archivos de código ni la base de datos. Para importaciones de lectura de la propiedad, los valores `CLOUDBEDS_CLIENT_ID` y `CLOUDBEDS_CLIENT_SECRET` no son necesarios. Referencia: [Guía oficial de API key de Cloudbeds](https://developers.cloudbeds.com/docs/quickstart-guide-api-authentication-for-property-level-users).
+
+La importación de caja usará el endpoint `POST https://api.cloudbeds.com/accounting/v1.0/transactions` con cabeceras `Authorization: Bearer <API_KEY>` y `X-Property-ID`. El permiso mínimo necesario es `read:payment`. La API exige el identificador de propiedad y permite filtrar por `transaction_datetime`; los resultados se paginan con `nextPageToken`. Los códigos internos de pago son `9000`, `9100`, `9200` y `9300`; sus ajustes o devoluciones usan los sufijos `A` o `V`. Fuentes: [Cloudbeds Accounting API](https://developers.cloudbeds.com/docs/accounting) y [migración de transacciones](https://developers.cloudbeds.com/docs/documentation-to-support-cloudbeds-api-transaction-termination).
 
 ## Loyverse
 

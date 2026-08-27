@@ -16,6 +16,7 @@ import { aggregateLoyverseReceiptsByOperationalDay, loyverseReceiptDate } from "
 import { isAllowedDocumentType } from "../shared/countries";
 import { compareCashByDate } from "../shared/externalCashComparison";
 import { fetchLoyverseReceipts, getLoyverseOperationalWindow } from "./loyverseReceipts";
+import { aggregateCloudbedsPaymentsByOperationalDay, fetchCloudbedsTransactions } from "./cloudbedsTransactions";
 
 // Admin-only procedure
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -2402,7 +2403,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           dailyCash,
           connections: {
             loyverse: Boolean(process.env.LOYVERSE_ACCESS_TOKEN),
-            cloudbeds: Boolean(process.env.CLOUDBEDS_CLIENT_ID && process.env.CLOUDBEDS_CLIENT_SECRET),
+            cloudbeds: Boolean(process.env.CLOUDBEDS_API_KEY && process.env.CLOUDBEDS_PROPERTY_ID),
           },
         };
       }),
@@ -2485,6 +2486,30 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           return { success: true, runId, recordsImported: records.length };
         } catch (error) {
           const message = error instanceof Error ? error.message : "Error no identificado al importar Loyverse";
+          await db.updateExternalImportRun(runId, { status: "failed", errorMessage: message, finishedAt: new Date() });
+          throw new TRPCError({ code: "BAD_GATEWAY", message });
+        }
+      }),
+      importCloudbedsDailyCash: adminProcedure.input(z.object({
+        dateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        dateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      })).mutation(async ({ input, ctx }) => {
+        const apiKey = process.env.CLOUDBEDS_API_KEY;
+        const propertyId = process.env.CLOUDBEDS_PROPERTY_ID;
+        if (!apiKey || !propertyId) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Configura CLOUDBEDS_API_KEY y CLOUDBEDS_PROPERTY_ID para importar Cloudbeds" });
+        if (input.dateFrom > input.dateTo) throw new TRPCError({ code: "BAD_REQUEST", message: "La fecha inicial no puede ser posterior a la final" });
+        const runId = await db.createExternalImportRun({ provider: "cloudbeds", importType: "daily_cash", status: "running", dateFrom: input.dateFrom, dateTo: input.dateTo, createdBy: ctx.user.id, startedAt: new Date(), metadata: JSON.stringify({ source: "Cloudbeds Accounting API", operationalDayStart: "07:00 Europe/Madrid", propertyId, isolated: true }) });
+        try {
+          const start = getLoyverseOperationalWindow(input.dateFrom).start;
+          const end = getLoyverseOperationalWindow(input.dateTo).end;
+          const transactions = await fetchCloudbedsTransactions(apiKey, propertyId, start, end);
+          const records = aggregateCloudbedsPaymentsByOperationalDay(transactions, runId, propertyId).filter((record) => record.businessDate >= input.dateFrom && record.businessDate <= input.dateTo);
+          await db.replaceExternalDailyCashRecords("cloudbeds", input.dateFrom, input.dateTo, records);
+          const totalAmount = records.reduce((sum, record) => sum + Number(record.totalSales), 0);
+          await db.updateExternalImportRun(runId, { status: "completed", recordsImported: records.length, totalAmount: totalAmount.toFixed(2), finishedAt: new Date() });
+          return { success: true, runId, recordsImported: records.length };
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Error no identificado al importar Cloudbeds";
           await db.updateExternalImportRun(runId, { status: "failed", errorMessage: message, finishedAt: new Date() });
           throw new TRPCError({ code: "BAD_GATEWAY", message });
         }

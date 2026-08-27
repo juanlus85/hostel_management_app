@@ -2283,10 +2283,14 @@ export async function createExternalDailyCashRecords(records: InsertExternalDail
 }
 
 export async function replaceLoyverseDailyCashRecords(dateFrom: string, dateTo: string, records: InsertExternalDailyCashRecord[]) {
+  return replaceExternalDailyCashRecords("loyverse", dateFrom, dateTo, records);
+}
+
+export async function replaceExternalDailyCashRecords(provider: "loyverse" | "cloudbeds", dateFrom: string, dateTo: string, records: InsertExternalDailyCashRecord[]) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.delete(externalDailyCashRecords).where(and(
-    eq(externalDailyCashRecords.provider, "loyverse"),
+    eq(externalDailyCashRecords.provider, provider),
     gte(externalDailyCashRecords.businessDate, dateFrom),
     lte(externalDailyCashRecords.businessDate, dateTo),
   ));
