@@ -90,6 +90,13 @@ describe("cashClosings router", () => {
 
     expect(caller.cashClosings.importLoyverseZ).toBeDefined();
   });
+
+  it("has Cloudbeds Z import procedure for Hostel", async () => {
+    const { ctx } = createAuthContext();
+    const caller = appRouter.createCaller(ctx);
+
+    expect(caller.cashClosings.importCloudbedsZ).toBeDefined();
+  });
 });
 
 describe("cashMovements router", () => {

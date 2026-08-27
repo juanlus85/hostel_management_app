@@ -1216,8 +1216,14 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [ ] Verificar la primera importación real de Cloudbeds con la API key y Property ID activos
 - [x] Corregir la importación de Cloudbeds que conecta pero finaliza con cero días
 - [x] Registrar un diagnóstico seguro de los campos y recuentos devueltos por Cloudbeds cuando una importación queda vacía
+- [x] Crear un submenú para importar las reservas con llegada en los próximos tres días
+- [x] Guardar de forma aislada datos de estancia y contacto necesarios para comunicaciones operativas
+- [x] Añadir estado y trazabilidad de mensajes por reserva sin realizar envíos automáticos
+- [x] Preparar acciones futuras útiles de llegada, revisión y comunicación sin mezclar datos operativos
+- [ ] Añadir el permiso Reserva → Leer a la API key y verificar una primera importación real de próximas llegadas
 - [ ] Desglosar y conciliar pagos de Cloudbeds frente a la caja de Hostel por método, anticipos, devoluciones y jornada operativa
 - [x] Importar Cloudbeds por fecha de servicio y categorías de pago para coincidir con la Z de Hostel
+- [x] Añadir en Caja de Hostel la importación de Z de Cloudbeds para la fecha de servicio actual
 - [ ] Ejecutar `SQL_IMPORTACIONES_EXTERNAS.sql` en el VPS antes de activar el módulo allí
 
 

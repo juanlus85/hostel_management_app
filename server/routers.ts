@@ -17,6 +17,7 @@ import { isAllowedDocumentType } from "../shared/countries";
 import { compareCashByDate } from "../shared/externalCashComparison";
 import { fetchLoyverseReceipts, getLoyverseOperationalWindow } from "./loyverseReceipts";
 import { aggregateCloudbedsPaymentsByOperationalDay, fetchCloudbedsTransactions } from "./cloudbedsTransactions";
+import { fetchCloudbedsUpcomingReservations } from "./cloudbedsUpcomingReservations";
 
 // Admin-only procedure
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -1222,6 +1223,20 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
       const receipts = await fetchLoyverseReceipts(accessToken, start, end);
       const total = receipts.reduce((sum, receipt) => sum + Number(receipt.total_money || 0), 0);
       return { zReading: total.toFixed(2), receiptCount: receipts.length, windowStart: start, windowEnd: end };
+    }),
+    importCloudbedsZ: protectedProcedure.input(z.object({
+      businessId: z.number(),
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    })).mutation(async ({ input }) => {
+      const apiKey = process.env.CLOUDBEDS_API_KEY;
+      const propertyId = process.env.CLOUDBEDS_PROPERTY_ID;
+      if (!apiKey || !propertyId) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Configura CLOUDBEDS_API_KEY y CLOUDBEDS_PROPERTY_ID para importar la Z de Cloudbeds" });
+      const business = (await db.getAllBusinesses()).find((item) => item.id === input.businessId);
+      if (business?.code !== "hostel") throw new TRPCError({ code: "BAD_REQUEST", message: "La importación de Z de Cloudbeds solo está disponible para la caja de Hostel" });
+      const transactions = await fetchCloudbedsTransactions(apiKey, propertyId, input.date, input.date);
+      const record = aggregateCloudbedsPaymentsByOperationalDay(transactions, 0, propertyId).find((item) => item.businessDate === input.date);
+      const paymentCount = record ? (JSON.parse(record.rawData || "[]") as unknown[]).length : 0;
+      return { zReading: record?.totalSales ?? "0.00", paymentCount, serviceDate: input.date };
     }),
   }),
 
@@ -2511,6 +2526,50 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           await db.updateExternalImportRun(runId, { status: "failed", errorMessage: message, finishedAt: new Date() });
           throw new TRPCError({ code: "BAD_GATEWAY", message });
         }
+      }),
+      importCloudbedsUpcomingReservations: adminProcedure.mutation(async ({ ctx }) => {
+        const apiKey = process.env.CLOUDBEDS_API_KEY;
+        const propertyId = process.env.CLOUDBEDS_PROPERTY_ID;
+        if (!apiKey || !propertyId) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Configura CLOUDBEDS_API_KEY y CLOUDBEDS_PROPERTY_ID para importar reservas" });
+        const formatter = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Madrid", year: "numeric", month: "2-digit", day: "2-digit" });
+        const todayInMadrid = formatter.format(new Date());
+        const [month, day, year] = todayInMadrid.split("/");
+        const start = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+        const dates = Array.from({ length: 3 }, (_, index) => {
+          const date = new Date(start);
+          date.setUTCDate(start.getUTCDate() + index);
+          return date.toISOString().slice(0, 10);
+        });
+        const runId = await db.createExternalImportRun({ provider: "cloudbeds", importType: "future", status: "running", dateFrom: dates[0], dateTo: dates[2], createdBy: ctx.user.id, startedAt: new Date(), metadata: JSON.stringify({ source: "Cloudbeds PMS API", scope: "reservation assignments and reservation details", isolated: true }) });
+        try {
+          const reservations = await fetchCloudbedsUpcomingReservations(apiKey, propertyId, dates);
+          await db.upsertExternalUpcomingReservations(reservations.map((reservation) => ({ ...reservation, importRunId: runId, provider: "cloudbeds" })));
+          await db.updateExternalImportRun(runId, { status: "completed", recordsImported: reservations.length, finishedAt: new Date() });
+          return { success: true, runId, dates, recordsImported: reservations.length };
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Error no identificado al importar las reservas de Cloudbeds";
+          await db.updateExternalImportRun(runId, { status: "failed", errorMessage: message, finishedAt: new Date() });
+          throw new TRPCError({ code: "BAD_GATEWAY", message });
+        }
+      }),
+      listCloudbedsUpcomingReservations: adminProcedure.input(z.object({
+        dateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        dateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      })).query(async ({ input }) => db.getExternalUpcomingReservations(input.dateFrom, input.dateTo)),
+      setCloudbedsUpcomingReservationReviewed: adminProcedure.input(z.object({ id: z.number(), isReviewed: z.boolean() })).mutation(async ({ input }) => {
+        await db.setExternalUpcomingReservationReviewed(input.id, input.isReviewed);
+        return { success: true };
+      }),
+      listCloudbedsReservationCommunications: adminProcedure.query(async () => db.getExternalReservationCommunications()),
+      createCloudbedsReservationCommunication: adminProcedure.input(z.object({
+        externalReservationId: z.number(),
+        channel: z.enum(["email", "whatsapp", "other"]),
+        status: z.enum(["pending", "prepared", "sent", "failed", "cancelled"]),
+        messageType: z.string().min(1).max(100).default("arrival"),
+        notes: z.string().max(2000).optional(),
+      })).mutation(async ({ input, ctx }) => {
+        const id = await db.createExternalReservationCommunication({ ...input, notes: input.notes ?? null, createdBy: ctx.user.id, sentAt: input.status === "sent" ? new Date() : null });
+        return { success: true, id };
       }),
     }),
     

@@ -105,6 +105,15 @@ export default function Caja() {
     onError: (error) => toast.error(error.message),
   });
 
+  const importCloudbedsZ = trpc.cashClosings.importCloudbedsZ.useMutation({
+    onSuccess: (result) => {
+      setZReading(result.zReading);
+      setHasUserEdited(true);
+      toast.success(`Z de Cloudbeds cargada: ${result.zReading} € (${result.paymentCount} cobros)`);
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
   const closeClosing = trpc.cashClosings.close.useMutation({
     onSuccess: () => {
       refetchClosing();
@@ -653,6 +662,13 @@ export default function Caja() {
                   </Button>
                 )}
                 {selectedBusiness === "tienda" && !isClosed && <p className="text-xs text-muted-foreground">Carga la suma de recibos de la jornada operativa de Sevilla. Guarda o cierra la caja después para conservarla.</p>}
+                {selectedBusiness === "hostel" && !isClosed && (
+                  <Button variant="outline" size="sm" className="w-full" disabled={!currentBusinessId || importCloudbedsZ.isPending} onClick={() => importCloudbedsZ.mutate({ businessId: currentBusinessId ?? 0, date: currentDate })}>
+                    {importCloudbedsZ.isPending ? <Download className="mr-2 h-4 w-4 animate-pulse" /> : <Download className="mr-2 h-4 w-4" />}
+                    Importar Z de Cloudbeds
+                  </Button>
+                )}
+                {selectedBusiness === "hostel" && !isClosed && <p className="text-xs text-muted-foreground">Carga los pagos del informe de conciliación de Cloudbeds por fecha de servicio. Guarda o cierra la caja después para conservarla.</p>}
               </div>
               <div className="space-y-2">
                 <Label>Cambio Anterior (automático)</Label>

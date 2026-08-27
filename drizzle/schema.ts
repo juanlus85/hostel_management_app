@@ -830,7 +830,48 @@ export const externalDailyCashRecords = mysqlTable("external_daily_cash_records"
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
+// Próximas reservas importadas: aisladas de los huéspedes y reservas operativas del hostel.
+export const externalUpcomingReservations = mysqlTable("external_upcoming_reservations", {
+  id: int("id").autoincrement().primaryKey(),
+  importRunId: int("importRunId").notNull(),
+  provider: mysqlEnum("provider", ["cloudbeds"]).default("cloudbeds").notNull(),
+  sourceReservationId: varchar("sourceReservationId", { length: 100 }).notNull(),
+  reservationCode: varchar("reservationCode", { length: 100 }),
+  guestName: varchar("guestName", { length: 255 }),
+  guestEmail: varchar("guestEmail", { length: 320 }),
+  guestPhone: varchar("guestPhone", { length: 80 }),
+  checkInDate: varchar("checkInDate", { length: 10 }).notNull(),
+  checkOutDate: varchar("checkOutDate", { length: 10 }),
+  roomType: varchar("roomType", { length: 255 }),
+  roomNumber: varchar("roomNumber", { length: 100 }),
+  reservationStatus: varchar("reservationStatus", { length: 80 }),
+  bookingSource: varchar("bookingSource", { length: 255 }),
+  isReviewed: boolean("isReviewed").default(false).notNull(),
+  rawData: text("rawData"),
+  importedAt: timestamp("importedAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+// Auditoría de comunicaciones externas: no envía mensajes por sí misma.
+export const externalReservationCommunications = mysqlTable("external_reservation_communications", {
+  id: int("id").autoincrement().primaryKey(),
+  externalReservationId: int("externalReservationId").notNull(),
+  channel: mysqlEnum("channel", ["email", "whatsapp", "other"]).notNull(),
+  status: mysqlEnum("status", ["pending", "prepared", "sent", "failed", "cancelled"]).default("pending").notNull(),
+  messageType: varchar("messageType", { length: 100 }).default("arrival").notNull(),
+  notes: text("notes"),
+  sentAt: timestamp("sentAt"),
+  createdBy: int("createdBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
 export type ExternalImportRun = typeof externalImportRuns.$inferSelect;
 export type InsertExternalImportRun = typeof externalImportRuns.$inferInsert;
 export type ExternalDailyCashRecord = typeof externalDailyCashRecords.$inferSelect;
 export type InsertExternalDailyCashRecord = typeof externalDailyCashRecords.$inferInsert;
+export type ExternalUpcomingReservation = typeof externalUpcomingReservations.$inferSelect;
+export type InsertExternalUpcomingReservation = typeof externalUpcomingReservations.$inferInsert;
+export type ExternalReservationCommunication = typeof externalReservationCommunications.$inferSelect;
+export type InsertExternalReservationCommunication = typeof externalReservationCommunications.$inferInsert;

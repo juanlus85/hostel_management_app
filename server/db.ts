@@ -37,7 +37,9 @@ import {
   onlineCheckinLinks, InsertOnlineCheckinLink, OnlineCheckinLink,
   hostelSettingsCheckin, InsertHostelSettingCheckin, HostelSettingCheckin,
   externalImportRuns, InsertExternalImportRun, ExternalImportRun,
-  externalDailyCashRecords, InsertExternalDailyCashRecord, ExternalDailyCashRecord
+  externalDailyCashRecords, InsertExternalDailyCashRecord, ExternalDailyCashRecord,
+  externalUpcomingReservations, InsertExternalUpcomingReservation, ExternalUpcomingReservation,
+  externalReservationCommunications, InsertExternalReservationCommunication, ExternalReservationCommunication
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { aggregateSupplierExpenses } from "../shared/supplierExpenses";
@@ -2295,4 +2297,59 @@ export async function replaceExternalDailyCashRecords(provider: "loyverse" | "cl
     lte(externalDailyCashRecords.businessDate, dateTo),
   ));
   if (records.length) await db.insert(externalDailyCashRecords).values(records);
+}
+
+export async function getExternalUpcomingReservations(dateFrom: string, dateTo: string): Promise<ExternalUpcomingReservation[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(externalUpcomingReservations)
+    .where(and(gte(externalUpcomingReservations.checkInDate, dateFrom), lte(externalUpcomingReservations.checkInDate, dateTo)))
+    .orderBy(externalUpcomingReservations.checkInDate, externalUpcomingReservations.guestName);
+}
+
+export async function upsertExternalUpcomingReservations(records: InsertExternalUpcomingReservation[]) {
+  const db = await getDb();
+  if (!db) return;
+  for (const record of records) {
+    const [existing] = await db.select({ id: externalUpcomingReservations.id }).from(externalUpcomingReservations)
+      .where(eq(externalUpcomingReservations.sourceReservationId, record.sourceReservationId)).limit(1);
+    if (existing) {
+      await db.update(externalUpcomingReservations).set({
+        importRunId: record.importRunId,
+        reservationCode: record.reservationCode,
+        guestName: record.guestName,
+        guestEmail: record.guestEmail,
+        guestPhone: record.guestPhone,
+        checkInDate: record.checkInDate,
+        checkOutDate: record.checkOutDate,
+        roomType: record.roomType,
+        roomNumber: record.roomNumber,
+        reservationStatus: record.reservationStatus,
+        bookingSource: record.bookingSource,
+        rawData: record.rawData,
+        importedAt: new Date(),
+      }).where(eq(externalUpcomingReservations.id, existing.id));
+    } else {
+      await db.insert(externalUpcomingReservations).values(record);
+    }
+  }
+}
+
+export async function setExternalUpcomingReservationReviewed(id: number, isReviewed: boolean) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(externalUpcomingReservations).set({ isReviewed }).where(eq(externalUpcomingReservations.id, id));
+}
+
+export async function getExternalReservationCommunications(): Promise<ExternalReservationCommunication[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(externalReservationCommunications).orderBy(desc(externalReservationCommunications.createdAt));
+}
+
+export async function createExternalReservationCommunication(data: InsertExternalReservationCommunication) {
+  const db = await getDb();
+  if (!db) throw new Error("Base de datos no disponible");
+  const result = await db.insert(externalReservationCommunications).values(data);
+  return Number(result[0].insertId);
 }
