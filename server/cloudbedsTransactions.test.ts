@@ -17,7 +17,7 @@ describe("aggregateCloudbedsPaymentsByOperationalDay", () => {
   });
 
   it("consulta transacciones con rango, API key y Property ID sin exponerlos", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ content: [{ id: "1", amount: "-10", internalCode: "9300", transactionDatetime: "2026-08-26T10:00:00Z" }], nextPageToken: null }), { status: 200, headers: { "content-type": "application/json" } }));
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ transactions: [{ id: "1", amount: "-10", internalCode: "9300", transactionDatetime: "2026-08-26T10:00:00Z" }], nextPageToken: null }), { status: 200, headers: { "content-type": "application/json" } }));
     vi.stubGlobal("fetch", fetchMock);
     const transactions = await fetchCloudbedsTransactions("cbat_private", "204754", "2026-08-26T05:00:00Z", "2026-08-27T04:59:59Z");
     expect(transactions).toHaveLength(1);

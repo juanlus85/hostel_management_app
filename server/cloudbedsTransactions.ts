@@ -11,7 +11,7 @@ export type CloudbedsTransaction = {
   currency?: string;
 };
 
-type CloudbedsResponse = { content?: CloudbedsTransaction[]; nextPageToken?: string | null; message?: string; errors?: unknown };
+type CloudbedsResponse = { transactions?: CloudbedsTransaction[]; content?: CloudbedsTransaction[]; nextPageToken?: string | null; message?: string; errors?: unknown };
 
 function transactionCode(transaction: CloudbedsTransaction) {
   return String(transaction.internalCode ?? transaction.internalTransactionCode ?? transaction.internal_code ?? "").toUpperCase();
@@ -79,7 +79,8 @@ export async function fetchCloudbedsTransactions(apiKey: string, propertyId: str
     try { payload = JSON.parse(body) as CloudbedsResponse; }
     catch { throw new Error(`Cloudbeds devolvió una respuesta no JSON (HTTP ${response.status}). Revisa la API key y los permisos read:payment.`); }
     if (!response.ok) throw new Error(payload.message || `Cloudbeds respondió HTTP ${response.status}. Verifica la API key, el Property ID y el permiso read:payment.`);
-    all.push(...(payload.content || []));
+    // Accounting API devuelve `transactions`; `content` se acepta solo como compatibilidad defensiva.
+    all.push(...(payload.transactions || payload.content || []));
     if (!payload.nextPageToken) break;
     pageToken = payload.nextPageToken;
   }
