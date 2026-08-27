@@ -6,7 +6,7 @@ afterEach(() => vi.unstubAllGlobals());
 describe("aggregateCloudbedsPaymentsByOperationalDay", () => {
   it("agrupa cobros y devoluciones según la jornada de Sevilla de 07:00", () => {
     const records = aggregateCloudbedsPaymentsByOperationalDay([
-      { id: 1, internalCode: "9300", amount: "-100.00", transactionDatetime: "2026-08-26T04:30:00Z" },
+      { id: 1, internalTransactionCode: "9300", amount: "-100.00", transactionDatetime: "2026-08-26T04:30:00Z" },
       { id: 2, internalCode: "9100", amount: "-20.00", transactionDatetime: "2026-08-26T12:00:00Z" },
       { id: 3, internalCode: "9300A", amount: "10.00", transactionDatetime: "2026-08-26T13:00:00Z" },
     ], 9, "204754");

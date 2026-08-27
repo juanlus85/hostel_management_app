@@ -4,6 +4,7 @@ export type CloudbedsTransaction = {
   id?: string | number;
   amount?: string | number;
   internalCode?: string;
+  internalTransactionCode?: string;
   internal_code?: string;
   transactionDatetime?: string;
   transaction_datetime?: string;
@@ -13,7 +14,7 @@ export type CloudbedsTransaction = {
 type CloudbedsResponse = { content?: CloudbedsTransaction[]; nextPageToken?: string | null; message?: string; errors?: unknown };
 
 function transactionCode(transaction: CloudbedsTransaction) {
-  return String(transaction.internalCode ?? transaction.internal_code ?? "").toUpperCase();
+  return String(transaction.internalCode ?? transaction.internalTransactionCode ?? transaction.internal_code ?? "").toUpperCase();
 }
 
 function transactionDateTime(transaction: CloudbedsTransaction) {

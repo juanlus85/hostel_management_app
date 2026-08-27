@@ -1214,6 +1214,7 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [ ] Generar una API key de Cloudbeds con permisos mínimos de lectura y configurar su conexión segura
 - [x] Implementar una importación aislada de la caja diaria de Cloudbeds y compararla con Hostel
 - [ ] Verificar la primera importación real de Cloudbeds con la API key y Property ID activos
+- [ ] Corregir la importación de Cloudbeds que conecta pero finaliza con cero días
 - [ ] Ejecutar `SQL_IMPORTACIONES_EXTERNAS.sql` en el VPS antes de activar el módulo allí
 
 
