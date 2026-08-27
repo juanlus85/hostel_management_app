@@ -1,5 +1,3 @@
-import { loyverseOperationalDate } from "../shared/loyverseDailyCash";
-
 export type CloudbedsTransaction = {
   id?: string | number;
   amount?: string | number;
@@ -8,6 +6,8 @@ export type CloudbedsTransaction = {
   internal_code?: string;
   transactionDatetime?: string;
   transaction_datetime?: string;
+  serviceDate?: string;
+  service_date?: string;
   currency?: string;
 };
 
@@ -21,12 +21,18 @@ function transactionDateTime(transaction: CloudbedsTransaction) {
   return transaction.transactionDatetime ?? transaction.transaction_datetime ?? "";
 }
 
+function serviceDate(transaction: CloudbedsTransaction) {
+  const value = transaction.serviceDate ?? transaction.service_date ?? "";
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : "";
+}
+
 export function aggregateCloudbedsPaymentsByOperationalDay(transactions: CloudbedsTransaction[], importRunId: number, propertyId: string) {
   const days = new Map<string, { total: number; cash: number; nonCash: number; transactions: Array<Record<string, unknown>> }>();
   for (const transaction of transactions) {
     const code = transactionCode(transaction);
     if (!/^9\d{3}(?:A|V)?$/.test(code)) continue;
-    const businessDate = loyverseOperationalDate(transactionDateTime(transaction));
+    // La Z del Hostel se obtiene del informe Cloudbeds por Fecha de servicio, no por fecha de contabilización.
+    const businessDate = serviceDate(transaction);
     if (!businessDate) continue;
     // Cloudbeds registra los cobros como débitos contables; se invierte el signo para mostrar caja recibida.
     const amount = -Number(transaction.amount || 0);
@@ -35,7 +41,7 @@ export function aggregateCloudbedsPaymentsByOperationalDay(transactions: Cloudbe
     existing.total += amount;
     if (code.startsWith("9100")) existing.cash += amount;
     else existing.nonCash += amount;
-    existing.transactions.push({ id: transaction.id ?? null, internalCode: code, amount: transaction.amount ?? 0, transactionDatetime: transactionDateTime(transaction) });
+    existing.transactions.push({ id: transaction.id ?? null, internalCode: code, amount: transaction.amount ?? 0, serviceDate: businessDate });
     days.set(businessDate, existing);
   }
 
@@ -57,7 +63,7 @@ export function aggregateCloudbedsPaymentsByOperationalDay(transactions: Cloudbe
   }));
 }
 
-export async function fetchCloudbedsTransactions(apiKey: string, propertyId: string, start: string, end: string) {
+export async function fetchCloudbedsTransactions(apiKey: string, propertyId: string, dateFrom: string, dateTo: string) {
   const all: CloudbedsTransaction[] = [];
   let pageToken: string | undefined;
   for (let page = 0; page < 50; page += 1) {
@@ -66,12 +72,12 @@ export async function fetchCloudbedsTransactions(apiKey: string, propertyId: str
       headers: { Authorization: `Bearer ${apiKey}`, "X-Property-ID": propertyId, "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({
         filters: { and: [
-          { field: "transaction_datetime", operator: "greater_than_or_equal", value: start },
-          { field: "transaction_datetime", operator: "less_than_or_equal", value: end },
+          { field: "service_date", operator: "greater_than_or_equal", value: dateFrom },
+          { field: "service_date", operator: "less_than_or_equal", value: dateTo },
         ] },
         pageToken,
         limit: 1100,
-        sort: [{ field: "transaction_datetime", direction: "asc" }],
+        sort: [{ field: "service_date", direction: "asc" }],
       }),
     });
     const body = await response.text();

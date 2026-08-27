@@ -2498,11 +2498,9 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
         const propertyId = process.env.CLOUDBEDS_PROPERTY_ID;
         if (!apiKey || !propertyId) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Configura CLOUDBEDS_API_KEY y CLOUDBEDS_PROPERTY_ID para importar Cloudbeds" });
         if (input.dateFrom > input.dateTo) throw new TRPCError({ code: "BAD_REQUEST", message: "La fecha inicial no puede ser posterior a la final" });
-        const runId = await db.createExternalImportRun({ provider: "cloudbeds", importType: "daily_cash", status: "running", dateFrom: input.dateFrom, dateTo: input.dateTo, createdBy: ctx.user.id, startedAt: new Date(), metadata: JSON.stringify({ source: "Cloudbeds Accounting API", operationalDayStart: "07:00 Europe/Madrid", propertyId, isolated: true }) });
+        const runId = await db.createExternalImportRun({ provider: "cloudbeds", importType: "daily_cash", status: "running", dateFrom: input.dateFrom, dateTo: input.dateTo, createdBy: ctx.user.id, startedAt: new Date(), metadata: JSON.stringify({ source: "Cloudbeds Accounting API", criterion: "service_date", propertyId, isolated: true }) });
         try {
-          const start = getLoyverseOperationalWindow(input.dateFrom).start;
-          const end = getLoyverseOperationalWindow(input.dateTo).end;
-          const transactions = await fetchCloudbedsTransactions(apiKey, propertyId, start, end);
+          const transactions = await fetchCloudbedsTransactions(apiKey, propertyId, input.dateFrom, input.dateTo);
           const records = aggregateCloudbedsPaymentsByOperationalDay(transactions, runId, propertyId).filter((record) => record.businessDate >= input.dateFrom && record.businessDate <= input.dateTo);
           await db.replaceExternalDailyCashRecords("cloudbeds", input.dateFrom, input.dateTo, records);
           const totalAmount = records.reduce((sum, record) => sum + Number(record.totalSales), 0);
