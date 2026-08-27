@@ -1207,6 +1207,10 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Añadir una guía de configuración segura de credenciales OAuth de Cloudbeds en Administración
 - [x] Corregir la importación de Loyverse que termina completada con cero cierres pese a existir datos en la cuenta
 - [x] Respetar el límite de 31 días de recibos de Loyverse y explicar el rango disponible antes de importar
+- [x] Comparar siempre Loyverse solo con la caja de Tienda y eliminar el selector interno innecesario
+- [x] Preparar la comparación futura de Cloudbeds con la caja de Hostel y su diferencia diaria
+- [x] Añadir un botón en Caja de Tienda para importar la Z de Loyverse del día operativo 07:00–07:00
+- [ ] Configurar las credenciales de entorno OAuth de Cloudbeds cuando se faciliten
 - [ ] Crear las credenciales OAuth de Cloudbeds y configurar su conexión segura
 - [ ] Ejecutar `SQL_IMPORTACIONES_EXTERNAS.sql` en el VPS antes de activar el módulo allí
 

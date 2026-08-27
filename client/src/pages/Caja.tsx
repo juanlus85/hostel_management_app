@@ -96,6 +96,15 @@ export default function Caja() {
     },
   });
 
+  const importLoyverseZ = trpc.cashClosings.importLoyverseZ.useMutation({
+    onSuccess: (result) => {
+      setZReading(result.zReading);
+      setHasUserEdited(true);
+      toast.success(`Z de Loyverse cargada: ${result.zReading} € (${result.receiptCount} recibos)`);
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
   const closeClosing = trpc.cashClosings.close.useMutation({
     onSuccess: () => {
       refetchClosing();
@@ -637,6 +646,13 @@ export default function Caja() {
                   disabled={isClosed}
                   placeholder="0.00"
                 />
+                {selectedBusiness === "tienda" && !isClosed && (
+                  <Button variant="outline" size="sm" className="w-full" disabled={!currentBusinessId || importLoyverseZ.isPending} onClick={() => importLoyverseZ.mutate({ businessId: currentBusinessId ?? 0, date: currentDate })}>
+                    {importLoyverseZ.isPending ? <Download className="mr-2 h-4 w-4 animate-pulse" /> : <Download className="mr-2 h-4 w-4" />}
+                    Importar Z de Loyverse (07:00–07:00)
+                  </Button>
+                )}
+                {selectedBusiness === "tienda" && !isClosed && <p className="text-xs text-muted-foreground">Carga la suma de recibos de la jornada operativa de Sevilla. Guarda o cierra la caja después para conservarla.</p>}
               </div>
               <div className="space-y-2">
                 <Label>Cambio Anterior (automático)</Label>

@@ -15,6 +15,7 @@ import { normalizedDocumentSupport, requiresDocumentSupport } from "../shared/do
 import { aggregateLoyverseReceiptsByOperationalDay, loyverseReceiptDate } from "../shared/loyverseDailyCash";
 import { isAllowedDocumentType } from "../shared/countries";
 import { compareCashByDate } from "../shared/externalCashComparison";
+import { fetchLoyverseReceipts, getLoyverseOperationalWindow } from "./loyverseReceipts";
 
 // Admin-only procedure
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -1204,6 +1205,23 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
     })).query(async ({ input }) => {
       return db.exportCashClosingsToCSV(input.businessId, input.startDate, input.endDate);
     }),
+    importLoyverseZ: protectedProcedure.input(z.object({
+      businessId: z.number(),
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    })).mutation(async ({ input }) => {
+      const accessToken = process.env.LOYVERSE_ACCESS_TOKEN;
+      if (!accessToken) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Falta configurar el token de acceso de Loyverse" });
+      }
+      const business = (await db.getAllBusinesses()).find((item) => item.id === input.businessId);
+      if (business?.code !== "tienda") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "La importación de Z de Loyverse solo está disponible para la caja de Tienda" });
+      }
+      const { start, end } = getLoyverseOperationalWindow(input.date);
+      const receipts = await fetchLoyverseReceipts(accessToken, start, end);
+      const total = receipts.reduce((sum, receipt) => sum + Number(receipt.total_money || 0), 0);
+      return { zReading: total.toFixed(2), receiptCount: receipts.length, windowStart: start, windowEnd: end };
+    }),
   }),
 
   // ==================== CASH MOVEMENTS ====================
@@ -2391,25 +2409,27 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
       comparison: adminProcedure.input(z.object({
         dateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
         dateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-        businessId: z.number().nullable().optional(),
+        provider: z.enum(["loyverse", "cloudbeds"]).default("loyverse"),
       })).query(async ({ input }) => {
         if (input.dateFrom > input.dateTo) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "La fecha inicial no puede ser posterior a la final" });
         }
         const businesses = await db.getAllBusinesses();
-        const selectedBusinesses = input.businessId ? businesses.filter((business) => business.id === input.businessId) : businesses;
+        const targetBusinessCode = input.provider === "loyverse" ? "tienda" : "hostel";
+        const targetBusiness = businesses.find((business) => business.code === targetBusinessCode);
+        if (!targetBusiness) throw new TRPCError({ code: "NOT_FOUND", message: `No se ha encontrado la caja interna de ${targetBusinessCode}` });
         const [externalRecords, closingGroups] = await Promise.all([
           db.getExternalDailyCashRecordsByDateRange(input.dateFrom, input.dateTo),
-          Promise.all(selectedBusinesses.map((business) => db.getCashClosingsByBusiness(business.id, input.dateFrom, input.dateTo))),
+          db.getCashClosingsByBusiness(targetBusiness.id, input.dateFrom, input.dateTo),
         ]);
-        const internalClosings = closingGroups.flat().filter((closing) => closing.status === "closed");
+        const internalClosings = closingGroups.filter((closing) => closing.status === "closed");
         return {
           rows: compareCashByDate(
-            externalRecords.map((record) => ({ date: record.businessDate, amount: record.totalSales })),
+            externalRecords.filter((record) => record.provider === input.provider).map((record) => ({ date: record.businessDate, amount: record.totalSales })),
             internalClosings.map((closing) => ({ date: closing.date, amount: closing.zReading })),
           ),
-          businesses: businesses.map((business) => ({ id: business.id, name: business.name, code: business.code })),
-          scope: input.businessId ? selectedBusinesses[0]?.name || "Negocio no encontrado" : "Hostel y Tienda",
+          scope: targetBusiness.name,
+          providerLabel: input.provider === "loyverse" ? "Loyverse / Tienda" : "Cloudbeds / Hostel",
         };
       }),
       importLoyverseDailyCash: adminProcedure.input(z.object({
@@ -2442,36 +2462,9 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
         });
 
         try {
-          type LoyversePayload = { receipts?: Array<Record<string, unknown>>; cursor?: string; errors?: Array<{ details?: string }> };
-          const allReceipts: Array<Record<string, unknown>> = [];
-          let cursor: string | undefined;
-          for (let page = 0; page < 10; page += 1) {
-            const url = new URL("https://api.loyverse.com/v1.0/receipts");
-            url.searchParams.set("limit", "250");
-            url.searchParams.set("created_at_min", `${input.dateFrom}T00:00:00.000Z`);
-            url.searchParams.set("created_at_max", `${input.dateTo}T23:59:59.999Z`);
-            if (cursor) url.searchParams.set("cursor", cursor);
-            const response = await fetch(url, {
-              headers: { Authorization: `Bearer ${accessToken}`, Accept: "application/json" },
-              redirect: "manual",
-            });
-            const responseText = await response.text();
-            let payload: LoyversePayload;
-            try {
-              payload = JSON.parse(responseText) as LoyversePayload;
-            } catch {
-              const contentType = response.headers.get("content-type") || "desconocido";
-              throw new Error(`Loyverse devolvió una respuesta no JSON (HTTP ${response.status}, ${contentType}). Revisa la conectividad del servidor y el token.`);
-            }
-            if (!response.ok) {
-              throw new Error(payload.errors?.map((error) => error.details).filter(Boolean).join(" · ") || `Loyverse respondió HTTP ${response.status}`);
-            }
-            const pageReceipts = payload.receipts || [];
-            allReceipts.push(...pageReceipts);
-            const operationalDates = pageReceipts.map(loyverseReceiptDate).filter(Boolean);
-            if (!payload.cursor || !operationalDates.length || operationalDates.some((date) => date < input.dateFrom)) break;
-            cursor = payload.cursor;
-          }
+          const { start } = getLoyverseOperationalWindow(input.dateFrom);
+          const endWindow = getLoyverseOperationalWindow(input.dateTo);
+          const allReceipts = await fetchLoyverseReceipts(accessToken, start, endWindow.end);
 
           const records = aggregateLoyverseReceiptsByOperationalDay(
             allReceipts.filter((receipt) => {

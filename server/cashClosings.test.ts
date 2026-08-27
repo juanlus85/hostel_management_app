@@ -83,6 +83,13 @@ describe("cashClosings router", () => {
     
     expect(caller.cashClosings.exportCSV).toBeDefined();
   });
+
+  it("has manual Loyverse Z import procedure", async () => {
+    const { ctx } = createAuthContext();
+    const caller = appRouter.createCaller(ctx);
+
+    expect(caller.cashClosings.importLoyverseZ).toBeDefined();
+  });
 });
 
 describe("cashMovements router", () => {
