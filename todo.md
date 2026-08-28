@@ -1213,29 +1213,30 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Comparar siempre Loyverse solo con la caja de Tienda y eliminar el selector interno innecesario
 - [x] Preparar la comparación futura de Cloudbeds con la caja de Hostel y su diferencia diaria
 - [x] Añadir un botón en Caja de Tienda para importar la Z de Loyverse del día operativo 07:00–07:00
-- [ ] Configurar la variable privada `CLOUDBEDS_API_KEY` cuando se genere en la propiedad
-- [ ] Generar una API key de Cloudbeds con permisos mínimos de lectura y configurar su conexión segura
+- [x] Configurar la variable privada `CLOUDBEDS_API_KEY` cuando se genere en la propiedad
+- [x] Generar una API key de Cloudbeds con permisos mínimos de lectura y configurar su conexión segura
 - [x] Implementar una importación aislada de la caja diaria de Cloudbeds y compararla con Hostel
-- [ ] Verificar la primera importación real de Cloudbeds con la API key y Property ID activos
+- [x] Verificar la primera importación real de Cloudbeds con la API key y Property ID activos
 - [x] Corregir la importación de Cloudbeds que conecta pero finaliza con cero días
 - [x] Registrar un diagnóstico seguro de los campos y recuentos devueltos por Cloudbeds cuando una importación queda vacía
 - [x] Crear un submenú para importar las reservas con llegada en los próximos tres días
 - [x] Corregir el error `Invalid time value` al importar próximas reservas de Cloudbeds
-- [ ] Corregir el mapeo de próximas reservas de Cloudbeds que importa asignaciones sin huésped, contacto ni detalles de estancia
-- [ ] Completar salida, número y tipo de habitación, y teléfono en las próximas reservas importadas desde Cloudbeds
-- [ ] Registrar de forma segura las claves reales devueltas por Cloudbeds para terminar el mapeo de reservas
-- [ ] Registrar y mostrar solo la estructura no sensible de una respuesta de reserva y su asignación para corregir los campos vacíos
-- [ ] Mostrar el diagnóstico no sensible de la última importación y enlazar correctamente detalle de reserva con asignación de habitación
-- [ ] Usar `startDate`, `endDate`, `guestList` y `assigned` confirmados por Cloudbeds para completar los campos operativos
-- [ ] Extraer el teléfono desde `guestList` cuando Cloudbeds devuelve los huéspedes indexados por identificador
-- [ ] Incorporar `guestPhone` y `guestCellPhone` de Cloudbeds al teléfono mostrado en próximas reservas
+- [x] Corregir el mapeo de próximas reservas de Cloudbeds que importa asignaciones sin huésped, contacto ni detalles de estancia
+- [x] Completar salida, número y tipo de habitación, y teléfono en las próximas reservas importadas desde Cloudbeds
+- [x] Registrar de forma segura las claves reales devueltas por Cloudbeds para terminar el mapeo de reservas
+- [x] Registrar y mostrar solo la estructura no sensible de una respuesta de reserva y su asignación para corregir los campos vacíos
+- [x] Mostrar el diagnóstico no sensible de la última importación y enlazar correctamente detalle de reserva con asignación de habitación
+- [x] Usar `startDate`, `endDate`, `guestList` y `assigned` confirmados por Cloudbeds para completar los campos operativos
+- [x] Extraer el teléfono desde `guestList` cuando Cloudbeds devuelve los huéspedes indexados por identificador
+- [x] Incorporar `guestPhone` y `guestCellPhone` de Cloudbeds al teléfono mostrado en próximas reservas
 - [x] Mostrar el importe pendiente de cada reserva importada desde Cloudbeds en la cola de llegadas
-- [ ] Mover el saldo pendiente a una zona visible y confirmar su actualización al reimportar reservas existentes
+- [x] Mover el saldo pendiente a una zona visible y confirmar su actualización al reimportar reservas existentes
+- [x] Unificar saldo pendiente y cola de próximas reservas de Cloudbeds en una única tabla homogénea
 - [x] Guardar de forma aislada datos de estancia y contacto necesarios para comunicaciones operativas
 - [x] Añadir estado y trazabilidad de mensajes por reserva sin realizar envíos automáticos
 - [x] Preparar acciones futuras útiles de llegada, revisión y comunicación sin mezclar datos operativos
-- [ ] Añadir el permiso Reserva → Leer a la API key y verificar una primera importación real de próximas llegadas
-- [ ] Desglosar y conciliar pagos de Cloudbeds frente a la caja de Hostel por método, anticipos, devoluciones y jornada operativa
+- [x] Añadir el permiso Reserva → Leer a la API key y verificar una primera importación real de próximas llegadas
+- [x] Desglosar y conciliar pagos de Cloudbeds frente a la caja de Hostel por método, anticipos, devoluciones y jornada operativa
 - [x] Importar Cloudbeds por fecha de servicio y categorías de pago para coincidir con la Z de Hostel
 - [x] Añadir en Caja de Hostel la importación de Z de Cloudbeds para la fecha de servicio actual
 - [x] Añadir en Caja de Hostel la importación independiente de prepago Booking desde Cloudbeds
