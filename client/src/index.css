@@ -181,4 +181,18 @@
       max-width: 1280px; /* Standard content width */
     }
   }
+
+  .external-arrivals {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .external-arrivals > * {
+    margin-top: 0 !important;
+  }
+
+  .external-arrivals > :nth-child(1) { order: 1; }
+  .external-arrivals > :nth-child(3) { order: 2; }
+  .external-arrivals > :nth-child(2) { order: 3; }
 }
