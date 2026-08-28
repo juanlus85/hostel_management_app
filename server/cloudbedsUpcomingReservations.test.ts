@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { getNextMadridCalendarDates, normalizeUpcomingReservation } from "./cloudbedsUpcomingReservations";
+import { describe, expect, it, vi } from "vitest";
+import { fetchCloudbedsUpcomingReservations, getNextMadridCalendarDates, normalizeUpcomingReservation } from "./cloudbedsUpcomingReservations";
 
 describe("normalizeUpcomingReservation", () => {
   it("extrae solo los datos operativos necesarios de una reserva futura", () => {
@@ -14,5 +14,19 @@ describe("normalizeUpcomingReservation", () => {
 
   it("calcula tres fechas de llegada de Madrid sin depender del formato regional", () => {
     expect(getNextMadridCalendarDates(new Date("2026-08-27T12:00:00.000Z"))).toEqual(["2026-08-27", "2026-08-28", "2026-08-29"]);
+  });
+
+  it("desanida el detalle real de una reserva antes de extraer huésped y habitación", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify([{ reservationID: "R-72", date: "2026-08-28" }]), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ reservation: {
+        reservationID: "R-72", confirmationNumber: "CB-772", check_in: "2026-08-28", check_out: "2026-08-30",
+        guestList: [{ first_name: "Lucía", last_name: "Martín", email_address: "lucia@example.com", mobile: "+34955000111" }],
+        reservationRooms: [{ room_type: "Twin", room_number: "15" }],
+      } }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const result = await fetchCloudbedsUpcomingReservations("cbat_test", "204754", ["2026-08-28"]);
+    expect(result[0]).toMatchObject({ guestName: "Lucía Martín", guestEmail: "lucia@example.com", guestPhone: "+34955000111", checkOutDate: "2026-08-30", roomType: "Twin", roomNumber: "15" });
+    vi.unstubAllGlobals();
   });
 });

@@ -1218,6 +1218,7 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Registrar un diagnóstico seguro de los campos y recuentos devueltos por Cloudbeds cuando una importación queda vacía
 - [x] Crear un submenú para importar las reservas con llegada en los próximos tres días
 - [x] Corregir el error `Invalid time value` al importar próximas reservas de Cloudbeds
+- [ ] Corregir el mapeo de próximas reservas de Cloudbeds que importa asignaciones sin huésped, contacto ni detalles de estancia
 - [x] Guardar de forma aislada datos de estancia y contacto necesarios para comunicaciones operativas
 - [x] Añadir estado y trazabilidad de mensajes por reserva sin realizar envíos automáticos
 - [x] Preparar acciones futuras útiles de llegada, revisión y comunicación sin mezclar datos operativos
