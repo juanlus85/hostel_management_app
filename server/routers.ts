@@ -57,6 +57,8 @@ import {
 } from "./cloudbedsUpcomingReservations";
 import type { ExternalUpcomingReservation } from "../drizzle/schema";
 import {
+  buildConfiguredReservationWelcome,
+  buildEditedReservationEmail,
   buildOnlineCheckinInvitation,
   buildReservationWelcomeEmail,
   buildReservationWhatsAppMessage,
@@ -3872,6 +3874,8 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             privacyUrlEn: z.string().url().or(z.literal("")).optional(),
             welcomeMessageEs: z.string().optional(),
             welcomeMessageEn: z.string().optional(),
+            reservationWelcomeEmailEs: z.string().max(10000).optional(),
+            reservationWelcomeEmailEn: z.string().max(10000).optional(),
             arrivalMapUrl: z.string().url().or(z.literal("")).optional(),
             arrivalIntroEs: z.string().optional(),
             arrivalIntroEn: z.string().optional(),
@@ -4277,6 +4281,8 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             externalReservationId: z.number(),
             messageType: z.enum(["welcome", "online_checkin"]),
             language: z.enum(["es", "en"]).default("es"),
+            subject: z.string().trim().min(1).max(200).optional(),
+            message: z.string().trim().min(1).max(10000).optional(),
           })
         )
         .mutation(async ({ input, ctx }) => {
@@ -4339,7 +4345,25 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
               });
             return { success: true, checkinUrl: invitation.url };
           }
-          const message = buildReservationWelcomeEmail(context, language);
+          const settings = await db.getHostelSettings();
+          const configuredTemplate =
+            language === "en"
+              ? settings?.reservationWelcomeEmailEn
+              : settings?.reservationWelcomeEmailEs;
+          const message =
+            input.subject && input.message
+              ? buildEditedReservationEmail(input.subject, input.message)
+              : buildConfiguredReservationWelcome(
+                  configuredTemplate,
+                  context,
+                  language,
+                  {
+                    name: settings?.hostelName,
+                    address: settings?.hostelAddress,
+                    phone: settings?.hostelPhone,
+                    email: settings?.hostelEmail,
+                  }
+                );
           const { sendEmail } = await import("./email");
           const result = await sendEmail(
             reservation.guestEmail,
@@ -4364,6 +4388,47 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
               message: result.error || "No se pudo enviar el correo",
             });
           return { success: true, checkinUrl: null };
+        }),
+      prepareCloudbedsReservationWelcome: adminProcedure
+        .input(
+          z.object({
+            externalReservationId: z.number(),
+            language: z.enum(["es", "en"]).default("es"),
+          })
+        )
+        .mutation(async ({ input }) => {
+          const reservation = await db.getExternalUpcomingReservationById(
+            input.externalReservationId
+          );
+          if (!reservation)
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: "No se encontró la reserva importada",
+            });
+          const settings = await db.getHostelSettings();
+          const context = {
+            guestName: reservation.guestName,
+            checkInDate: reservation.checkInDate,
+            checkOutDate: reservation.checkOutDate,
+            roomNumber: reservation.roomNumber,
+            roomType: reservation.roomType,
+            reservationCode: reservation.reservationCode,
+          };
+          const template =
+            input.language === "en"
+              ? settings?.reservationWelcomeEmailEn
+              : settings?.reservationWelcomeEmailEs;
+          return buildConfiguredReservationWelcome(
+            template,
+            context,
+            input.language,
+            {
+              name: settings?.hostelName,
+              address: settings?.hostelAddress,
+              phone: settings?.hostelPhone,
+              email: settings?.hostelEmail,
+            }
+          );
         }),
       prepareCloudbedsReservationWhatsApp: adminProcedure
         .input(

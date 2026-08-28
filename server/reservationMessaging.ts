@@ -1,3 +1,5 @@
+import { renderArrivalTemplate } from "../shared/arrivalTemplate";
+
 export type ReservationMessageLanguage = "es" | "en";
 
 export type ReservationMessageContext = {
@@ -51,6 +53,52 @@ export function buildReservationWelcomeEmail(
       : `Hola ${displayName(context.guestName)},\n\nGracias por tu reserva en The Spot Central Hostel. Te esperamos el ${arrival}. La salida está prevista para el ${departure}. ${context.roomNumber ? `Tu alojamiento asignado es ${room}${context.roomType ? ` (${context.roomType})` : ""}.` : "La información de tu habitación se confirmará antes de la llegada."}\n\nUn saludo,\nThe Spot Central Hostel`;
   const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#1f2937;line-height:1.6"><div style="background:#0f766e;color:#fff;padding:22px;border-radius:10px 10px 0 0"><h1 style="margin:0;font-size:22px">${escapeHtml(subject)}</h1></div><div style="background:#f8fafc;padding:26px;border-radius:0 0 10px 10px"><p>${language === "en" ? "Hello" : "Hola"} <strong>${name}</strong>,</p><p>${language === "en" ? "Thank you for your reservation at The Spot Central Hostel. We look forward to welcoming you." : "Gracias por tu reserva en The Spot Central Hostel. Estamos deseando recibirte."}</p><div style="background:#fff;border-left:4px solid #0f766e;padding:16px;border-radius:6px"><p style="margin:0 0 8px"><strong>${language === "en" ? "Arrival" : "Llegada"}:</strong> ${escapeHtml(arrival)}</p><p style="margin:0 0 8px"><strong>${language === "en" ? "Departure" : "Salida"}:</strong> ${escapeHtml(departure)}</p><p style="margin:0"><strong>${language === "en" ? "Accommodation" : "Alojamiento"}:</strong> ${escapeHtml(room)}${context.roomType ? ` · ${escapeHtml(context.roomType)}` : ""}</p></div><p>${language === "en" ? "You will receive the online check-in invitation separately when it is ready." : "Recibirás la invitación de Check-in Online por separado cuando esté preparada."}</p><p><strong>The Spot Central Hostel</strong></p></div></div>`;
   return { subject, text, html };
+}
+
+export function buildConfiguredReservationWelcome(
+  template: string | null | undefined,
+  context: ReservationMessageContext,
+  language: ReservationMessageLanguage,
+  hostel: {
+    name?: string | null;
+    address?: string | null;
+    phone?: string | null;
+    email?: string | null;
+  }
+) {
+  if (!template?.trim()) return buildReservationWelcomeEmail(context, language);
+  const text = renderArrivalTemplate(template, {
+    guestName: context.guestName,
+    roomNumber: context.roomNumber,
+    roomType: context.roomType,
+    hostelName: hostel.name || "The Spot Central Hostel",
+    hostelAddress: hostel.address,
+    hostelPhone: hostel.phone,
+    hostelEmail: hostel.email,
+    checkInDate: context.checkInDate,
+    checkOutDate: context.checkOutDate,
+    entranceCode: null,
+    roomCode: null,
+  }).trim();
+  const subject =
+    language === "en"
+      ? "Welcome to The Spot Central Hostel"
+      : "Bienvenido/a a The Spot Central Hostel";
+  return {
+    subject,
+    text,
+    html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#1f2937;line-height:1.6;white-space:pre-line">${escapeHtml(text)}</div>`,
+  };
+}
+
+export function buildEditedReservationEmail(subject: string, text: string) {
+  const cleanSubject = subject.trim();
+  const cleanText = text.trim();
+  return {
+    subject: cleanSubject,
+    text: cleanText,
+    html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#1f2937;line-height:1.6;white-space:pre-line">${escapeHtml(cleanText)}</div>`,
+  };
 }
 
 export function buildOnlineCheckinInvitation(

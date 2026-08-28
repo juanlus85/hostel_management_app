@@ -1,4 +1,13 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, boolean } from "drizzle-orm/mysql-core";
+import {
+  int,
+  mysqlEnum,
+  mysqlTable,
+  text,
+  timestamp,
+  varchar,
+  decimal,
+  boolean,
+} from "drizzle-orm/mysql-core";
 
 // ==================== USERS ====================
 export const users = mysqlTable("users", {
@@ -9,7 +18,9 @@ export const users = mysqlTable("users", {
   username: varchar("username", { length: 100 }), // Username for login
   passwordHash: varchar("passwordHash", { length: 255 }), // Hashed password
   loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin", "housekeeping", "tablet"]).default("user").notNull(),
+  role: mysqlEnum("role", ["user", "admin", "housekeeping", "tablet"])
+    .default("user")
+    .notNull(),
   pin: varchar("pin", { length: 6 }), // PIN for quick clock-in/out
   color: varchar("color", { length: 7 }).default("#3b82f6"), // Color for calendar display
   displayOrder: int("displayOrder").default(0).notNull(), // Order of rows in shift calendars
@@ -50,7 +61,14 @@ export const shifts = mysqlTable("shifts", {
   actualEnd: timestamp("actualEnd"),
   hoursWorked: decimal("hoursWorked", { precision: 5, scale: 2 }),
   notes: text("notes"),
-  status: mysqlEnum("status", ["scheduled", "in_progress", "completed", "cancelled"]).default("scheduled").notNull(),
+  status: mysqlEnum("status", [
+    "scheduled",
+    "in_progress",
+    "completed",
+    "cancelled",
+  ])
+    .default("scheduled")
+    .notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -65,12 +83,18 @@ export const cashRegisters = mysqlTable("cash_registers", {
   userId: int("userId").notNull(),
   shiftId: int("shiftId"),
   date: varchar("date", { length: 10 }).notNull(), // YYYY-MM-DD format
-  openingAmount: decimal("openingAmount", { precision: 10, scale: 2 }).default("0").notNull(),
+  openingAmount: decimal("openingAmount", { precision: 10, scale: 2 })
+    .default("0")
+    .notNull(),
   closingAmount: decimal("closingAmount", { precision: 10, scale: 2 }),
   expectedAmount: decimal("expectedAmount", { precision: 10, scale: 2 }),
   difference: decimal("difference", { precision: 10, scale: 2 }),
-  cashWithdrawn: decimal("cashWithdrawn", { precision: 10, scale: 2 }).default("0").notNull(),
-  cardWithdrawn: decimal("cardWithdrawn", { precision: 10, scale: 2 }).default("0").notNull(),
+  cashWithdrawn: decimal("cashWithdrawn", { precision: 10, scale: 2 })
+    .default("0")
+    .notNull(),
+  cardWithdrawn: decimal("cardWithdrawn", { precision: 10, scale: 2 })
+    .default("0")
+    .notNull(),
   notes: text("notes"),
   status: mysqlEnum("status", ["open", "closed"]).default("open").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -90,7 +114,21 @@ export const transactions = mysqlTable("transactions", {
   category: varchar("category", { length: 100 }),
   concept: varchar("concept", { length: 255 }).notNull(),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
-  paymentMethod: mysqlEnum("paymentMethod", ["cash", "card", "transfer", "cuenta_bancaria", "ana", "juanlu", "caja_hostel", "caja_tienda", "caja_fuerte", "caja_fuerte_cambio", "other"]).default("cash").notNull(),
+  paymentMethod: mysqlEnum("paymentMethod", [
+    "cash",
+    "card",
+    "transfer",
+    "cuenta_bancaria",
+    "ana",
+    "juanlu",
+    "caja_hostel",
+    "caja_tienda",
+    "caja_fuerte",
+    "caja_fuerte_cambio",
+    "other",
+  ])
+    .default("cash")
+    .notNull(),
   date: varchar("date", { length: 10 }).notNull(), // YYYY-MM-DD format
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -113,11 +151,28 @@ export const invoices = mysqlTable("invoices", {
   vatRate: decimal("vatRate", { precision: 5, scale: 2 }),
   vatAmount: decimal("vatAmount", { precision: 10, scale: 2 }),
   totalAmount: decimal("totalAmount", { precision: 10, scale: 2 }),
-  paymentMethod: mysqlEnum("paymentMethodInvoice", ["cuenta_bancaria", "tarjeta", "ana", "juanlu", "caja_hostel", "caja_tienda", "caja_fuerte", "caja_fuerte_cambio", "otros"]).default("cuenta_bancaria"),
+  paymentMethod: mysqlEnum("paymentMethodInvoice", [
+    "cuenta_bancaria",
+    "tarjeta",
+    "ana",
+    "juanlu",
+    "caja_hostel",
+    "caja_tienda",
+    "caja_fuerte",
+    "caja_fuerte_cambio",
+    "otros",
+  ]).default("cuenta_bancaria"),
   imageUrl: text("imageUrl"),
   imageKey: varchar("imageKey", { length: 255 }),
   ocrData: text("ocrData"), // JSON string with OCR extracted data
-  ocrStatus: mysqlEnum("ocrStatus", ["pending", "processing", "completed", "failed"]).default("pending").notNull(),
+  ocrStatus: mysqlEnum("ocrStatus", [
+    "pending",
+    "processing",
+    "completed",
+    "failed",
+  ])
+    .default("pending")
+    .notNull(),
   isVerified: boolean("isVerified").default(false).notNull(),
   isScanned: boolean("isScanned").default(false).notNull(), // Escaneado/Contabilizado
   hasVAT: boolean("hasVAT").default(true).notNull(), // Factura con IVA / A contabilizar
@@ -134,7 +189,11 @@ export type InsertInvoice = typeof invoices.$inferInsert;
 export const issuedInvoices = mysqlTable("issued_invoices", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
-  issuerBusiness: mysqlEnum("issuerBusiness", ["The Spot Central Hostel", "Sweet & Salty", "Organizus"]).notNull(),
+  issuerBusiness: mysqlEnum("issuerBusiness", [
+    "The Spot Central Hostel",
+    "Sweet & Salty",
+    "Organizus",
+  ]).notNull(),
   recipient: varchar("recipient", { length: 255 }),
   invoiceNumber: varchar("invoiceNumber", { length: 100 }),
   invoiceDate: varchar("invoiceDate", { length: 10 }).notNull(),
@@ -156,8 +215,12 @@ export const inventoryItems = mysqlTable("inventory_items", {
   name: varchar("name", { length: 255 }).notNull(),
   category: varchar("category", { length: 100 }),
   supplier: varchar("supplier", { length: 255 }),
-  currentStock: decimal("currentStock", { precision: 10, scale: 2 }).default("0").notNull(),
-  minimumStock: decimal("minimumStock", { precision: 10, scale: 2 }).default("0").notNull(),
+  currentStock: decimal("currentStock", { precision: 10, scale: 2 })
+    .default("0")
+    .notNull(),
+  minimumStock: decimal("minimumStock", { precision: 10, scale: 2 })
+    .default("0")
+    .notNull(),
   unit: varchar("unit", { length: 50 }).default("unidad").notNull(),
   costPrice: decimal("costPrice", { precision: 10, scale: 2 }),
   isActive: boolean("isActive").default(true).notNull(),
@@ -180,7 +243,9 @@ export const orders = mysqlTable("orders", {
   orderDate: varchar("orderDate", { length: 10 }).notNull(),
   expectedDelivery: varchar("expectedDelivery", { length: 10 }),
   actualDelivery: varchar("actualDelivery", { length: 10 }),
-  status: mysqlEnum("status", ["pending", "ordered", "delivered", "cancelled"]).default("pending").notNull(),
+  status: mysqlEnum("status", ["pending", "ordered", "delivered", "cancelled"])
+    .default("pending")
+    .notNull(),
   totalAmount: decimal("totalAmount", { precision: 10, scale: 2 }),
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -214,8 +279,12 @@ export const incidents = mysqlTable("incidents", {
   userId: int("userId").notNull(),
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
-  priority: mysqlEnum("priority", ["low", "medium", "high", "urgent"]).default("medium").notNull(),
-  status: mysqlEnum("status", ["open", "in_progress", "resolved", "closed"]).default("open").notNull(),
+  priority: mysqlEnum("priority", ["low", "medium", "high", "urgent"])
+    .default("medium")
+    .notNull(),
+  status: mysqlEnum("status", ["open", "in_progress", "resolved", "closed"])
+    .default("open")
+    .notNull(),
   resolvedAt: timestamp("resolvedAt"),
   resolvedBy: int("resolvedBy"),
   notes: text("notes"),
@@ -235,8 +304,17 @@ export const tasks = mysqlTable("tasks", {
   assignedTo: int("assignedTo"),
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
-  priority: mysqlEnum("priority", ["low", "medium", "high", "urgent"]).default("medium").notNull(),
-  status: mysqlEnum("status", ["pending", "in_progress", "completed", "cancelled"]).default("pending").notNull(),
+  priority: mysqlEnum("priority", ["low", "medium", "high", "urgent"])
+    .default("medium")
+    .notNull(),
+  status: mysqlEnum("status", [
+    "pending",
+    "in_progress",
+    "completed",
+    "cancelled",
+  ])
+    .default("pending")
+    .notNull(),
   dueDate: varchar("dueDate", { length: 10 }),
   completedAt: timestamp("completedAt"),
   notes: text("notes"),
@@ -255,7 +333,10 @@ export const stockMovements = mysqlTable("stock_movements", {
   userId: int("userId").notNull(),
   type: mysqlEnum("type", ["in", "out", "adjustment"]).notNull(),
   quantity: decimal("quantity", { precision: 10, scale: 2 }).notNull(),
-  previousStock: decimal("previousStock", { precision: 10, scale: 2 }).notNull(),
+  previousStock: decimal("previousStock", {
+    precision: 10,
+    scale: 2,
+  }).notNull(),
   newStock: decimal("newStock", { precision: 10, scale: 2 }).notNull(),
   reason: varchar("reason", { length: 255 }),
   orderId: int("orderId"),
@@ -316,21 +397,43 @@ export const cashClosings = mysqlTable("cash_closings", {
   bills20: int("bills20").default(0).notNull(), // Cantidad de billetes de 20€
   bills50: int("bills50").default(0).notNull(), // Cantidad de billetes de 50€
   // Totales calculados
-  totalCash: decimal("totalCash", { precision: 10, scale: 2 }).default("0").notNull(),
-  totalCards: decimal("totalCards", { precision: 10, scale: 2 }).default("0").notNull(),
-  zReading: decimal("zReading", { precision: 10, scale: 2 }).default("0").notNull(), // Z de la caja
+  totalCash: decimal("totalCash", { precision: 10, scale: 2 })
+    .default("0")
+    .notNull(),
+  totalCards: decimal("totalCards", { precision: 10, scale: 2 })
+    .default("0")
+    .notNull(),
+  zReading: decimal("zReading", { precision: 10, scale: 2 })
+    .default("0")
+    .notNull(), // Z de la caja
   // Cambio del día anterior (automático)
-  previousChange: decimal("previousChange", { precision: 10, scale: 2 }).default("0").notNull(),
+  previousChange: decimal("previousChange", { precision: 10, scale: 2 })
+    .default("0")
+    .notNull(),
   // Retiros
-  prepaidBooking: decimal("prepaidBooking", { precision: 10, scale: 2 }).default("0").notNull(),
-  withdrawnCash: decimal("withdrawnCash", { precision: 10, scale: 2 }).default("0").notNull(),
-  withdrawnCards: decimal("withdrawnCards", { precision: 10, scale: 2 }).default("0").notNull(),
+  prepaidBooking: decimal("prepaidBooking", { precision: 10, scale: 2 })
+    .default("0")
+    .notNull(),
+  withdrawnCash: decimal("withdrawnCash", { precision: 10, scale: 2 })
+    .default("0")
+    .notNull(),
+  withdrawnCards: decimal("withdrawnCards", { precision: 10, scale: 2 })
+    .default("0")
+    .notNull(),
   // Descuadre
-  expectedTotal: decimal("expectedTotal", { precision: 10, scale: 2 }).default("0").notNull(),
-  actualTotal: decimal("actualTotal", { precision: 10, scale: 2 }).default("0").notNull(),
-  difference: decimal("difference", { precision: 10, scale: 2 }).default("0").notNull(),
+  expectedTotal: decimal("expectedTotal", { precision: 10, scale: 2 })
+    .default("0")
+    .notNull(),
+  actualTotal: decimal("actualTotal", { precision: 10, scale: 2 })
+    .default("0")
+    .notNull(),
+  difference: decimal("difference", { precision: 10, scale: 2 })
+    .default("0")
+    .notNull(),
   // Cambio que queda para el día siguiente
-  changeForNextDay: decimal("changeForNextDay", { precision: 10, scale: 2 }).default("0").notNull(),
+  changeForNextDay: decimal("changeForNextDay", { precision: 10, scale: 2 })
+    .default("0")
+    .notNull(),
   notes: text("notes"),
   status: mysqlEnum("status", ["draft", "closed"]).default("draft").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -359,12 +462,24 @@ export const weeklySummaries = mysqlTable("weekly_summaries", {
   businessId: int("businessId").notNull(),
   weekStart: varchar("weekStart", { length: 10 }).notNull(),
   weekEnd: varchar("weekEnd", { length: 10 }).notNull(),
-  totalIncome: decimal("totalIncome", { precision: 12, scale: 2 }).default("0").notNull(),
-  totalExpenses: decimal("totalExpenses", { precision: 12, scale: 2 }).default("0").notNull(),
-  totalCashWithdrawn: decimal("totalCashWithdrawn", { precision: 12, scale: 2 }).default("0").notNull(),
-  totalCardWithdrawn: decimal("totalCardWithdrawn", { precision: 12, scale: 2 }).default("0").notNull(),
-  totalDifference: decimal("totalDifference", { precision: 12, scale: 2 }).default("0").notNull(),
-  totalHoursWorked: decimal("totalHoursWorked", { precision: 10, scale: 2 }).default("0").notNull(),
+  totalIncome: decimal("totalIncome", { precision: 12, scale: 2 })
+    .default("0")
+    .notNull(),
+  totalExpenses: decimal("totalExpenses", { precision: 12, scale: 2 })
+    .default("0")
+    .notNull(),
+  totalCashWithdrawn: decimal("totalCashWithdrawn", { precision: 12, scale: 2 })
+    .default("0")
+    .notNull(),
+  totalCardWithdrawn: decimal("totalCardWithdrawn", { precision: 12, scale: 2 })
+    .default("0")
+    .notNull(),
+  totalDifference: decimal("totalDifference", { precision: 12, scale: 2 })
+    .default("0")
+    .notNull(),
+  totalHoursWorked: decimal("totalHoursWorked", { precision: 10, scale: 2 })
+    .default("0")
+    .notNull(),
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -373,12 +488,17 @@ export const weeklySummaries = mysqlTable("weekly_summaries", {
 export type WeeklySummary = typeof weeklySummaries.$inferSelect;
 export type InsertWeeklySummary = typeof weeklySummaries.$inferInsert;
 
-
 // ==================== NOTIFICATIONS (Notificaciones) ====================
 export const notifications = mysqlTable("notifications", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(), // Usuario que recibe la notificación
-  type: mysqlEnum("type", ["shift_assigned", "shift_modified", "shift_deleted", "room_checkout", "general"]).notNull(),
+  type: mysqlEnum("type", [
+    "shift_assigned",
+    "shift_modified",
+    "shift_deleted",
+    "room_checkout",
+    "general",
+  ]).notNull(),
   title: varchar("title", { length: 255 }).notNull(),
   message: text("message").notNull(),
   relatedShiftId: int("relatedShiftId"), // ID del turno relacionado (opcional)
@@ -388,7 +508,6 @@ export const notifications = mysqlTable("notifications", {
 
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = typeof notifications.$inferInsert;
-
 
 // ==================== SYSTEM SETTINGS (Configuración del Sistema) ====================
 export const systemSettings = mysqlTable("system_settings", {
@@ -402,13 +521,17 @@ export const systemSettings = mysqlTable("system_settings", {
 export type SystemSetting = typeof systemSettings.$inferSelect;
 export type InsertSystemSetting = typeof systemSettings.$inferInsert;
 
-
 // ==================== ROOM STATUS (Estado de Habitaciones) ====================
 export const roomStatus = mysqlTable("room_status", {
   id: int("id").autoincrement().primaryKey(),
   roomNumber: varchar("roomNumber", { length: 10 }).notNull(),
   date: varchar("date", { length: 10 }).notNull(), // YYYY-MM-DD
-  status: mysqlEnum("status", ["checkout", "continues", "empty", "ready"]).notNull(),
+  status: mysqlEnum("status", [
+    "checkout",
+    "continues",
+    "empty",
+    "ready",
+  ]).notNull(),
   beds: int("beds"), // Solo para habitación 42
   notes: text("notes"),
   updatedBy: int("updatedBy").notNull(),
@@ -419,17 +542,34 @@ export const roomStatus = mysqlTable("room_status", {
 export type RoomStatus = typeof roomStatus.$inferSelect;
 export type InsertRoomStatus = typeof roomStatus.$inferInsert;
 
-
 // ==================== OTROS GASTOS (Gastos No Facturados) ====================
 export const otrosGastos = mysqlTable("otros_gastos", {
   id: int("id").autoincrement().primaryKey(),
   businessId: int("businessId").notNull(),
   type: mysqlEnum("type", ["gasto", "ingreso"]).notNull().default("gasto"),
   concepto: varchar("concepto", { length: 255 }).notNull(),
-  categoria: mysqlEnum("categoria", ["sueldos", "seguridad_social", "impuestos", "seguros", "otros"]).notNull().default("otros"),
+  categoria: mysqlEnum("categoria", [
+    "sueldos",
+    "seguridad_social",
+    "impuestos",
+    "seguros",
+    "otros",
+  ])
+    .notNull()
+    .default("otros"),
   categoriaOtros: varchar("categoriaOtros", { length: 255 }), // Solo si categoria = "otros"
   importe: decimal("importe", { precision: 10, scale: 2 }).notNull(),
-  paymentMethod: mysqlEnum("paymentMethod", ["cuenta_bancaria", "tarjeta", "ana", "juanlu", "caja_hostel", "caja_tienda", "caja_fuerte", "caja_fuerte_cambio", "otros"]),
+  paymentMethod: mysqlEnum("paymentMethod", [
+    "cuenta_bancaria",
+    "tarjeta",
+    "ana",
+    "juanlu",
+    "caja_hostel",
+    "caja_tienda",
+    "caja_fuerte",
+    "caja_fuerte_cambio",
+    "otros",
+  ]),
   fecha: varchar("fecha", { length: 10 }).notNull(), // YYYY-MM-DD format
   notas: text("notas"),
   createdBy: int("createdBy"),
@@ -438,7 +578,6 @@ export const otrosGastos = mysqlTable("otros_gastos", {
 
 export type OtroGasto = typeof otrosGastos.$inferSelect;
 export type InsertOtroGasto = typeof otrosGastos.$inferInsert;
-
 
 // ==================== SAFE BOXES (Cajas Fuertes) ====================
 export const safeBoxes = mysqlTable("safe_boxes", {
@@ -455,12 +594,16 @@ export const safeBoxes = mysqlTable("safe_boxes", {
     "ajuste",
     "caja_semana",
     "es_efectivo_cf_hostel",
-    "es_efectivo_cf_tienda"
+    "es_efectivo_cf_tienda",
   ]).notNull(),
   concept: varchar("concept", { length: 255 }), // Texto libre
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(), // Puede ser positivo o negativo
-  accumulated: decimal("accumulated", { precision: 10, scale: 2 }).notNull().default("0"), // Total acumulado después de este movimiento
-  checkStatus: mysqlEnum("checkStatus", ["unchecked", "correct", "incorrect"]).default("unchecked").notNull(),
+  accumulated: decimal("accumulated", { precision: 10, scale: 2 })
+    .notNull()
+    .default("0"), // Total acumulado después de este movimiento
+  checkStatus: mysqlEnum("checkStatus", ["unchecked", "correct", "incorrect"])
+    .default("unchecked")
+    .notNull(),
   createdBy: int("createdBy"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -468,7 +611,6 @@ export const safeBoxes = mysqlTable("safe_boxes", {
 
 export type SafeBox = typeof safeBoxes.$inferSelect;
 export type InsertSafeBox = typeof safeBoxes.$inferInsert;
-
 
 // ==================== ACCESS CODES (Códigos de Acceso) ====================
 export const accessCodes = mysqlTable("access_codes", {
@@ -486,15 +628,20 @@ export const accessCodes = mysqlTable("access_codes", {
 export type AccessCode = typeof accessCodes.$inferSelect;
 export type InsertAccessCode = typeof accessCodes.$inferInsert;
 
-
 // ==================== WEEKLY SUMMARY - CASH ENVELOPES ====================
 export const weeklyCashEnvelopes = mysqlTable("weekly_cash_envelopes", {
   id: int("id").autoincrement().primaryKey(),
   weekStart: varchar("weekStart", { length: 10 }).notNull(), // YYYY-MM-DD (lunes de la semana)
   dayOfWeek: int("dayOfWeek").notNull(), // 1=Lunes, 2=Martes, ..., 7=Domingo
-  expectedCash: decimal("expectedCash", { precision: 10, scale: 2 }).notNull().default("0"), // Lo que debería haber
-  actualCash: decimal("actualCash", { precision: 10, scale: 2 }).notNull().default("0"), // Lo que había
-  difference: decimal("difference", { precision: 10, scale: 2 }).notNull().default("0"), // Desfase (actualCash - expectedCash)
+  expectedCash: decimal("expectedCash", { precision: 10, scale: 2 })
+    .notNull()
+    .default("0"), // Lo que debería haber
+  actualCash: decimal("actualCash", { precision: 10, scale: 2 })
+    .notNull()
+    .default("0"), // Lo que había
+  difference: decimal("difference", { precision: 10, scale: 2 })
+    .notNull()
+    .default("0"), // Desfase (actualCash - expectedCash)
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -503,31 +650,43 @@ export type WeeklyCashEnvelope = typeof weeklyCashEnvelopes.$inferSelect;
 export type InsertWeeklyCashEnvelope = typeof weeklyCashEnvelopes.$inferInsert;
 
 // ==================== WEEKLY SUMMARY - AVAILABILITY SOURCES ====================
-export const weeklyAvailabilitySources = mysqlTable("weekly_availability_sources", {
-  id: int("id").autoincrement().primaryKey(),
-  name: varchar("name", { length: 100 }).notNull(), // Nombre de la fuente (BBVA, Santander, C.F. Hostel, etc.)
-  type: mysqlEnum("type", ["bank", "cash_register", "safe"]).notNull(), // Tipo de fuente
-  isActive: boolean("isActive").default(true).notNull(), // Permitir desactivar fuentes
-  displayOrder: int("displayOrder").default(0).notNull(), // Orden de visualización
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+export const weeklyAvailabilitySources = mysqlTable(
+  "weekly_availability_sources",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    name: varchar("name", { length: 100 }).notNull(), // Nombre de la fuente (BBVA, Santander, C.F. Hostel, etc.)
+    type: mysqlEnum("type", ["bank", "cash_register", "safe"]).notNull(), // Tipo de fuente
+    isActive: boolean("isActive").default(true).notNull(), // Permitir desactivar fuentes
+    displayOrder: int("displayOrder").default(0).notNull(), // Orden de visualización
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  }
+);
 
-export type WeeklyAvailabilitySource = typeof weeklyAvailabilitySources.$inferSelect;
-export type InsertWeeklyAvailabilitySource = typeof weeklyAvailabilitySources.$inferInsert;
+export type WeeklyAvailabilitySource =
+  typeof weeklyAvailabilitySources.$inferSelect;
+export type InsertWeeklyAvailabilitySource =
+  typeof weeklyAvailabilitySources.$inferInsert;
 
 // ==================== WEEKLY SUMMARY - AVAILABILITY RECORDS ====================
-export const weeklyAvailabilityRecords = mysqlTable("weekly_availability_records", {
-  id: int("id").autoincrement().primaryKey(),
-  weekStart: varchar("weekStart", { length: 10 }).notNull(), // YYYY-MM-DD (lunes de la semana)
-  sourceId: int("sourceId").notNull(), // Referencia a weekly_availability_sources
-  amount: decimal("amount", { precision: 10, scale: 2 }).notNull().default("0"), // Cantidad disponible
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+export const weeklyAvailabilityRecords = mysqlTable(
+  "weekly_availability_records",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    weekStart: varchar("weekStart", { length: 10 }).notNull(), // YYYY-MM-DD (lunes de la semana)
+    sourceId: int("sourceId").notNull(), // Referencia a weekly_availability_sources
+    amount: decimal("amount", { precision: 10, scale: 2 })
+      .notNull()
+      .default("0"), // Cantidad disponible
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  }
+);
 
-export type WeeklyAvailabilityRecord = typeof weeklyAvailabilityRecords.$inferSelect;
-export type InsertWeeklyAvailabilityRecord = typeof weeklyAvailabilityRecords.$inferInsert;
+export type WeeklyAvailabilityRecord =
+  typeof weeklyAvailabilityRecords.$inferSelect;
+export type InsertWeeklyAvailabilityRecord =
+  typeof weeklyAvailabilityRecords.$inferInsert;
 
 // ==================== APP SETTINGS ====================
 export const appSettings = mysqlTable("app_settings", {
@@ -552,8 +711,12 @@ export const historicalCashData = mysqlTable("historical_cash_data", {
   businessType: mysqlEnum("businessType", ["hostel", "tienda"]).notNull(),
   // Totales mensuales
   totalZ: decimal("totalZ", { precision: 12, scale: 2 }).default("0").notNull(), // Total Z del mes
-  totalCash: decimal("totalCash", { precision: 12, scale: 2 }).default("0").notNull(), // Total efectivo del mes
-  totalCards: decimal("totalCards", { precision: 12, scale: 2 }).default("0").notNull(), // Total tarjetas del mes
+  totalCash: decimal("totalCash", { precision: 12, scale: 2 })
+    .default("0")
+    .notNull(), // Total efectivo del mes
+  totalCards: decimal("totalCards", { precision: 12, scale: 2 })
+    .default("0")
+    .notNull(), // Total tarjetas del mes
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -569,7 +732,9 @@ export const inventoryProducts = mysqlTable("inventory_products", {
   category: varchar("category", { length: 100 }), // Categoría
   cost: decimal("cost", { precision: 10, scale: 2 }).default("0").notNull(), // Coste
   price: decimal("price", { precision: 10, scale: 2 }).default("0").notNull(), // Precio de venta
-  inStock: decimal("inStock", { precision: 10, scale: 3 }).default("0").notNull(), // En inventario
+  inStock: decimal("inStock", { precision: 10, scale: 3 })
+    .default("0")
+    .notNull(), // En inventario
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -638,12 +803,14 @@ export const guests = mysqlTable("guests", {
   lastName: varchar("lastName", { length: 100 }).notNull(),
   documentNumber: varchar("documentNumber", { length: 50 }).notNull(),
   documentSupport: varchar("documentSupport", { length: 50 }), // Número de soporte para DNI español
-  documentType: varchar("documentType", { length: 50 }).default("Passport").notNull(), // Passport, ID Card, Driver License
+  documentType: varchar("documentType", { length: 50 })
+    .default("Passport")
+    .notNull(), // Passport, ID Card, Driver License
   gender: mysqlEnum("gender", ["Hombre", "Mujer", "Otro"]),
   nationality: varchar("nationality", { length: 100 }),
   birthDate: varchar("birthDate", { length: 10 }), // YYYY-MM-DD
   documentExpiry: varchar("documentExpiry", { length: 10 }), // YYYY-MM-DD
-  
+
   // Dirección
   street: varchar("street", { length: 255 }),
   addressExtra: varchar("addressExtra", { length: 255 }),
@@ -651,12 +818,12 @@ export const guests = mysqlTable("guests", {
   city: varchar("city", { length: 100 }),
   province: varchar("province", { length: 100 }),
   country: varchar("country", { length: 100 }),
-  
+
   // Contacto
   phone: varchar("phone", { length: 50 }),
   phoneExtra: varchar("phoneExtra", { length: 50 }),
   email: varchar("email", { length: 320 }),
-  
+
   // Información de reserva
   reservationNumber: varchar("reservationNumber", { length: 100 }),
   checkInDate: varchar("checkInDate", { length: 10 }), // YYYY-MM-DD - Opcional para check-in anticipado
@@ -667,34 +834,71 @@ export const guests = mysqlTable("guests", {
   entranceCode: varchar("entranceCode", { length: 10 }), // Código de entrada hostel
   numberOfRooms: int("numberOfRooms").default(1).notNull(),
   hasInternet: boolean("hasInternet").default(true).notNull(),
-  accommodationType: mysqlEnum("accommodationType", ["S.A. (Solo Aloj.)", "A.D. (Aloj. y Desayuno)", "M.P. (Media Pensión)", "P.C. (Pensión Completa)"]).default("S.A. (Solo Aloj.)").notNull(),
-  reservationOrigin: mysqlEnum("reservationOrigin", ["Walk In", "Booking.com", "Airbnb", "Expedia", "Website", "Phone", "Email", "Other"]).default("Walk In").notNull(),
-  
+  accommodationType: mysqlEnum("accommodationType", [
+    "S.A. (Solo Aloj.)",
+    "A.D. (Aloj. y Desayuno)",
+    "M.P. (Media Pensión)",
+    "P.C. (Pensión Completa)",
+  ])
+    .default("S.A. (Solo Aloj.)")
+    .notNull(),
+  reservationOrigin: mysqlEnum("reservationOrigin", [
+    "Walk In",
+    "Booking.com",
+    "Airbnb",
+    "Expedia",
+    "Website",
+    "Phone",
+    "Email",
+    "Other",
+  ])
+    .default("Walk In")
+    .notNull(),
+
   // Información de pago
-  paymentType: mysqlEnum("paymentType", ["EFECT", "TARJT", "TRANS", "PLATF", "MOVIL", "TREG", "DESTI", "OTRO"]).default("TRANS").notNull(),
+  paymentType: mysqlEnum("paymentType", [
+    "EFECT",
+    "TARJT",
+    "TRANS",
+    "PLATF",
+    "MOVIL",
+    "TREG",
+    "DESTI",
+    "OTRO",
+  ])
+    .default("TRANS")
+    .notNull(),
   paymentDate: varchar("paymentDate", { length: 10 }), // YYYY-MM-DD
-  amountPaid: decimal("amountPaid", { precision: 10, scale: 2 }).default("0").notNull(),
-  amountPending: decimal("amountPending", { precision: 10, scale: 2 }).default("0").notNull(),
+  amountPaid: decimal("amountPaid", { precision: 10, scale: 2 })
+    .default("0")
+    .notNull(),
+  amountPending: decimal("amountPending", { precision: 10, scale: 2 })
+    .default("0")
+    .notNull(),
   paymentHolder: varchar("paymentHolder", { length: 255 }),
   paymentMethod: varchar("paymentMethod", { length: 255 }),
-  
+
   // Número de personas
   numberOfGuests: int("numberOfGuests").default(1).notNull(),
-  
+
   // Firma y términos
   signature: text("signature"), // Base64 de la firma
   acceptedTerms: boolean("acceptedTerms").default(false).notNull(),
   acceptedPrivacy: boolean("acceptedPrivacy").default(false).notNull(),
-  
+
   // Metadatos
   isMainGuest: boolean("isMainGuest").default(true).notNull(), // Si es el huésped principal
   groupId: varchar("groupId", { length: 100 }), // ID del grupo de huéspedes (para múltiples huéspedes)
-  status: mysqlEnum("status", ["pending", "completed", "online", "cancelled"]).default("pending").notNull(),
-  checkinType: mysqlEnum("checkinType", ["presencial", "anticipado", "online"]).default("presencial").notNull(), // Tipo de check-in
+  status: mysqlEnum("status", ["pending", "completed", "online", "cancelled"])
+    .default("pending")
+    .notNull(),
+  checkinType: mysqlEnum("checkinType", ["presencial", "anticipado", "online"])
+    .default("presencial")
+    .notNull(), // Tipo de check-in
   language: mysqlEnum("language", ["es", "en"]).default("es").notNull(),
   token: varchar("token", { length: 255 }).unique(), // Token único para check-in online
   sendCodes: boolean("sendCodes").default(false).notNull(), // Si se enviaron códigos (online vs anticipado)
-  
+
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   createdBy: int("createdBy"), // Usuario que creó el registro
@@ -708,14 +912,27 @@ export type InsertGuest = typeof guests.$inferInsert;
 export const onlineCheckinLinks = mysqlTable("online_checkin_links", {
   id: int("id").autoincrement().primaryKey(),
   token: varchar("token", { length: 128 }).notNull().unique(),
-  status: mysqlEnum("status", ["pending", "completed", "cancelled", "expired"]).default("pending").notNull(),
+  status: mysqlEnum("status", ["pending", "completed", "cancelled", "expired"])
+    .default("pending")
+    .notNull(),
   email: varchar("email", { length: 320 }).notNull(),
   prefilledFirstName: varchar("prefilledFirstName", { length: 120 }),
   prefilledLastName: varchar("prefilledLastName", { length: 160 }),
   prefilledPhone: varchar("prefilledPhone", { length: 80 }),
   language: mysqlEnum("language", ["es", "en"]).default("es").notNull(),
   reservationNumber: varchar("reservationNumber", { length: 100 }),
-  reservationOrigin: mysqlEnum("reservationOrigin", ["Walk In", "Booking.com", "Airbnb", "Expedia", "Website", "Phone", "Email", "Other"]).default("Website").notNull(),
+  reservationOrigin: mysqlEnum("reservationOrigin", [
+    "Walk In",
+    "Booking.com",
+    "Airbnb",
+    "Expedia",
+    "Website",
+    "Phone",
+    "Email",
+    "Other",
+  ])
+    .default("Website")
+    .notNull(),
   checkInDate: varchar("checkInDate", { length: 10 }).notNull(),
   checkOutDate: varchar("checkOutDate", { length: 10 }).notNull(),
   roomNumber: varchar("roomNumber", { length: 10 }).notNull(),
@@ -724,9 +941,24 @@ export const onlineCheckinLinks = mysqlTable("online_checkin_links", {
   entranceCode: varchar("entranceCode", { length: 20 }),
   numberOfRooms: int("numberOfRooms").default(1).notNull(),
   numberOfGuests: int("numberOfGuests").default(1).notNull(),
-  paymentType: mysqlEnum("paymentType", ["EFECT", "TARJT", "TRANS", "PLATF", "MOVIL", "TREG", "DESTI", "OTRO"]).default("TRANS").notNull(),
-  amountPaid: decimal("amountPaid", { precision: 10, scale: 2 }).default("0").notNull(),
-  amountPending: decimal("amountPending", { precision: 10, scale: 2 }).default("0").notNull(),
+  paymentType: mysqlEnum("paymentType", [
+    "EFECT",
+    "TARJT",
+    "TRANS",
+    "PLATF",
+    "MOVIL",
+    "TREG",
+    "DESTI",
+    "OTRO",
+  ])
+    .default("TRANS")
+    .notNull(),
+  amountPaid: decimal("amountPaid", { precision: 10, scale: 2 })
+    .default("0")
+    .notNull(),
+  amountPending: decimal("amountPending", { precision: 10, scale: 2 })
+    .default("0")
+    .notNull(),
   createdBy: int("createdBy"),
   guestId: int("guestId"),
   expiresAt: varchar("expiresAt", { length: 10 }).notNull(),
@@ -751,12 +983,12 @@ export const hostelSettingsCheckin = mysqlTable("hostel_settings_checkin", {
   policeCode: varchar("policeCode", { length: 100 }), // Código establecimiento para Sistema Hospedajes
   municipioCode: varchar("municipioCode", { length: 5 }), // Código INE del municipio (5 dígitos)
   hostelLogo: text("hostelLogo"), // Base64 o URL del logo
-  
+
   // Información adicional
   wifiPassword: varchar("wifiPassword", { length: 255 }),
   checkoutTime: varchar("checkoutTime", { length: 5 }), // HH:MM
   defaultEntranceCode: varchar("defaultEntranceCode", { length: 10 }),
-  
+
   // Términos y condiciones (bilingüe)
   termsConditionsEs: text("termsConditionsEs"),
   termsConditionsEn: text("termsConditionsEn"),
@@ -768,6 +1000,8 @@ export const hostelSettingsCheckin = mysqlTable("hostel_settings_checkin", {
   privacyUrlEn: varchar("privacyUrlEn", { length: 500 }),
   welcomeMessageEs: text("welcomeMessageEs"),
   welcomeMessageEn: text("welcomeMessageEn"),
+  reservationWelcomeEmailEs: text("reservationWelcomeEmailEs"),
+  reservationWelcomeEmailEn: text("reservationWelcomeEmailEn"),
   arrivalMapUrl: varchar("arrivalMapUrl", { length: 500 }),
   arrivalIntroEs: text("arrivalIntroEs"),
   arrivalIntroEn: text("arrivalIntroEn"),
@@ -777,10 +1011,10 @@ export const hostelSettingsCheckin = mysqlTable("hostel_settings_checkin", {
   commonAreasEn: text("commonAreasEn"),
   houseRulesEs: text("houseRulesEs"),
   houseRulesEn: text("houseRulesEn"),
-  
+
   // Tipos de habitación disponibles (JSON array)
   roomTypes: text("roomTypes"), // JSON: ["Individual", "Doble", "Triple", "Cuádruple", "Suite"]
-  
+
   // Configuración SMTP
   smtpHost: varchar("smtpHost", { length: 255 }),
   smtpPort: int("smtpPort"),
@@ -788,24 +1022,31 @@ export const hostelSettingsCheckin = mysqlTable("hostel_settings_checkin", {
   smtpPassword: varchar("smtpPassword", { length: 255 }),
   smtpFromEmail: varchar("smtpFromEmail", { length: 320 }),
   smtpFromName: varchar("smtpFromName", { length: 255 }),
-  
+
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
 export type HostelSettingCheckin = typeof hostelSettingsCheckin.$inferSelect;
-export type InsertHostelSettingCheckin = typeof hostelSettingsCheckin.$inferInsert;
+export type InsertHostelSettingCheckin =
+  typeof hostelSettingsCheckin.$inferInsert;
 
 // ==================== EXTERNAL IMPORTS (aislado de la operación diaria) ====================
 export const externalImportRuns = mysqlTable("external_import_runs", {
   id: int("id").autoincrement().primaryKey(),
   provider: mysqlEnum("provider", ["loyverse", "cloudbeds"]).notNull(),
-  importType: mysqlEnum("importType", ["daily_cash", "future"]).default("daily_cash").notNull(),
-  status: mysqlEnum("status", ["pending", "running", "completed", "failed"]).default("pending").notNull(),
+  importType: mysqlEnum("importType", ["daily_cash", "future"])
+    .default("daily_cash")
+    .notNull(),
+  status: mysqlEnum("status", ["pending", "running", "completed", "failed"])
+    .default("pending")
+    .notNull(),
   dateFrom: varchar("dateFrom", { length: 10 }),
   dateTo: varchar("dateTo", { length: 10 }),
   recordsImported: int("recordsImported").default(0).notNull(),
-  totalAmount: decimal("totalAmount", { precision: 12, scale: 2 }).default("0").notNull(),
+  totalAmount: decimal("totalAmount", { precision: 12, scale: 2 })
+    .default("0")
+    .notNull(),
   errorMessage: text("errorMessage"),
   metadata: text("metadata"),
   createdBy: int("createdBy").notNull(),
@@ -814,70 +1055,111 @@ export const externalImportRuns = mysqlTable("external_import_runs", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
-export const externalDailyCashRecords = mysqlTable("external_daily_cash_records", {
-  id: int("id").autoincrement().primaryKey(),
-  importRunId: int("importRunId").notNull(),
-  provider: mysqlEnum("provider", ["loyverse", "cloudbeds"]).notNull(),
-  sourceStoreId: varchar("sourceStoreId", { length: 100 }),
-  sourceStoreName: varchar("sourceStoreName", { length: 255 }),
-  sourceShiftId: varchar("sourceShiftId", { length: 100 }),
-  businessLabel: varchar("businessLabel", { length: 255 }),
-  businessDate: varchar("businessDate", { length: 10 }).notNull(),
-  currency: varchar("currency", { length: 10 }).default("EUR").notNull(),
-  openingCash: decimal("openingCash", { precision: 12, scale: 2 }).default("0").notNull(),
-  closingCash: decimal("closingCash", { precision: 12, scale: 2 }).default("0").notNull(),
-  cashSales: decimal("cashSales", { precision: 12, scale: 2 }).default("0").notNull(),
-  cardSales: decimal("cardSales", { precision: 12, scale: 2 }).default("0").notNull(),
-  totalSales: decimal("totalSales", { precision: 12, scale: 2 }).default("0").notNull(),
-  rawData: text("rawData"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+export const externalDailyCashRecords = mysqlTable(
+  "external_daily_cash_records",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    importRunId: int("importRunId").notNull(),
+    provider: mysqlEnum("provider", ["loyverse", "cloudbeds"]).notNull(),
+    sourceStoreId: varchar("sourceStoreId", { length: 100 }),
+    sourceStoreName: varchar("sourceStoreName", { length: 255 }),
+    sourceShiftId: varchar("sourceShiftId", { length: 100 }),
+    businessLabel: varchar("businessLabel", { length: 255 }),
+    businessDate: varchar("businessDate", { length: 10 }).notNull(),
+    currency: varchar("currency", { length: 10 }).default("EUR").notNull(),
+    openingCash: decimal("openingCash", { precision: 12, scale: 2 })
+      .default("0")
+      .notNull(),
+    closingCash: decimal("closingCash", { precision: 12, scale: 2 })
+      .default("0")
+      .notNull(),
+    cashSales: decimal("cashSales", { precision: 12, scale: 2 })
+      .default("0")
+      .notNull(),
+    cardSales: decimal("cardSales", { precision: 12, scale: 2 })
+      .default("0")
+      .notNull(),
+    totalSales: decimal("totalSales", { precision: 12, scale: 2 })
+      .default("0")
+      .notNull(),
+    rawData: text("rawData"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  }
+);
 
 // Próximas reservas importadas: aisladas de los huéspedes y reservas operativas del hostel.
-export const externalUpcomingReservations = mysqlTable("external_upcoming_reservations", {
-  id: int("id").autoincrement().primaryKey(),
-  importRunId: int("importRunId").notNull(),
-  provider: mysqlEnum("provider", ["cloudbeds"]).default("cloudbeds").notNull(),
-  sourceReservationId: varchar("sourceReservationId", { length: 100 }).notNull(),
-  reservationCode: varchar("reservationCode", { length: 100 }),
-  guestName: varchar("guestName", { length: 255 }),
-  guestEmail: varchar("guestEmail", { length: 320 }),
-  guestPhone: varchar("guestPhone", { length: 80 }),
-  checkInDate: varchar("checkInDate", { length: 10 }).notNull(),
-  checkOutDate: varchar("checkOutDate", { length: 10 }),
-  roomType: varchar("roomType", { length: 255 }),
-  roomNumber: varchar("roomNumber", { length: 100 }),
-  reservationStatus: varchar("reservationStatus", { length: 80 }),
-  guestCount: int("guestCount"),
-  reservationNotes: text("reservationNotes"),
-  bookingSource: varchar("bookingSource", { length: 255 }),
-  amountPending: decimal("amountPending", { precision: 12, scale: 2 }).default("0").notNull(),
-  isReviewed: boolean("isReviewed").default(false).notNull(),
-  rawData: text("rawData"),
-  importedAt: timestamp("importedAt").defaultNow().notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+export const externalUpcomingReservations = mysqlTable(
+  "external_upcoming_reservations",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    importRunId: int("importRunId").notNull(),
+    provider: mysqlEnum("provider", ["cloudbeds"])
+      .default("cloudbeds")
+      .notNull(),
+    sourceReservationId: varchar("sourceReservationId", {
+      length: 100,
+    }).notNull(),
+    reservationCode: varchar("reservationCode", { length: 100 }),
+    guestName: varchar("guestName", { length: 255 }),
+    guestEmail: varchar("guestEmail", { length: 320 }),
+    guestPhone: varchar("guestPhone", { length: 80 }),
+    checkInDate: varchar("checkInDate", { length: 10 }).notNull(),
+    checkOutDate: varchar("checkOutDate", { length: 10 }),
+    roomType: varchar("roomType", { length: 255 }),
+    roomNumber: varchar("roomNumber", { length: 100 }),
+    reservationStatus: varchar("reservationStatus", { length: 80 }),
+    guestCount: int("guestCount"),
+    reservationNotes: text("reservationNotes"),
+    bookingSource: varchar("bookingSource", { length: 255 }),
+    amountPending: decimal("amountPending", { precision: 12, scale: 2 })
+      .default("0")
+      .notNull(),
+    isReviewed: boolean("isReviewed").default(false).notNull(),
+    rawData: text("rawData"),
+    importedAt: timestamp("importedAt").defaultNow().notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  }
+);
 
 // Auditoría de comunicaciones externas: no envía mensajes por sí misma.
-export const externalReservationCommunications = mysqlTable("external_reservation_communications", {
-  id: int("id").autoincrement().primaryKey(),
-  externalReservationId: int("externalReservationId").notNull(),
-  channel: mysqlEnum("channel", ["email", "whatsapp", "other"]).notNull(),
-  status: mysqlEnum("status", ["pending", "prepared", "sent", "failed", "cancelled"]).default("pending").notNull(),
-  messageType: varchar("messageType", { length: 100 }).default("arrival").notNull(),
-  notes: text("notes"),
-  sentAt: timestamp("sentAt"),
-  createdBy: int("createdBy"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+export const externalReservationCommunications = mysqlTable(
+  "external_reservation_communications",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    externalReservationId: int("externalReservationId").notNull(),
+    channel: mysqlEnum("channel", ["email", "whatsapp", "other"]).notNull(),
+    status: mysqlEnum("status", [
+      "pending",
+      "prepared",
+      "sent",
+      "failed",
+      "cancelled",
+    ])
+      .default("pending")
+      .notNull(),
+    messageType: varchar("messageType", { length: 100 })
+      .default("arrival")
+      .notNull(),
+    notes: text("notes"),
+    sentAt: timestamp("sentAt"),
+    createdBy: int("createdBy"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  }
+);
 
 export type ExternalImportRun = typeof externalImportRuns.$inferSelect;
 export type InsertExternalImportRun = typeof externalImportRuns.$inferInsert;
-export type ExternalDailyCashRecord = typeof externalDailyCashRecords.$inferSelect;
-export type InsertExternalDailyCashRecord = typeof externalDailyCashRecords.$inferInsert;
-export type ExternalUpcomingReservation = typeof externalUpcomingReservations.$inferSelect;
-export type InsertExternalUpcomingReservation = typeof externalUpcomingReservations.$inferInsert;
-export type ExternalReservationCommunication = typeof externalReservationCommunications.$inferSelect;
-export type InsertExternalReservationCommunication = typeof externalReservationCommunications.$inferInsert;
+export type ExternalDailyCashRecord =
+  typeof externalDailyCashRecords.$inferSelect;
+export type InsertExternalDailyCashRecord =
+  typeof externalDailyCashRecords.$inferInsert;
+export type ExternalUpcomingReservation =
+  typeof externalUpcomingReservations.$inferSelect;
+export type InsertExternalUpcomingReservation =
+  typeof externalUpcomingReservations.$inferInsert;
+export type ExternalReservationCommunication =
+  typeof externalReservationCommunications.$inferSelect;
+export type InsertExternalReservationCommunication =
+  typeof externalReservationCommunications.$inferInsert;

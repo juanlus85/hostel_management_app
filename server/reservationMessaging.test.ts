@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildConfiguredReservationWelcome,
   buildOnlineCheckinInvitation,
   buildReservationWelcomeEmail,
   buildReservationWhatsAppMessage,
@@ -46,5 +47,19 @@ describe("mensajería manual de reservas", () => {
       "https://management.example/checkin-online/token"
     );
     expect(message).toContain("Check-in Online");
+  });
+
+  it("aplica las etiquetas de una plantilla de bienvenida configurable sin exponer códigos", () => {
+    const message = buildConfiguredReservationWelcome(
+      "Hola {{NOMBRE_HUESPED}}, te esperamos el {{FECHA_LLEGADA}} en {{NOMBRE_HOSTEL}}. Código: {{CODIGO_ENTRADA}}",
+      context,
+      "es",
+      { name: "The Spot" }
+    );
+    expect(message.text).toContain(
+      "Hola Ana <García>, te esperamos el 2026-08-30 en The Spot."
+    );
+    expect(message.text).not.toContain("{{CODIGO_ENTRADA}}");
+    expect(message.text).not.toMatch(/\*\d{4}\*/);
   });
 });

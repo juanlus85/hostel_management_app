@@ -1238,6 +1238,8 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Integrar el envío de enlace de Check-in Online precompletado con los datos de Cloudbeds
 - [ ] Definir la activación automática de comunicaciones sin realizar envíos no confirmados
 - [x] Implementar mensajería manual revisada por recepción: correo SMTP y WhatsApp con mensaje preparado
+- [x] Añadir plantillas de bienvenida editables en español e inglés para comunicaciones de reservas
+- [x] Permitir personalizar y previsualizar cada mensaje de bienvenida antes de enviarlo
 - [ ] Ejecutar `SQL_MENSAJERIA_RESERVAS.sql` en el VPS antes de usar enlaces precompletados en producción
 - [x] Guardar de forma aislada datos de estancia y contacto necesarios para comunicaciones operativas
 - [x] Añadir estado y trazabilidad de mensajes por reserva sin realizar envíos automáticos
