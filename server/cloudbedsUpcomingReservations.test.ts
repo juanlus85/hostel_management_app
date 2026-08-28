@@ -42,14 +42,14 @@ describe("normalizeUpcomingReservation", () => {
     let diagnostics: { detailKeys: string[]; guestKeys: string[]; roomKeys: string[] } | undefined;
     const result = await fetchCloudbedsUpcomingReservations("cbat_test", "204754", ["2026-08-28"], (value) => { diagnostics = value; });
     expect(result[0]).toMatchObject({ guestName: "Carlos Ruiz", guestPhone: "+34600000456", checkOutDate: "2026-08-31", roomType: "Habitación privada", roomNumber: "18" });
-    expect(diagnostics).toMatchObject({ detailKeys: expect.arrayContaining(["date_departure", "guestList", "roomAssignments"]), guestKeys: expect.arrayContaining(["mobile_phone_number"]), roomKeys: expect.arrayContaining(["room_type_name"]) });
+    expect(diagnostics).toMatchObject({ detailKeys: expect.arrayContaining(["date_departure", "guestList", "roomAssignments"]), guestKeys: expect.arrayContaining(["mobile_phone_number"]), roomKeys: expect.arrayContaining(["room_type_name"]), fieldShapes: { guestList: expect.stringContaining("lista con objeto") } });
     vi.unstubAllGlobals();
   });
 
   it("reconoce las variantes de salida, habitación y teléfono del detalle de Cloudbeds", () => {
     const result = normalizeUpcomingReservation(
       { reservationID: "R-73", date: "2026-08-28", room_type: "Dormitorio" },
-      { reservationID: "R-73", check_in: "2026-08-28", dateDeparture: "2026-08-31", primary_guest: { first_name: "Marta", last_name: "López", mobile_phone_number: "+34600000123" }, assigned_room: { name: "12", room_type: { name: "Cama en dormitorio" } } },
+      { reservationID: "R-73", startDate: "2026-08-28", endDate: "2026-08-31", primary_guest: { first_name: "Marta", last_name: "López", mobile_phone_number: "+34600000123" }, assigned: { name: "12", room_type: { name: "Cama en dormitorio" } } },
       "2026-08-28",
     );
     expect(result).toMatchObject({ guestPhone: "+34600000123", checkOutDate: "2026-08-31", roomType: "Cama en dormitorio", roomNumber: "12" });

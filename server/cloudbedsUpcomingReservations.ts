@@ -22,6 +22,7 @@ export type CloudbedsReservationFieldDiagnostics = {
   detailKeys: string[];
   guestKeys: string[];
   roomKeys: string[];
+  fieldShapes: Record<string, string>;
 };
 
 function text(value: unknown): string | null {
@@ -42,6 +43,17 @@ function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }
 
+function describeFieldShape(value: unknown): string {
+  if (value === null || value === undefined) return "vacío";
+  if (Array.isArray(value)) {
+    const first = asRecord(value[0]);
+    return Object.keys(first).length ? `lista con objeto: ${Object.keys(first).sort().join(", ")}` : `lista (${value.length})`;
+  }
+  const record = asRecord(value);
+  if (Object.keys(record).length) return `objeto: ${Object.keys(record).sort().join(", ")}`;
+  return typeof value;
+}
+
 function asList(payload: unknown): Record<string, unknown>[] {
   if (Array.isArray(payload)) return payload.map(asRecord);
   const root = asRecord(payload);
@@ -54,13 +66,15 @@ function asList(payload: unknown): Record<string, unknown>[] {
 function firstGuest(detail: Record<string, unknown>) {
   const guests = detail.guests ?? detail.guestList ?? detail.guest_list ?? detail.guestDetails ?? detail.guest_details;
   if (Array.isArray(guests)) return asRecord(guests[0]);
-  return asRecord(detail.guest ?? detail.primaryGuest ?? detail.primary_guest ?? detail.mainGuest ?? detail.main_guest);
+  const guestContainer = asRecord(guests);
+  if (Array.isArray(guestContainer.data)) return asRecord(guestContainer.data[0]);
+  return asRecord(detail.guest ?? detail.primaryGuest ?? detail.primary_guest ?? detail.mainGuest ?? detail.main_guest ?? guests);
 }
 
 function firstRoom(detail: Record<string, unknown>) {
-  const rooms = detail.rooms ?? detail.accommodations ?? detail.reservationRooms ?? detail.reservation_rooms ?? detail.roomAssignments ?? detail.room_assignments ?? detail.roomList ?? detail.room_list ?? detail.assignedRooms ?? detail.assigned_rooms ?? detail.roomDetails ?? detail.room_details;
+  const rooms = detail.rooms ?? detail.accommodations ?? detail.reservationRooms ?? detail.reservation_rooms ?? detail.roomAssignments ?? detail.room_assignments ?? detail.roomList ?? detail.room_list ?? detail.assignedRooms ?? detail.assigned_rooms ?? detail.roomDetails ?? detail.room_details ?? detail.assigned;
   if (Array.isArray(rooms)) return asRecord(rooms[0]);
-  return asRecord(detail.room ?? detail.accommodation ?? detail.assignedRoom ?? detail.assigned_room ?? detail.roomDetail ?? detail.room_detail);
+  return asRecord(detail.room ?? detail.accommodation ?? detail.assignedRoom ?? detail.assigned_room ?? detail.roomDetail ?? detail.room_detail ?? detail.assigned);
 }
 
 function unwrapReservationDetail(payload: unknown) {
@@ -107,9 +121,9 @@ export function normalizeUpcomingReservation(assignment: CloudbedsReservationAss
     guestEmail: firstText(guest.email, guest.emailAddress, guest.email_address, guest.email_address_1, detailRecord.guestEmail, detailRecord.guest_email),
     guestPhone: firstText(guest.phone, guest.phoneNumber, guest.phone_number, guest.mobile, guest.mobilePhone, guest.mobile_phone, guest.phoneMobile, guest.phone_mobile, guest.mobilePhoneNumber, guest.mobile_phone_number, guest.cellPhone, guest.cell_phone, detailRecord.guestPhone, detailRecord.guest_phone, detailRecord.phone, detailRecord.phoneNumber),
     checkInDate,
-    checkOutDate: firstText(detailRecord.checkOutDate, detailRecord.check_out_date, detailRecord.departureDate, detailRecord.departure_date, detailRecord.dateDeparture, detailRecord.date_departure, detailRecord.departure, detailRecord.checkOut, detailRecord.check_out, assignmentRecord.checkOutDate, assignmentRecord.check_out_date, assignmentRecord.dateDeparture, assignmentRecord.date_departure),
+    checkOutDate: firstText(detailRecord.checkOutDate, detailRecord.check_out_date, detailRecord.departureDate, detailRecord.departure_date, detailRecord.dateDeparture, detailRecord.date_departure, detailRecord.endDate, detailRecord.end_date, detailRecord.departure, detailRecord.checkOut, detailRecord.check_out, assignmentRecord.checkOutDate, assignmentRecord.check_out_date, assignmentRecord.dateDeparture, assignmentRecord.date_departure, assignmentRecord.endDate, assignmentRecord.end_date),
     roomType: firstText(room.roomTypeName, room.room_type_name, room.roomTypeNameDisplay, room.room_type_name_display, room.roomType, room.room_type, roomTypeRecord.name, roomTypeRecord.roomTypeName, roomTypeRecord.room_type_name, detailRecord.roomTypeName, detailRecord.room_type_name, detailRecord.roomType, detailRecord.room_type, assignmentRecord.roomTypeName, assignmentRecord.room_type_name, assignmentRecord.roomType, assignmentRecord.room_type),
-    roomNumber: firstText(room.roomName, room.room_name, room.roomNumber, room.room_number, room.room_number_display, room.name, room.number, detailRecord.roomNumber, detailRecord.room_number, detailRecord.roomName, detailRecord.room_name, assignmentRecord.roomName, assignmentRecord.room_number, assignmentRecord.roomNumber, assignmentRecord.room_name),
+    roomNumber: firstText(room.roomName, room.room_name, room.roomNumber, room.room_number, room.room_number_display, room.name, room.number, detailRecord.roomNumber, detailRecord.room_number, detailRecord.roomName, detailRecord.room_name, detailRecord.assignedRoomNumber, detailRecord.assigned_room_number, assignmentRecord.roomName, assignmentRecord.room_number, assignmentRecord.roomNumber, assignmentRecord.room_name, assignmentRecord.assignedRoomNumber, assignmentRecord.assigned_room_number),
     reservationStatus: firstText(detailRecord.status, detailRecord.reservationStatus, detailRecord.reservation_status, assignmentRecord.status),
     bookingSource: firstText(detailRecord.sourceName, detailRecord.source_name, detailRecord.source, assignmentRecord.sourceName, assignmentRecord.source_name),
     // Se conserva solo trazabilidad técnica; los datos personales usados están normalizados en columnas explícitas.
@@ -159,6 +173,12 @@ export async function fetchCloudbedsUpcomingReservations(
           detailKeys: Object.keys(detail).sort(),
           guestKeys: Object.keys(guest).sort(),
           roomKeys: Object.keys(room).sort(),
+          fieldShapes: {
+            guestList: describeFieldShape(detail.guestList),
+            assigned: describeFieldShape(detail.assigned),
+            startDate: describeFieldShape(detail.startDate),
+            endDate: describeFieldShape(detail.endDate),
+          },
         });
         diagnosticsReported = true;
       }
