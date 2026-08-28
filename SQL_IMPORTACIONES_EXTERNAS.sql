@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS `external_upcoming_reservations` (
   `roomNumber` varchar(100),
   `reservationStatus` varchar(80),
   `bookingSource` varchar(255),
+  `amountPending` decimal(12,2) NOT NULL DEFAULT 0,
   `isReviewed` boolean NOT NULL DEFAULT false,
   `rawData` text,
   `importedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -64,6 +65,10 @@ CREATE TABLE IF NOT EXISTS `external_upcoming_reservations` (
   INDEX `external_upcoming_reservations_arrival_idx` (`checkInDate`),
   INDEX `external_upcoming_reservations_source_idx` (`sourceReservationId`)
 );
+
+-- Para instalaciones donde la tabla ya existe antes de esta ampliación.
+ALTER TABLE `external_upcoming_reservations`
+  ADD COLUMN IF NOT EXISTS `amountPending` decimal(12,2) NOT NULL DEFAULT 0;
 
 CREATE TABLE IF NOT EXISTS `external_reservation_communications` (
   `id` int AUTO_INCREMENT NOT NULL,

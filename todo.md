@@ -1226,7 +1226,7 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [ ] Usar `startDate`, `endDate`, `guestList` y `assigned` confirmados por Cloudbeds para completar los campos operativos
 - [ ] Extraer el teléfono desde `guestList` cuando Cloudbeds devuelve los huéspedes indexados por identificador
 - [ ] Incorporar `guestPhone` y `guestCellPhone` de Cloudbeds al teléfono mostrado en próximas reservas
-- [ ] Mostrar el importe pendiente de cada reserva importada desde Cloudbeds en la cola de llegadas
+- [x] Mostrar el importe pendiente de cada reserva importada desde Cloudbeds en la cola de llegadas
 - [x] Guardar de forma aislada datos de estancia y contacto necesarios para comunicaciones operativas
 - [x] Añadir estado y trazabilidad de mensajes por reserva sin realizar envíos automáticos
 - [x] Preparar acciones futuras útiles de llegada, revisión y comunicación sin mezclar datos operativos

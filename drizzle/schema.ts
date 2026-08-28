@@ -846,6 +846,7 @@ export const externalUpcomingReservations = mysqlTable("external_upcoming_reserv
   roomNumber: varchar("roomNumber", { length: 100 }),
   reservationStatus: varchar("reservationStatus", { length: 80 }),
   bookingSource: varchar("bookingSource", { length: 255 }),
+  amountPending: decimal("amountPending", { precision: 12, scale: 2 }).default("0").notNull(),
   isReviewed: boolean("isReviewed").default(false).notNull(),
   rawData: text("rawData"),
   importedAt: timestamp("importedAt").defaultNow().notNull(),

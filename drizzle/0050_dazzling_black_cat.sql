@@ -1,0 +1,1 @@
+ALTER TABLE `external_upcoming_reservations` ADD `amountPending` decimal(12,2) DEFAULT '0' NOT NULL;

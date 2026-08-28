@@ -2326,6 +2326,7 @@ export async function upsertExternalUpcomingReservations(records: InsertExternal
         roomNumber: record.roomNumber,
         reservationStatus: record.reservationStatus,
         bookingSource: record.bookingSource,
+        amountPending: record.amountPending,
         rawData: record.rawData,
         importedAt: new Date(),
       }).where(eq(externalUpcomingReservations.id, existing.id));

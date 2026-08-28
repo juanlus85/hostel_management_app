@@ -13,6 +13,7 @@ export type ImportedUpcomingReservation = {
   roomNumber: string | null;
   reservationStatus: string | null;
   bookingSource: string | null;
+  amountPending: string;
   rawData: string;
 };
 
@@ -37,6 +38,13 @@ function firstText(...values: unknown[]) {
     if (normalized) return normalized;
   }
   return null;
+}
+
+function moneyText(value: unknown) {
+  const normalized = text(value);
+  if (!normalized) return "0";
+  const amount = Number(normalized.replace(",", "."));
+  return Number.isFinite(amount) ? amount.toFixed(2) : "0";
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -128,6 +136,7 @@ export function normalizeUpcomingReservation(assignment: CloudbedsReservationAss
     roomNumber: firstText(room.roomName, room.room_name, room.roomNumber, room.room_number, room.room_number_display, room.name, room.number, detailRecord.roomNumber, detailRecord.room_number, detailRecord.roomName, detailRecord.room_name, detailRecord.assignedRoomNumber, detailRecord.assigned_room_number, assignmentRecord.roomName, assignmentRecord.room_number, assignmentRecord.roomNumber, assignmentRecord.room_name, assignmentRecord.assignedRoomNumber, assignmentRecord.assigned_room_number),
     reservationStatus: firstText(detailRecord.status, detailRecord.reservationStatus, detailRecord.reservation_status, assignmentRecord.status),
     bookingSource: firstText(detailRecord.sourceName, detailRecord.source_name, detailRecord.source, assignmentRecord.sourceName, assignmentRecord.source_name),
+    amountPending: moneyText(detailRecord.balance ?? detailRecord.amountPending ?? detailRecord.amount_pending ?? detailRecord.balanceDue ?? detailRecord.balance_due),
     // Se conserva solo trazabilidad técnica; los datos personales usados están normalizados en columnas explícitas.
     rawData: JSON.stringify({ source: "Cloudbeds PMS API", sourceReservationId, importedFields: ["arrival", "departure", "room", "contact"] }),
   };
