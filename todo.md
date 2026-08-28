@@ -1232,6 +1232,13 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Mostrar el importe pendiente de cada reserva importada desde Cloudbeds en la cola de llegadas
 - [x] Mover el saldo pendiente a una zona visible y confirmar su actualización al reimportar reservas existentes
 - [x] Unificar saldo pendiente y cola de próximas reservas de Cloudbeds en una única tabla homogénea
+- [x] Importar y mostrar estado, notas y número de huéspedes de cada reserva de Cloudbeds
+- [x] Preparar el envío de bienvenida por correo desde la ficha de una próxima reserva
+- [x] Preparar el envío por WhatsApp usando el teléfono importado y registrar su trazabilidad
+- [x] Integrar el envío de enlace de Check-in Online precompletado con los datos de Cloudbeds
+- [ ] Definir la activación automática de comunicaciones sin realizar envíos no confirmados
+- [x] Implementar mensajería manual revisada por recepción: correo SMTP y WhatsApp con mensaje preparado
+- [ ] Ejecutar `SQL_MENSAJERIA_RESERVAS.sql` en el VPS antes de usar enlaces precompletados en producción
 - [x] Guardar de forma aislada datos de estancia y contacto necesarios para comunicaciones operativas
 - [x] Añadir estado y trazabilidad de mensajes por reserva sin realizar envíos automáticos
 - [x] Preparar acciones futuras útiles de llegada, revisión y comunicación sin mezclar datos operativos

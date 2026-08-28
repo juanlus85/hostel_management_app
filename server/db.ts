@@ -2307,6 +2307,13 @@ export async function getExternalUpcomingReservations(dateFrom: string, dateTo: 
     .orderBy(externalUpcomingReservations.checkInDate, externalUpcomingReservations.guestName);
 }
 
+export async function getExternalUpcomingReservationById(id: number): Promise<ExternalUpcomingReservation | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const [reservation] = await db.select().from(externalUpcomingReservations).where(eq(externalUpcomingReservations.id, id)).limit(1);
+  return reservation || null;
+}
+
 export async function upsertExternalUpcomingReservations(records: InsertExternalUpcomingReservation[]) {
   const db = await getDb();
   if (!db) return;
@@ -2325,6 +2332,8 @@ export async function upsertExternalUpcomingReservations(records: InsertExternal
         roomType: record.roomType,
         roomNumber: record.roomNumber,
         reservationStatus: record.reservationStatus,
+        guestCount: record.guestCount,
+        reservationNotes: record.reservationNotes,
         bookingSource: record.bookingSource,
         amountPending: record.amountPending,
         rawData: record.rawData,

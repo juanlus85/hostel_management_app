@@ -12,6 +12,8 @@ export type ImportedUpcomingReservation = {
   roomType: string | null;
   roomNumber: string | null;
   reservationStatus: string | null;
+  guestCount: number | null;
+  reservationNotes: string | null;
   bookingSource: string | null;
   amountPending: string;
   rawData: string;
@@ -49,6 +51,36 @@ function moneyText(value: unknown) {
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function guestCount(detail: Record<string, unknown>): number | null {
+  for (const value of [detail.guestCount, detail.guest_count, detail.numberOfGuests, detail.number_of_guests, detail.totalGuests, detail.total_guests]) {
+    const count = Number(value);
+    if (Number.isInteger(count) && count > 0) return count;
+  }
+  const guests = detail.guests ?? detail.guestList ?? detail.guest_list ?? detail.guestDetails ?? detail.guest_details;
+  if (Array.isArray(guests)) return guests.length || null;
+  const container = asRecord(guests);
+  if (Array.isArray(container.data)) return container.data.length || null;
+  const indexedGuests = Object.values(container).filter((value) => Object.keys(asRecord(value)).length > 0);
+  return indexedGuests.length || null;
+}
+
+function notesText(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  const direct = text(value);
+  if (direct) return direct;
+  if (typeof value !== "object") return null;
+  if (Array.isArray(value)) {
+    const combined = value.map(notesText).filter((note): note is string => Boolean(note)).join(" · ").trim();
+    return combined ? combined.slice(0, 4000) : null;
+  }
+  const record = asRecord(value);
+  for (const key of ["reservationNote", "reservation_note", "note", "notes", "text", "content", "message", "description", "data", "results"]) {
+    const note = notesText(record[key]);
+    if (note) return note;
+  }
+  return null;
 }
 
 function describeFieldShape(value: unknown): string {
@@ -135,6 +167,8 @@ export function normalizeUpcomingReservation(assignment: CloudbedsReservationAss
     roomType: firstText(room.roomTypeName, room.room_type_name, room.roomTypeNameDisplay, room.room_type_name_display, room.roomType, room.room_type, roomTypeRecord.name, roomTypeRecord.roomTypeName, roomTypeRecord.room_type_name, detailRecord.roomTypeName, detailRecord.room_type_name, detailRecord.roomType, detailRecord.room_type, assignmentRecord.roomTypeName, assignmentRecord.room_type_name, assignmentRecord.roomType, assignmentRecord.room_type),
     roomNumber: firstText(room.roomName, room.room_name, room.roomNumber, room.room_number, room.room_number_display, room.name, room.number, detailRecord.roomNumber, detailRecord.room_number, detailRecord.roomName, detailRecord.room_name, detailRecord.assignedRoomNumber, detailRecord.assigned_room_number, assignmentRecord.roomName, assignmentRecord.room_number, assignmentRecord.roomNumber, assignmentRecord.room_name, assignmentRecord.assignedRoomNumber, assignmentRecord.assigned_room_number),
     reservationStatus: firstText(detailRecord.status, detailRecord.reservationStatus, detailRecord.reservation_status, assignmentRecord.status),
+    guestCount: guestCount(detailRecord),
+    reservationNotes: notesText(detailRecord.reservationNotes ?? detailRecord.reservation_notes ?? detailRecord.notes ?? detailRecord.note ?? detailRecord.importedReservationNotes),
     bookingSource: firstText(detailRecord.sourceName, detailRecord.source_name, detailRecord.source, assignmentRecord.sourceName, assignmentRecord.source_name),
     amountPending: moneyText(detailRecord.balance ?? detailRecord.amountPending ?? detailRecord.amount_pending ?? detailRecord.balanceDue ?? detailRecord.balance_due),
     // Se conserva solo trazabilidad técnica; los datos personales usados están normalizados en columnas explícitas.
@@ -150,6 +184,18 @@ async function getJson(url: URL, apiKey: string) {
   catch { throw new Error(`Cloudbeds devolvió una respuesta no JSON (HTTP ${response.status}). Revisa la API key y el permiso Reserva → Leer.`); }
   if (!response.ok) throw new Error(`Cloudbeds respondió HTTP ${response.status}. Revisa la API key, el Property ID y el permiso Reserva → Leer.`);
   return payload;
+}
+
+async function getReservationNotes(apiKey: string, propertyId: string, reservationId: string) {
+  try {
+    const notesUrl = new URL("https://api.cloudbeds.com/api/v1.3/getReservationNotes");
+    notesUrl.searchParams.set("propertyID", propertyId);
+    notesUrl.searchParams.set("reservationID", reservationId);
+    return notesText(await getJson(notesUrl, apiKey));
+  } catch {
+    // La importación de llegadas sigue disponible si la API key no concede acceso a notas.
+    return null;
+  }
 }
 
 export async function fetchCloudbedsUpcomingReservations(
@@ -175,6 +221,7 @@ export async function fetchCloudbedsUpcomingReservations(
       detailUrl.searchParams.set("reservationID", id);
       const detailPayload = await getJson(detailUrl, apiKey);
       const detail = unwrapReservationDetail(detailPayload);
+      const importedReservationNotes = await getReservationNotes(apiKey, propertyId, id);
       if (!diagnosticsReported) {
         const guest = firstGuest(detail);
         const room = firstRoom(detail);
@@ -193,7 +240,7 @@ export async function fetchCloudbedsUpcomingReservations(
         });
         diagnosticsReported = true;
       }
-      const reservation = normalizeUpcomingReservation(assignment, detail, date);
+      const reservation = normalizeUpcomingReservation(assignment, { ...detail, importedReservationNotes }, date);
       if (reservation) imported.push(reservation);
     }
   }

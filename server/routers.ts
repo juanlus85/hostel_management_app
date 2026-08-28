@@ -1,61 +1,261 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, protectedProcedure, router, tabletProcedure } from "./_core/trpc";
+import {
+  publicProcedure,
+  protectedProcedure,
+  router,
+  tabletProcedure,
+} from "./_core/trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { randomBytes } from "node:crypto";
 import * as db from "./db";
 import { canBeScheduled } from "../shared/shiftEligibility";
 import { defaultGuestsForRoomType } from "../shared/roomCapacity";
-import { canAccessOnlineGuide, dayAfter, effectiveGuideExpiry } from "@shared/onlineGuideAccess";
-import { hasInvitationEmail, onlineGuestToken } from "../shared/onlineCheckinGuests";
-import { checkoutNotificationContent, shouldCreateCheckoutNotification } from "../shared/roomCheckoutNotifications";
-import { normalizedDocumentSupport, requiresDocumentSupport } from "../shared/documentSupport";
-import { aggregateLoyverseReceiptsByOperationalDay, loyverseReceiptDate } from "../shared/loyverseDailyCash";
-import { currentLoyverseOperationalDate, madridDateParts, sumLoyverseReceiptsForOperationalDay } from "../shared/provisionalExternalCash";
+import {
+  canAccessOnlineGuide,
+  dayAfter,
+  effectiveGuideExpiry,
+} from "@shared/onlineGuideAccess";
+import {
+  hasInvitationEmail,
+  onlineGuestToken,
+} from "../shared/onlineCheckinGuests";
+import {
+  checkoutNotificationContent,
+  shouldCreateCheckoutNotification,
+} from "../shared/roomCheckoutNotifications";
+import {
+  normalizedDocumentSupport,
+  requiresDocumentSupport,
+} from "../shared/documentSupport";
+import {
+  aggregateLoyverseReceiptsByOperationalDay,
+  loyverseReceiptDate,
+} from "../shared/loyverseDailyCash";
+import {
+  currentLoyverseOperationalDate,
+  madridDateParts,
+  sumLoyverseReceiptsForOperationalDay,
+} from "../shared/provisionalExternalCash";
 import { isAllowedDocumentType } from "../shared/countries";
 import { compareCashByDate } from "../shared/externalCashComparison";
-import { fetchLoyverseReceipts, getLoyverseOperationalWindow } from "./loyverseReceipts";
-import { aggregateCloudbedsPaymentsByOperationalDay, fetchCloudbedsTransactions, getCloudbedsBookingPrepayment } from "./cloudbedsTransactions";
-import { fetchCloudbedsUpcomingReservations, getNextMadridCalendarDates, type CloudbedsReservationFieldDiagnostics } from "./cloudbedsUpcomingReservations";
+import {
+  fetchLoyverseReceipts,
+  getLoyverseOperationalWindow,
+} from "./loyverseReceipts";
+import {
+  aggregateCloudbedsPaymentsByOperationalDay,
+  fetchCloudbedsTransactions,
+  getCloudbedsBookingPrepayment,
+} from "./cloudbedsTransactions";
+import {
+  fetchCloudbedsUpcomingReservations,
+  getNextMadridCalendarDates,
+  type CloudbedsReservationFieldDiagnostics,
+} from "./cloudbedsUpcomingReservations";
+import type { ExternalUpcomingReservation } from "../drizzle/schema";
+import {
+  buildOnlineCheckinInvitation,
+  buildReservationWelcomeEmail,
+  buildReservationWhatsAppMessage,
+  type ReservationMessageLanguage,
+} from "./reservationMessaging";
 
 // Admin-only procedure
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== 'admin') {
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'Solo administradores pueden realizar esta acción' });
+  if (ctx.user.role !== "admin") {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Solo administradores pueden realizar esta acción",
+    });
   }
   return next({ ctx });
 });
 
 // Housekeeping procedure (admin, user, or housekeeping role)
 const housekeepingProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== 'housekeeping' && ctx.user.role !== 'admin' && ctx.user.role !== 'user') {
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'No tienes permisos para acceder a esta sección' });
+  if (
+    ctx.user.role !== "housekeeping" &&
+    ctx.user.role !== "admin" &&
+    ctx.user.role !== "user"
+  ) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "No tienes permisos para acceder a esta sección",
+    });
   }
   return next({ ctx });
 });
 
 function getMadridStayDates() {
-  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Madrid", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
-  const values = Object.fromEntries(parts.filter((part) => part.type !== "literal").map((part) => [part.type, part.value]));
-  const date = new Date(Date.UTC(Number(values.year), Number(values.month) - 1, Number(values.day)));
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Madrid",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(
+    parts
+      .filter(part => part.type !== "literal")
+      .map(part => [part.type, part.value])
+  );
+  const date = new Date(
+    Date.UTC(Number(values.year), Number(values.month) - 1, Number(values.day))
+  );
   const format = (value: Date) => value.toISOString().slice(0, 10);
-  return { checkInDate: format(date), checkOutDate: format(new Date(date.getTime() + 86_400_000)) };
+  return {
+    checkInDate: format(date),
+    checkOutDate: format(new Date(date.getTime() + 86_400_000)),
+  };
 }
 
-function assertRequiredDocumentSupport(documentType: string | null | undefined, nationality: string | null | undefined, support: string | null | undefined) {
+function assertRequiredDocumentSupport(
+  documentType: string | null | undefined,
+  nationality: string | null | undefined,
+  support: string | null | undefined
+) {
   if (!isAllowedDocumentType(nationality, documentType)) {
-    throw new TRPCError({ code: "BAD_REQUEST", message: "El tipo de documento no está permitido para la nacionalidad indicada" });
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message:
+        "El tipo de documento no está permitido para la nacionalidad indicada",
+    });
   }
-  if (requiresDocumentSupport(documentType, nationality) && !normalizedDocumentSupport(documentType, nationality, support)) {
-    throw new TRPCError({ code: "BAD_REQUEST", message: "El número de soporte es obligatorio para DNI/NIF y NIE europeo" });
+  if (
+    requiresDocumentSupport(documentType, nationality) &&
+    !normalizedDocumentSupport(documentType, nationality, support)
+  ) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "El número de soporte es obligatorio para DNI/NIF y NIE europeo",
+    });
   }
+}
+
+function externalReservationOrigin(
+  source: string | null
+):
+  | "Walk In"
+  | "Booking.com"
+  | "Airbnb"
+  | "Expedia"
+  | "Website"
+  | "Phone"
+  | "Email"
+  | "Other" {
+  const normalized = source?.toLowerCase() || "";
+  if (normalized.includes("booking")) return "Booking.com";
+  if (normalized.includes("airbnb")) return "Airbnb";
+  if (normalized.includes("expedia")) return "Expedia";
+  if (normalized.includes("phone") || normalized.includes("teléfono"))
+    return "Phone";
+  if (normalized.includes("email") || normalized.includes("mail"))
+    return "Email";
+  if (normalized.includes("walk")) return "Walk In";
+  if (normalized.includes("website") || normalized.includes("web"))
+    return "Website";
+  return "Other";
+}
+
+function externalReservationGuestName(name: string | null) {
+  const parts = (name || "").trim().split(/\s+/).filter(Boolean);
+  return {
+    firstName: parts.shift() || null,
+    lastName: parts.join(" ") || null,
+  };
+}
+
+function requestOrigin(req: any) {
+  const configured = process.env.PUBLIC_APP_URL?.trim();
+  if (configured) return configured.replace(/\/$/, "");
+  const forwardedHost = req.header?.("x-forwarded-host");
+  const host = (
+    typeof forwardedHost === "string"
+      ? forwardedHost.split(",")[0]
+      : req.header?.("host")
+  )?.trim();
+  const forwardedProtocol = req.header?.("x-forwarded-proto");
+  const protocol = (
+    typeof forwardedProtocol === "string"
+      ? forwardedProtocol.split(",")[0]
+      : req.protocol || "https"
+  ).trim();
+  if (!host)
+    throw new TRPCError({
+      code: "PRECONDITION_FAILED",
+      message:
+        "No se pudo determinar la dirección pública de la aplicación para crear el enlace de Check-in",
+    });
+  return `${protocol}://${host}`;
+}
+
+async function createOnlineCheckinFromExternalReservation(
+  reservation: ExternalUpcomingReservation,
+  createdBy: number,
+  origin: string
+) {
+  if (!reservation.roomNumber)
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message:
+        "Asigna una habitación con código de acceso antes de enviar el Check-in Online",
+    });
+  const accessCodeList = await db.getAllAccessCodes();
+  const room = accessCodeList.find(
+    code => code.roomNumber === reservation.roomNumber
+  );
+  if (!room || room.roomNumber === "ENTRADA")
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: `La habitación ${reservation.roomNumber} no tiene códigos de acceso configurados`,
+    });
+  const entrance = accessCodeList.find(code => code.roomNumber === "ENTRADA");
+  const hostelSettings = await db.getHostelSettings();
+  const token = randomBytes(32).toString("hex");
+  const guest = externalReservationGuestName(reservation.guestName);
+  const checkOutDate =
+    reservation.checkOutDate ||
+    new Date(
+      new Date(`${reservation.checkInDate}T00:00:00Z`).getTime() + 86_400_000
+    )
+      .toISOString()
+      .slice(0, 10);
+  const linkId = await db.createOnlineCheckinLink({
+    token,
+    email: reservation.guestEmail?.trim().toLowerCase() || "",
+    prefilledFirstName: guest.firstName,
+    prefilledLastName: guest.lastName,
+    prefilledPhone: reservation.guestPhone || null,
+    language: "es",
+    reservationNumber:
+      reservation.reservationCode || reservation.sourceReservationId,
+    reservationOrigin: externalReservationOrigin(reservation.bookingSource),
+    checkInDate: reservation.checkInDate,
+    checkOutDate,
+    roomNumber: room.roomNumber,
+    roomType: room.roomType,
+    roomCode: room.roomCode,
+    entranceCode:
+      room.entranceCode ||
+      entrance?.roomCode ||
+      hostelSettings?.defaultEntranceCode ||
+      null,
+    numberOfRooms: 1,
+    numberOfGuests: reservation.guestCount || 1,
+    paymentType: "PLATF",
+    amountPaid: "0",
+    amountPending: reservation.amountPending || "0",
+    createdBy,
+    expiresAt: dayAfter(reservation.checkInDate),
+  });
+  return { id: linkId, token, url: `${origin}/checkin-online/${token}` };
 }
 
 export const appRouter = router({
   system: systemRouter,
-  
+
   // Global utility procedures
   utils: router({
     // Get available years from database (for all modules)
@@ -63,7 +263,7 @@ export const appRouter = router({
       return db.getAvailableYears();
     }),
   }),
-  
+
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
@@ -72,27 +272,49 @@ export const appRouter = router({
       return { success: true } as const;
     }),
     // Login with username and password
-    login: publicProcedure.input(z.object({
-      username: z.string(),
-      password: z.string(),
-    })).mutation(async ({ input, ctx }) => {
-      const user = await db.verifyUserPassword(input.username, input.password);
-      if (!user) {
-        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Usuario o contraseña incorrectos' });
-      }
-      if (!user.isActive) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'Usuario desactivado' });
-      }
-      // Update last signed in
-      await db.updateUser(user.id, { lastSignedIn: new Date() });
-      // Create session token using SDK
-      const { sdk } = await import("./_core/sdk");
-      const { ONE_YEAR_MS } = await import("@shared/const");
-      const token = await sdk.createSessionToken(user.openId, { name: user.name || "", expiresInMs: ONE_YEAR_MS });
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ONE_YEAR_MS });
-      return { success: true, user: { id: user.id, name: user.name, role: user.role } };
-    }),
+    login: publicProcedure
+      .input(
+        z.object({
+          username: z.string(),
+          password: z.string(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const user = await db.verifyUserPassword(
+          input.username,
+          input.password
+        );
+        if (!user) {
+          throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: "Usuario o contraseña incorrectos",
+          });
+        }
+        if (!user.isActive) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Usuario desactivado",
+          });
+        }
+        // Update last signed in
+        await db.updateUser(user.id, { lastSignedIn: new Date() });
+        // Create session token using SDK
+        const { sdk } = await import("./_core/sdk");
+        const { ONE_YEAR_MS } = await import("@shared/const");
+        const token = await sdk.createSessionToken(user.openId, {
+          name: user.name || "",
+          expiresInMs: ONE_YEAR_MS,
+        });
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, token, {
+          ...cookieOptions,
+          maxAge: ONE_YEAR_MS,
+        });
+        return {
+          success: true,
+          user: { id: user.id, name: user.name, role: user.role },
+        };
+      }),
   }),
 
   // ==================== USERS ====================
@@ -100,35 +322,48 @@ export const appRouter = router({
     list: protectedProcedure.query(async () => {
       return db.getAllUsers();
     }),
-    getById: protectedProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
-      return db.getUserById(input.id);
-    }),
-    update: adminProcedure.input(z.object({
-      id: z.number(),
-      name: z.string().optional(),
-      email: z.string().optional(),
-      role: z.enum(["user", "admin", "housekeeping", "tablet"]).optional(),
-      pin: z.string().max(6).optional(),
-      isActive: z.boolean().optional(),
-      scheduleTemplate: z.string().optional(), // JSON string with weekly schedule template
-      color: z.string().optional(), // Color for calendar display
-    })).mutation(async ({ input }) => {
-      const { id, ...data } = input;
-      await db.updateUser(id, data);
-      return { success: true };
-    }),
-    reorder: adminProcedure.input(z.object({ userIds: z.array(z.number().int()).min(1) })).mutation(async ({ input }) => {
-      await db.updateUserDisplayOrders(input.userIds);
-      return { success: true };
-    }),
-    delete: adminProcedure.input(z.object({ userId: z.number() })).mutation(async ({ input, ctx }) => {
-      // Prevent deleting yourself
-      if (ctx.user.id === input.userId) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "No puedes eliminarte a ti mismo" });
-      }
-      await db.deleteUser(input.userId);
-      return { success: true };
-    }),
+    getById: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return db.getUserById(input.id);
+      }),
+    update: adminProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          name: z.string().optional(),
+          email: z.string().optional(),
+          role: z.enum(["user", "admin", "housekeeping", "tablet"]).optional(),
+          pin: z.string().max(6).optional(),
+          isActive: z.boolean().optional(),
+          scheduleTemplate: z.string().optional(), // JSON string with weekly schedule template
+          color: z.string().optional(), // Color for calendar display
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        await db.updateUser(id, data);
+        return { success: true };
+      }),
+    reorder: adminProcedure
+      .input(z.object({ userIds: z.array(z.number().int()).min(1) }))
+      .mutation(async ({ input }) => {
+        await db.updateUserDisplayOrders(input.userIds);
+        return { success: true };
+      }),
+    delete: adminProcedure
+      .input(z.object({ userId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        // Prevent deleting yourself
+        if (ctx.user.id === input.userId) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "No puedes eliminarte a ti mismo",
+          });
+        }
+        await db.deleteUser(input.userId);
+        return { success: true };
+      }),
   }),
 
   // ==================== BUSINESSES ====================
@@ -136,9 +371,11 @@ export const appRouter = router({
     list: protectedProcedure.query(async () => {
       return db.getAllBusinesses();
     }),
-    getByCode: protectedProcedure.input(z.object({ code: z.string() })).query(async ({ input }) => {
-      return db.getBusinessByCode(input.code);
-    }),
+    getByCode: protectedProcedure
+      .input(z.object({ code: z.string() }))
+      .query(async ({ input }) => {
+        return db.getBusinessByCode(input.code);
+      }),
     initialize: adminProcedure.mutation(async () => {
       await db.initializeBusinesses();
       return { success: true };
@@ -147,671 +384,984 @@ export const appRouter = router({
 
   // ==================== SHIFTS ====================
   shifts: router({
-    list: protectedProcedure.input(z.object({
-      startDate: z.string(),
-      endDate: z.string(),
-    })).query(async ({ input }) => {
-      return db.getShiftsByDateRange(input.startDate, input.endDate);
-    }),
-    listByUser: protectedProcedure.input(z.object({
-      userId: z.number(),
-      startDate: z.string().optional(),
-      endDate: z.string().optional(),
-    })).query(async ({ input }) => {
-      return db.getShiftsByUser(input.userId, input.startDate, input.endDate);
-    }),
-    create: adminProcedure.input(z.object({
-      userId: z.number(),
-      scheduledDate: z.string(),
-      scheduledStart: z.string(),
-      scheduledEnd: z.string(),
-      notes: z.string().optional(),
-    })).mutation(async ({ input }) => {
-      const targetUser = await db.getUserById(input.userId);
-      if (targetUser && !canBeScheduled(targetUser.role)) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Los usuarios Tablet no pueden tener turnos asignados" });
-      }
-      const id = await db.createShift(input);
-      
-      // Send notification and email
-      const user = targetUser;
-      if (user) {
-        // Create in-app notification
-        await db.createNotification({
-          userId: input.userId,
-          type: "shift_assigned",
-          title: "Nuevo turno asignado",
-          message: `Se te ha asignado un turno el ${input.scheduledDate} de ${input.scheduledStart} a ${input.scheduledEnd}`,
-          relatedShiftId: id,
-        });
-        
-        // Send email if user has email
-        if (user.email) {
-          const { sendShiftNotificationEmail } = await import("./email");
-          await sendShiftNotificationEmail(
-            user.email,
-            user.name || "Empleado",
-            "assigned",
-            input.scheduledDate,
-            input.scheduledStart,
-            input.scheduledEnd
-          );
+    list: protectedProcedure
+      .input(
+        z.object({
+          startDate: z.string(),
+          endDate: z.string(),
+        })
+      )
+      .query(async ({ input }) => {
+        return db.getShiftsByDateRange(input.startDate, input.endDate);
+      }),
+    listByUser: protectedProcedure
+      .input(
+        z.object({
+          userId: z.number(),
+          startDate: z.string().optional(),
+          endDate: z.string().optional(),
+        })
+      )
+      .query(async ({ input }) => {
+        return db.getShiftsByUser(input.userId, input.startDate, input.endDate);
+      }),
+    create: adminProcedure
+      .input(
+        z.object({
+          userId: z.number(),
+          scheduledDate: z.string(),
+          scheduledStart: z.string(),
+          scheduledEnd: z.string(),
+          notes: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const targetUser = await db.getUserById(input.userId);
+        if (targetUser && !canBeScheduled(targetUser.role)) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Los usuarios Tablet no pueden tener turnos asignados",
+          });
         }
-      }
-      
-      return { success: true, id };
-    }),
-    update: adminProcedure.input(z.object({
-      id: z.number(),
-      scheduledDate: z.string().optional(),
-      scheduledStart: z.string().optional(),
-      scheduledEnd: z.string().optional(),
-      notes: z.string().optional(),
-      status: z.enum(["scheduled", "in_progress", "completed", "cancelled"]).optional(),
-    })).mutation(async ({ input }) => {
-      const { id, ...data } = input;
-      
-      // Get shift before update to get userId and send notification
-      const shift = await db.getShiftById(id);
-      await db.updateShift(id, data);
-      
-      // Send notification if shift date/time changed
-      if (shift && (data.scheduledDate || data.scheduledStart || data.scheduledEnd)) {
-        const user = await db.getUserById(shift.userId);
+        const id = await db.createShift(input);
+
+        // Send notification and email
+        const user = targetUser;
         if (user) {
-          const newDate = data.scheduledDate || shift.scheduledDate;
-          const newStart = data.scheduledStart || shift.scheduledStart;
-          const newEnd = data.scheduledEnd || shift.scheduledEnd;
-          
+          // Create in-app notification
           await db.createNotification({
-            userId: shift.userId,
-            type: "shift_modified",
-            title: "Turno modificado",
-            message: `Tu turno del ${newDate} ha sido modificado: ${newStart} - ${newEnd}`,
+            userId: input.userId,
+            type: "shift_assigned",
+            title: "Nuevo turno asignado",
+            message: `Se te ha asignado un turno el ${input.scheduledDate} de ${input.scheduledStart} a ${input.scheduledEnd}`,
             relatedShiftId: id,
           });
-          
+
+          // Send email if user has email
           if (user.email) {
             const { sendShiftNotificationEmail } = await import("./email");
             await sendShiftNotificationEmail(
               user.email,
               user.name || "Empleado",
-              "modified",
-              newDate,
-              newStart,
-              newEnd
+              "assigned",
+              input.scheduledDate,
+              input.scheduledStart,
+              input.scheduledEnd
             );
           }
         }
-      }
-      
-      return { success: true };
-    }),
-    delete: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
-      // Get shift before delete to send notification
-      const shift = await db.getShiftById(input.id);
-      
-      if (shift) {
-        const user = await db.getUserById(shift.userId);
-        if (user) {
-          await db.createNotification({
-            userId: shift.userId,
-            type: "shift_deleted",
-            title: "Turno eliminado",
-            message: `Tu turno del ${shift.scheduledDate} (${shift.scheduledStart} - ${shift.scheduledEnd}) ha sido eliminado`,
-          });
-          
-          if (user.email) {
-            const { sendShiftNotificationEmail } = await import("./email");
-            await sendShiftNotificationEmail(
-              user.email,
-              user.name || "Empleado",
-              "deleted",
-              shift.scheduledDate,
-              shift.scheduledStart,
-              shift.scheduledEnd
-            );
-          }
-        }
-      }
-      
-      await db.deleteShift(input.id);
-      return { success: true };
-    }),
-    clockIn: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
-      await db.clockIn(input.id);
-      return { success: true };
-    }),
-    clockOut: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
-      await db.clockOut(input.id);
-      return { success: true };
-    }),
-    // Generate shifts for a month based on employee schedule templates
-    generateFromTemplates: adminProcedure.input(z.object({
-      year: z.number(),
-      month: z.number(), // 1-12
-    })).mutation(async ({ input }) => {
-      const { year, month } = input;
-      const users = await db.getAllUsers();
-      let created = 0;
-      let skipped = 0;
-      
-      // Get existing shifts for the month to avoid duplicates
-      const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-      const lastDay = new Date(year, month, 0).getDate();
-      const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
-      const existingShifts = await db.getShiftsByDateRange(startDate, endDate);
-      const existingSet = new Set(existingShifts.map(s => `${s.userId}-${s.scheduledDate}`));
-      
-      // Day of week mapping (0 = Sunday, 1 = Monday, etc.)
-      const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-      
-      for (const user of users) {
-        if (!canBeScheduled(user.role)) continue;
-        if (!user.scheduleTemplate) continue;
-        
-        try {
-          const template = JSON.parse(user.scheduleTemplate);
-          
-          // Iterate through each day of the month
-          for (let day = 1; day <= lastDay; day++) {
-            const date = new Date(year, month - 1, day);
-            const dayOfWeek = date.getDay();
-            const dayKey = dayKeys[dayOfWeek];
-            const schedule = template[dayKey];
-            
-            if (schedule && schedule.start && schedule.end) {
-              const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-              
-              // Check if shift already exists
-              if (existingSet.has(`${user.id}-${dateStr}`)) {
-                skipped++;
-                continue;
-              }
-              
-              await db.createShift({
-                userId: user.id,
-                scheduledDate: dateStr,
-                scheduledStart: schedule.start,
-                scheduledEnd: schedule.end,
-              });
-              created++;
+
+        return { success: true, id };
+      }),
+    update: adminProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          scheduledDate: z.string().optional(),
+          scheduledStart: z.string().optional(),
+          scheduledEnd: z.string().optional(),
+          notes: z.string().optional(),
+          status: z
+            .enum(["scheduled", "in_progress", "completed", "cancelled"])
+            .optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+
+        // Get shift before update to get userId and send notification
+        const shift = await db.getShiftById(id);
+        await db.updateShift(id, data);
+
+        // Send notification if shift date/time changed
+        if (
+          shift &&
+          (data.scheduledDate || data.scheduledStart || data.scheduledEnd)
+        ) {
+          const user = await db.getUserById(shift.userId);
+          if (user) {
+            const newDate = data.scheduledDate || shift.scheduledDate;
+            const newStart = data.scheduledStart || shift.scheduledStart;
+            const newEnd = data.scheduledEnd || shift.scheduledEnd;
+
+            await db.createNotification({
+              userId: shift.userId,
+              type: "shift_modified",
+              title: "Turno modificado",
+              message: `Tu turno del ${newDate} ha sido modificado: ${newStart} - ${newEnd}`,
+              relatedShiftId: id,
+            });
+
+            if (user.email) {
+              const { sendShiftNotificationEmail } = await import("./email");
+              await sendShiftNotificationEmail(
+                user.email,
+                user.name || "Empleado",
+                "modified",
+                newDate,
+                newStart,
+                newEnd
+              );
             }
           }
-        } catch (e) {
-          console.error(`Error parsing schedule template for user ${user.id}:`, e);
         }
-      }
-      
-      return { success: true, created, skipped };
-    }),
+
+        return { success: true };
+      }),
+    delete: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        // Get shift before delete to send notification
+        const shift = await db.getShiftById(input.id);
+
+        if (shift) {
+          const user = await db.getUserById(shift.userId);
+          if (user) {
+            await db.createNotification({
+              userId: shift.userId,
+              type: "shift_deleted",
+              title: "Turno eliminado",
+              message: `Tu turno del ${shift.scheduledDate} (${shift.scheduledStart} - ${shift.scheduledEnd}) ha sido eliminado`,
+            });
+
+            if (user.email) {
+              const { sendShiftNotificationEmail } = await import("./email");
+              await sendShiftNotificationEmail(
+                user.email,
+                user.name || "Empleado",
+                "deleted",
+                shift.scheduledDate,
+                shift.scheduledStart,
+                shift.scheduledEnd
+              );
+            }
+          }
+        }
+
+        await db.deleteShift(input.id);
+        return { success: true };
+      }),
+    clockIn: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.clockIn(input.id);
+        return { success: true };
+      }),
+    clockOut: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.clockOut(input.id);
+        return { success: true };
+      }),
+    // Generate shifts for a month based on employee schedule templates
+    generateFromTemplates: adminProcedure
+      .input(
+        z.object({
+          year: z.number(),
+          month: z.number(), // 1-12
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { year, month } = input;
+        const users = await db.getAllUsers();
+        let created = 0;
+        let skipped = 0;
+
+        // Get existing shifts for the month to avoid duplicates
+        const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
+        const lastDay = new Date(year, month, 0).getDate();
+        const endDate = `${year}-${String(month).padStart(2, "0")}-${lastDay}`;
+        const existingShifts = await db.getShiftsByDateRange(
+          startDate,
+          endDate
+        );
+        const existingSet = new Set(
+          existingShifts.map(s => `${s.userId}-${s.scheduledDate}`)
+        );
+
+        // Day of week mapping (0 = Sunday, 1 = Monday, etc.)
+        const dayKeys = [
+          "sunday",
+          "monday",
+          "tuesday",
+          "wednesday",
+          "thursday",
+          "friday",
+          "saturday",
+        ];
+
+        for (const user of users) {
+          if (!canBeScheduled(user.role)) continue;
+          if (!user.scheduleTemplate) continue;
+
+          try {
+            const template = JSON.parse(user.scheduleTemplate);
+
+            // Iterate through each day of the month
+            for (let day = 1; day <= lastDay; day++) {
+              const date = new Date(year, month - 1, day);
+              const dayOfWeek = date.getDay();
+              const dayKey = dayKeys[dayOfWeek];
+              const schedule = template[dayKey];
+
+              if (schedule && schedule.start && schedule.end) {
+                const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+
+                // Check if shift already exists
+                if (existingSet.has(`${user.id}-${dateStr}`)) {
+                  skipped++;
+                  continue;
+                }
+
+                await db.createShift({
+                  userId: user.id,
+                  scheduledDate: dateStr,
+                  scheduledStart: schedule.start,
+                  scheduledEnd: schedule.end,
+                });
+                created++;
+              }
+            }
+          } catch (e) {
+            console.error(
+              `Error parsing schedule template for user ${user.id}:`,
+              e
+            );
+          }
+        }
+
+        return { success: true, created, skipped };
+      }),
   }),
 
   // ==================== CASH REGISTERS ====================
   cashRegisters: router({
-    list: protectedProcedure.input(z.object({
-      businessId: z.number(),
-      startDate: z.string().optional(),
-      endDate: z.string().optional(),
-    })).query(async ({ input }) => {
-      return db.getCashRegistersByBusiness(input.businessId, input.startDate, input.endDate);
-    }),
-    getOpen: protectedProcedure.input(z.object({
-      businessId: z.number(),
-    })).query(async ({ input, ctx }) => {
-      return db.getOpenCashRegister(input.businessId, ctx.user.id);
-    }),
-    open: protectedProcedure.input(z.object({
-      businessId: z.number(),
-      openingAmount: z.string(),
-      shiftId: z.number().optional(),
-    })).mutation(async ({ input, ctx }) => {
-      const today = new Date().toISOString().split('T')[0];
-      const id = await db.createCashRegister({
-        businessId: input.businessId,
-        userId: ctx.user.id,
-        date: today,
-        openingAmount: input.openingAmount,
-        shiftId: input.shiftId,
-      });
-      return { success: true, id };
-    }),
-    close: protectedProcedure.input(z.object({
-      id: z.number(),
-      closingAmount: z.string(),
-      notes: z.string().optional(),
-    })).mutation(async ({ input }) => {
-      await db.closeCashRegister(input.id, input.closingAmount, input.notes);
-      return { success: true };
-    }),
-    updateWithdrawals: protectedProcedure.input(z.object({
-      id: z.number(),
-      cashWithdrawn: z.string().optional(),
-      cardWithdrawn: z.string().optional(),
-    })).mutation(async ({ input }) => {
-      const { id, ...data } = input;
-      await db.updateCashRegister(id, data);
-      return { success: true };
-    }),
+    list: protectedProcedure
+      .input(
+        z.object({
+          businessId: z.number(),
+          startDate: z.string().optional(),
+          endDate: z.string().optional(),
+        })
+      )
+      .query(async ({ input }) => {
+        return db.getCashRegistersByBusiness(
+          input.businessId,
+          input.startDate,
+          input.endDate
+        );
+      }),
+    getOpen: protectedProcedure
+      .input(
+        z.object({
+          businessId: z.number(),
+        })
+      )
+      .query(async ({ input, ctx }) => {
+        return db.getOpenCashRegister(input.businessId, ctx.user.id);
+      }),
+    open: protectedProcedure
+      .input(
+        z.object({
+          businessId: z.number(),
+          openingAmount: z.string(),
+          shiftId: z.number().optional(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const today = new Date().toISOString().split("T")[0];
+        const id = await db.createCashRegister({
+          businessId: input.businessId,
+          userId: ctx.user.id,
+          date: today,
+          openingAmount: input.openingAmount,
+          shiftId: input.shiftId,
+        });
+        return { success: true, id };
+      }),
+    close: protectedProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          closingAmount: z.string(),
+          notes: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        await db.closeCashRegister(input.id, input.closingAmount, input.notes);
+        return { success: true };
+      }),
+    updateWithdrawals: protectedProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          cashWithdrawn: z.string().optional(),
+          cardWithdrawn: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        await db.updateCashRegister(id, data);
+        return { success: true };
+      }),
   }),
 
   // ==================== TRANSACTIONS ====================
   transactions: router({
-    list: protectedProcedure.input(z.object({
-      businessId: z.number(),
-      startDate: z.string().optional(),
-      endDate: z.string().optional(),
-    })).query(async ({ input }) => {
-      return db.getTransactionsByBusiness(input.businessId, input.startDate, input.endDate);
-    }),
-    create: protectedProcedure.input(z.object({
-      businessId: z.number(),
-      cashRegisterId: z.number().optional(),
-      type: z.enum(["income", "expense"]),
-      category: z.string().optional(),
-      concept: z.string(),
-      amount: z.string(),
-      paymentMethod: z.enum(["cash", "card", "transfer", "cuenta_bancaria", "ana", "juanlu", "caja_hostel", "caja_tienda", "caja_fuerte", "caja_fuerte_cambio", "other"]).default("cash"),
-      date: z.string(),
-      notes: z.string().optional(),
-    })).mutation(async ({ input, ctx }) => {
-      const id = await db.createTransaction({ ...input, userId: ctx.user.id });
-      return { success: true, id };
-    }),
-    update: protectedProcedure.input(z.object({
-      id: z.number(),
-      type: z.enum(["income", "expense"]).optional(),
-      category: z.string().optional(),
-      concept: z.string().optional(),
-      amount: z.string().optional(),
-      paymentMethod: z.enum(["cash", "card", "transfer", "cuenta_bancaria", "ana", "juanlu", "caja_hostel", "caja_tienda", "caja_fuerte", "caja_fuerte_cambio", "other"]).optional(),
-      notes: z.string().optional(),
-    })).mutation(async ({ input }) => {
-      const { id, ...data } = input;
-      await db.updateTransaction(id, data);
-      return { success: true };
-    }),
-    delete: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
-      await db.deleteTransaction(input.id);
-      return { success: true };
-    }),
+    list: protectedProcedure
+      .input(
+        z.object({
+          businessId: z.number(),
+          startDate: z.string().optional(),
+          endDate: z.string().optional(),
+        })
+      )
+      .query(async ({ input }) => {
+        return db.getTransactionsByBusiness(
+          input.businessId,
+          input.startDate,
+          input.endDate
+        );
+      }),
+    create: protectedProcedure
+      .input(
+        z.object({
+          businessId: z.number(),
+          cashRegisterId: z.number().optional(),
+          type: z.enum(["income", "expense"]),
+          category: z.string().optional(),
+          concept: z.string(),
+          amount: z.string(),
+          paymentMethod: z
+            .enum([
+              "cash",
+              "card",
+              "transfer",
+              "cuenta_bancaria",
+              "ana",
+              "juanlu",
+              "caja_hostel",
+              "caja_tienda",
+              "caja_fuerte",
+              "caja_fuerte_cambio",
+              "other",
+            ])
+            .default("cash"),
+          date: z.string(),
+          notes: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const id = await db.createTransaction({
+          ...input,
+          userId: ctx.user.id,
+        });
+        return { success: true, id };
+      }),
+    update: protectedProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          type: z.enum(["income", "expense"]).optional(),
+          category: z.string().optional(),
+          concept: z.string().optional(),
+          amount: z.string().optional(),
+          paymentMethod: z
+            .enum([
+              "cash",
+              "card",
+              "transfer",
+              "cuenta_bancaria",
+              "ana",
+              "juanlu",
+              "caja_hostel",
+              "caja_tienda",
+              "caja_fuerte",
+              "caja_fuerte_cambio",
+              "other",
+            ])
+            .optional(),
+          notes: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        await db.updateTransaction(id, data);
+        return { success: true };
+      }),
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deleteTransaction(input.id);
+        return { success: true };
+      }),
   }),
 
   // ==================== INVOICES ====================
   invoices: router({
-    list: protectedProcedure.input(z.object({
-      businessId: z.number(),
-      startDate: z.string().optional(),
-      endDate: z.string().optional(),
-    })).query(async ({ input }) => {
-      return db.getInvoicesByBusiness(input.businessId, input.startDate, input.endDate);
-    }),
-    create: protectedProcedure.input(z.object({
-      businessId: z.number(),
-      supplier: z.string().trim().min(1, "El proveedor es obligatorio"),
-      invoiceNumber: z.string().optional(),
-      invoiceDate: z.string().optional(),
-      baseAmount: z.string().optional(),
-      vatRate: z.string().optional(),
-      vatAmount: z.string().optional(),
-      totalAmount: z.string().optional(),
-      paymentMethod: z.enum(["cuenta_bancaria", "tarjeta", "ana", "juanlu", "caja_hostel", "caja_tienda", "caja_fuerte", "caja_fuerte_cambio", "otros"]).optional(),
-      imageUrl: z.string().optional(),
-      imageKey: z.string().optional(),
-      hasVAT: z.boolean().default(true),
-      notes: z.string().optional(),
-    })).mutation(async ({ input, ctx }) => {
-      const id = await db.createInvoice({ ...input, userId: ctx.user.id, updatedBy: ctx.user.id });
-      
-      // Send email notification with invoice
-      try {
-        console.log("[Invoices] Sending email notification for invoice:", input.invoiceNumber, "with file:", input.imageUrl);
-        const { sendInvoiceNotificationEmail } = await import("./email");
-        const emailResult = await sendInvoiceNotificationEmail(
-          input.invoiceNumber || "Sin número",
-          input.supplier || "Sin proveedor",
-          parseFloat(input.totalAmount || "0"),
-          input.invoiceDate || new Date().toISOString().split('T')[0],
-          input.paymentMethod || "otros",
-          input.notes || null,
-          input.imageUrl || null
+    list: protectedProcedure
+      .input(
+        z.object({
+          businessId: z.number(),
+          startDate: z.string().optional(),
+          endDate: z.string().optional(),
+        })
+      )
+      .query(async ({ input }) => {
+        return db.getInvoicesByBusiness(
+          input.businessId,
+          input.startDate,
+          input.endDate
         );
-        console.log("[Invoices] Email notification result:", emailResult);
-      } catch (error) {
-        console.error("[Invoices] Failed to send email notification:", error);
-      }
-      
-      return { success: true, id };
-    }),
-    update: protectedProcedure.input(z.object({
-      id: z.number(),
-      supplier: z.string().trim().min(1, "El proveedor es obligatorio").optional(),
-      invoiceNumber: z.string().optional(),
-      invoiceDate: z.string().optional(),
-      baseAmount: z.string().optional(),
-      vatRate: z.string().optional(),
-      vatAmount: z.string().optional(),
-      totalAmount: z.string().optional(),
-      paymentMethod: z.enum(["cuenta_bancaria", "tarjeta", "ana", "juanlu", "caja_hostel", "caja_tienda", "caja_fuerte", "caja_fuerte_cambio", "otros"]).optional(),
-      imageUrl: z.string().optional(),
-      imageKey: z.string().optional(),
-      ocrData: z.string().optional(),
-      ocrStatus: z.enum(["pending", "processing", "completed", "failed"]).optional(),
-      isVerified: z.boolean().optional(),
-      isScanned: z.boolean().optional(),
-      hasVAT: z.boolean().optional(),
-      notes: z.string().optional(),
-      resendEmail: z.boolean().optional(), // Flag para reenviar email
-    })).mutation(async ({ input, ctx }) => {
-      const { id, resendEmail, ...data } = input;
-      await db.updateInvoice(id, data);
-      
-      // Si se solicita reenviar email y hay imagen
-      if (resendEmail && data.imageUrl) {
+      }),
+    create: protectedProcedure
+      .input(
+        z.object({
+          businessId: z.number(),
+          supplier: z.string().trim().min(1, "El proveedor es obligatorio"),
+          invoiceNumber: z.string().optional(),
+          invoiceDate: z.string().optional(),
+          baseAmount: z.string().optional(),
+          vatRate: z.string().optional(),
+          vatAmount: z.string().optional(),
+          totalAmount: z.string().optional(),
+          paymentMethod: z
+            .enum([
+              "cuenta_bancaria",
+              "tarjeta",
+              "ana",
+              "juanlu",
+              "caja_hostel",
+              "caja_tienda",
+              "caja_fuerte",
+              "caja_fuerte_cambio",
+              "otros",
+            ])
+            .optional(),
+          imageUrl: z.string().optional(),
+          imageKey: z.string().optional(),
+          hasVAT: z.boolean().default(true),
+          notes: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const id = await db.createInvoice({
+          ...input,
+          userId: ctx.user.id,
+          updatedBy: ctx.user.id,
+        });
+
+        // Send email notification with invoice
         try {
-          const invoice = await db.getInvoiceById(id);
-          if (invoice) {
-            const { sendInvoiceNotificationEmail } = await import("./email");
-            await sendInvoiceNotificationEmail(
-              invoice.invoiceNumber || "Sin número",
-              invoice.supplier || "Sin proveedor",
-              parseFloat(invoice.totalAmount || "0"),
-              invoice.invoiceDate || new Date().toISOString().split('T')[0],
-              invoice.paymentMethod || "otros",
-              invoice.notes || null,
-              data.imageUrl
-            );
-          }
+          console.log(
+            "[Invoices] Sending email notification for invoice:",
+            input.invoiceNumber,
+            "with file:",
+            input.imageUrl
+          );
+          const { sendInvoiceNotificationEmail } = await import("./email");
+          const emailResult = await sendInvoiceNotificationEmail(
+            input.invoiceNumber || "Sin número",
+            input.supplier || "Sin proveedor",
+            parseFloat(input.totalAmount || "0"),
+            input.invoiceDate || new Date().toISOString().split("T")[0],
+            input.paymentMethod || "otros",
+            input.notes || null,
+            input.imageUrl || null
+          );
+          console.log("[Invoices] Email notification result:", emailResult);
         } catch (error) {
-          console.error("[Invoices] Failed to resend email:", error);
+          console.error("[Invoices] Failed to send email notification:", error);
         }
-      }
-      
-      return { success: true };
-    }),
-    delete: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
-      await db.deleteInvoice(input.id);
-      return { success: true };
-    }),
-    uploadFile: protectedProcedure.input(z.object({
-      fileData: z.string(), // base64 encoded file
-      fileName: z.string(),
-      contentType: z.string(),
-    })).mutation(async ({ input }) => {
-      const fs = await import('fs');
-      const path = await import('path');
-      
-      // Decode base64 to buffer
-      const base64Data = input.fileData.split(',')[1] || input.fileData;
-      const buffer = Buffer.from(base64Data, 'base64');
-      
-      // Create uploads directory if it doesn't exist
-      const uploadsDir = path.join(process.cwd(), 'uploads', 'invoices');
-      if (!fs.existsSync(uploadsDir)) {
-        fs.mkdirSync(uploadsDir, { recursive: true });
-      }
-      
-      // Use provided fileName and add numbering if file exists
-      const extension = input.fileName.split('.').pop() || 'pdf';
-      const baseNameWithoutExt = input.fileName.substring(0, input.fileName.lastIndexOf('.'));
-      
-      let fileName = input.fileName;
-      let counter = 2;
-      
-      // Check if file exists and increment counter
-      while (fs.existsSync(path.join(uploadsDir, fileName))) {
-        fileName = `${baseNameWithoutExt} (${counter}).${extension}`;
-        counter++;
-      }
-      
-      // Save file to disk
-      const filePath = path.join(uploadsDir, fileName);
-      fs.writeFileSync(filePath, buffer);
-      
-      // Generate URL (relative to server root)
-      const url = `/uploads/invoices/${fileName}`;
-      const key = `invoices/${fileName}`;
-      
-      console.log(`[Upload] File saved locally: ${filePath}`);
-      console.log(`[Upload] File URL: ${url}`);
-      return { url, key };
-    }),
+
+        return { success: true, id };
+      }),
+    update: protectedProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          supplier: z
+            .string()
+            .trim()
+            .min(1, "El proveedor es obligatorio")
+            .optional(),
+          invoiceNumber: z.string().optional(),
+          invoiceDate: z.string().optional(),
+          baseAmount: z.string().optional(),
+          vatRate: z.string().optional(),
+          vatAmount: z.string().optional(),
+          totalAmount: z.string().optional(),
+          paymentMethod: z
+            .enum([
+              "cuenta_bancaria",
+              "tarjeta",
+              "ana",
+              "juanlu",
+              "caja_hostel",
+              "caja_tienda",
+              "caja_fuerte",
+              "caja_fuerte_cambio",
+              "otros",
+            ])
+            .optional(),
+          imageUrl: z.string().optional(),
+          imageKey: z.string().optional(),
+          ocrData: z.string().optional(),
+          ocrStatus: z
+            .enum(["pending", "processing", "completed", "failed"])
+            .optional(),
+          isVerified: z.boolean().optional(),
+          isScanned: z.boolean().optional(),
+          hasVAT: z.boolean().optional(),
+          notes: z.string().optional(),
+          resendEmail: z.boolean().optional(), // Flag para reenviar email
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const { id, resendEmail, ...data } = input;
+        await db.updateInvoice(id, data);
+
+        // Si se solicita reenviar email y hay imagen
+        if (resendEmail && data.imageUrl) {
+          try {
+            const invoice = await db.getInvoiceById(id);
+            if (invoice) {
+              const { sendInvoiceNotificationEmail } = await import("./email");
+              await sendInvoiceNotificationEmail(
+                invoice.invoiceNumber || "Sin número",
+                invoice.supplier || "Sin proveedor",
+                parseFloat(invoice.totalAmount || "0"),
+                invoice.invoiceDate || new Date().toISOString().split("T")[0],
+                invoice.paymentMethod || "otros",
+                invoice.notes || null,
+                data.imageUrl
+              );
+            }
+          } catch (error) {
+            console.error("[Invoices] Failed to resend email:", error);
+          }
+        }
+
+        return { success: true };
+      }),
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deleteInvoice(input.id);
+        return { success: true };
+      }),
+    uploadFile: protectedProcedure
+      .input(
+        z.object({
+          fileData: z.string(), // base64 encoded file
+          fileName: z.string(),
+          contentType: z.string(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const fs = await import("fs");
+        const path = await import("path");
+
+        // Decode base64 to buffer
+        const base64Data = input.fileData.split(",")[1] || input.fileData;
+        const buffer = Buffer.from(base64Data, "base64");
+
+        // Create uploads directory if it doesn't exist
+        const uploadsDir = path.join(process.cwd(), "uploads", "invoices");
+        if (!fs.existsSync(uploadsDir)) {
+          fs.mkdirSync(uploadsDir, { recursive: true });
+        }
+
+        // Use provided fileName and add numbering if file exists
+        const extension = input.fileName.split(".").pop() || "pdf";
+        const baseNameWithoutExt = input.fileName.substring(
+          0,
+          input.fileName.lastIndexOf(".")
+        );
+
+        let fileName = input.fileName;
+        let counter = 2;
+
+        // Check if file exists and increment counter
+        while (fs.existsSync(path.join(uploadsDir, fileName))) {
+          fileName = `${baseNameWithoutExt} (${counter}).${extension}`;
+          counter++;
+        }
+
+        // Save file to disk
+        const filePath = path.join(uploadsDir, fileName);
+        fs.writeFileSync(filePath, buffer);
+
+        // Generate URL (relative to server root)
+        const url = `/uploads/invoices/${fileName}`;
+        const key = `invoices/${fileName}`;
+
+        console.log(`[Upload] File saved locally: ${filePath}`);
+        console.log(`[Upload] File URL: ${url}`);
+        return { url, key };
+      }),
   }),
 
   issuedInvoices: router({
-    list: protectedProcedure.input(z.object({ startDate: z.string().optional(), endDate: z.string().optional() })).query(async ({ input }) => {
-      return db.getIssuedInvoices(input.startDate, input.endDate);
-    }),
-    create: protectedProcedure.input(z.object({
-      issuerBusiness: z.enum(["The Spot Central Hostel", "Sweet & Salty", "Organizus"]),
-      recipient: z.string().optional(), invoiceNumber: z.string().optional(), invoiceDate: z.string(), totalAmount: z.string().optional(), imageUrl: z.string().optional(), imageKey: z.string().optional(), notes: z.string().optional(),
-    })).mutation(async ({ input, ctx }) => {
-      const id = await db.createIssuedInvoice({ ...input, userId: ctx.user.id });
-      return { success: true, id };
-    }),
-    delete: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
-      await db.deleteIssuedInvoice(input.id);
-      return { success: true };
-    }),
+    list: protectedProcedure
+      .input(
+        z.object({
+          startDate: z.string().optional(),
+          endDate: z.string().optional(),
+        })
+      )
+      .query(async ({ input }) => {
+        return db.getIssuedInvoices(input.startDate, input.endDate);
+      }),
+    create: protectedProcedure
+      .input(
+        z.object({
+          issuerBusiness: z.enum([
+            "The Spot Central Hostel",
+            "Sweet & Salty",
+            "Organizus",
+          ]),
+          recipient: z.string().optional(),
+          invoiceNumber: z.string().optional(),
+          invoiceDate: z.string(),
+          totalAmount: z.string().optional(),
+          imageUrl: z.string().optional(),
+          imageKey: z.string().optional(),
+          notes: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const id = await db.createIssuedInvoice({
+          ...input,
+          userId: ctx.user.id,
+        });
+        return { success: true, id };
+      }),
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deleteIssuedInvoice(input.id);
+        return { success: true };
+      }),
   }),
 
   // ==================== INVENTORY ====================
   inventory: router({
-    list: protectedProcedure.input(z.object({
-      businessId: z.number(),
-    })).query(async ({ input }) => {
-      return db.getInventoryByBusiness(input.businessId);
-    }),
-    lowStock: protectedProcedure.input(z.object({
-      businessId: z.number(),
-    })).query(async ({ input }) => {
-      return db.getLowStockItems(input.businessId);
-    }),
-    create: protectedProcedure.input(z.object({
-      businessId: z.number(),
-      name: z.string(),
-      category: z.string().optional(),
-      supplier: z.string().optional(),
-      currentStock: z.string().default("0"),
-      minimumStock: z.string().default("0"),
-      unit: z.string().default("unidad"),
-      costPrice: z.string().optional(),
-      notes: z.string().optional(),
-    })).mutation(async ({ input }) => {
-      const id = await db.createInventoryItem(input);
-      return { success: true, id };
-    }),
-    update: protectedProcedure.input(z.object({
-      id: z.number(),
-      name: z.string().optional(),
-      category: z.string().optional(),
-      supplier: z.string().optional(),
-      currentStock: z.string().optional(),
-      minimumStock: z.string().optional(),
-      unit: z.string().optional(),
-      costPrice: z.string().optional(),
-      notes: z.string().optional(),
-      isActive: z.boolean().optional(),
-    })).mutation(async ({ input }) => {
-      const { id, ...data } = input;
-      await db.updateInventoryItem(id, data);
-      return { success: true };
-    }),
-    delete: protectedProcedure.input(z.object({
-      id: z.number(),
-    })).mutation(async ({ input }) => {
-      await db.deleteInventoryItem(input.id);
-      return { success: true };
-    }),
-    adjustStock: protectedProcedure.input(z.object({
-      itemId: z.number(),
-      quantity: z.number(),
-      type: z.enum(["in", "out", "adjustment"]),
-      reason: z.string().optional(),
-    })).mutation(async ({ input, ctx }) => {
-      await db.adjustStock(input.itemId, ctx.user.id, input.quantity, input.type, input.reason);
-      return { success: true };
-    }),
+    list: protectedProcedure
+      .input(
+        z.object({
+          businessId: z.number(),
+        })
+      )
+      .query(async ({ input }) => {
+        return db.getInventoryByBusiness(input.businessId);
+      }),
+    lowStock: protectedProcedure
+      .input(
+        z.object({
+          businessId: z.number(),
+        })
+      )
+      .query(async ({ input }) => {
+        return db.getLowStockItems(input.businessId);
+      }),
+    create: protectedProcedure
+      .input(
+        z.object({
+          businessId: z.number(),
+          name: z.string(),
+          category: z.string().optional(),
+          supplier: z.string().optional(),
+          currentStock: z.string().default("0"),
+          minimumStock: z.string().default("0"),
+          unit: z.string().default("unidad"),
+          costPrice: z.string().optional(),
+          notes: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const id = await db.createInventoryItem(input);
+        return { success: true, id };
+      }),
+    update: protectedProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          name: z.string().optional(),
+          category: z.string().optional(),
+          supplier: z.string().optional(),
+          currentStock: z.string().optional(),
+          minimumStock: z.string().optional(),
+          unit: z.string().optional(),
+          costPrice: z.string().optional(),
+          notes: z.string().optional(),
+          isActive: z.boolean().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        await db.updateInventoryItem(id, data);
+        return { success: true };
+      }),
+    delete: protectedProcedure
+      .input(
+        z.object({
+          id: z.number(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        await db.deleteInventoryItem(input.id);
+        return { success: true };
+      }),
+    adjustStock: protectedProcedure
+      .input(
+        z.object({
+          itemId: z.number(),
+          quantity: z.number(),
+          type: z.enum(["in", "out", "adjustment"]),
+          reason: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        await db.adjustStock(
+          input.itemId,
+          ctx.user.id,
+          input.quantity,
+          input.type,
+          input.reason
+        );
+        return { success: true };
+      }),
   }),
 
   // ==================== ORDERS ====================
   orders: router({
-    list: protectedProcedure.input(z.object({
-      businessId: z.number(),
-      status: z.string().optional(),
-    })).query(async ({ input }) => {
-      return db.getOrdersByBusiness(input.businessId, input.status);
-    }),
-    getItems: protectedProcedure.input(z.object({
-      orderId: z.number(),
-    })).query(async ({ input }) => {
-      return db.getOrderItems(input.orderId);
-    }),
-    create: protectedProcedure.input(z.object({
-      businessId: z.number(),
-      supplier: z.string().optional(),
-      orderDate: z.string(),
-      expectedDelivery: z.string().optional(),
-      notes: z.string().optional(),
-    })).mutation(async ({ input, ctx }) => {
-      const id = await db.createOrder({ ...input, userId: ctx.user.id });
-      return { success: true, id };
-    }),
-    update: protectedProcedure.input(z.object({
-      id: z.number(),
-      supplier: z.string().optional(),
-      expectedDelivery: z.string().optional(),
-      actualDelivery: z.string().optional(),
-      status: z.enum(["pending", "ordered", "delivered", "cancelled"]).optional(),
-      totalAmount: z.string().optional(),
-      notes: z.string().optional(),
-    })).mutation(async ({ input }) => {
-      const { id, ...data } = input;
-      await db.updateOrder(id, data);
-      return { success: true };
-    }),
-    addItem: protectedProcedure.input(z.object({
-      orderId: z.number(),
-      inventoryItemId: z.number().optional(),
-      itemName: z.string(),
-      quantity: z.string(),
-      unitPrice: z.string().optional(),
-      totalPrice: z.string().optional(),
-    })).mutation(async ({ input }) => {
-      await db.addOrderItem(input);
-      return { success: true };
-    }),
+    list: protectedProcedure
+      .input(
+        z.object({
+          businessId: z.number(),
+          status: z.string().optional(),
+        })
+      )
+      .query(async ({ input }) => {
+        return db.getOrdersByBusiness(input.businessId, input.status);
+      }),
+    getItems: protectedProcedure
+      .input(
+        z.object({
+          orderId: z.number(),
+        })
+      )
+      .query(async ({ input }) => {
+        return db.getOrderItems(input.orderId);
+      }),
+    create: protectedProcedure
+      .input(
+        z.object({
+          businessId: z.number(),
+          supplier: z.string().optional(),
+          orderDate: z.string(),
+          expectedDelivery: z.string().optional(),
+          notes: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const id = await db.createOrder({ ...input, userId: ctx.user.id });
+        return { success: true, id };
+      }),
+    update: protectedProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          supplier: z.string().optional(),
+          expectedDelivery: z.string().optional(),
+          actualDelivery: z.string().optional(),
+          status: z
+            .enum(["pending", "ordered", "delivered", "cancelled"])
+            .optional(),
+          totalAmount: z.string().optional(),
+          notes: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        await db.updateOrder(id, data);
+        return { success: true };
+      }),
+    addItem: protectedProcedure
+      .input(
+        z.object({
+          orderId: z.number(),
+          inventoryItemId: z.number().optional(),
+          itemName: z.string(),
+          quantity: z.string(),
+          unitPrice: z.string().optional(),
+          totalPrice: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        await db.addOrderItem(input);
+        return { success: true };
+      }),
   }),
 
   // ==================== INCIDENTS ====================
   incidents: router({
-    list: protectedProcedure.input(z.object({
-      businessId: z.number(),
-      status: z.string().optional(),
-    })).query(async ({ input }) => {
-      return db.getIncidentsByBusiness(input.businessId, input.status);
-    }),
-    create: protectedProcedure.input(z.object({
-      businessId: z.number(),
-      title: z.string(),
-      description: z.string().optional(),
-      priority: z.enum(["low", "medium", "high", "urgent"]).default("medium"),
-    })).mutation(async ({ input, ctx }) => {
-      const id = await db.createIncident({ ...input, userId: ctx.user.id });
-      return { success: true, id };
-    }),
-    update: protectedProcedure.input(z.object({
-      id: z.number(),
-      title: z.string().optional(),
-      description: z.string().optional(),
-      priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
-      status: z.enum(["open", "in_progress", "resolved", "closed"]).optional(),
-      notes: z.string().optional(),
-    })).mutation(async ({ input, ctx }) => {
-      const { id, ...data } = input;
-      if (data.status === "resolved" || data.status === "closed") {
-        await db.updateIncident(id, { ...data, resolvedAt: new Date(), resolvedBy: ctx.user.id });
-      } else {
-        await db.updateIncident(id, data);
-      }
-      return { success: true };
-    }),
-    delete: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
-      await db.deleteIncident(input.id);
-      return { success: true };
-    }),
+    list: protectedProcedure
+      .input(
+        z.object({
+          businessId: z.number(),
+          status: z.string().optional(),
+        })
+      )
+      .query(async ({ input }) => {
+        return db.getIncidentsByBusiness(input.businessId, input.status);
+      }),
+    create: protectedProcedure
+      .input(
+        z.object({
+          businessId: z.number(),
+          title: z.string(),
+          description: z.string().optional(),
+          priority: z
+            .enum(["low", "medium", "high", "urgent"])
+            .default("medium"),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const id = await db.createIncident({ ...input, userId: ctx.user.id });
+        return { success: true, id };
+      }),
+    update: protectedProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          title: z.string().optional(),
+          description: z.string().optional(),
+          priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
+          status: z
+            .enum(["open", "in_progress", "resolved", "closed"])
+            .optional(),
+          notes: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const { id, ...data } = input;
+        if (data.status === "resolved" || data.status === "closed") {
+          await db.updateIncident(id, {
+            ...data,
+            resolvedAt: new Date(),
+            resolvedBy: ctx.user.id,
+          });
+        } else {
+          await db.updateIncident(id, data);
+        }
+        return { success: true };
+      }),
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deleteIncident(input.id);
+        return { success: true };
+      }),
   }),
 
   // ==================== TASKS ====================
   tasks: router({
-    list: protectedProcedure.input(z.object({
-      businessId: z.number().optional(),
-      assignedTo: z.number().optional(),
-      status: z.string().optional(),
-    })).query(async ({ input }) => {
-      return db.getTasks(input.businessId, input.assignedTo, input.status);
-    }),
-    create: protectedProcedure.input(z.object({
-      businessId: z.number().optional(),
-      assignedTo: z.number().optional(),
-      title: z.string(),
-      description: z.string().optional(),
-      priority: z.enum(["low", "medium", "high", "urgent"]).default("medium"),
-      dueDate: z.string().optional(),
-    })).mutation(async ({ input, ctx }) => {
-      const id = await db.createTask({ ...input, createdBy: ctx.user.id });
-      return { success: true, id };
-    }),
-    update: protectedProcedure.input(z.object({
-      id: z.number(),
-      title: z.string().optional(),
-      description: z.string().optional(),
-      assignedTo: z.number().optional(),
-      priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
-      status: z.enum(["pending", "in_progress", "completed", "cancelled"]).optional(),
-      dueDate: z.string().optional(),
-      notes: z.string().optional(),
-    })).mutation(async ({ input }) => {
-      const { id, ...data } = input;
-      if (data.status === "completed") {
-        await db.updateTask(id, { ...data, completedAt: new Date() });
-      } else {
-        await db.updateTask(id, data);
-      }
-      return { success: true };
-    }),
-    delete: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
-      await db.deleteTask(input.id);
-      return { success: true };
-    }),
+    list: protectedProcedure
+      .input(
+        z.object({
+          businessId: z.number().optional(),
+          assignedTo: z.number().optional(),
+          status: z.string().optional(),
+        })
+      )
+      .query(async ({ input }) => {
+        return db.getTasks(input.businessId, input.assignedTo, input.status);
+      }),
+    create: protectedProcedure
+      .input(
+        z.object({
+          businessId: z.number().optional(),
+          assignedTo: z.number().optional(),
+          title: z.string(),
+          description: z.string().optional(),
+          priority: z
+            .enum(["low", "medium", "high", "urgent"])
+            .default("medium"),
+          dueDate: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const id = await db.createTask({ ...input, createdBy: ctx.user.id });
+        return { success: true, id };
+      }),
+    update: protectedProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          title: z.string().optional(),
+          description: z.string().optional(),
+          assignedTo: z.number().optional(),
+          priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
+          status: z
+            .enum(["pending", "in_progress", "completed", "cancelled"])
+            .optional(),
+          dueDate: z.string().optional(),
+          notes: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        if (data.status === "completed") {
+          await db.updateTask(id, { ...data, completedAt: new Date() });
+        } else {
+          await db.updateTask(id, data);
+        }
+        return { success: true };
+      }),
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deleteTask(input.id);
+        return { success: true };
+      }),
   }),
 
   // ==================== OCR ====================
   ocr: router({
-    processInvoice: protectedProcedure.input(z.object({
-      imageUrl: z.string(),
-    })).mutation(async ({ input }) => {
-      // Get OpenAI API key from database
-      const apiKeySetting = await db.getSetting("openai_api_key");
-      if (!apiKeySetting?.settingValue) {
-        throw new Error("OpenAI API key not configured. Please add it in Settings.");
-      }
-      
-      const apiKey = apiKeySetting.settingValue;
-      
-      // Call OpenAI API directly
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: "gpt-4o",
-          messages: [
-            {
-              role: "system",
-              content: `Eres un asistente especializado en extraer datos de facturas y tickets. 
+    processInvoice: protectedProcedure
+      .input(
+        z.object({
+          imageUrl: z.string(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        // Get OpenAI API key from database
+        const apiKeySetting = await db.getSetting("openai_api_key");
+        if (!apiKeySetting?.settingValue) {
+          throw new Error(
+            "OpenAI API key not configured. Please add it in Settings."
+          );
+        }
+
+        const apiKey = apiKeySetting.settingValue;
+
+        // Call OpenAI API directly
+        const response = await fetch(
+          "https://api.openai.com/v1/chat/completions",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${apiKey}`,
+            },
+            body: JSON.stringify({
+              model: "gpt-4o",
+              messages: [
+                {
+                  role: "system",
+                  content: `Eres un asistente especializado en extraer datos de facturas y tickets. 
 Extrae la siguiente información de la imagen:
 - supplier: nombre del proveedor/empresa
 - invoiceNumber: número de factura (si existe)
@@ -821,177 +1371,246 @@ Extrae la siguiente información de la imagen:
 - vatAmount: importe del IVA
 - totalAmount: importe total
 
-Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún campo, usa null.`
-            },
-            {
-              role: "user",
-              content: [
-                { type: "text", text: "Extrae los datos de esta factura:" },
-                { type: "image_url", image_url: { url: input.imageUrl } }
-              ]
-            }
-          ],
-          response_format: {
-            type: "json_schema",
-            json_schema: {
-              name: "invoice_data",
-              strict: true,
-              schema: {
-                type: "object",
-                properties: {
-                  supplier: { type: ["string", "null"], description: "Nombre del proveedor" },
-                  invoiceNumber: { type: ["string", "null"], description: "Número de factura" },
-                  invoiceDate: { type: ["string", "null"], description: "Fecha en formato YYYY-MM-DD" },
-                  baseAmount: { type: ["string", "null"], description: "Importe base sin IVA" },
-                  vatRate: { type: ["string", "null"], description: "Porcentaje de IVA" },
-                  vatAmount: { type: ["string", "null"], description: "Importe del IVA" },
-                  totalAmount: { type: ["string", "null"], description: "Importe total" },
+Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún campo, usa null.`,
                 },
-                required: ["supplier", "invoiceNumber", "invoiceDate", "baseAmount", "vatRate", "vatAmount", "totalAmount"],
-                additionalProperties: false,
-              },
-            },
-          },
-        }),
-      });
-      
-      if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`OpenAI API error: ${error}`);
-      }
-      
-      const data = await response.json();
-      
-      try {
-        const content = data.choices[0]?.message?.content;
-        if (content && typeof content === 'string') {
-          return JSON.parse(content);
-        }
-        return null;
-      } catch (e) {
-        console.error("Error parsing OCR response:", e);
-        return null;
-      }
-    }),
-
-    processInvoiceFile: protectedProcedure.input(z.object({
-      fileData: z.string(),
-      fileName: z.string(),
-      contentType: z.enum(["application/pdf", "image/jpeg", "image/png", "image/webp"]),
-    })).mutation(async ({ input }) => {
-      const apiKeySetting = await db.getSetting("openai_api_key");
-      if (!apiKeySetting?.settingValue) {
-        throw new Error("API Key de OpenAI no configurada. Añádela en Configuración antes de analizar facturas.");
-      }
-
-      const apiKey = apiKeySetting.settingValue;
-      const base64Data = input.fileData.split(",")[1] || input.fileData;
-      const fileBuffer = Buffer.from(base64Data, "base64");
-      const safeFileName = input.fileName.replace(/[^a-zA-Z0-9._-]/g, "_") || "factura";
-
-      const fileForm = new FormData();
-      fileForm.append("purpose", "user_data");
-      fileForm.append("file", new Blob([fileBuffer], { type: input.contentType }), safeFileName);
-
-      const uploadResponse = await fetch("https://api.openai.com/v1/files", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${apiKey}` },
-        body: fileForm,
-      });
-
-      if (!uploadResponse.ok) {
-        const error = await uploadResponse.text();
-        throw new Error(`No se pudo enviar el documento a OpenAI: ${error}`);
-      }
-
-      const uploadedFile: any = await uploadResponse.json();
-
-      try {
-        const analysisResponse = await fetch("https://api.openai.com/v1/responses", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${apiKey}`,
-          },
-          body: JSON.stringify({
-            model: "gpt-4o",
-            input: [{
-              role: "user",
-              content: [
                 {
-                  type: "input_text",
-                  text: "Extrae los datos de esta factura. Devuelve proveedor, número de factura, fecha YYYY-MM-DD, base imponible, porcentaje de IVA, importe de IVA y total. El campo totalAmount debe ser el IMPORTE TOTAL FINAL A PAGAR, normalmente etiquetado como TOTAL, TOTAL FACTURA, IMPORTE TOTAL o TOTAL A PAGAR, e incluir IVA cuando exista. Nunca uses la base imponible, el importe pendiente ni una cuota parcial como total. Devuelve los importes como texto decimal con punto y sin símbolo de moneda (ejemplo: 1234.56). Si un valor no aparece o no es legible, usa null; nunca uses 0 o 0.00 como relleno.",
+                  role: "user",
+                  content: [
+                    { type: "text", text: "Extrae los datos de esta factura:" },
+                    { type: "image_url", image_url: { url: input.imageUrl } },
+                  ],
                 },
-                { type: "input_file", file_id: uploadedFile.id },
               ],
-            }],
-            text: {
-              format: {
+              response_format: {
                 type: "json_schema",
-                name: "invoice_data",
-                strict: true,
-                schema: {
-                  type: "object",
-                  properties: {
-                    supplier: { type: ["string", "null"] },
-                    invoiceNumber: { type: ["string", "null"] },
-                    invoiceDate: { type: ["string", "null"] },
-                    baseAmount: { type: ["string", "null"] },
-                    vatRate: { type: ["string", "null"] },
-                    vatAmount: { type: ["string", "null"] },
-                    totalAmount: { type: ["string", "null"] },
+                json_schema: {
+                  name: "invoice_data",
+                  strict: true,
+                  schema: {
+                    type: "object",
+                    properties: {
+                      supplier: {
+                        type: ["string", "null"],
+                        description: "Nombre del proveedor",
+                      },
+                      invoiceNumber: {
+                        type: ["string", "null"],
+                        description: "Número de factura",
+                      },
+                      invoiceDate: {
+                        type: ["string", "null"],
+                        description: "Fecha en formato YYYY-MM-DD",
+                      },
+                      baseAmount: {
+                        type: ["string", "null"],
+                        description: "Importe base sin IVA",
+                      },
+                      vatRate: {
+                        type: ["string", "null"],
+                        description: "Porcentaje de IVA",
+                      },
+                      vatAmount: {
+                        type: ["string", "null"],
+                        description: "Importe del IVA",
+                      },
+                      totalAmount: {
+                        type: ["string", "null"],
+                        description: "Importe total",
+                      },
+                    },
+                    required: [
+                      "supplier",
+                      "invoiceNumber",
+                      "invoiceDate",
+                      "baseAmount",
+                      "vatRate",
+                      "vatAmount",
+                      "totalAmount",
+                    ],
+                    additionalProperties: false,
                   },
-                  required: ["supplier", "invoiceNumber", "invoiceDate", "baseAmount", "vatRate", "vatAmount", "totalAmount"],
-                  additionalProperties: false,
                 },
               },
-            },
-          }),
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          const error = await response.text();
+          throw new Error(`OpenAI API error: ${error}`);
+        }
+
+        const data = await response.json();
+
+        try {
+          const content = data.choices[0]?.message?.content;
+          if (content && typeof content === "string") {
+            return JSON.parse(content);
+          }
+          return null;
+        } catch (e) {
+          console.error("Error parsing OCR response:", e);
+          return null;
+        }
+      }),
+
+    processInvoiceFile: protectedProcedure
+      .input(
+        z.object({
+          fileData: z.string(),
+          fileName: z.string(),
+          contentType: z.enum([
+            "application/pdf",
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+          ]),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const apiKeySetting = await db.getSetting("openai_api_key");
+        if (!apiKeySetting?.settingValue) {
+          throw new Error(
+            "API Key de OpenAI no configurada. Añádela en Configuración antes de analizar facturas."
+          );
+        }
+
+        const apiKey = apiKeySetting.settingValue;
+        const base64Data = input.fileData.split(",")[1] || input.fileData;
+        const fileBuffer = Buffer.from(base64Data, "base64");
+        const safeFileName =
+          input.fileName.replace(/[^a-zA-Z0-9._-]/g, "_") || "factura";
+
+        const fileForm = new FormData();
+        fileForm.append("purpose", "user_data");
+        fileForm.append(
+          "file",
+          new Blob([fileBuffer], { type: input.contentType }),
+          safeFileName
+        );
+
+        const uploadResponse = await fetch("https://api.openai.com/v1/files", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${apiKey}` },
+          body: fileForm,
         });
 
-        if (!analysisResponse.ok) {
-          const error = await analysisResponse.text();
-          throw new Error(`No se pudo analizar la factura: ${error}`);
+        if (!uploadResponse.ok) {
+          const error = await uploadResponse.text();
+          throw new Error(`No se pudo enviar el documento a OpenAI: ${error}`);
         }
 
-        const analysis: any = await analysisResponse.json();
-        const outputText = analysis.output_text || analysis.output
-          ?.flatMap((item: any) => item.content || [])
-          ?.find((item: any) => item.type === "output_text")?.text;
+        const uploadedFile: any = await uploadResponse.json();
 
-        if (!outputText || typeof outputText !== "string") return null;
+        try {
+          const analysisResponse = await fetch(
+            "https://api.openai.com/v1/responses",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${apiKey}`,
+              },
+              body: JSON.stringify({
+                model: "gpt-4o",
+                input: [
+                  {
+                    role: "user",
+                    content: [
+                      {
+                        type: "input_text",
+                        text: "Extrae los datos de esta factura. Devuelve proveedor, número de factura, fecha YYYY-MM-DD, base imponible, porcentaje de IVA, importe de IVA y total. El campo totalAmount debe ser el IMPORTE TOTAL FINAL A PAGAR, normalmente etiquetado como TOTAL, TOTAL FACTURA, IMPORTE TOTAL o TOTAL A PAGAR, e incluir IVA cuando exista. Nunca uses la base imponible, el importe pendiente ni una cuota parcial como total. Devuelve los importes como texto decimal con punto y sin símbolo de moneda (ejemplo: 1234.56). Si un valor no aparece o no es legible, usa null; nunca uses 0 o 0.00 como relleno.",
+                      },
+                      { type: "input_file", file_id: uploadedFile.id },
+                    ],
+                  },
+                ],
+                text: {
+                  format: {
+                    type: "json_schema",
+                    name: "invoice_data",
+                    strict: true,
+                    schema: {
+                      type: "object",
+                      properties: {
+                        supplier: { type: ["string", "null"] },
+                        invoiceNumber: { type: ["string", "null"] },
+                        invoiceDate: { type: ["string", "null"] },
+                        baseAmount: { type: ["string", "null"] },
+                        vatRate: { type: ["string", "null"] },
+                        vatAmount: { type: ["string", "null"] },
+                        totalAmount: { type: ["string", "null"] },
+                      },
+                      required: [
+                        "supplier",
+                        "invoiceNumber",
+                        "invoiceDate",
+                        "baseAmount",
+                        "vatRate",
+                        "vatAmount",
+                        "totalAmount",
+                      ],
+                      additionalProperties: false,
+                    },
+                  },
+                },
+              }),
+            }
+          );
 
-        const extracted = JSON.parse(outputText) as Record<string, string | null>;
-        const parseMoney = (value: string | null | undefined) => {
-          if (!value) return null;
-          const compact = value.replace(/[^0-9,.-]/g, "");
-          const normalized = compact.includes(",") && compact.includes(".")
-            ? (compact.lastIndexOf(",") > compact.lastIndexOf(".")
-              ? compact.replace(/\./g, "").replace(",", ".")
-              : compact.replace(/,/g, ""))
-            : compact.replace(",", ".");
-          const amount = Number.parseFloat(normalized);
-          return Number.isFinite(amount) ? amount : null;
-        };
+          if (!analysisResponse.ok) {
+            const error = await analysisResponse.text();
+            throw new Error(`No se pudo analizar la factura: ${error}`);
+          }
 
-        const total = parseMoney(extracted.totalAmount);
-        const base = parseMoney(extracted.baseAmount);
-        const vat = parseMoney(extracted.vatAmount);
+          const analysis: any = await analysisResponse.json();
+          const outputText =
+            analysis.output_text ||
+            analysis.output
+              ?.flatMap((item: any) => item.content || [])
+              ?.find((item: any) => item.type === "output_text")?.text;
 
-        if ((total === null || (total === 0 && (base || vat))) && base !== null && vat !== null) {
-          extracted.totalAmount = (base + vat).toFixed(2);
-        } else if (total !== null) {
-          extracted.totalAmount = total.toFixed(2);
+          if (!outputText || typeof outputText !== "string") return null;
+
+          const extracted = JSON.parse(outputText) as Record<
+            string,
+            string | null
+          >;
+          const parseMoney = (value: string | null | undefined) => {
+            if (!value) return null;
+            const compact = value.replace(/[^0-9,.-]/g, "");
+            const normalized =
+              compact.includes(",") && compact.includes(".")
+                ? compact.lastIndexOf(",") > compact.lastIndexOf(".")
+                  ? compact.replace(/\./g, "").replace(",", ".")
+                  : compact.replace(/,/g, "")
+                : compact.replace(",", ".");
+            const amount = Number.parseFloat(normalized);
+            return Number.isFinite(amount) ? amount : null;
+          };
+
+          const total = parseMoney(extracted.totalAmount);
+          const base = parseMoney(extracted.baseAmount);
+          const vat = parseMoney(extracted.vatAmount);
+
+          if (
+            (total === null || (total === 0 && (base || vat))) &&
+            base !== null &&
+            vat !== null
+          ) {
+            extracted.totalAmount = (base + vat).toFixed(2);
+          } else if (total !== null) {
+            extracted.totalAmount = total.toFixed(2);
+          }
+
+          return extracted;
+        } finally {
+          fetch(`https://api.openai.com/v1/files/${uploadedFile.id}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${apiKey}` },
+          }).catch(() => undefined);
         }
-
-        return extracted;
-      } finally {
-        fetch(`https://api.openai.com/v1/files/${uploadedFile.id}`, {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${apiKey}` },
-        }).catch(() => undefined);
-      }
-    }),
+      }),
   }),
 
   // ==================== SUPPLIERS ====================
@@ -999,36 +1618,46 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
     list: protectedProcedure.query(async () => {
       return db.getAllSuppliers();
     }),
-    create: adminProcedure.input(z.object({
-      name: z.string(),
-      legalName: z.string().optional(),
-      contactName: z.string().optional(),
-      phone: z.string().optional(),
-      email: z.string().optional(),
-      address: z.string().optional(),
-      notes: z.string().optional(),
-    })).mutation(async ({ input }) => {
-      const id = await db.createSupplier(input);
-      return { success: true, id };
-    }),
-    update: adminProcedure.input(z.object({
-      id: z.number(),
-      name: z.string().optional(),
-      legalName: z.string().optional(),
-      contactName: z.string().optional(),
-      phone: z.string().optional(),
-      email: z.string().optional(),
-      address: z.string().optional(),
-      notes: z.string().optional(),
-    })).mutation(async ({ input }) => {
-      const { id, ...data } = input;
-      await db.updateSupplier(id, data);
-      return { success: true };
-    }),
-    delete: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
-      await db.deleteSupplier(input.id);
-      return { success: true };
-    }),
+    create: adminProcedure
+      .input(
+        z.object({
+          name: z.string(),
+          legalName: z.string().optional(),
+          contactName: z.string().optional(),
+          phone: z.string().optional(),
+          email: z.string().optional(),
+          address: z.string().optional(),
+          notes: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const id = await db.createSupplier(input);
+        return { success: true, id };
+      }),
+    update: adminProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          name: z.string().optional(),
+          legalName: z.string().optional(),
+          contactName: z.string().optional(),
+          phone: z.string().optional(),
+          email: z.string().optional(),
+          address: z.string().optional(),
+          notes: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        await db.updateSupplier(id, data);
+        return { success: true };
+      }),
+    delete: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deleteSupplier(input.id);
+        return { success: true };
+      }),
   }),
 
   // ==================== SHIFT TEMPLATES ====================
@@ -1036,109 +1665,187 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
     list: protectedProcedure.query(async () => {
       return db.getAllShiftTemplates();
     }),
-    create: adminProcedure.input(z.object({
-      name: z.string(),
-      dayOfWeek: z.number().min(0).max(6),
-      userId: z.number(),
-      scheduledStart: z.string(),
-      scheduledEnd: z.string(),
-    })).mutation(async ({ input }) => {
-      const id = await db.createShiftTemplate(input);
-      return { success: true, id };
-    }),
-    update: adminProcedure.input(z.object({
-      id: z.number(),
-      name: z.string().optional(),
-      dayOfWeek: z.number().min(0).max(6).optional(),
-      userId: z.number().optional(),
-      scheduledStart: z.string().optional(),
-      scheduledEnd: z.string().optional(),
-    })).mutation(async ({ input }) => {
-      const { id, ...data } = input;
-      await db.updateShiftTemplate(id, data);
-      return { success: true };
-    }),
-    delete: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
-      await db.deleteShiftTemplate(input.id);
-      return { success: true };
-    }),
-    generate: adminProcedure.input(z.object({
-      startDate: z.string(),
-      endDate: z.string(),
-    })).mutation(async ({ input }) => {
-      await db.generateShiftsFromTemplates(input.startDate, input.endDate);
-      return { success: true };
-    }),
+    create: adminProcedure
+      .input(
+        z.object({
+          name: z.string(),
+          dayOfWeek: z.number().min(0).max(6),
+          userId: z.number(),
+          scheduledStart: z.string(),
+          scheduledEnd: z.string(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const id = await db.createShiftTemplate(input);
+        return { success: true, id };
+      }),
+    update: adminProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          name: z.string().optional(),
+          dayOfWeek: z.number().min(0).max(6).optional(),
+          userId: z.number().optional(),
+          scheduledStart: z.string().optional(),
+          scheduledEnd: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        await db.updateShiftTemplate(id, data);
+        return { success: true };
+      }),
+    delete: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deleteShiftTemplate(input.id);
+        return { success: true };
+      }),
+    generate: adminProcedure
+      .input(
+        z.object({
+          startDate: z.string(),
+          endDate: z.string(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        await db.generateShiftsFromTemplates(input.startDate, input.endDate);
+        return { success: true };
+      }),
   }),
 
   // ==================== EMPLOYEE MANAGEMENT ====================
   employees: router({
-    create: adminProcedure.input(z.object({
-      name: z.string(),
-      email: z.string().optional(),
-      username: z.string(),
-      password: z.string().min(4),
-      role: z.enum(["user", "admin", "housekeeping", "tablet"]).default("user"),
-    })).mutation(async ({ input }) => {
-      const id = await db.createEmployeeWithCredentials(input.name, input.email, input.username, input.password, input.role);
-      return { success: true, id };
-    }),
-    updatePassword: adminProcedure.input(z.object({
-      userId: z.number(),
-      newPassword: z.string().min(4),
-    })).mutation(async ({ input }) => {
-      await db.updateUserPassword(input.userId, input.newPassword);
-      return { success: true };
-    }),
+    create: adminProcedure
+      .input(
+        z.object({
+          name: z.string(),
+          email: z.string().optional(),
+          username: z.string(),
+          password: z.string().min(4),
+          role: z
+            .enum(["user", "admin", "housekeeping", "tablet"])
+            .default("user"),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const id = await db.createEmployeeWithCredentials(
+          input.name,
+          input.email,
+          input.username,
+          input.password,
+          input.role
+        );
+        return { success: true, id };
+      }),
+    updatePassword: adminProcedure
+      .input(
+        z.object({
+          userId: z.number(),
+          newPassword: z.string().min(4),
+        })
+      )
+      .mutation(async ({ input }) => {
+        await db.updateUserPassword(input.userId, input.newPassword);
+        return { success: true };
+      }),
   }),
 
   // ==================== CASH REGISTER AUTO ====================
   cashAuto: router({
-    getOrCreate: protectedProcedure.input(z.object({
-      businessId: z.number(),
-      date: z.string(),
-    })).mutation(async ({ input, ctx }) => {
-      return db.getOrCreateDailyCashRegister(input.businessId, ctx.user.id, input.date);
-    }),
+    getOrCreate: protectedProcedure
+      .input(
+        z.object({
+          businessId: z.number(),
+          date: z.string(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        return db.getOrCreateDailyCashRegister(
+          input.businessId,
+          ctx.user.id,
+          input.date
+        );
+      }),
   }),
 
   // ==================== DASHBOARD ====================
   dashboard: router({
-    stats: protectedProcedure.input(z.object({
-      businessId: z.number(),
-      startDate: z.string(),
-      endDate: z.string(),
-    })).query(async ({ input }) => {
-      return db.getDashboardStats(input.businessId, input.startDate, input.endDate);
-    }),
-    supplierExpenses: adminProcedure.input(z.object({
-      businessId: z.number(),
-      startDate: z.string(),
-      endDate: z.string(),
-    })).query(async ({ input }) => {
-      return db.getSupplierExpenses(input.businessId, input.startDate, input.endDate);
-    }),
-    trend: adminProcedure.input(z.object({
-      businessId: z.number(),
-      startDate: z.string(),
-      endDate: z.string(),
-    })).query(async ({ input }) => {
-      return db.getDashboardTrend(input.businessId, input.startDate, input.endDate);
-    }),
-    hoursWorked: protectedProcedure.input(z.object({
-      userId: z.number(),
-      startDate: z.string(),
-      endDate: z.string(),
-    })).query(async ({ input }) => {
-      return db.getHoursWorkedByUser(input.userId, input.startDate, input.endDate);
-    }),
-    dailyWithdrawals: protectedProcedure.input(z.object({
-      businessId: z.number(),
-      startDate: z.string(),
-      endDate: z.string(),
-    })).query(async ({ input }) => {
-      return db.getDailyWithdrawals(input.businessId, input.startDate, input.endDate);
-    }),
+    stats: protectedProcedure
+      .input(
+        z.object({
+          businessId: z.number(),
+          startDate: z.string(),
+          endDate: z.string(),
+        })
+      )
+      .query(async ({ input }) => {
+        return db.getDashboardStats(
+          input.businessId,
+          input.startDate,
+          input.endDate
+        );
+      }),
+    supplierExpenses: adminProcedure
+      .input(
+        z.object({
+          businessId: z.number(),
+          startDate: z.string(),
+          endDate: z.string(),
+        })
+      )
+      .query(async ({ input }) => {
+        return db.getSupplierExpenses(
+          input.businessId,
+          input.startDate,
+          input.endDate
+        );
+      }),
+    trend: adminProcedure
+      .input(
+        z.object({
+          businessId: z.number(),
+          startDate: z.string(),
+          endDate: z.string(),
+        })
+      )
+      .query(async ({ input }) => {
+        return db.getDashboardTrend(
+          input.businessId,
+          input.startDate,
+          input.endDate
+        );
+      }),
+    hoursWorked: protectedProcedure
+      .input(
+        z.object({
+          userId: z.number(),
+          startDate: z.string(),
+          endDate: z.string(),
+        })
+      )
+      .query(async ({ input }) => {
+        return db.getHoursWorkedByUser(
+          input.userId,
+          input.startDate,
+          input.endDate
+        );
+      }),
+    dailyWithdrawals: protectedProcedure
+      .input(
+        z.object({
+          businessId: z.number(),
+          startDate: z.string(),
+          endDate: z.string(),
+        })
+      )
+      .query(async ({ input }) => {
+        return db.getDailyWithdrawals(
+          input.businessId,
+          input.startDate,
+          input.endDate
+        );
+      }),
     provisionalExternalCash: adminProcedure.query(async () => {
       const now = new Date();
       const loyverseDate = currentLoyverseOperationalDate(now);
@@ -1148,25 +1855,73 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
       const cloudbedsPropertyId = process.env.CLOUDBEDS_PROPERTY_ID;
 
       const tienda = await (async () => {
-        if (!loyverseToken) return { status: "not_configured" as const, businessDate: loyverseDate, total: "0.00", receiptCount: 0 };
+        if (!loyverseToken)
+          return {
+            status: "not_configured" as const,
+            businessDate: loyverseDate,
+            total: "0.00",
+            receiptCount: 0,
+          };
         try {
           const { start } = getLoyverseOperationalWindow(loyverseDate);
-          const receipts = await fetchLoyverseReceipts(loyverseToken, start, now.toISOString());
-          const summary = sumLoyverseReceiptsForOperationalDay(receipts, loyverseDate);
-          return { status: "ready" as const, businessDate: loyverseDate, total: summary.total.toFixed(2), receiptCount: summary.receiptCount };
+          const receipts = await fetchLoyverseReceipts(
+            loyverseToken,
+            start,
+            now.toISOString()
+          );
+          const summary = sumLoyverseReceiptsForOperationalDay(
+            receipts,
+            loyverseDate
+          );
+          return {
+            status: "ready" as const,
+            businessDate: loyverseDate,
+            total: summary.total.toFixed(2),
+            receiptCount: summary.receiptCount,
+          };
         } catch {
-          return { status: "unavailable" as const, businessDate: loyverseDate, total: "0.00", receiptCount: 0 };
+          return {
+            status: "unavailable" as const,
+            businessDate: loyverseDate,
+            total: "0.00",
+            receiptCount: 0,
+          };
         }
       })();
 
       const hostel = await (async () => {
-        if (!cloudbedsApiKey || !cloudbedsPropertyId) return { status: "not_configured" as const, serviceDate: cloudbedsDate, total: "0.00", paymentCount: 0 };
+        if (!cloudbedsApiKey || !cloudbedsPropertyId)
+          return {
+            status: "not_configured" as const,
+            serviceDate: cloudbedsDate,
+            total: "0.00",
+            paymentCount: 0,
+          };
         try {
-          const payments = await fetchCloudbedsTransactions(cloudbedsApiKey, cloudbedsPropertyId, cloudbedsDate, cloudbedsDate);
-          const row = aggregateCloudbedsPaymentsByOperationalDay(payments, 0, cloudbedsPropertyId).find((item) => item.businessDate === cloudbedsDate);
-          return { status: "ready" as const, serviceDate: cloudbedsDate, total: row?.totalSales ?? "0.00", paymentCount: payments.length };
+          const payments = await fetchCloudbedsTransactions(
+            cloudbedsApiKey,
+            cloudbedsPropertyId,
+            cloudbedsDate,
+            cloudbedsDate
+          );
+          const row = aggregateCloudbedsPaymentsByOperationalDay(
+            payments,
+            0,
+            cloudbedsPropertyId
+          ).find(item => item.businessDate === cloudbedsDate);
+          return {
+            status: "ready" as const,
+            serviceDate: cloudbedsDate,
+            total: row?.totalSales ?? "0.00",
+            paymentCount: payments.length,
+          };
         } catch {
-          return { status: "unavailable" as const, serviceDate: cloudbedsDate, total: "0.00", paymentCount: 0 };
+          return {
+            status: "unavailable" as const,
+            serviceDate: cloudbedsDate,
+            total: "0.00",
+            paymentCount: 0,
+          };
         }
       })();
 
@@ -1176,139 +1931,268 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
 
   // ==================== CASH CLOSINGS (Cierres de Caja Detallados) ====================
   cashClosings: router({
-    list: protectedProcedure.input(z.object({
-      businessId: z.number(),
-      startDate: z.string().optional(),
-      endDate: z.string().optional(),
-    })).query(async ({ input }) => {
-      return db.getCashClosingsByBusiness(input.businessId, input.startDate, input.endDate);
-    }),
-    getByDate: protectedProcedure.input(z.object({
-      businessId: z.number(),
-      date: z.string(),
-    })).query(async ({ input }) => {
-      return db.getCashClosingByDate(input.businessId, input.date);
-    }),
-    getOrCreate: protectedProcedure.input(z.object({
-      businessId: z.number(),
-      date: z.string(),
-    })).mutation(async ({ input, ctx }) => {
-      return db.getOrCreateCashClosing(input.businessId, ctx.user.id, input.date);
-    }),
-    update: protectedProcedure.input(z.object({
-      id: z.number(),
-      coins010: z.number().optional(),
-      coins020: z.number().optional(),
-      coins050: z.number().optional(),
-      coins100: z.number().optional(),
-      coins200: z.number().optional(),
-      bills5: z.number().optional(),
-      bills10: z.number().optional(),
-      bills20: z.number().optional(),
-      bills50: z.number().optional(),
-      totalCash: z.string().optional(),
-      totalCards: z.string().optional(),
-      zReading: z.string().optional(),
-      prepaidBooking: z.string().optional(),
-      withdrawnCash: z.string().optional(),
-      withdrawnCards: z.string().optional(),
-      expectedTotal: z.string().optional(),
-      actualTotal: z.string().optional(),
-      difference: z.string().optional(),
-      changeForNextDay: z.string().optional(),
-      notes: z.string().optional(),
-    })).mutation(async ({ input }) => {
-      const { id, ...data } = input;
-      await db.updateCashClosing(id, data);
-      return { success: true };
-    }),
-    close: protectedProcedure.input(z.object({
-      id: z.number(),
-    })).mutation(async ({ input }) => {
-      await db.closeCashClosing(input.id);
-      return { success: true };
-    }),
-    reopen: protectedProcedure.input(z.object({
-      id: z.number(),
-    })).mutation(async ({ input }) => {
-      await db.reopenCashClosing(input.id);
-      return { success: true };
-    }),
-    exportCSV: protectedProcedure.input(z.object({
-      businessId: z.number(),
-      startDate: z.string(),
-      endDate: z.string(),
-    })).query(async ({ input }) => {
-      return db.exportCashClosingsToCSV(input.businessId, input.startDate, input.endDate);
-    }),
-    importLoyverseZ: protectedProcedure.input(z.object({
-      businessId: z.number(),
-      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-    })).mutation(async ({ input }) => {
-      const accessToken = process.env.LOYVERSE_ACCESS_TOKEN;
-      if (!accessToken) {
-        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Falta configurar el token de acceso de Loyverse" });
-      }
-      const business = (await db.getAllBusinesses()).find((item) => item.id === input.businessId);
-      if (business?.code !== "tienda") {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "La importación de Z de Loyverse solo está disponible para la caja de Tienda" });
-      }
-      const { start, end } = getLoyverseOperationalWindow(input.date);
-      const receipts = await fetchLoyverseReceipts(accessToken, start, end);
-      const total = receipts.reduce((sum, receipt) => sum + Number(receipt.total_money || 0), 0);
-      return { zReading: total.toFixed(2), receiptCount: receipts.length, windowStart: start, windowEnd: end };
-    }),
-    importCloudbedsZ: protectedProcedure.input(z.object({
-      businessId: z.number(),
-      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-    })).mutation(async ({ input }) => {
-      const apiKey = process.env.CLOUDBEDS_API_KEY;
-      const propertyId = process.env.CLOUDBEDS_PROPERTY_ID;
-      if (!apiKey || !propertyId) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Configura CLOUDBEDS_API_KEY y CLOUDBEDS_PROPERTY_ID para importar la Z de Cloudbeds" });
-      const business = (await db.getAllBusinesses()).find((item) => item.id === input.businessId);
-      if (business?.code !== "hostel") throw new TRPCError({ code: "BAD_REQUEST", message: "La importación de Z de Cloudbeds solo está disponible para la caja de Hostel" });
-      const transactions = await fetchCloudbedsTransactions(apiKey, propertyId, input.date, input.date);
-      const record = aggregateCloudbedsPaymentsByOperationalDay(transactions, 0, propertyId).find((item) => item.businessDate === input.date);
-      const paymentCount = record ? (JSON.parse(record.rawData || "[]") as unknown[]).length : 0;
-      return { zReading: record?.totalSales ?? "0.00", paymentCount, serviceDate: input.date };
-    }),
-    importCloudbedsBookingPrepayment: protectedProcedure.input(z.object({
-      businessId: z.number(),
-      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-    })).mutation(async ({ input }) => {
-      const apiKey = process.env.CLOUDBEDS_API_KEY;
-      const propertyId = process.env.CLOUDBEDS_PROPERTY_ID;
-      if (!apiKey || !propertyId) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Configura CLOUDBEDS_API_KEY y CLOUDBEDS_PROPERTY_ID para importar el prepago Booking" });
-      const business = (await db.getAllBusinesses()).find((item) => item.id === input.businessId);
-      if (business?.code !== "hostel") throw new TRPCError({ code: "BAD_REQUEST", message: "La importación de prepago Booking de Cloudbeds solo está disponible para la caja de Hostel" });
-      const transactions = await fetchCloudbedsTransactions(apiKey, propertyId, input.date, input.date);
-      const result = getCloudbedsBookingPrepayment(transactions, input.date);
-      return { prepaidBooking: result.total, paymentCount: result.paymentCount, serviceDate: input.date };
-    }),
+    list: protectedProcedure
+      .input(
+        z.object({
+          businessId: z.number(),
+          startDate: z.string().optional(),
+          endDate: z.string().optional(),
+        })
+      )
+      .query(async ({ input }) => {
+        return db.getCashClosingsByBusiness(
+          input.businessId,
+          input.startDate,
+          input.endDate
+        );
+      }),
+    getByDate: protectedProcedure
+      .input(
+        z.object({
+          businessId: z.number(),
+          date: z.string(),
+        })
+      )
+      .query(async ({ input }) => {
+        return db.getCashClosingByDate(input.businessId, input.date);
+      }),
+    getOrCreate: protectedProcedure
+      .input(
+        z.object({
+          businessId: z.number(),
+          date: z.string(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        return db.getOrCreateCashClosing(
+          input.businessId,
+          ctx.user.id,
+          input.date
+        );
+      }),
+    update: protectedProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          coins010: z.number().optional(),
+          coins020: z.number().optional(),
+          coins050: z.number().optional(),
+          coins100: z.number().optional(),
+          coins200: z.number().optional(),
+          bills5: z.number().optional(),
+          bills10: z.number().optional(),
+          bills20: z.number().optional(),
+          bills50: z.number().optional(),
+          totalCash: z.string().optional(),
+          totalCards: z.string().optional(),
+          zReading: z.string().optional(),
+          prepaidBooking: z.string().optional(),
+          withdrawnCash: z.string().optional(),
+          withdrawnCards: z.string().optional(),
+          expectedTotal: z.string().optional(),
+          actualTotal: z.string().optional(),
+          difference: z.string().optional(),
+          changeForNextDay: z.string().optional(),
+          notes: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        await db.updateCashClosing(id, data);
+        return { success: true };
+      }),
+    close: protectedProcedure
+      .input(
+        z.object({
+          id: z.number(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        await db.closeCashClosing(input.id);
+        return { success: true };
+      }),
+    reopen: protectedProcedure
+      .input(
+        z.object({
+          id: z.number(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        await db.reopenCashClosing(input.id);
+        return { success: true };
+      }),
+    exportCSV: protectedProcedure
+      .input(
+        z.object({
+          businessId: z.number(),
+          startDate: z.string(),
+          endDate: z.string(),
+        })
+      )
+      .query(async ({ input }) => {
+        return db.exportCashClosingsToCSV(
+          input.businessId,
+          input.startDate,
+          input.endDate
+        );
+      }),
+    importLoyverseZ: protectedProcedure
+      .input(
+        z.object({
+          businessId: z.number(),
+          date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const accessToken = process.env.LOYVERSE_ACCESS_TOKEN;
+        if (!accessToken) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: "Falta configurar el token de acceso de Loyverse",
+          });
+        }
+        const business = (await db.getAllBusinesses()).find(
+          item => item.id === input.businessId
+        );
+        if (business?.code !== "tienda") {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message:
+              "La importación de Z de Loyverse solo está disponible para la caja de Tienda",
+          });
+        }
+        const { start, end } = getLoyverseOperationalWindow(input.date);
+        const receipts = await fetchLoyverseReceipts(accessToken, start, end);
+        const total = receipts.reduce(
+          (sum, receipt) => sum + Number(receipt.total_money || 0),
+          0
+        );
+        return {
+          zReading: total.toFixed(2),
+          receiptCount: receipts.length,
+          windowStart: start,
+          windowEnd: end,
+        };
+      }),
+    importCloudbedsZ: protectedProcedure
+      .input(
+        z.object({
+          businessId: z.number(),
+          date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const apiKey = process.env.CLOUDBEDS_API_KEY;
+        const propertyId = process.env.CLOUDBEDS_PROPERTY_ID;
+        if (!apiKey || !propertyId)
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message:
+              "Configura CLOUDBEDS_API_KEY y CLOUDBEDS_PROPERTY_ID para importar la Z de Cloudbeds",
+          });
+        const business = (await db.getAllBusinesses()).find(
+          item => item.id === input.businessId
+        );
+        if (business?.code !== "hostel")
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message:
+              "La importación de Z de Cloudbeds solo está disponible para la caja de Hostel",
+          });
+        const transactions = await fetchCloudbedsTransactions(
+          apiKey,
+          propertyId,
+          input.date,
+          input.date
+        );
+        const record = aggregateCloudbedsPaymentsByOperationalDay(
+          transactions,
+          0,
+          propertyId
+        ).find(item => item.businessDate === input.date);
+        const paymentCount = record
+          ? (JSON.parse(record.rawData || "[]") as unknown[]).length
+          : 0;
+        return {
+          zReading: record?.totalSales ?? "0.00",
+          paymentCount,
+          serviceDate: input.date,
+        };
+      }),
+    importCloudbedsBookingPrepayment: protectedProcedure
+      .input(
+        z.object({
+          businessId: z.number(),
+          date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const apiKey = process.env.CLOUDBEDS_API_KEY;
+        const propertyId = process.env.CLOUDBEDS_PROPERTY_ID;
+        if (!apiKey || !propertyId)
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message:
+              "Configura CLOUDBEDS_API_KEY y CLOUDBEDS_PROPERTY_ID para importar el prepago Booking",
+          });
+        const business = (await db.getAllBusinesses()).find(
+          item => item.id === input.businessId
+        );
+        if (business?.code !== "hostel")
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message:
+              "La importación de prepago Booking de Cloudbeds solo está disponible para la caja de Hostel",
+          });
+        const transactions = await fetchCloudbedsTransactions(
+          apiKey,
+          propertyId,
+          input.date,
+          input.date
+        );
+        const result = getCloudbedsBookingPrepayment(transactions, input.date);
+        return {
+          prepaidBooking: result.total,
+          paymentCount: result.paymentCount,
+          serviceDate: input.date,
+        };
+      }),
   }),
 
   // ==================== CASH MOVEMENTS ====================
   cashMovements: router({
-    list: protectedProcedure.input(z.object({
-      cashClosingId: z.number(),
-    })).query(async ({ input }) => {
-      return db.getCashMovementsByClosing(input.cashClosingId);
-    }),
-    create: protectedProcedure.input(z.object({
-      cashClosingId: z.number(),
-      type: z.enum(["in", "out"]),
-      description: z.string(),
-      amount: z.string(),
-    })).mutation(async ({ input }) => {
-      const id = await db.createCashMovement(input);
-      return { success: true, id };
-    }),
-    delete: protectedProcedure.input(z.object({
-      id: z.number(),
-    })).mutation(async ({ input }) => {
-      await db.deleteCashMovement(input.id);
-      return { success: true };
-    }),
+    list: protectedProcedure
+      .input(
+        z.object({
+          cashClosingId: z.number(),
+        })
+      )
+      .query(async ({ input }) => {
+        return db.getCashMovementsByClosing(input.cashClosingId);
+      }),
+    create: protectedProcedure
+      .input(
+        z.object({
+          cashClosingId: z.number(),
+          type: z.enum(["in", "out"]),
+          description: z.string(),
+          amount: z.string(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const id = await db.createCashMovement(input);
+        return { success: true, id };
+      }),
+    delete: protectedProcedure
+      .input(
+        z.object({
+          id: z.number(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        await db.deleteCashMovement(input.id);
+        return { success: true };
+      }),
   }),
 
   // ==================== NOTIFICATIONS ====================
@@ -1319,12 +2203,16 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
     unreadCount: protectedProcedure.query(async ({ ctx }) => {
       return db.getUnreadNotificationsCount(ctx.user.id);
     }),
-    markAsRead: protectedProcedure.input(z.object({
-      id: z.number(),
-    })).mutation(async ({ input }) => {
-      await db.markNotificationAsRead(input.id);
-      return { success: true };
-    }),
+    markAsRead: protectedProcedure
+      .input(
+        z.object({
+          id: z.number(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        await db.markNotificationAsRead(input.id);
+        return { success: true };
+      }),
     markAllAsRead: protectedProcedure.mutation(async ({ ctx }) => {
       await db.markAllNotificationsAsRead(ctx.user.id);
       return { success: true };
@@ -1342,214 +2230,334 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
       }
       return null;
     }),
-    saveSMTP: adminProcedure.input(z.object({
-      host: z.string(),
-      port: z.number(),
-      secure: z.boolean(),
-      user: z.string(),
-      password: z.string(),
-      fromEmail: z.string(),
-      fromName: z.string(),
-    })).mutation(async ({ input }) => {
-      const { saveSMTPConfig, getSMTPConfig } = await import("./email");
-      // If password is masked, keep the old one
-      if (input.password === "********") {
-        const oldConfig = await getSMTPConfig();
-        if (oldConfig) {
-          input.password = oldConfig.password;
+    saveSMTP: adminProcedure
+      .input(
+        z.object({
+          host: z.string(),
+          port: z.number(),
+          secure: z.boolean(),
+          user: z.string(),
+          password: z.string(),
+          fromEmail: z.string(),
+          fromName: z.string(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { saveSMTPConfig, getSMTPConfig } = await import("./email");
+        // If password is masked, keep the old one
+        if (input.password === "********") {
+          const oldConfig = await getSMTPConfig();
+          if (oldConfig) {
+            input.password = oldConfig.password;
+          }
         }
-      }
-      await saveSMTPConfig(input);
-      return { success: true };
-    }),
-    testSMTP: adminProcedure.input(z.object({
-      host: z.string(),
-      port: z.number(),
-      secure: z.boolean(),
-      user: z.string(),
-      password: z.string(),
-      fromEmail: z.string(),
-      fromName: z.string(),
-    })).mutation(async ({ input }) => {
-      const { testSMTPConnection, getSMTPConfig } = await import("./email");
-      // If password is masked, use the old one
-      if (input.password === "********") {
-        const oldConfig = await getSMTPConfig();
-        if (oldConfig) {
-          input.password = oldConfig.password;
+        await saveSMTPConfig(input);
+        return { success: true };
+      }),
+    testSMTP: adminProcedure
+      .input(
+        z.object({
+          host: z.string(),
+          port: z.number(),
+          secure: z.boolean(),
+          user: z.string(),
+          password: z.string(),
+          fromEmail: z.string(),
+          fromName: z.string(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { testSMTPConnection, getSMTPConfig } = await import("./email");
+        // If password is masked, use the old one
+        if (input.password === "********") {
+          const oldConfig = await getSMTPConfig();
+          if (oldConfig) {
+            input.password = oldConfig.password;
+          }
         }
-      }
-      return testSMTPConnection(input);
-    }),
+        return testSMTPConnection(input);
+      }),
 
     // App Settings (OpenAI, etc.)
-    get: protectedProcedure.input(z.object({ key: z.string() })).query(async ({ input }) => {
-      return db.getSetting(input.key);
-    }),
+    get: protectedProcedure
+      .input(z.object({ key: z.string() }))
+      .query(async ({ input }) => {
+        return db.getSetting(input.key);
+      }),
     getAll: adminProcedure.query(async () => {
       return db.getAllSettings();
     }),
-    upsert: adminProcedure.input(z.object({
-      key: z.string(),
-      value: z.string(),
-      description: z.string().optional(),
-    })).mutation(async ({ input }) => {
-      await db.upsertSetting(input.key, input.value, input.description);
-      return { success: true };
-    }),
-    delete: adminProcedure.input(z.object({ key: z.string() })).mutation(async ({ input }) => {
-      await db.deleteSetting(input.key);
-      return { success: true };
-    }),
+    upsert: adminProcedure
+      .input(
+        z.object({
+          key: z.string(),
+          value: z.string(),
+          description: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        await db.upsertSetting(input.key, input.value, input.description);
+        return { success: true };
+      }),
+    delete: adminProcedure
+      .input(z.object({ key: z.string() }))
+      .mutation(async ({ input }) => {
+        await db.deleteSetting(input.key);
+        return { success: true };
+      }),
   }),
 
   // ==================== ROOM STATUS ====================
   roomStatus: router({
-    getByDate: housekeepingProcedure.input(z.object({
-      date: z.string(),
-    })).query(async ({ input }) => {
-      return db.getRoomStatusByDate(input.date);
-    }),
-    update: housekeepingProcedure.input(z.object({
-      roomNumber: z.string(),
-      date: z.string(),
-      status: z.enum(["checkout", "continues", "empty", "ready"]),
-      beds: z.number().optional(),
-      notes: z.string().optional(),
-    })).mutation(async ({ input, ctx }) => {
-      const statuses = await db.getRoomStatusByDate(input.date);
-      const previousStatus = statuses.find((room) => room.roomNumber === input.roomNumber)?.status;
-      const room = await db.updateRoomStatus({
-        ...input,
-        updatedBy: ctx.user.id,
-      });
-      let notifiedUsers = 0;
-      if (shouldCreateCheckoutNotification(previousStatus, input.status)) {
-        const housekeepingUsers = (await db.getAllUsers()).filter((user) => user.role === "housekeeping");
-        const notification = checkoutNotificationContent(input.roomNumber, input.date);
-        await Promise.all(housekeepingUsers.map(async (user) => {
-          await db.createNotification({ userId: user.id, ...notification });
-        }));
-        notifiedUsers = housekeepingUsers.length;
-      }
-      return { room, notifiedUsers };
-    }),
+    getByDate: housekeepingProcedure
+      .input(
+        z.object({
+          date: z.string(),
+        })
+      )
+      .query(async ({ input }) => {
+        return db.getRoomStatusByDate(input.date);
+      }),
+    update: housekeepingProcedure
+      .input(
+        z.object({
+          roomNumber: z.string(),
+          date: z.string(),
+          status: z.enum(["checkout", "continues", "empty", "ready"]),
+          beds: z.number().optional(),
+          notes: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const statuses = await db.getRoomStatusByDate(input.date);
+        const previousStatus = statuses.find(
+          room => room.roomNumber === input.roomNumber
+        )?.status;
+        const room = await db.updateRoomStatus({
+          ...input,
+          updatedBy: ctx.user.id,
+        });
+        let notifiedUsers = 0;
+        if (shouldCreateCheckoutNotification(previousStatus, input.status)) {
+          const housekeepingUsers = (await db.getAllUsers()).filter(
+            user => user.role === "housekeeping"
+          );
+          const notification = checkoutNotificationContent(
+            input.roomNumber,
+            input.date
+          );
+          await Promise.all(
+            housekeepingUsers.map(async user => {
+              await db.createNotification({ userId: user.id, ...notification });
+            })
+          );
+          notifiedUsers = housekeepingUsers.length;
+        }
+        return { room, notifiedUsers };
+      }),
   }),
 
   // ==================== OTROS GASTOS ====================
   otrosGastos: router({
-    list: adminProcedure.input(z.object({
-      businessId: z.number(),
-      startDate: z.string().optional(),
-      endDate: z.string().optional(),
-    })).query(async ({ input }) => {
-      return db.listOtrosGastos(input.businessId, input.startDate, input.endDate);
-    }),
-    create: adminProcedure.input(z.object({
-      businessId: z.number(),
-      type: z.enum(["gasto", "ingreso"]),
-      concepto: z.string(),
-      categoria: z.enum(["sueldos", "seguridad_social", "impuestos", "seguros", "otros"]),
-      categoriaOtros: z.string().optional(),
-      importe: z.string(),
-      paymentMethod: z.enum(["cuenta_bancaria", "tarjeta", "ana", "juanlu", "caja_hostel", "caja_tienda", "caja_fuerte", "caja_fuerte_cambio", "otros"]).optional(),
-      fecha: z.string(),
-      notas: z.string().optional(),
-    })).mutation(async ({ input, ctx }) => {
-      const id = await db.createOtroGasto({ ...input, createdBy: ctx.user.id });
-      return { success: true, id };
-    }),
-    update: adminProcedure.input(z.object({
-      id: z.number(),
-      businessId: z.number().optional(),
-      type: z.enum(["gasto", "ingreso"]).optional(),
-      concepto: z.string().optional(),
-      categoria: z.enum(["sueldos", "seguridad_social", "impuestos", "seguros", "otros"]).optional(),
-      categoriaOtros: z.string().optional(),
-      importe: z.string().optional(),
-      paymentMethod: z.enum(["cuenta_bancaria", "tarjeta", "ana", "juanlu", "caja_hostel", "caja_tienda", "caja_fuerte", "caja_fuerte_cambio", "otros"]).optional(),
-      fecha: z.string().optional(),
-      notas: z.string().optional(),
-    })).mutation(async ({ input }) => {
-      const { id, ...data } = input;
-      await db.updateOtroGasto(id, data);
-      return { success: true };
-    }),
-    delete: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
-      await db.deleteOtroGasto(input.id);
-      return { success: true };
-    }),
-    getTotal: adminProcedure.input(z.object({
-      businessId: z.number(),
-      startDate: z.string().optional(),
-      endDate: z.string().optional(),
-    })).query(async ({ input }) => {
-      return db.getTotalOtrosGastos(input.businessId, input.startDate, input.endDate);
-    }),
+    list: adminProcedure
+      .input(
+        z.object({
+          businessId: z.number(),
+          startDate: z.string().optional(),
+          endDate: z.string().optional(),
+        })
+      )
+      .query(async ({ input }) => {
+        return db.listOtrosGastos(
+          input.businessId,
+          input.startDate,
+          input.endDate
+        );
+      }),
+    create: adminProcedure
+      .input(
+        z.object({
+          businessId: z.number(),
+          type: z.enum(["gasto", "ingreso"]),
+          concepto: z.string(),
+          categoria: z.enum([
+            "sueldos",
+            "seguridad_social",
+            "impuestos",
+            "seguros",
+            "otros",
+          ]),
+          categoriaOtros: z.string().optional(),
+          importe: z.string(),
+          paymentMethod: z
+            .enum([
+              "cuenta_bancaria",
+              "tarjeta",
+              "ana",
+              "juanlu",
+              "caja_hostel",
+              "caja_tienda",
+              "caja_fuerte",
+              "caja_fuerte_cambio",
+              "otros",
+            ])
+            .optional(),
+          fecha: z.string(),
+          notas: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const id = await db.createOtroGasto({
+          ...input,
+          createdBy: ctx.user.id,
+        });
+        return { success: true, id };
+      }),
+    update: adminProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          businessId: z.number().optional(),
+          type: z.enum(["gasto", "ingreso"]).optional(),
+          concepto: z.string().optional(),
+          categoria: z
+            .enum([
+              "sueldos",
+              "seguridad_social",
+              "impuestos",
+              "seguros",
+              "otros",
+            ])
+            .optional(),
+          categoriaOtros: z.string().optional(),
+          importe: z.string().optional(),
+          paymentMethod: z
+            .enum([
+              "cuenta_bancaria",
+              "tarjeta",
+              "ana",
+              "juanlu",
+              "caja_hostel",
+              "caja_tienda",
+              "caja_fuerte",
+              "caja_fuerte_cambio",
+              "otros",
+            ])
+            .optional(),
+          fecha: z.string().optional(),
+          notas: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        await db.updateOtroGasto(id, data);
+        return { success: true };
+      }),
+    delete: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deleteOtroGasto(input.id);
+        return { success: true };
+      }),
+    getTotal: adminProcedure
+      .input(
+        z.object({
+          businessId: z.number(),
+          startDate: z.string().optional(),
+          endDate: z.string().optional(),
+        })
+      )
+      .query(async ({ input }) => {
+        return db.getTotalOtrosGastos(
+          input.businessId,
+          input.startDate,
+          input.endDate
+        );
+      }),
   }),
 
   // ==================== SAFE BOXES (Cajas Fuertes) ====================
   safeBoxes: router({
-    list: adminProcedure.input(z.object({
-      businessId: z.number(),
-      limit: z.number().optional(),
-    })).query(async ({ input }) => {
-      return db.getSafeBoxMovements(input.businessId, input.limit);
-    }),
-    create: adminProcedure.input(z.object({
-      businessId: z.number(),
-      date: z.string(),
-      type: z.enum([
-        "entrada_efectivo_caja",
-        "salida_efectivo_cambio",
-        "entrada_salida_bbva",
-        "descuadres",
-        "sueldos",
-        "pago_proveedor",
-        "ajuste",
-        "caja_semana",
-        "es_efectivo_cf_hostel",
-        "es_efectivo_cf_tienda"
-      ]),
-      concept: z.string().optional(),
-      amount: z.string(),
-    })).mutation(async ({ input, ctx }) => {
-      await db.createSafeBoxMovement({ ...input, createdBy: ctx.user.id });
-      return { success: true };
-    }),
-    update: adminProcedure.input(z.object({
-      id: z.number(),
-      date: z.string().optional(),
-      type: z.enum([
-        "entrada_efectivo_caja",
-        "salida_efectivo_cambio",
-        "entrada_salida_bbva",
-        "descuadres",
-        "sueldos",
-        "pago_proveedor",
-        "ajuste",
-        "caja_semana",
-        "es_efectivo_cf_hostel",
-        "es_efectivo_cf_tienda"
-      ]).optional(),
-      concept: z.string().optional(),
-      amount: z.string().optional(),
-    })).mutation(async ({ input }) => {
-      const { id, ...data } = input;
-      await db.updateSafeBoxMovement(id, data);
-      return { success: true };
-    }),
-    delete: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
-      await db.deleteSafeBoxMovement(input.id);
-      return { success: true };
-    }),
-    updateCheckStatus: adminProcedure.input(z.object({
-      id: z.number(),
-      checkStatus: z.enum(["unchecked", "correct", "incorrect"]),
-    })).mutation(async ({ input }) => {
-      await db.updateSafeBoxCheckStatus(input.id, input.checkStatus);
-      return { success: true };
-    }),
+    list: adminProcedure
+      .input(
+        z.object({
+          businessId: z.number(),
+          limit: z.number().optional(),
+        })
+      )
+      .query(async ({ input }) => {
+        return db.getSafeBoxMovements(input.businessId, input.limit);
+      }),
+    create: adminProcedure
+      .input(
+        z.object({
+          businessId: z.number(),
+          date: z.string(),
+          type: z.enum([
+            "entrada_efectivo_caja",
+            "salida_efectivo_cambio",
+            "entrada_salida_bbva",
+            "descuadres",
+            "sueldos",
+            "pago_proveedor",
+            "ajuste",
+            "caja_semana",
+            "es_efectivo_cf_hostel",
+            "es_efectivo_cf_tienda",
+          ]),
+          concept: z.string().optional(),
+          amount: z.string(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        await db.createSafeBoxMovement({ ...input, createdBy: ctx.user.id });
+        return { success: true };
+      }),
+    update: adminProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          date: z.string().optional(),
+          type: z
+            .enum([
+              "entrada_efectivo_caja",
+              "salida_efectivo_cambio",
+              "entrada_salida_bbva",
+              "descuadres",
+              "sueldos",
+              "pago_proveedor",
+              "ajuste",
+              "caja_semana",
+              "es_efectivo_cf_hostel",
+              "es_efectivo_cf_tienda",
+            ])
+            .optional(),
+          concept: z.string().optional(),
+          amount: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        await db.updateSafeBoxMovement(id, data);
+        return { success: true };
+      }),
+    delete: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deleteSafeBoxMovement(input.id);
+        return { success: true };
+      }),
+    updateCheckStatus: adminProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          checkStatus: z.enum(["unchecked", "correct", "incorrect"]),
+        })
+      )
+      .mutation(async ({ input }) => {
+        await db.updateSafeBoxCheckStatus(input.id, input.checkStatus);
+        return { success: true };
+      }),
   }),
 
   // ==================== ACCESS CODES (Códigos de Acceso) ====================
@@ -1557,102 +2565,142 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
     list: protectedProcedure.query(async () => {
       return db.getAllAccessCodes();
     }),
-    create: adminProcedure.input(z.object({
-      roomNumber: z.string(),
-      roomCode: z.string(),
-      roomType: z.string(),
-      floor: z.string(),
-      floorLevel: z.string(),
-      entranceCode: z.string().optional(),
-    })).mutation(async ({ input }) => {
-      const id = await db.createAccessCode(input);
-      return { success: true, id };
-    }),
-    update: adminProcedure.input(z.object({
-      id: z.number(),
-      roomNumber: z.string().optional(),
-      roomCode: z.string().optional(),
-      roomType: z.string().optional(),
-      floor: z.string().optional(),
-      floorLevel: z.string().optional(),
-      entranceCode: z.string().optional(),
-    })).mutation(async ({ input }) => {
-      const { id, ...data } = input;
-      await db.updateAccessCode(id, data);
-      return { success: true };
-    }),
-    delete: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
-      await db.deleteAccessCode(input.id);
-      return { success: true };
-    }),
-    updateEntrance: adminProcedure.input(z.object({
-      entranceCode: z.string(),
-    })).mutation(async ({ input }) => {
-      await db.updateEntranceCode(input.entranceCode);
-      return { success: true };
-    }),
+    create: adminProcedure
+      .input(
+        z.object({
+          roomNumber: z.string(),
+          roomCode: z.string(),
+          roomType: z.string(),
+          floor: z.string(),
+          floorLevel: z.string(),
+          entranceCode: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const id = await db.createAccessCode(input);
+        return { success: true, id };
+      }),
+    update: adminProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          roomNumber: z.string().optional(),
+          roomCode: z.string().optional(),
+          roomType: z.string().optional(),
+          floor: z.string().optional(),
+          floorLevel: z.string().optional(),
+          entranceCode: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        await db.updateAccessCode(id, data);
+        return { success: true };
+      }),
+    delete: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deleteAccessCode(input.id);
+        return { success: true };
+      }),
+    updateEntrance: adminProcedure
+      .input(
+        z.object({
+          entranceCode: z.string(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        await db.updateEntranceCode(input.entranceCode);
+        return { success: true };
+      }),
   }),
 
   // ==================== WEEKLY SUMMARY (Resumen Semanal) ====================
   weeklySummary: router({
     // Cash Envelopes
-    getCashEnvelopes: protectedProcedure.input(z.object({
-      weekStart: z.string(), // YYYY-MM-DD
-    })).query(async ({ input }) => {
-      return db.getWeeklyCashEnvelopes(input.weekStart);
-    }),
-    upsertCashEnvelope: adminProcedure.input(z.object({
-      weekStart: z.string(),
-      dayOfWeek: z.number().min(1).max(7),
-      expectedCash: z.string(),
-      actualCash: z.string(),
-      difference: z.string(),
-    })).mutation(async ({ input }) => {
-      const id = await db.upsertWeeklyCashEnvelope(input);
-      return { success: true, id };
-    }),
+    getCashEnvelopes: protectedProcedure
+      .input(
+        z.object({
+          weekStart: z.string(), // YYYY-MM-DD
+        })
+      )
+      .query(async ({ input }) => {
+        return db.getWeeklyCashEnvelopes(input.weekStart);
+      }),
+    upsertCashEnvelope: adminProcedure
+      .input(
+        z.object({
+          weekStart: z.string(),
+          dayOfWeek: z.number().min(1).max(7),
+          expectedCash: z.string(),
+          actualCash: z.string(),
+          difference: z.string(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const id = await db.upsertWeeklyCashEnvelope(input);
+        return { success: true, id };
+      }),
 
     // Availability Sources
     listSources: protectedProcedure.query(async () => {
       return db.getAllAvailabilitySources();
     }),
-    createSource: adminProcedure.input(z.object({
-      name: z.string(),
-      type: z.enum(["bank", "cash_register", "safe"]),
-      displayOrder: z.number().optional(),
-    })).mutation(async ({ input }) => {
-      const id = await db.createAvailabilitySource(input);
-      return { success: true, id };
-    }),
-    updateSource: adminProcedure.input(z.object({
-      id: z.number(),
-      name: z.string().optional(),
-      type: z.enum(["bank", "cash_register", "safe"]).optional(),
-      displayOrder: z.number().optional(),
-    })).mutation(async ({ input }) => {
-      const { id, ...data } = input;
-      await db.updateAvailabilitySource(id, data);
-      return { success: true };
-    }),
-    deleteSource: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
-      await db.deleteAvailabilitySource(input.id);
-      return { success: true };
-    }),
+    createSource: adminProcedure
+      .input(
+        z.object({
+          name: z.string(),
+          type: z.enum(["bank", "cash_register", "safe"]),
+          displayOrder: z.number().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const id = await db.createAvailabilitySource(input);
+        return { success: true, id };
+      }),
+    updateSource: adminProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          name: z.string().optional(),
+          type: z.enum(["bank", "cash_register", "safe"]).optional(),
+          displayOrder: z.number().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        await db.updateAvailabilitySource(id, data);
+        return { success: true };
+      }),
+    deleteSource: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deleteAvailabilitySource(input.id);
+        return { success: true };
+      }),
 
     // Availability Records
-    getAvailabilityRecords: protectedProcedure.input(z.object({
-      weekStart: z.string(), // YYYY-MM-DD
-    })).query(async ({ input }) => {
-      return db.getWeeklyAvailabilityRecords(input.weekStart);
-    }),
-    upsertAvailabilityRecord: adminProcedure.input(z.object({
-      weekStart: z.string(),
-      sourceId: z.number(),
-      amount: z.string(),
-    })).mutation(async ({ input }) => {
-      const id = await db.upsertWeeklyAvailabilityRecord(input);
-      return { success: true, id };
-    }),
+    getAvailabilityRecords: protectedProcedure
+      .input(
+        z.object({
+          weekStart: z.string(), // YYYY-MM-DD
+        })
+      )
+      .query(async ({ input }) => {
+        return db.getWeeklyAvailabilityRecords(input.weekStart);
+      }),
+    upsertAvailabilityRecord: adminProcedure
+      .input(
+        z.object({
+          weekStart: z.string(),
+          sourceId: z.number(),
+          amount: z.string(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const id = await db.upsertWeeklyAvailabilityRecord(input);
+        return { success: true, id };
+      }),
     getAllAvailabilityRecords: protectedProcedure.query(async () => {
       return db.getAllWeeklyAvailabilityRecords();
     }),
@@ -1665,32 +2713,42 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
       return db.getAllHistoricalCashData();
     }),
     // Get historical data by year
-    getByYear: adminProcedure.input(z.object({ year: z.number() })).query(async ({ input }) => {
-      return db.getHistoricalCashDataByYear(input.year);
-    }),
+    getByYear: adminProcedure
+      .input(z.object({ year: z.number() }))
+      .query(async ({ input }) => {
+        return db.getHistoricalCashDataByYear(input.year);
+      }),
     // Get aggregated data for graphics view
     getAggregatedData: adminProcedure.query(async () => {
       return db.getAggregatedHistoricalData();
     }),
     // Import historical data (for initial setup)
-    importData: adminProcedure.input(z.object({
-      year: z.number(),
-      month: z.number(),
-      businessType: z.enum(["hostel", "tienda"]),
-      totalZ: z.string(),
-      totalCash: z.string(),
-      totalCards: z.string(),
-    })).mutation(async ({ input }) => {
-      await db.insertHistoricalCashData(input);
-      return { success: true };
-    }),
+    importData: adminProcedure
+      .input(
+        z.object({
+          year: z.number(),
+          month: z.number(),
+          businessType: z.enum(["hostel", "tienda"]),
+          totalZ: z.string(),
+          totalCash: z.string(),
+          totalCards: z.string(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        await db.insertHistoricalCashData(input);
+        return { success: true };
+      }),
     // Get current year data from cash_closings (2026+)
-    getCurrentYearData: adminProcedure.input(z.object({ year: z.number() })).query(async ({ input }) => {
-      return db.getCurrentYearCashData(input.year);
-    }),
-    getCurrentYearDailyData: adminProcedure.input(z.object({ year: z.number() })).query(async ({ input }) => {
-      return db.getCurrentYearDailyCashSales(input.year);
-    }),
+    getCurrentYearData: adminProcedure
+      .input(z.object({ year: z.number() }))
+      .query(async ({ input }) => {
+        return db.getCurrentYearCashData(input.year);
+      }),
+    getCurrentYearDailyData: adminProcedure
+      .input(z.object({ year: z.number() }))
+      .query(async ({ input }) => {
+        return db.getCurrentYearDailyCashSales(input.year);
+      }),
   }),
 
   // ==================== INVENTORY PRODUCTS ====================
@@ -1698,50 +2756,66 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
     list: adminProcedure.query(async () => {
       return db.getAllInventoryProducts();
     }),
-    create: adminProcedure.input(z.object({
-      handle: z.string().optional(),
-      ref: z.string().optional(),
-      name: z.string(),
-      category: z.string().optional(),
-      cost: z.string(),
-      price: z.string(),
-      inStock: z.string(),
-    })).mutation(async ({ input }) => {
-      const id = await db.createInventoryProduct(input);
-      return { success: true, id };
-    }),
-    update: adminProcedure.input(z.object({
-      id: z.number(),
-      handle: z.string().optional(),
-      ref: z.string().optional(),
-      name: z.string().optional(),
-      category: z.string().optional(),
-      cost: z.string().optional(),
-      price: z.string().optional(),
-      inStock: z.string().optional(),
-    })).mutation(async ({ input }) => {
-      const { id, ...data } = input;
-      await db.updateInventoryProduct(id, data);
-      return { success: true };
-    }),
-    delete: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
-      await db.deleteInventoryProduct(input.id);
-      return { success: true };
-    }),
-    importCSV: adminProcedure.input(z.object({
-      products: z.array(z.object({
-        handle: z.string().optional(),
-        ref: z.string().optional(),
-        name: z.string(),
-        category: z.string().optional(),
-        cost: z.string(),
-        price: z.string(),
-        inStock: z.string(),
-      })),
-    })).mutation(async ({ input }) => {
-      await db.replaceAllInventoryProducts(input.products);
-      return { success: true };
-    }),
+    create: adminProcedure
+      .input(
+        z.object({
+          handle: z.string().optional(),
+          ref: z.string().optional(),
+          name: z.string(),
+          category: z.string().optional(),
+          cost: z.string(),
+          price: z.string(),
+          inStock: z.string(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const id = await db.createInventoryProduct(input);
+        return { success: true, id };
+      }),
+    update: adminProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          handle: z.string().optional(),
+          ref: z.string().optional(),
+          name: z.string().optional(),
+          category: z.string().optional(),
+          cost: z.string().optional(),
+          price: z.string().optional(),
+          inStock: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        await db.updateInventoryProduct(id, data);
+        return { success: true };
+      }),
+    delete: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deleteInventoryProduct(input.id);
+        return { success: true };
+      }),
+    importCSV: adminProcedure
+      .input(
+        z.object({
+          products: z.array(
+            z.object({
+              handle: z.string().optional(),
+              ref: z.string().optional(),
+              name: z.string(),
+              category: z.string().optional(),
+              cost: z.string(),
+              price: z.string(),
+              inStock: z.string(),
+            })
+          ),
+        })
+      )
+      .mutation(async ({ input }) => {
+        await db.replaceAllInventoryProducts(input.products);
+        return { success: true };
+      }),
   }),
 
   // ==================== ORDERS (Pedidos) ====================
@@ -1749,56 +2823,81 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
     list: adminProcedure.query(async () => {
       return db.getAllOrdersWithItems();
     }),
-    getById: adminProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
-      return db.getOrderWithItemsById(input.id);
-    }),
-    create: adminProcedure.input(z.object({
-      supplierName: z.string(),
-      estimatedDate: z.string().optional(),
-      notes: z.string().optional(),
-    })).mutation(async ({ input, ctx }) => {
-      const id = await db.createOrderWithSupplier({ ...input, userId: ctx.user.id });
-      return { success: true, id };
-    }),
-    update: adminProcedure.input(z.object({
-      id: z.number(),
-      supplierName: z.string().optional(),
-      estimatedDate: z.string().optional(),
-      isOrdered: z.boolean().optional(),
-      isReceived: z.boolean().optional(),
-      notes: z.string().optional(),
-    })).mutation(async ({ input }) => {
-      const { id, ...data } = input;
-      await db.updateOrderStatus(id, data);
-      return { success: true };
-    }),
-    delete: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
-      await db.deleteOrderWithItems(input.id);
-      return { success: true };
-    }),
-    addItem: adminProcedure.input(z.object({
-      orderId: z.number(),
-      productName: z.string(),
-      quantity: z.string(),
-      unit: z.string().optional(),
-    })).mutation(async ({ input }) => {
-      const id = await db.createOrderItemForProduct(input);
-      return { success: true, id };
-    }),
-    updateItem: adminProcedure.input(z.object({
-      id: z.number(),
-      productName: z.string().optional(),
-      quantity: z.string().optional(),
-      unit: z.string().optional(),
-    })).mutation(async ({ input }) => {
-      const { id, ...data } = input;
-      await db.updateOrderItemDetails(id, data);
-      return { success: true };
-    }),
-    deleteItem: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
-      await db.deleteOrderItemById(input.id);
-      return { success: true };
-    }),
+    getById: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return db.getOrderWithItemsById(input.id);
+      }),
+    create: adminProcedure
+      .input(
+        z.object({
+          supplierName: z.string(),
+          estimatedDate: z.string().optional(),
+          notes: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const id = await db.createOrderWithSupplier({
+          ...input,
+          userId: ctx.user.id,
+        });
+        return { success: true, id };
+      }),
+    update: adminProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          supplierName: z.string().optional(),
+          estimatedDate: z.string().optional(),
+          isOrdered: z.boolean().optional(),
+          isReceived: z.boolean().optional(),
+          notes: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        await db.updateOrderStatus(id, data);
+        return { success: true };
+      }),
+    delete: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deleteOrderWithItems(input.id);
+        return { success: true };
+      }),
+    addItem: adminProcedure
+      .input(
+        z.object({
+          orderId: z.number(),
+          productName: z.string(),
+          quantity: z.string(),
+          unit: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const id = await db.createOrderItemForProduct(input);
+        return { success: true, id };
+      }),
+    updateItem: adminProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          productName: z.string().optional(),
+          quantity: z.string().optional(),
+          unit: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        await db.updateOrderItemDetails(id, data);
+        return { success: true };
+      }),
+    deleteItem: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deleteOrderItemById(input.id);
+        return { success: true };
+      }),
   }),
 
   // ==================== CHEF SANDWICH ORDERS ====================
@@ -1809,54 +2908,58 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
     getLatest: adminProcedure.query(async () => {
       return db.getLatestChefOrder();
     }),
-    create: adminProcedure.input(z.object({
-      orderDate: z.string(),
-      burguerBoxes: z.number().optional(),
-      burguerUnits: z.number().optional(),
-      mojoBoxes: z.number().optional(),
-      mojoUnits: z.number().optional(),
-      serranitoBoxes: z.number().optional(),
-      serranitoUnits: z.number().optional(),
-      lomoWBoxes: z.number().optional(),
-      lomoWUnits: z.number().optional(),
-      frankfurtBoxes: z.number().optional(),
-      frankfurtUnits: z.number().optional(),
-      tortillaBoxes: z.number().optional(),
-      tortillaUnits: z.number().optional(),
-      empanadoBoxes: z.number().optional(),
-      empanadoUnits: z.number().optional(),
-      bbqBoxes: z.number().optional(),
-      bbqUnits: z.number().optional(),
-      polloBaconBoxes: z.number().optional(),
-      polloBaconUnits: z.number().optional(),
-      carbonaraBoxes: z.number().optional(),
-      carbonaraUnits: z.number().optional(),
-      yorkBoxes: z.number().optional(),
-      yorkUnits: z.number().optional(),
-      serranoBoxes: z.number().optional(),
-      serranoUnits: z.number().optional(),
-      piripiBoxes: z.number().optional(),
-      piripiUnits: z.number().optional(),
-      tostaBarbacoa: z.number().optional(),
-      tostaCarbonara: z.number().optional(),
-      tostaPolloBoxes: z.number().optional(),
-      tostaPolloUnits: z.number().optional(),
-      tostaRuloCabra: z.number().optional(),
-      tosta3Quesos: z.number().optional(),
-      tostaYork: z.number().optional(),
-      bocapizzaYork: z.number().optional(),
-      bocapizzaBacon: z.number().optional(),
-      bocapizzaBBQ: z.number().optional(),
-      bocapizza4Q: z.number().optional(),
-      bocapizzaAtun: z.number().optional(),
-    })).mutation(async ({ input }) => {
-      const id = await db.createChefOrder(input);
-      return { success: true, id };
-    }),
+    create: adminProcedure
+      .input(
+        z.object({
+          orderDate: z.string(),
+          burguerBoxes: z.number().optional(),
+          burguerUnits: z.number().optional(),
+          mojoBoxes: z.number().optional(),
+          mojoUnits: z.number().optional(),
+          serranitoBoxes: z.number().optional(),
+          serranitoUnits: z.number().optional(),
+          lomoWBoxes: z.number().optional(),
+          lomoWUnits: z.number().optional(),
+          frankfurtBoxes: z.number().optional(),
+          frankfurtUnits: z.number().optional(),
+          tortillaBoxes: z.number().optional(),
+          tortillaUnits: z.number().optional(),
+          empanadoBoxes: z.number().optional(),
+          empanadoUnits: z.number().optional(),
+          bbqBoxes: z.number().optional(),
+          bbqUnits: z.number().optional(),
+          polloBaconBoxes: z.number().optional(),
+          polloBaconUnits: z.number().optional(),
+          carbonaraBoxes: z.number().optional(),
+          carbonaraUnits: z.number().optional(),
+          yorkBoxes: z.number().optional(),
+          yorkUnits: z.number().optional(),
+          serranoBoxes: z.number().optional(),
+          serranoUnits: z.number().optional(),
+          piripiBoxes: z.number().optional(),
+          piripiUnits: z.number().optional(),
+          tostaBarbacoa: z.number().optional(),
+          tostaCarbonara: z.number().optional(),
+          tostaPolloBoxes: z.number().optional(),
+          tostaPolloUnits: z.number().optional(),
+          tostaRuloCabra: z.number().optional(),
+          tosta3Quesos: z.number().optional(),
+          tostaYork: z.number().optional(),
+          bocapizzaYork: z.number().optional(),
+          bocapizzaBacon: z.number().optional(),
+          bocapizzaBBQ: z.number().optional(),
+          bocapizza4Q: z.number().optional(),
+          bocapizzaAtun: z.number().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const id = await db.createChefOrder(input);
+        return { success: true, id };
+      }),
   }),
 
   // ==================== CHECK-IN ====================
-    checkin: router({
+  checkin: router({
     tablet: router({
       getLegalSettings: tabletProcedure.query(async () => {
         const settings = await db.getHostelSettings();
@@ -1868,271 +2971,435 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           privacyUrlEn: settings?.privacyUrlEn || "",
         };
       }),
-      registerGroup: tabletProcedure.input(z.object({
-        language: z.enum(["es", "en"]),
-        guests: z.array(z.object({
-          firstName: z.string().trim().min(1),
-          lastName: z.string().trim().min(1),
-          documentType: z.enum(["NIF", "NIE", "CAR", "ID", "PAS", "OTRO"]),
-          documentNumber: z.string().trim().min(1),
-          documentSupport: z.string().trim().optional(),
-          nationality: z.string().trim().min(1),
-          gender: z.enum(["Hombre", "Mujer", "Otro"]),
-          birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-          documentExpiry: z.string().optional(),
-          street: z.string().trim().min(1),
-          addressExtra: z.string().trim().optional(),
-          postalCode: z.string().trim().min(1),
-          city: z.string().trim().min(1),
-          province: z.string().trim().optional(),
-          country: z.string().trim().min(1),
-          phone: z.string().trim().min(1),
-          email: z.string().email(),
-          signature: z.string().min(100),
-          acceptedTerms: z.literal(true),
-          acceptedPrivacy: z.literal(true),
-        })).min(1).max(12),
-      })).mutation(async ({ input, ctx }) => {
-        input.guests.forEach((guest) => assertRequiredDocumentSupport(guest.documentType, guest.nationality, guest.documentSupport));
-        const groupId = `tablet-${randomBytes(12).toString("hex")}`;
-        const stayDates = getMadridStayDates();
-        const guestIds: number[] = [];
-        for (let index = 0; index < input.guests.length; index += 1) {
-          const guest = input.guests[index];
-          const guestId = await db.createGuest({
-            ...guest,
-            documentSupport: normalizedDocumentSupport(guest.documentType, guest.nationality, guest.documentSupport) || null,
-            documentExpiry: guest.documentExpiry || null,
-            addressExtra: guest.addressExtra || null,
-            province: guest.province || null,
-            reservationNumber: null,
-            reservationOrigin: "Walk In",
-            checkInDate: stayDates.checkInDate,
-            checkOutDate: stayDates.checkOutDate,
-            roomNumber: null,
-            roomType: null,
-            paymentType: "EFECT",
-            amountPaid: "0",
-            amountPending: "0",
-            numberOfGuests: input.guests.length,
-            signature: guest.signature,
-            acceptedTerms: guest.acceptedTerms,
-            acceptedPrivacy: guest.acceptedPrivacy,
-            isMainGuest: index === 0,
-            groupId,
-            status: "completed",
-            checkinType: "presencial",
-            language: input.language,
-            sendCodes: false,
-            createdBy: ctx.user.id,
-          });
-          guestIds.push(guestId);
-          const { generateGuestPDF } = await import("./generateGuestPDF");
-          await generateGuestPDF(guestId);
-        }
-        return { success: true, guestIds, groupId };
-      }),
-      scanDocument: tabletProcedure.input(z.object({
-        imageData: z.string().min(100).max(12_000_000),
-        contentType: z.enum(["image/jpeg", "image/png", "image/webp"]),
-      })).mutation(async ({ input }) => {
-        const apiKeySetting = await db.getSetting("openai_api_key");
-        if (!apiKeySetting?.settingValue) {
-          throw new TRPCError({ code: "PRECONDITION_FAILED", message: "La clave de OpenAI no está configurada" });
-        }
-        const response = await fetch("https://api.openai.com/v1/chat/completions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKeySetting.settingValue}` },
-          body: JSON.stringify({
-            model: "gpt-4o",
-            response_format: { type: "json_object" },
-            messages: [
-              { role: "system", content: "Extract only legible guest-registration data from a Spanish DNI, NIE, driving licence, passport, or national ID. Return valid JSON with fields firstName,lastName,documentType (NIF,NIE,CAR,PAS,OTRO),documentNumber,documentSupport,nationality (ISO 3),gender (Hombre,Mujer,Otro),birthDate (YYYY-MM-DD),documentExpiry (YYYY-MM-DD or empty),street,postalCode,city,province,country (ISO 3),phone,email. Use CAR only for a Spanish driving licence. Never invent values: use an empty string when unavailable." },
-              { role: "user", content: [{ type: "text", text: "Read this identity document. The image is used only for this request and must not be retained." }, { type: "image_url", image_url: { url: input.imageData, detail: "high" } }] },
-            ],
-          }),
-        });
-        if (!response.ok) throw new TRPCError({ code: "BAD_GATEWAY", message: "No se pudo analizar el documento" });
-        const completion = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
-        const content = completion.choices?.[0]?.message?.content || "{}";
-        let extracted: Record<string, string> = {};
-        try { extracted = JSON.parse(content); } catch { throw new TRPCError({ code: "BAD_GATEWAY", message: "No se pudo interpretar el documento" }); }
-        return { fields: extracted };
-      }),
+      registerGroup: tabletProcedure
+        .input(
+          z.object({
+            language: z.enum(["es", "en"]),
+            guests: z
+              .array(
+                z.object({
+                  firstName: z.string().trim().min(1),
+                  lastName: z.string().trim().min(1),
+                  documentType: z.enum([
+                    "NIF",
+                    "NIE",
+                    "CAR",
+                    "ID",
+                    "PAS",
+                    "OTRO",
+                  ]),
+                  documentNumber: z.string().trim().min(1),
+                  documentSupport: z.string().trim().optional(),
+                  nationality: z.string().trim().min(1),
+                  gender: z.enum(["Hombre", "Mujer", "Otro"]),
+                  birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+                  documentExpiry: z.string().optional(),
+                  street: z.string().trim().min(1),
+                  addressExtra: z.string().trim().optional(),
+                  postalCode: z.string().trim().min(1),
+                  city: z.string().trim().min(1),
+                  province: z.string().trim().optional(),
+                  country: z.string().trim().min(1),
+                  phone: z.string().trim().min(1),
+                  email: z.string().email(),
+                  signature: z.string().min(100),
+                  acceptedTerms: z.literal(true),
+                  acceptedPrivacy: z.literal(true),
+                })
+              )
+              .min(1)
+              .max(12),
+          })
+        )
+        .mutation(async ({ input, ctx }) => {
+          input.guests.forEach(guest =>
+            assertRequiredDocumentSupport(
+              guest.documentType,
+              guest.nationality,
+              guest.documentSupport
+            )
+          );
+          const groupId = `tablet-${randomBytes(12).toString("hex")}`;
+          const stayDates = getMadridStayDates();
+          const guestIds: number[] = [];
+          for (let index = 0; index < input.guests.length; index += 1) {
+            const guest = input.guests[index];
+            const guestId = await db.createGuest({
+              ...guest,
+              documentSupport:
+                normalizedDocumentSupport(
+                  guest.documentType,
+                  guest.nationality,
+                  guest.documentSupport
+                ) || null,
+              documentExpiry: guest.documentExpiry || null,
+              addressExtra: guest.addressExtra || null,
+              province: guest.province || null,
+              reservationNumber: null,
+              reservationOrigin: "Walk In",
+              checkInDate: stayDates.checkInDate,
+              checkOutDate: stayDates.checkOutDate,
+              roomNumber: null,
+              roomType: null,
+              paymentType: "EFECT",
+              amountPaid: "0",
+              amountPending: "0",
+              numberOfGuests: input.guests.length,
+              signature: guest.signature,
+              acceptedTerms: guest.acceptedTerms,
+              acceptedPrivacy: guest.acceptedPrivacy,
+              isMainGuest: index === 0,
+              groupId,
+              status: "completed",
+              checkinType: "presencial",
+              language: input.language,
+              sendCodes: false,
+              createdBy: ctx.user.id,
+            });
+            guestIds.push(guestId);
+            const { generateGuestPDF } = await import("./generateGuestPDF");
+            await generateGuestPDF(guestId);
+          }
+          return { success: true, guestIds, groupId };
+        }),
+      scanDocument: tabletProcedure
+        .input(
+          z.object({
+            imageData: z.string().min(100).max(12_000_000),
+            contentType: z.enum(["image/jpeg", "image/png", "image/webp"]),
+          })
+        )
+        .mutation(async ({ input }) => {
+          const apiKeySetting = await db.getSetting("openai_api_key");
+          if (!apiKeySetting?.settingValue) {
+            throw new TRPCError({
+              code: "PRECONDITION_FAILED",
+              message: "La clave de OpenAI no está configurada",
+            });
+          }
+          const response = await fetch(
+            "https://api.openai.com/v1/chat/completions",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${apiKeySetting.settingValue}`,
+              },
+              body: JSON.stringify({
+                model: "gpt-4o",
+                response_format: { type: "json_object" },
+                messages: [
+                  {
+                    role: "system",
+                    content:
+                      "Extract only legible guest-registration data from a Spanish DNI, NIE, driving licence, passport, or national ID. Return valid JSON with fields firstName,lastName,documentType (NIF,NIE,CAR,PAS,OTRO),documentNumber,documentSupport,nationality (ISO 3),gender (Hombre,Mujer,Otro),birthDate (YYYY-MM-DD),documentExpiry (YYYY-MM-DD or empty),street,postalCode,city,province,country (ISO 3),phone,email. Use CAR only for a Spanish driving licence. Never invent values: use an empty string when unavailable.",
+                  },
+                  {
+                    role: "user",
+                    content: [
+                      {
+                        type: "text",
+                        text: "Read this identity document. The image is used only for this request and must not be retained.",
+                      },
+                      {
+                        type: "image_url",
+                        image_url: { url: input.imageData, detail: "high" },
+                      },
+                    ],
+                  },
+                ],
+              }),
+            }
+          );
+          if (!response.ok)
+            throw new TRPCError({
+              code: "BAD_GATEWAY",
+              message: "No se pudo analizar el documento",
+            });
+          const completion = (await response.json()) as {
+            choices?: Array<{ message?: { content?: string } }>;
+          };
+          const content = completion.choices?.[0]?.message?.content || "{}";
+          let extracted: Record<string, string> = {};
+          try {
+            extracted = JSON.parse(content);
+          } catch {
+            throw new TRPCError({
+              code: "BAD_GATEWAY",
+              message: "No se pudo interpretar el documento",
+            });
+          }
+          return { fields: extracted };
+        }),
     }),
     // Guests
     guests: router({
       list: protectedProcedure.query(async () => {
         return db.getAllGuests();
       }),
-      search: protectedProcedure.input(z.object({
-        search: z.string().optional(),
-        startDate: z.string().optional(),
-        endDate: z.string().optional(),
-        status: z.string().optional(),
-      })).query(async ({ input }) => {
-        return db.searchGuests(input);
-      }),
-      getById: protectedProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
-        return db.getGuestById(input.id);
-      }),
-      create: publicProcedure.input(z.object({
-        firstName: z.string(),
-        lastName: z.string(),
-        documentNumber: z.string(),
-        documentSupport: z.string().optional(),
-        documentType: z.string().optional(),
-        gender: z.enum(["Hombre", "Mujer", "Otro"]).optional(),
-        nationality: z.string().optional(),
-        birthDate: z.string().optional(),
-        documentExpiry: z.string().optional(),
-        street: z.string().optional(),
-        addressExtra: z.string().optional(),
-        postalCode: z.string().optional(),
-        city: z.string().optional(),
-        province: z.string().optional(),
-        country: z.string().optional(),
-        phone: z.string().optional(),
-        phoneExtra: z.string().optional(),
-        email: z.string().optional(),
-        reservationNumber: z.string().optional(),
-        checkInDate: z.string().optional(),
-        checkOutDate: z.string().optional(),
-        roomNumber: z.string().optional(),
-        roomType: z.string().optional(),
-        roomCode: z.string().optional(),
-        entranceCode: z.string().optional(),
-        numberOfRooms: z.number().optional(),
-        hasInternet: z.boolean().optional(),
-        accommodationType: z.enum(["S.A. (Solo Aloj.)", "A.D. (Aloj. y Desayuno)", "M.P. (Media Pensión)", "P.C. (Pensión Completa)"]).optional(),
-        reservationOrigin: z.enum(["Walk In", "Booking.com", "Airbnb", "Expedia", "Website", "Phone", "Email", "Other"]).optional(),
-        paymentType: z.enum(["EFECT", "TARJT", "TRANS", "PLATF", "MOVIL", "TREG", "DESTI", "OTRO"]).optional(),
-        paymentDate: z.string().optional(),
-        amountPaid: z.string().optional(),
-        amountPending: z.string().optional(),
-        paymentHolder: z.string().optional(),
-        paymentMethod: z.string().optional(),
-        numberOfGuests: z.number().optional(),
-        signature: z.string().optional(),
-        acceptedTerms: z.boolean().optional(),
-        acceptedPrivacy: z.boolean().optional(),
-        isMainGuest: z.boolean().optional(),
-        groupId: z.string().optional(),
-        status: z.enum(["pending", "completed", "online", "cancelled"]).optional(),
-        checkinType: z.enum(["presencial", "anticipado", "online"]).optional(),
-        language: z.enum(["es", "en"]).optional(),
-      })).mutation(async ({ input, ctx }) => {
-        assertRequiredDocumentSupport(input.documentType, input.nationality, input.documentSupport);
-        // Para check-ins públicos (anticipado), createdBy será null
-        const id = await db.createGuest({ ...input, documentSupport: normalizedDocumentSupport(input.documentType, input.nationality, input.documentSupport), createdBy: ctx.user?.id || null });
-        
-        // Generar PDF automáticamente si el check-in está completado
-        if (input.status === 'completed') {
-          const { generateGuestPDF } = await import('./generateGuestPDF');
-          await generateGuestPDF(id);
-        }
-        
-        // Si es check-in anticipado y tiene email, enviar confirmación
-        if (input.checkinType === 'anticipado' && input.email) {
-          const { sendCheckinAnticipadoConfirmation, sendCheckinAnticipadoNotificationToReception } = await import('./email');
-          
-          // Enviar confirmación al huésped
-          await sendCheckinAnticipadoConfirmation({
-            firstName: input.firstName,
-            lastName: input.lastName,
-            email: input.email,
-            documentNumber: input.documentNumber,
-            checkInDate: input.checkInDate,
-            language: input.language || 'es',
+      search: protectedProcedure
+        .input(
+          z.object({
+            search: z.string().optional(),
+            startDate: z.string().optional(),
+            endDate: z.string().optional(),
+            status: z.string().optional(),
+          })
+        )
+        .query(async ({ input }) => {
+          return db.searchGuests(input);
+        }),
+      getById: protectedProcedure
+        .input(z.object({ id: z.number() }))
+        .query(async ({ input }) => {
+          return db.getGuestById(input.id);
+        }),
+      create: publicProcedure
+        .input(
+          z.object({
+            firstName: z.string(),
+            lastName: z.string(),
+            documentNumber: z.string(),
+            documentSupport: z.string().optional(),
+            documentType: z.string().optional(),
+            gender: z.enum(["Hombre", "Mujer", "Otro"]).optional(),
+            nationality: z.string().optional(),
+            birthDate: z.string().optional(),
+            documentExpiry: z.string().optional(),
+            street: z.string().optional(),
+            addressExtra: z.string().optional(),
+            postalCode: z.string().optional(),
+            city: z.string().optional(),
+            province: z.string().optional(),
+            country: z.string().optional(),
+            phone: z.string().optional(),
+            phoneExtra: z.string().optional(),
+            email: z.string().optional(),
+            reservationNumber: z.string().optional(),
+            checkInDate: z.string().optional(),
+            checkOutDate: z.string().optional(),
+            roomNumber: z.string().optional(),
+            roomType: z.string().optional(),
+            roomCode: z.string().optional(),
+            entranceCode: z.string().optional(),
+            numberOfRooms: z.number().optional(),
+            hasInternet: z.boolean().optional(),
+            accommodationType: z
+              .enum([
+                "S.A. (Solo Aloj.)",
+                "A.D. (Aloj. y Desayuno)",
+                "M.P. (Media Pensión)",
+                "P.C. (Pensión Completa)",
+              ])
+              .optional(),
+            reservationOrigin: z
+              .enum([
+                "Walk In",
+                "Booking.com",
+                "Airbnb",
+                "Expedia",
+                "Website",
+                "Phone",
+                "Email",
+                "Other",
+              ])
+              .optional(),
+            paymentType: z
+              .enum([
+                "EFECT",
+                "TARJT",
+                "TRANS",
+                "PLATF",
+                "MOVIL",
+                "TREG",
+                "DESTI",
+                "OTRO",
+              ])
+              .optional(),
+            paymentDate: z.string().optional(),
+            amountPaid: z.string().optional(),
+            amountPending: z.string().optional(),
+            paymentHolder: z.string().optional(),
+            paymentMethod: z.string().optional(),
+            numberOfGuests: z.number().optional(),
+            signature: z.string().optional(),
+            acceptedTerms: z.boolean().optional(),
+            acceptedPrivacy: z.boolean().optional(),
+            isMainGuest: z.boolean().optional(),
+            groupId: z.string().optional(),
+            status: z
+              .enum(["pending", "completed", "online", "cancelled"])
+              .optional(),
+            checkinType: z
+              .enum(["presencial", "anticipado", "online"])
+              .optional(),
+            language: z.enum(["es", "en"]).optional(),
+          })
+        )
+        .mutation(async ({ input, ctx }) => {
+          assertRequiredDocumentSupport(
+            input.documentType,
+            input.nationality,
+            input.documentSupport
+          );
+          // Para check-ins públicos (anticipado), createdBy será null
+          const id = await db.createGuest({
+            ...input,
+            documentSupport: normalizedDocumentSupport(
+              input.documentType,
+              input.nationality,
+              input.documentSupport
+            ),
+            createdBy: ctx.user?.id || null,
           });
-          
-          // Enviar notificación a recepción
-          await sendCheckinAnticipadoNotificationToReception({
-            firstName: input.firstName,
-            lastName: input.lastName,
-            email: input.email,
-            phone: input.phone,
-            documentNumber: input.documentNumber,
-            nationality: input.nationality,
-            checkInDate: input.checkInDate,
-            checkOutDate: input.checkOutDate,
-            reservationNumber: input.reservationNumber,
-            documentType: input.documentType,
-            documentSupport: input.documentSupport,
-            gender: input.gender,
-            birthDate: input.birthDate,
-            street: input.street,
-            addressExtra: input.addressExtra,
-            postalCode: input.postalCode,
-            city: input.city,
-            province: input.province,
-            country: input.country,
-            roomNumber: input.roomNumber,
-            roomType: input.roomType,
-            reservationOrigin: input.reservationOrigin,
-            numberOfGuests: input.numberOfGuests,
-          });
-        }
-        
-        return { success: true, id };
-      }),
-      update: protectedProcedure.input(z.object({
-        id: z.number(),
-        firstName: z.string().optional(),
-        lastName: z.string().optional(),
-        documentNumber: z.string().optional(),
-        documentType: z.string().optional(),
-        gender: z.enum(["Hombre", "Mujer", "Otro"]).optional(),
-        nationality: z.string().optional(),
-        birthDate: z.string().optional(),
-        documentExpiry: z.string().optional(),
-        street: z.string().optional(),
-        addressExtra: z.string().optional(),
-        postalCode: z.string().optional(),
-        city: z.string().optional(),
-        province: z.string().optional(),
-        country: z.string().optional(),
-        phone: z.string().optional(),
-        phoneExtra: z.string().optional(),
-        email: z.string().optional(),
-        reservationNumber: z.string().optional(),
-        checkInDate: z.string().optional(),
-        checkOutDate: z.string().optional(),
-        roomNumber: z.string().optional(),
-        roomType: z.string().optional(),
-        roomCode: z.string().optional(),
-        entranceCode: z.string().optional(),
-        numberOfRooms: z.number().optional(),
-        hasInternet: z.boolean().optional(),
-        accommodationType: z.enum(["S.A. (Solo Aloj.)", "A.D. (Aloj. y Desayuno)", "M.P. (Media Pensión)", "P.C. (Pensión Completa)"]).optional(),
-        reservationOrigin: z.enum(["Walk In", "Booking.com", "Airbnb", "Expedia", "Website", "Phone", "Email", "Other"]).optional(),
-        paymentType: z.enum(["EFECT", "TARJT", "TRANS", "PLATF", "MOVIL", "TREG", "DESTI", "OTRO"]).optional(),
-        paymentDate: z.string().optional(),
-        amountPaid: z.string().optional(),
-        amountPending: z.string().optional(),
-        paymentHolder: z.string().optional(),
-        paymentMethod: z.string().optional(),
-        numberOfGuests: z.number().optional(),
-        signature: z.string().optional(),
-        acceptedTerms: z.boolean().optional(),
-        acceptedPrivacy: z.boolean().optional(),
-        status: z.enum(["pending", "completed", "online", "cancelled"]).optional(),
-      })).mutation(async ({ input }) => {
-        const { id, ...data } = input;
-        await db.updateGuest(id, data);
-        
-        // Generar PDF automáticamente si se cambia el status a completed
-        if (data.status === 'completed') {
-          const { generateGuestPDF } = await import('./generateGuestPDF');
-          await generateGuestPDF(id);
-        }
-        
-        return { success: true };
-      }),
-      delete: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
-        await db.deleteGuest(input.id);
-        return { success: true };
-      }),
+
+          // Generar PDF automáticamente si el check-in está completado
+          if (input.status === "completed") {
+            const { generateGuestPDF } = await import("./generateGuestPDF");
+            await generateGuestPDF(id);
+          }
+
+          // Si es check-in anticipado y tiene email, enviar confirmación
+          if (input.checkinType === "anticipado" && input.email) {
+            const {
+              sendCheckinAnticipadoConfirmation,
+              sendCheckinAnticipadoNotificationToReception,
+            } = await import("./email");
+
+            // Enviar confirmación al huésped
+            await sendCheckinAnticipadoConfirmation({
+              firstName: input.firstName,
+              lastName: input.lastName,
+              email: input.email,
+              documentNumber: input.documentNumber,
+              checkInDate: input.checkInDate,
+              language: input.language || "es",
+            });
+
+            // Enviar notificación a recepción
+            await sendCheckinAnticipadoNotificationToReception({
+              firstName: input.firstName,
+              lastName: input.lastName,
+              email: input.email,
+              phone: input.phone,
+              documentNumber: input.documentNumber,
+              nationality: input.nationality,
+              checkInDate: input.checkInDate,
+              checkOutDate: input.checkOutDate,
+              reservationNumber: input.reservationNumber,
+              documentType: input.documentType,
+              documentSupport: input.documentSupport,
+              gender: input.gender,
+              birthDate: input.birthDate,
+              street: input.street,
+              addressExtra: input.addressExtra,
+              postalCode: input.postalCode,
+              city: input.city,
+              province: input.province,
+              country: input.country,
+              roomNumber: input.roomNumber,
+              roomType: input.roomType,
+              reservationOrigin: input.reservationOrigin,
+              numberOfGuests: input.numberOfGuests,
+            });
+          }
+
+          return { success: true, id };
+        }),
+      update: protectedProcedure
+        .input(
+          z.object({
+            id: z.number(),
+            firstName: z.string().optional(),
+            lastName: z.string().optional(),
+            documentNumber: z.string().optional(),
+            documentType: z.string().optional(),
+            gender: z.enum(["Hombre", "Mujer", "Otro"]).optional(),
+            nationality: z.string().optional(),
+            birthDate: z.string().optional(),
+            documentExpiry: z.string().optional(),
+            street: z.string().optional(),
+            addressExtra: z.string().optional(),
+            postalCode: z.string().optional(),
+            city: z.string().optional(),
+            province: z.string().optional(),
+            country: z.string().optional(),
+            phone: z.string().optional(),
+            phoneExtra: z.string().optional(),
+            email: z.string().optional(),
+            reservationNumber: z.string().optional(),
+            checkInDate: z.string().optional(),
+            checkOutDate: z.string().optional(),
+            roomNumber: z.string().optional(),
+            roomType: z.string().optional(),
+            roomCode: z.string().optional(),
+            entranceCode: z.string().optional(),
+            numberOfRooms: z.number().optional(),
+            hasInternet: z.boolean().optional(),
+            accommodationType: z
+              .enum([
+                "S.A. (Solo Aloj.)",
+                "A.D. (Aloj. y Desayuno)",
+                "M.P. (Media Pensión)",
+                "P.C. (Pensión Completa)",
+              ])
+              .optional(),
+            reservationOrigin: z
+              .enum([
+                "Walk In",
+                "Booking.com",
+                "Airbnb",
+                "Expedia",
+                "Website",
+                "Phone",
+                "Email",
+                "Other",
+              ])
+              .optional(),
+            paymentType: z
+              .enum([
+                "EFECT",
+                "TARJT",
+                "TRANS",
+                "PLATF",
+                "MOVIL",
+                "TREG",
+                "DESTI",
+                "OTRO",
+              ])
+              .optional(),
+            paymentDate: z.string().optional(),
+            amountPaid: z.string().optional(),
+            amountPending: z.string().optional(),
+            paymentHolder: z.string().optional(),
+            paymentMethod: z.string().optional(),
+            numberOfGuests: z.number().optional(),
+            signature: z.string().optional(),
+            acceptedTerms: z.boolean().optional(),
+            acceptedPrivacy: z.boolean().optional(),
+            status: z
+              .enum(["pending", "completed", "online", "cancelled"])
+              .optional(),
+          })
+        )
+        .mutation(async ({ input }) => {
+          const { id, ...data } = input;
+          await db.updateGuest(id, data);
+
+          // Generar PDF automáticamente si se cambia el status a completed
+          if (data.status === "completed") {
+            const { generateGuestPDF } = await import("./generateGuestPDF");
+            await generateGuestPDF(id);
+          }
+
+          return { success: true };
+        }),
+      delete: adminProcedure
+        .input(z.object({ id: z.number() }))
+        .mutation(async ({ input }) => {
+          await db.deleteGuest(input.id);
+          return { success: true };
+        }),
     }),
 
     // Enlaces públicos de un solo uso para check-in completamente online.
@@ -2140,317 +3407,493 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
       list: protectedProcedure.query(async () => {
         return db.getOnlineCheckinLinks();
       }),
-      createLink: protectedProcedure.input(z.object({
-        email: z.string().trim().email().or(z.literal("")).optional().default(""),
-        language: z.enum(["es", "en"]).default("es"),
-        reservationNumber: z.string().optional(),
-        reservationOrigin: z.enum(["Walk In", "Booking.com", "Airbnb", "Expedia", "Website", "Phone", "Email", "Other"]).default("Website"),
-        checkInDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-        checkOutDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-        roomNumber: z.string().min(1),
-        numberOfRooms: z.number().int().min(1).default(1),
-        numberOfGuests: z.number().int().min(1).default(1),
-        paymentType: z.enum(["EFECT", "TARJT", "TRANS", "PLATF", "MOVIL", "TREG", "DESTI", "OTRO"]).default("TRANS"),
-        amountPaid: z.string().default("0"),
-        amountPending: z.string().default("0"),
-      })).mutation(async ({ input, ctx }) => {
-        if (input.checkOutDate <= input.checkInDate) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "La fecha de salida debe ser posterior a la fecha de llegada" });
-        }
+      createLink: protectedProcedure
+        .input(
+          z.object({
+            email: z
+              .string()
+              .trim()
+              .email()
+              .or(z.literal(""))
+              .optional()
+              .default(""),
+            prefilledFirstName: z.string().trim().max(120).optional(),
+            prefilledLastName: z.string().trim().max(160).optional(),
+            prefilledPhone: z.string().trim().max(80).optional(),
+            language: z.enum(["es", "en"]).default("es"),
+            reservationNumber: z.string().optional(),
+            reservationOrigin: z
+              .enum([
+                "Walk In",
+                "Booking.com",
+                "Airbnb",
+                "Expedia",
+                "Website",
+                "Phone",
+                "Email",
+                "Other",
+              ])
+              .default("Website"),
+            checkInDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+            checkOutDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+            roomNumber: z.string().min(1),
+            numberOfRooms: z.number().int().min(1).default(1),
+            numberOfGuests: z.number().int().min(1).default(1),
+            paymentType: z
+              .enum([
+                "EFECT",
+                "TARJT",
+                "TRANS",
+                "PLATF",
+                "MOVIL",
+                "TREG",
+                "DESTI",
+                "OTRO",
+              ])
+              .default("TRANS"),
+            amountPaid: z.string().default("0"),
+            amountPending: z.string().default("0"),
+          })
+        )
+        .mutation(async ({ input, ctx }) => {
+          if (input.checkOutDate <= input.checkInDate) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message:
+                "La fecha de salida debe ser posterior a la fecha de llegada",
+            });
+          }
 
-        const accessCodeList = await db.getAllAccessCodes();
-        const room = accessCodeList.find((code) => code.roomNumber === input.roomNumber);
-        if (!room || room.roomNumber === "ENTRADA") {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Selecciona una habitación con códigos de acceso configurados" });
-        }
-
-        const entrance = accessCodeList.find((code) => code.roomNumber === "ENTRADA");
-        const hostelSettings = await db.getHostelSettings();
-        const token = randomBytes(32).toString("hex");
-        const linkId = await db.createOnlineCheckinLink({
-          token,
-          email: input.email.trim().toLowerCase(),
-          language: input.language,
-          reservationNumber: input.reservationNumber?.trim() || null,
-          reservationOrigin: input.reservationOrigin,
-          checkInDate: input.checkInDate,
-          checkOutDate: input.checkOutDate,
-          roomNumber: room.roomNumber,
-          roomType: room.roomType,
-          roomCode: room.roomCode,
-          entranceCode: room.entranceCode || entrance?.roomCode || hostelSettings?.defaultEntranceCode || null,
-          numberOfRooms: input.numberOfRooms,
-          numberOfGuests: input.numberOfGuests || defaultGuestsForRoomType(room.roomType),
-          paymentType: input.paymentType,
-          amountPaid: input.amountPaid || "0",
-          amountPending: input.amountPending || "0",
-          createdBy: ctx.user.id,
-          // La guía se mantiene accesible durante el día posterior a la llegada.
-          expiresAt: dayAfter(input.checkInDate),
-        });
-
-        return { id: linkId, token };
-      }),
-      cancel: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
-        await db.updateOnlineCheckinLink(input.id, { status: "cancelled" });
-        return { success: true };
-      }),
-      getPublic: publicProcedure.input(z.object({ token: z.string().length(64) })).query(async ({ input }) => {
-        const link = await db.getOnlineCheckinLinkByToken(input.token);
-        if (!link) throw new TRPCError({ code: "NOT_FOUND", message: "El enlace de check-in no existe" });
-
-        const today = new Date().toISOString().slice(0, 10);
-        const guideExpiry = effectiveGuideExpiry(link);
-        if (link.expiresAt !== guideExpiry) {
-          await db.updateOnlineCheckinLink(link.id, { expiresAt: guideExpiry });
-          link.expiresAt = guideExpiry;
-        }
-        if (!canAccessOnlineGuide(link, today)) {
-          if (link.status === "pending") await db.updateOnlineCheckinLink(link.id, { status: "expired" });
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Este enlace ya no está disponible" });
-        }
-
-        const settings = await db.getHostelSettings();
-        const accessCodeList = await db.getAllAccessCodes();
-        const room = accessCodeList.find((code) => code.roomNumber === link.roomNumber);
-        const completedGuest = link.status === "completed" && link.guestId ? await db.getGuestById(link.guestId) : null;
-        return {
-          completed: link.status === "completed",
-          guestName: completedGuest?.firstName || "",
-          email: link.email,
-          language: link.language,
-          reservationNumber: link.reservationNumber,
-          checkInDate: link.checkInDate,
-          checkOutDate: link.checkOutDate,
-          roomType: link.roomType,
-          roomNumber: link.roomNumber,
-          roomCode: link.status === "completed" ? link.roomCode : "",
-          entranceCode: link.status === "completed" ? link.entranceCode : "",
-          floor: room?.floor || "",
-          floorLevel: room?.floorLevel || "",
-          numberOfGuests: link.numberOfGuests,
-          hostelName: settings?.hostelName || "The Spot Central Hostel",
-          termsUrlEs: settings?.termsUrlEs || "",
-          termsUrlEn: settings?.termsUrlEn || "",
-          privacyUrlEs: settings?.privacyUrlEs || "",
-          privacyUrlEn: settings?.privacyUrlEn || "",
-          welcomeMessageEs: settings?.welcomeMessageEs || "",
-          welcomeMessageEn: settings?.welcomeMessageEn || "",
-          hostelAddress: settings?.hostelAddress || "",
-          hostelPhone: settings?.hostelPhone || "",
-          hostelEmail: settings?.hostelEmail || "",
-          wifiPassword: settings?.wifiPassword || "",
-          arrivalMapUrl: settings?.arrivalMapUrl || "",
-          arrivalIntroEs: settings?.arrivalIntroEs || "",
-          arrivalIntroEn: settings?.arrivalIntroEn || "",
-          keyInstructionsEs: settings?.keyInstructionsEs || "",
-          keyInstructionsEn: settings?.keyInstructionsEn || "",
-          commonAreasEs: settings?.commonAreasEs || "",
-          commonAreasEn: settings?.commonAreasEn || "",
-          houseRulesEs: settings?.houseRulesEs || "",
-          houseRulesEn: settings?.houseRulesEn || "",
-        };
-      }),
-      completePublic: publicProcedure.input(z.object({
-        token: z.string().length(64),
-        language: z.enum(["es", "en"]),
-        firstName: z.string().min(1),
-        lastName: z.string().min(1),
-        documentNumber: z.string().min(1),
-        documentSupport: z.string().optional(),
-        documentType: z.enum(["NIF", "NIE", "CAR", "ID", "PAS", "OTRO"]),
-        gender: z.enum(["Hombre", "Mujer", "Otro"]),
-        nationality: z.string().min(1),
-        birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-        documentExpiry: z.string().optional(),
-        street: z.string().min(1),
-        addressExtra: z.string().optional(),
-        postalCode: z.string().min(1),
-        city: z.string().min(1),
-        province: z.string().optional(),
-        country: z.string().min(1),
-        phone: z.string().min(1),
-        email: z.string().email(),
-        signature: z.string().min(10),
-        acceptedTerms: z.literal(true),
-        acceptedPrivacy: z.literal(true),
-        guests: z.array(z.object({
-          firstName: z.string().min(1),
-          lastName: z.string().min(1),
-          documentNumber: z.string().min(1),
-          documentSupport: z.string().optional(),
-          documentType: z.enum(["NIF", "NIE", "CAR", "ID", "PAS", "OTRO"]),
-          gender: z.enum(["Hombre", "Mujer", "Otro"]),
-          nationality: z.string().min(1),
-          birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-          documentExpiry: z.string().optional(),
-          street: z.string().min(1),
-          addressExtra: z.string().optional(),
-          postalCode: z.string().min(1),
-          city: z.string().min(1),
-          province: z.string().optional(),
-          country: z.string().min(1),
-          phone: z.string().min(1),
-          email: z.string().email().optional(),
-          signature: z.string().min(10),
-          acceptedTerms: z.literal(true),
-          acceptedPrivacy: z.literal(true),
-        })).optional(),
-      })).mutation(async ({ input }) => {
-        const submittedGuests = input.guests?.length ? input.guests : [input];
-        submittedGuests.forEach((guest) => assertRequiredDocumentSupport(guest.documentType, guest.nationality, guest.documentSupport));
-        const link = await db.getOnlineCheckinLinkByToken(input.token);
-        if (!link) throw new TRPCError({ code: "NOT_FOUND", message: "El enlace de check-in no existe" });
-
-        const today = new Date().toISOString().slice(0, 10);
-        if (link.status === "pending" && link.expiresAt < today) {
-          await db.updateOnlineCheckinLink(link.id, { status: "expired" });
-          throw new TRPCError({ code: "BAD_REQUEST", message: "El enlace de check-in ha caducado" });
-        }
-        if (link.status !== "pending") {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Este enlace ya se utilizó o fue cancelado" });
-        }
-        if (submittedGuests.length !== link.numberOfGuests) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: `Este enlace requiere los datos de ${link.numberOfGuests} huésped(es)` });
-        }
-        if (hasInvitationEmail(link.email) && (submittedGuests[0].email || input.email).trim().toLowerCase() !== link.email.trim().toLowerCase()) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "El email no coincide con el enlace de check-in" });
-        }
-
-        let entranceCode = link.entranceCode;
-        if (!entranceCode) {
           const accessCodeList = await db.getAllAccessCodes();
-          const entrance = accessCodeList.find((code) => code.roomNumber === "ENTRADA");
+          const room = accessCodeList.find(
+            code => code.roomNumber === input.roomNumber
+          );
+          if (!room || room.roomNumber === "ENTRADA") {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message:
+                "Selecciona una habitación con códigos de acceso configurados",
+            });
+          }
+
+          const entrance = accessCodeList.find(
+            code => code.roomNumber === "ENTRADA"
+          );
           const hostelSettings = await db.getHostelSettings();
-          entranceCode = entrance?.roomCode || hostelSettings?.defaultEntranceCode || null;
-        }
-
-        const groupId = randomBytes(16).toString("hex");
-        const guestIds: number[] = [];
-        for (let index = 0; index < submittedGuests.length; index += 1) {
-          const guest = submittedGuests[index];
-          const guestId = await db.createGuest({
-            firstName: guest.firstName.trim(), lastName: guest.lastName.trim(), documentNumber: guest.documentNumber.trim(),
-            documentSupport: normalizedDocumentSupport(guest.documentType, guest.nationality, guest.documentSupport) || null, documentType: guest.documentType, gender: guest.gender,
-            nationality: guest.nationality, birthDate: guest.birthDate, documentExpiry: guest.documentExpiry || null,
-            street: guest.street.trim(), addressExtra: guest.addressExtra?.trim() || null, postalCode: guest.postalCode.trim(),
-            city: guest.city.trim(), province: guest.province?.trim() || null, country: guest.country, phone: guest.phone.trim(),
-            email: (guest.email || input.email).trim().toLowerCase(), reservationNumber: link.reservationNumber,
-            checkInDate: link.checkInDate, checkOutDate: link.checkOutDate, roomNumber: link.roomNumber, roomType: link.roomType,
-            roomCode: link.roomCode, entranceCode, numberOfRooms: link.numberOfRooms, reservationOrigin: link.reservationOrigin,
-            paymentType: link.paymentType, amountPaid: link.amountPaid, amountPending: link.amountPending, numberOfGuests: link.numberOfGuests,
-            signature: guest.signature, acceptedTerms: true, acceptedPrivacy: true, isMainGuest: index === 0, groupId,
-            status: "completed", checkinType: "online", language: input.language, token: onlineGuestToken(link.token, index), sendCodes: true, createdBy: null,
+          const token = randomBytes(32).toString("hex");
+          const linkId = await db.createOnlineCheckinLink({
+            token,
+            email: input.email.trim().toLowerCase(),
+            prefilledFirstName: input.prefilledFirstName?.trim() || null,
+            prefilledLastName: input.prefilledLastName?.trim() || null,
+            prefilledPhone: input.prefilledPhone?.trim() || null,
+            language: input.language,
+            reservationNumber: input.reservationNumber?.trim() || null,
+            reservationOrigin: input.reservationOrigin,
+            checkInDate: input.checkInDate,
+            checkOutDate: input.checkOutDate,
+            roomNumber: room.roomNumber,
+            roomType: room.roomType,
+            roomCode: room.roomCode,
+            entranceCode:
+              room.entranceCode ||
+              entrance?.roomCode ||
+              hostelSettings?.defaultEntranceCode ||
+              null,
+            numberOfRooms: input.numberOfRooms,
+            numberOfGuests:
+              input.numberOfGuests || defaultGuestsForRoomType(room.roomType),
+            paymentType: input.paymentType,
+            amountPaid: input.amountPaid || "0",
+            amountPending: input.amountPending || "0",
+            createdBy: ctx.user.id,
+            // La guía se mantiene accesible durante el día posterior a la llegada.
+            expiresAt: dayAfter(input.checkInDate),
           });
-          guestIds.push(guestId);
-        }
-        const guestId = guestIds[0];
 
-        await db.updateOnlineCheckinLink(link.id, { status: "completed", guestId, completedAt: new Date(), entranceCode, expiresAt: dayAfter(link.checkInDate), language: input.language });
+          return { id: linkId, token };
+        }),
+      cancel: protectedProcedure
+        .input(z.object({ id: z.number() }))
+        .mutation(async ({ input }) => {
+          await db.updateOnlineCheckinLink(input.id, { status: "cancelled" });
+          return { success: true };
+        }),
+      getPublic: publicProcedure
+        .input(z.object({ token: z.string().length(64) }))
+        .query(async ({ input }) => {
+          const link = await db.getOnlineCheckinLinkByToken(input.token);
+          if (!link)
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: "El enlace de check-in no existe",
+            });
 
-        const { generateGuestPDF } = await import("./generateGuestPDF");
-        await Promise.all(guestIds.map((id) => generateGuestPDF(id)));
+          const today = new Date().toISOString().slice(0, 10);
+          const guideExpiry = effectiveGuideExpiry(link);
+          if (link.expiresAt !== guideExpiry) {
+            await db.updateOnlineCheckinLink(link.id, {
+              expiresAt: guideExpiry,
+            });
+            link.expiresAt = guideExpiry;
+          }
+          if (!canAccessOnlineGuide(link, today)) {
+            if (link.status === "pending")
+              await db.updateOnlineCheckinLink(link.id, { status: "expired" });
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Este enlace ya no está disponible",
+            });
+          }
 
-        const settings = await db.getHostelSettings();
-        const accessCodeList = await db.getAllAccessCodes();
-        const roomDetails = accessCodeList.find((code) => code.roomNumber === link.roomNumber);
-        const { sendOnlineCheckinConfirmation } = await import("./email");
-        await sendOnlineCheckinConfirmation({
-          firstName: input.firstName,
-          email: input.email,
-          language: input.language,
-          checkInDate: link.checkInDate,
-          roomNumber: link.roomNumber,
-          roomCode: link.roomCode,
-          entranceCode,
-          welcomeMessage: input.language === "en" ? settings?.welcomeMessageEn : settings?.welcomeMessageEs,
-          roomType: link.roomType,
-          floor: input.language === "en" ? roomDetails?.floorLevel : roomDetails?.floor,
-          hostelAddress: settings?.hostelAddress,
-          hostelPhone: settings?.hostelPhone,
-          hostelEmail: settings?.hostelEmail,
-          wifiPassword: settings?.wifiPassword,
-          arrivalMapUrl: settings?.arrivalMapUrl,
-          arrivalIntro: input.language === "en" ? settings?.arrivalIntroEn : settings?.arrivalIntroEs,
-          keyInstructions: input.language === "en" ? settings?.keyInstructionsEn : settings?.keyInstructionsEs,
-          commonAreas: input.language === "en" ? settings?.commonAreasEn : settings?.commonAreasEs,
-          houseRules: input.language === "en" ? settings?.houseRulesEn : settings?.houseRulesEs,
-        });
+          const settings = await db.getHostelSettings();
+          const accessCodeList = await db.getAllAccessCodes();
+          const room = accessCodeList.find(
+            code => code.roomNumber === link.roomNumber
+          );
+          const completedGuest =
+            link.status === "completed" && link.guestId
+              ? await db.getGuestById(link.guestId)
+              : null;
+          return {
+            completed: link.status === "completed",
+            guestName: completedGuest?.firstName || "",
+            email: link.email,
+            prefilledFirstName: link.prefilledFirstName,
+            prefilledLastName: link.prefilledLastName,
+            prefilledPhone: link.prefilledPhone,
+            language: link.language,
+            reservationNumber: link.reservationNumber,
+            checkInDate: link.checkInDate,
+            checkOutDate: link.checkOutDate,
+            roomType: link.roomType,
+            roomNumber: link.roomNumber,
+            roomCode: link.status === "completed" ? link.roomCode : "",
+            entranceCode: link.status === "completed" ? link.entranceCode : "",
+            floor: room?.floor || "",
+            floorLevel: room?.floorLevel || "",
+            numberOfGuests: link.numberOfGuests,
+            hostelName: settings?.hostelName || "The Spot Central Hostel",
+            termsUrlEs: settings?.termsUrlEs || "",
+            termsUrlEn: settings?.termsUrlEn || "",
+            privacyUrlEs: settings?.privacyUrlEs || "",
+            privacyUrlEn: settings?.privacyUrlEn || "",
+            welcomeMessageEs: settings?.welcomeMessageEs || "",
+            welcomeMessageEn: settings?.welcomeMessageEn || "",
+            hostelAddress: settings?.hostelAddress || "",
+            hostelPhone: settings?.hostelPhone || "",
+            hostelEmail: settings?.hostelEmail || "",
+            wifiPassword: settings?.wifiPassword || "",
+            arrivalMapUrl: settings?.arrivalMapUrl || "",
+            arrivalIntroEs: settings?.arrivalIntroEs || "",
+            arrivalIntroEn: settings?.arrivalIntroEn || "",
+            keyInstructionsEs: settings?.keyInstructionsEs || "",
+            keyInstructionsEn: settings?.keyInstructionsEn || "",
+            commonAreasEs: settings?.commonAreasEs || "",
+            commonAreasEn: settings?.commonAreasEn || "",
+            houseRulesEs: settings?.houseRulesEs || "",
+            houseRulesEn: settings?.houseRulesEn || "",
+          };
+        }),
+      completePublic: publicProcedure
+        .input(
+          z.object({
+            token: z.string().length(64),
+            language: z.enum(["es", "en"]),
+            firstName: z.string().min(1),
+            lastName: z.string().min(1),
+            documentNumber: z.string().min(1),
+            documentSupport: z.string().optional(),
+            documentType: z.enum(["NIF", "NIE", "CAR", "ID", "PAS", "OTRO"]),
+            gender: z.enum(["Hombre", "Mujer", "Otro"]),
+            nationality: z.string().min(1),
+            birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+            documentExpiry: z.string().optional(),
+            street: z.string().min(1),
+            addressExtra: z.string().optional(),
+            postalCode: z.string().min(1),
+            city: z.string().min(1),
+            province: z.string().optional(),
+            country: z.string().min(1),
+            phone: z.string().min(1),
+            email: z.string().email(),
+            signature: z.string().min(10),
+            acceptedTerms: z.literal(true),
+            acceptedPrivacy: z.literal(true),
+            guests: z
+              .array(
+                z.object({
+                  firstName: z.string().min(1),
+                  lastName: z.string().min(1),
+                  documentNumber: z.string().min(1),
+                  documentSupport: z.string().optional(),
+                  documentType: z.enum([
+                    "NIF",
+                    "NIE",
+                    "CAR",
+                    "ID",
+                    "PAS",
+                    "OTRO",
+                  ]),
+                  gender: z.enum(["Hombre", "Mujer", "Otro"]),
+                  nationality: z.string().min(1),
+                  birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+                  documentExpiry: z.string().optional(),
+                  street: z.string().min(1),
+                  addressExtra: z.string().optional(),
+                  postalCode: z.string().min(1),
+                  city: z.string().min(1),
+                  province: z.string().optional(),
+                  country: z.string().min(1),
+                  phone: z.string().min(1),
+                  email: z.string().email().optional(),
+                  signature: z.string().min(10),
+                  acceptedTerms: z.literal(true),
+                  acceptedPrivacy: z.literal(true),
+                })
+              )
+              .optional(),
+          })
+        )
+        .mutation(async ({ input }) => {
+          const submittedGuests = input.guests?.length ? input.guests : [input];
+          submittedGuests.forEach(guest =>
+            assertRequiredDocumentSupport(
+              guest.documentType,
+              guest.nationality,
+              guest.documentSupport
+            )
+          );
+          const link = await db.getOnlineCheckinLinkByToken(input.token);
+          if (!link)
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: "El enlace de check-in no existe",
+            });
 
-        return {
-          success: true,
-          roomNumber: link.roomNumber,
-          roomCode: link.roomCode,
-          entranceCode,
-          checkInDate: link.checkInDate,
-          roomType: link.roomType,
-          floor: roomDetails?.floor || "",
-          floorLevel: roomDetails?.floorLevel || "",
-          hostelName: settings?.hostelName || "The Spot Central Hostel",
-          hostelAddress: settings?.hostelAddress || "",
-          hostelPhone: settings?.hostelPhone || "",
-          hostelEmail: settings?.hostelEmail || "",
-          wifiPassword: settings?.wifiPassword || "",
-          arrivalMapUrl: settings?.arrivalMapUrl || "",
-          arrivalIntroEs: settings?.arrivalIntroEs || "",
-          arrivalIntroEn: settings?.arrivalIntroEn || "",
-          keyInstructionsEs: settings?.keyInstructionsEs || "",
-          keyInstructionsEn: settings?.keyInstructionsEn || "",
-          commonAreasEs: settings?.commonAreasEs || "",
-          commonAreasEn: settings?.commonAreasEn || "",
-          houseRulesEs: settings?.houseRulesEs || "",
-          houseRulesEn: settings?.houseRulesEn || "",
-        };
-      }),
+          const today = new Date().toISOString().slice(0, 10);
+          if (link.status === "pending" && link.expiresAt < today) {
+            await db.updateOnlineCheckinLink(link.id, { status: "expired" });
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "El enlace de check-in ha caducado",
+            });
+          }
+          if (link.status !== "pending") {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Este enlace ya se utilizó o fue cancelado",
+            });
+          }
+          if (submittedGuests.length !== link.numberOfGuests) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `Este enlace requiere los datos de ${link.numberOfGuests} huésped(es)`,
+            });
+          }
+          let entranceCode = link.entranceCode;
+          if (!entranceCode) {
+            const accessCodeList = await db.getAllAccessCodes();
+            const entrance = accessCodeList.find(
+              code => code.roomNumber === "ENTRADA"
+            );
+            const hostelSettings = await db.getHostelSettings();
+            entranceCode =
+              entrance?.roomCode || hostelSettings?.defaultEntranceCode || null;
+          }
+
+          const groupId = randomBytes(16).toString("hex");
+          const guestIds: number[] = [];
+          for (let index = 0; index < submittedGuests.length; index += 1) {
+            const guest = submittedGuests[index];
+            const guestId = await db.createGuest({
+              firstName: guest.firstName.trim(),
+              lastName: guest.lastName.trim(),
+              documentNumber: guest.documentNumber.trim(),
+              documentSupport:
+                normalizedDocumentSupport(
+                  guest.documentType,
+                  guest.nationality,
+                  guest.documentSupport
+                ) || null,
+              documentType: guest.documentType,
+              gender: guest.gender,
+              nationality: guest.nationality,
+              birthDate: guest.birthDate,
+              documentExpiry: guest.documentExpiry || null,
+              street: guest.street.trim(),
+              addressExtra: guest.addressExtra?.trim() || null,
+              postalCode: guest.postalCode.trim(),
+              city: guest.city.trim(),
+              province: guest.province?.trim() || null,
+              country: guest.country,
+              phone: guest.phone.trim(),
+              email: (guest.email || input.email).trim().toLowerCase(),
+              reservationNumber: link.reservationNumber,
+              checkInDate: link.checkInDate,
+              checkOutDate: link.checkOutDate,
+              roomNumber: link.roomNumber,
+              roomType: link.roomType,
+              roomCode: link.roomCode,
+              entranceCode,
+              numberOfRooms: link.numberOfRooms,
+              reservationOrigin: link.reservationOrigin,
+              paymentType: link.paymentType,
+              amountPaid: link.amountPaid,
+              amountPending: link.amountPending,
+              numberOfGuests: link.numberOfGuests,
+              signature: guest.signature,
+              acceptedTerms: true,
+              acceptedPrivacy: true,
+              isMainGuest: index === 0,
+              groupId,
+              status: "completed",
+              checkinType: "online",
+              language: input.language,
+              token: onlineGuestToken(link.token, index),
+              sendCodes: true,
+              createdBy: null,
+            });
+            guestIds.push(guestId);
+          }
+          const guestId = guestIds[0];
+
+          await db.updateOnlineCheckinLink(link.id, {
+            status: "completed",
+            guestId,
+            completedAt: new Date(),
+            entranceCode,
+            expiresAt: dayAfter(link.checkInDate),
+            language: input.language,
+          });
+
+          const { generateGuestPDF } = await import("./generateGuestPDF");
+          await Promise.all(guestIds.map(id => generateGuestPDF(id)));
+
+          const settings = await db.getHostelSettings();
+          const accessCodeList = await db.getAllAccessCodes();
+          const roomDetails = accessCodeList.find(
+            code => code.roomNumber === link.roomNumber
+          );
+          const { sendOnlineCheckinConfirmation } = await import("./email");
+          await sendOnlineCheckinConfirmation({
+            firstName: input.firstName,
+            email: input.email,
+            language: input.language,
+            checkInDate: link.checkInDate,
+            roomNumber: link.roomNumber,
+            roomCode: link.roomCode,
+            entranceCode,
+            welcomeMessage:
+              input.language === "en"
+                ? settings?.welcomeMessageEn
+                : settings?.welcomeMessageEs,
+            roomType: link.roomType,
+            floor:
+              input.language === "en"
+                ? roomDetails?.floorLevel
+                : roomDetails?.floor,
+            hostelAddress: settings?.hostelAddress,
+            hostelPhone: settings?.hostelPhone,
+            hostelEmail: settings?.hostelEmail,
+            wifiPassword: settings?.wifiPassword,
+            arrivalMapUrl: settings?.arrivalMapUrl,
+            arrivalIntro:
+              input.language === "en"
+                ? settings?.arrivalIntroEn
+                : settings?.arrivalIntroEs,
+            keyInstructions:
+              input.language === "en"
+                ? settings?.keyInstructionsEn
+                : settings?.keyInstructionsEs,
+            commonAreas:
+              input.language === "en"
+                ? settings?.commonAreasEn
+                : settings?.commonAreasEs,
+            houseRules:
+              input.language === "en"
+                ? settings?.houseRulesEn
+                : settings?.houseRulesEs,
+          });
+
+          return {
+            success: true,
+            roomNumber: link.roomNumber,
+            roomCode: link.roomCode,
+            entranceCode,
+            checkInDate: link.checkInDate,
+            roomType: link.roomType,
+            floor: roomDetails?.floor || "",
+            floorLevel: roomDetails?.floorLevel || "",
+            hostelName: settings?.hostelName || "The Spot Central Hostel",
+            hostelAddress: settings?.hostelAddress || "",
+            hostelPhone: settings?.hostelPhone || "",
+            hostelEmail: settings?.hostelEmail || "",
+            wifiPassword: settings?.wifiPassword || "",
+            arrivalMapUrl: settings?.arrivalMapUrl || "",
+            arrivalIntroEs: settings?.arrivalIntroEs || "",
+            arrivalIntroEn: settings?.arrivalIntroEn || "",
+            keyInstructionsEs: settings?.keyInstructionsEs || "",
+            keyInstructionsEn: settings?.keyInstructionsEn || "",
+            commonAreasEs: settings?.commonAreasEs || "",
+            commonAreasEn: settings?.commonAreasEn || "",
+            houseRulesEs: settings?.houseRulesEs || "",
+            houseRulesEn: settings?.houseRulesEn || "",
+          };
+        }),
     }),
-    
+
     // Settings
     settings: router({
       get: protectedProcedure.query(async () => {
         return db.getHostelSettings();
       }),
-      update: adminProcedure.input(z.object({
-        hostelName: z.string().optional(),
-        hostelAddress: z.string().optional(),
-        hostelPhone: z.string().optional(),
-        hostelEmail: z.string().optional(),
-        hostelWebsite: z.string().optional(),
-        hostelRta: z.string().optional(),
-        policeCode: z.string().optional(),
-        municipioCode: z.string().max(5).optional(),
-        wifiPassword: z.string().optional(),
-        checkoutTime: z.string().optional(),
-        defaultEntranceCode: z.string().optional(),
-        termsConditionsEs: z.string().optional(),
-        termsConditionsEn: z.string().optional(),
-        termsUrlEs: z.string().url().or(z.literal("")).optional(),
-        termsUrlEn: z.string().url().or(z.literal("")).optional(),
-        privacyPolicyEs: z.string().optional(),
-        privacyPolicyEn: z.string().optional(),
-        privacyUrlEs: z.string().url().or(z.literal("")).optional(),
-        privacyUrlEn: z.string().url().or(z.literal("")).optional(),
-        welcomeMessageEs: z.string().optional(),
-        welcomeMessageEn: z.string().optional(),
-        arrivalMapUrl: z.string().url().or(z.literal("")).optional(),
-        arrivalIntroEs: z.string().optional(),
-        arrivalIntroEn: z.string().optional(),
-        keyInstructionsEs: z.string().optional(),
-        keyInstructionsEn: z.string().optional(),
-        commonAreasEs: z.string().optional(),
-        commonAreasEn: z.string().optional(),
-        houseRulesEs: z.string().optional(),
-        houseRulesEn: z.string().optional(),
-        roomTypes: z.string().optional(),
-        smtpHost: z.string().optional(),
-        smtpPort: z.number().optional(),
-        smtpUser: z.string().optional(),
-        smtpPassword: z.string().optional(),
-        smtpFromEmail: z.string().optional(),
-        smtpFromName: z.string().optional(),
-      })).mutation(async ({ input }) => {
-        await db.upsertHostelSettings(input);
-        return { success: true };
-      }),
+      update: adminProcedure
+        .input(
+          z.object({
+            hostelName: z.string().optional(),
+            hostelAddress: z.string().optional(),
+            hostelPhone: z.string().optional(),
+            hostelEmail: z.string().optional(),
+            hostelWebsite: z.string().optional(),
+            hostelRta: z.string().optional(),
+            policeCode: z.string().optional(),
+            municipioCode: z.string().max(5).optional(),
+            wifiPassword: z.string().optional(),
+            checkoutTime: z.string().optional(),
+            defaultEntranceCode: z.string().optional(),
+            termsConditionsEs: z.string().optional(),
+            termsConditionsEn: z.string().optional(),
+            termsUrlEs: z.string().url().or(z.literal("")).optional(),
+            termsUrlEn: z.string().url().or(z.literal("")).optional(),
+            privacyPolicyEs: z.string().optional(),
+            privacyPolicyEn: z.string().optional(),
+            privacyUrlEs: z.string().url().or(z.literal("")).optional(),
+            privacyUrlEn: z.string().url().or(z.literal("")).optional(),
+            welcomeMessageEs: z.string().optional(),
+            welcomeMessageEn: z.string().optional(),
+            arrivalMapUrl: z.string().url().or(z.literal("")).optional(),
+            arrivalIntroEs: z.string().optional(),
+            arrivalIntroEn: z.string().optional(),
+            keyInstructionsEs: z.string().optional(),
+            keyInstructionsEn: z.string().optional(),
+            commonAreasEs: z.string().optional(),
+            commonAreasEn: z.string().optional(),
+            houseRulesEs: z.string().optional(),
+            houseRulesEn: z.string().optional(),
+            roomTypes: z.string().optional(),
+            smtpHost: z.string().optional(),
+            smtpPort: z.number().optional(),
+            smtpUser: z.string().optional(),
+            smtpPassword: z.string().optional(),
+            smtpFromEmail: z.string().optional(),
+            smtpFromName: z.string().optional(),
+          })
+        )
+        .mutation(async ({ input }) => {
+          await db.upsertHostelSettings(input);
+          return { success: true };
+        }),
     }),
 
     externalImports: router({
@@ -2465,157 +3908,524 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           dailyCash,
           connections: {
             loyverse: Boolean(process.env.LOYVERSE_ACCESS_TOKEN),
-            cloudbeds: Boolean(process.env.CLOUDBEDS_API_KEY && process.env.CLOUDBEDS_PROPERTY_ID),
+            cloudbeds: Boolean(
+              process.env.CLOUDBEDS_API_KEY && process.env.CLOUDBEDS_PROPERTY_ID
+            ),
           },
         };
       }),
-      comparison: adminProcedure.input(z.object({
-        dateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-        dateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-        provider: z.enum(["loyverse", "cloudbeds"]).default("loyverse"),
-      })).query(async ({ input }) => {
-        if (input.dateFrom > input.dateTo) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "La fecha inicial no puede ser posterior a la final" });
-        }
-        const businesses = await db.getAllBusinesses();
-        const targetBusinessCode = input.provider === "loyverse" ? "tienda" : "hostel";
-        const targetBusiness = businesses.find((business) => business.code === targetBusinessCode);
-        if (!targetBusiness) throw new TRPCError({ code: "NOT_FOUND", message: `No se ha encontrado la caja interna de ${targetBusinessCode}` });
-        const [externalRecords, closingGroups] = await Promise.all([
-          db.getExternalDailyCashRecordsByDateRange(input.dateFrom, input.dateTo),
-          db.getCashClosingsByBusiness(targetBusiness.id, input.dateFrom, input.dateTo),
-        ]);
-        const internalClosings = closingGroups.filter((closing) => closing.status === "closed");
-        return {
-          rows: compareCashByDate(
-            externalRecords.filter((record) => record.provider === input.provider).map((record) => ({ date: record.businessDate, amount: record.totalSales })),
-            internalClosings.map((closing) => ({ date: closing.date, amount: closing.zReading })),
-          ),
-          scope: targetBusiness.name,
-          providerLabel: input.provider === "loyverse" ? "Loyverse / Tienda" : "Cloudbeds / Hostel",
-        };
-      }),
-      importLoyverseDailyCash: adminProcedure.input(z.object({
-        dateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-        dateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-      })).mutation(async ({ input, ctx }) => {
-        const accessToken = process.env.LOYVERSE_ACCESS_TOKEN;
-        if (!accessToken) {
-          throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Falta configurar el token de acceso de Loyverse" });
-        }
-        if (input.dateFrom > input.dateTo) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "La fecha inicial no puede ser posterior a la final" });
-        }
-        const minimumDate = new Date();
-        minimumDate.setUTCDate(minimumDate.getUTCDate() - 30);
-        const minimumDateString = minimumDate.toISOString().slice(0, 10);
-        if (input.dateFrom < minimumDateString) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: `Tu plan de Loyverse permite importar recibos desde ${minimumDateString}. Selecciona un período de hasta 31 días.` });
-        }
-
-        const runId = await db.createExternalImportRun({
-          provider: "loyverse",
-          importType: "daily_cash",
-          status: "running",
-          dateFrom: input.dateFrom,
-          dateTo: input.dateTo,
-          createdBy: ctx.user.id,
-          startedAt: new Date(),
-          metadata: JSON.stringify({ source: "Loyverse receipts API", operationalDayStart: "07:00 Europe/Madrid", isolated: true }),
-        });
-
-        try {
-          const { start } = getLoyverseOperationalWindow(input.dateFrom);
-          const endWindow = getLoyverseOperationalWindow(input.dateTo);
-          const allReceipts = await fetchLoyverseReceipts(accessToken, start, endWindow.end);
-
-          const records = aggregateLoyverseReceiptsByOperationalDay(
-            allReceipts.filter((receipt) => {
-              const date = loyverseReceiptDate(receipt);
-              return Boolean(date && date >= input.dateFrom && date <= input.dateTo);
-            }),
-            runId,
+      comparison: adminProcedure
+        .input(
+          z.object({
+            dateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+            dateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+            provider: z.enum(["loyverse", "cloudbeds"]).default("loyverse"),
+          })
+        )
+        .query(async ({ input }) => {
+          if (input.dateFrom > input.dateTo) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "La fecha inicial no puede ser posterior a la final",
+            });
+          }
+          const businesses = await db.getAllBusinesses();
+          const targetBusinessCode =
+            input.provider === "loyverse" ? "tienda" : "hostel";
+          const targetBusiness = businesses.find(
+            business => business.code === targetBusinessCode
           );
+          if (!targetBusiness)
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: `No se ha encontrado la caja interna de ${targetBusinessCode}`,
+            });
+          const [externalRecords, closingGroups] = await Promise.all([
+            db.getExternalDailyCashRecordsByDateRange(
+              input.dateFrom,
+              input.dateTo
+            ),
+            db.getCashClosingsByBusiness(
+              targetBusiness.id,
+              input.dateFrom,
+              input.dateTo
+            ),
+          ]);
+          const internalClosings = closingGroups.filter(
+            closing => closing.status === "closed"
+          );
+          return {
+            rows: compareCashByDate(
+              externalRecords
+                .filter(record => record.provider === input.provider)
+                .map(record => ({
+                  date: record.businessDate,
+                  amount: record.totalSales,
+                })),
+              internalClosings.map(closing => ({
+                date: closing.date,
+                amount: closing.zReading,
+              }))
+            ),
+            scope: targetBusiness.name,
+            providerLabel:
+              input.provider === "loyverse"
+                ? "Loyverse / Tienda"
+                : "Cloudbeds / Hostel",
+          };
+        }),
+      importLoyverseDailyCash: adminProcedure
+        .input(
+          z.object({
+            dateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+            dateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+          })
+        )
+        .mutation(async ({ input, ctx }) => {
+          const accessToken = process.env.LOYVERSE_ACCESS_TOKEN;
+          if (!accessToken) {
+            throw new TRPCError({
+              code: "PRECONDITION_FAILED",
+              message: "Falta configurar el token de acceso de Loyverse",
+            });
+          }
+          if (input.dateFrom > input.dateTo) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "La fecha inicial no puede ser posterior a la final",
+            });
+          }
+          const minimumDate = new Date();
+          minimumDate.setUTCDate(minimumDate.getUTCDate() - 30);
+          const minimumDateString = minimumDate.toISOString().slice(0, 10);
+          if (input.dateFrom < minimumDateString) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `Tu plan de Loyverse permite importar recibos desde ${minimumDateString}. Selecciona un período de hasta 31 días.`,
+            });
+          }
 
-          await db.replaceLoyverseDailyCashRecords(input.dateFrom, input.dateTo, records);
-          const totalAmount = records.reduce((total, record) => total + Number(record.totalSales), 0);
-          await db.updateExternalImportRun(runId, {
-            status: "completed",
-            recordsImported: records.length,
-            totalAmount: totalAmount.toFixed(2),
-            finishedAt: new Date(),
+          const runId = await db.createExternalImportRun({
+            provider: "loyverse",
+            importType: "daily_cash",
+            status: "running",
+            dateFrom: input.dateFrom,
+            dateTo: input.dateTo,
+            createdBy: ctx.user.id,
+            startedAt: new Date(),
+            metadata: JSON.stringify({
+              source: "Loyverse receipts API",
+              operationalDayStart: "07:00 Europe/Madrid",
+              isolated: true,
+            }),
           });
-          return { success: true, runId, recordsImported: records.length };
-        } catch (error) {
-          const message = error instanceof Error ? error.message : "Error no identificado al importar Loyverse";
-          await db.updateExternalImportRun(runId, { status: "failed", errorMessage: message, finishedAt: new Date() });
-          throw new TRPCError({ code: "BAD_GATEWAY", message });
+
+          try {
+            const { start } = getLoyverseOperationalWindow(input.dateFrom);
+            const endWindow = getLoyverseOperationalWindow(input.dateTo);
+            const allReceipts = await fetchLoyverseReceipts(
+              accessToken,
+              start,
+              endWindow.end
+            );
+
+            const records = aggregateLoyverseReceiptsByOperationalDay(
+              allReceipts.filter(receipt => {
+                const date = loyverseReceiptDate(receipt);
+                return Boolean(
+                  date && date >= input.dateFrom && date <= input.dateTo
+                );
+              }),
+              runId
+            );
+
+            await db.replaceLoyverseDailyCashRecords(
+              input.dateFrom,
+              input.dateTo,
+              records
+            );
+            const totalAmount = records.reduce(
+              (total, record) => total + Number(record.totalSales),
+              0
+            );
+            await db.updateExternalImportRun(runId, {
+              status: "completed",
+              recordsImported: records.length,
+              totalAmount: totalAmount.toFixed(2),
+              finishedAt: new Date(),
+            });
+            return { success: true, runId, recordsImported: records.length };
+          } catch (error) {
+            const message =
+              error instanceof Error
+                ? error.message
+                : "Error no identificado al importar Loyverse";
+            await db.updateExternalImportRun(runId, {
+              status: "failed",
+              errorMessage: message,
+              finishedAt: new Date(),
+            });
+            throw new TRPCError({ code: "BAD_GATEWAY", message });
+          }
+        }),
+      importCloudbedsDailyCash: adminProcedure
+        .input(
+          z.object({
+            dateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+            dateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+          })
+        )
+        .mutation(async ({ input, ctx }) => {
+          const apiKey = process.env.CLOUDBEDS_API_KEY;
+          const propertyId = process.env.CLOUDBEDS_PROPERTY_ID;
+          if (!apiKey || !propertyId)
+            throw new TRPCError({
+              code: "PRECONDITION_FAILED",
+              message:
+                "Configura CLOUDBEDS_API_KEY y CLOUDBEDS_PROPERTY_ID para importar Cloudbeds",
+            });
+          if (input.dateFrom > input.dateTo)
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "La fecha inicial no puede ser posterior a la final",
+            });
+          const runId = await db.createExternalImportRun({
+            provider: "cloudbeds",
+            importType: "daily_cash",
+            status: "running",
+            dateFrom: input.dateFrom,
+            dateTo: input.dateTo,
+            createdBy: ctx.user.id,
+            startedAt: new Date(),
+            metadata: JSON.stringify({
+              source: "Cloudbeds Accounting API",
+              criterion: "service_date",
+              propertyId,
+              isolated: true,
+            }),
+          });
+          try {
+            const transactions = await fetchCloudbedsTransactions(
+              apiKey,
+              propertyId,
+              input.dateFrom,
+              input.dateTo
+            );
+            const records = aggregateCloudbedsPaymentsByOperationalDay(
+              transactions,
+              runId,
+              propertyId
+            ).filter(
+              record =>
+                record.businessDate >= input.dateFrom &&
+                record.businessDate <= input.dateTo
+            );
+            await db.replaceExternalDailyCashRecords(
+              "cloudbeds",
+              input.dateFrom,
+              input.dateTo,
+              records
+            );
+            const totalAmount = records.reduce(
+              (sum, record) => sum + Number(record.totalSales),
+              0
+            );
+            await db.updateExternalImportRun(runId, {
+              status: "completed",
+              recordsImported: records.length,
+              totalAmount: totalAmount.toFixed(2),
+              finishedAt: new Date(),
+            });
+            return { success: true, runId, recordsImported: records.length };
+          } catch (error) {
+            const message =
+              error instanceof Error
+                ? error.message
+                : "Error no identificado al importar Cloudbeds";
+            await db.updateExternalImportRun(runId, {
+              status: "failed",
+              errorMessage: message,
+              finishedAt: new Date(),
+            });
+            throw new TRPCError({ code: "BAD_GATEWAY", message });
+          }
+        }),
+      importCloudbedsUpcomingReservations: adminProcedure.mutation(
+        async ({ ctx }) => {
+          const apiKey = process.env.CLOUDBEDS_API_KEY;
+          const propertyId = process.env.CLOUDBEDS_PROPERTY_ID;
+          if (!apiKey || !propertyId)
+            throw new TRPCError({
+              code: "PRECONDITION_FAILED",
+              message:
+                "Configura CLOUDBEDS_API_KEY y CLOUDBEDS_PROPERTY_ID para importar reservas",
+            });
+          const dates = getNextMadridCalendarDates();
+          const runId = await db.createExternalImportRun({
+            provider: "cloudbeds",
+            importType: "future",
+            status: "running",
+            dateFrom: dates[0],
+            dateTo: dates[2],
+            createdBy: ctx.user.id,
+            startedAt: new Date(),
+            metadata: JSON.stringify({
+              source: "Cloudbeds PMS API",
+              scope: "reservation assignments and reservation details",
+              isolated: true,
+            }),
+          });
+          try {
+            let diagnostics: CloudbedsReservationFieldDiagnostics | undefined;
+            const reservations = await fetchCloudbedsUpcomingReservations(
+              apiKey,
+              propertyId,
+              dates,
+              value => {
+                diagnostics = value;
+              }
+            );
+            await db.upsertExternalUpcomingReservations(
+              reservations.map(reservation => ({
+                ...reservation,
+                importRunId: runId,
+                provider: "cloudbeds",
+              }))
+            );
+            await db.updateExternalImportRun(runId, {
+              status: "completed",
+              recordsImported: reservations.length,
+              metadata: JSON.stringify({
+                source: "Cloudbeds PMS API",
+                scope: "reservation assignments and reservation details",
+                isolated: true,
+                diagnostics,
+              }),
+              finishedAt: new Date(),
+            });
+            return {
+              success: true,
+              runId,
+              dates,
+              recordsImported: reservations.length,
+              diagnostics,
+            };
+          } catch (error) {
+            const message =
+              error instanceof Error
+                ? error.message
+                : "Error no identificado al importar las reservas de Cloudbeds";
+            await db.updateExternalImportRun(runId, {
+              status: "failed",
+              errorMessage: message,
+              finishedAt: new Date(),
+            });
+            throw new TRPCError({ code: "BAD_GATEWAY", message });
+          }
         }
-      }),
-      importCloudbedsDailyCash: adminProcedure.input(z.object({
-        dateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-        dateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-      })).mutation(async ({ input, ctx }) => {
-        const apiKey = process.env.CLOUDBEDS_API_KEY;
-        const propertyId = process.env.CLOUDBEDS_PROPERTY_ID;
-        if (!apiKey || !propertyId) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Configura CLOUDBEDS_API_KEY y CLOUDBEDS_PROPERTY_ID para importar Cloudbeds" });
-        if (input.dateFrom > input.dateTo) throw new TRPCError({ code: "BAD_REQUEST", message: "La fecha inicial no puede ser posterior a la final" });
-        const runId = await db.createExternalImportRun({ provider: "cloudbeds", importType: "daily_cash", status: "running", dateFrom: input.dateFrom, dateTo: input.dateTo, createdBy: ctx.user.id, startedAt: new Date(), metadata: JSON.stringify({ source: "Cloudbeds Accounting API", criterion: "service_date", propertyId, isolated: true }) });
-        try {
-          const transactions = await fetchCloudbedsTransactions(apiKey, propertyId, input.dateFrom, input.dateTo);
-          const records = aggregateCloudbedsPaymentsByOperationalDay(transactions, runId, propertyId).filter((record) => record.businessDate >= input.dateFrom && record.businessDate <= input.dateTo);
-          await db.replaceExternalDailyCashRecords("cloudbeds", input.dateFrom, input.dateTo, records);
-          const totalAmount = records.reduce((sum, record) => sum + Number(record.totalSales), 0);
-          await db.updateExternalImportRun(runId, { status: "completed", recordsImported: records.length, totalAmount: totalAmount.toFixed(2), finishedAt: new Date() });
-          return { success: true, runId, recordsImported: records.length };
-        } catch (error) {
-          const message = error instanceof Error ? error.message : "Error no identificado al importar Cloudbeds";
-          await db.updateExternalImportRun(runId, { status: "failed", errorMessage: message, finishedAt: new Date() });
-          throw new TRPCError({ code: "BAD_GATEWAY", message });
-        }
-      }),
-      importCloudbedsUpcomingReservations: adminProcedure.mutation(async ({ ctx }) => {
-        const apiKey = process.env.CLOUDBEDS_API_KEY;
-        const propertyId = process.env.CLOUDBEDS_PROPERTY_ID;
-        if (!apiKey || !propertyId) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Configura CLOUDBEDS_API_KEY y CLOUDBEDS_PROPERTY_ID para importar reservas" });
-        const dates = getNextMadridCalendarDates();
-        const runId = await db.createExternalImportRun({ provider: "cloudbeds", importType: "future", status: "running", dateFrom: dates[0], dateTo: dates[2], createdBy: ctx.user.id, startedAt: new Date(), metadata: JSON.stringify({ source: "Cloudbeds PMS API", scope: "reservation assignments and reservation details", isolated: true }) });
-        try {
-          let diagnostics: CloudbedsReservationFieldDiagnostics | undefined;
-          const reservations = await fetchCloudbedsUpcomingReservations(apiKey, propertyId, dates, (value) => { diagnostics = value; });
-          await db.upsertExternalUpcomingReservations(reservations.map((reservation) => ({ ...reservation, importRunId: runId, provider: "cloudbeds" })));
-          await db.updateExternalImportRun(runId, { status: "completed", recordsImported: reservations.length, metadata: JSON.stringify({ source: "Cloudbeds PMS API", scope: "reservation assignments and reservation details", isolated: true, diagnostics }), finishedAt: new Date() });
-          return { success: true, runId, dates, recordsImported: reservations.length, diagnostics };
-        } catch (error) {
-          const message = error instanceof Error ? error.message : "Error no identificado al importar las reservas de Cloudbeds";
-          await db.updateExternalImportRun(runId, { status: "failed", errorMessage: message, finishedAt: new Date() });
-          throw new TRPCError({ code: "BAD_GATEWAY", message });
-        }
-      }),
-      listCloudbedsUpcomingReservations: adminProcedure.input(z.object({
-        dateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-        dateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-      })).query(async ({ input }) => db.getExternalUpcomingReservations(input.dateFrom, input.dateTo)),
-      setCloudbedsUpcomingReservationReviewed: adminProcedure.input(z.object({ id: z.number(), isReviewed: z.boolean() })).mutation(async ({ input }) => {
-        await db.setExternalUpcomingReservationReviewed(input.id, input.isReviewed);
-        return { success: true };
-      }),
-      listCloudbedsReservationCommunications: adminProcedure.query(async () => db.getExternalReservationCommunications()),
-      createCloudbedsReservationCommunication: adminProcedure.input(z.object({
-        externalReservationId: z.number(),
-        channel: z.enum(["email", "whatsapp", "other"]),
-        status: z.enum(["pending", "prepared", "sent", "failed", "cancelled"]),
-        messageType: z.string().min(1).max(100).default("arrival"),
-        notes: z.string().max(2000).optional(),
-      })).mutation(async ({ input, ctx }) => {
-        const id = await db.createExternalReservationCommunication({ ...input, notes: input.notes ?? null, createdBy: ctx.user.id, sentAt: input.status === "sent" ? new Date() : null });
-        return { success: true, id };
-      }),
+      ),
+      listCloudbedsUpcomingReservations: adminProcedure
+        .input(
+          z.object({
+            dateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+            dateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+          })
+        )
+        .query(async ({ input }) =>
+          db.getExternalUpcomingReservations(input.dateFrom, input.dateTo)
+        ),
+      setCloudbedsUpcomingReservationReviewed: adminProcedure
+        .input(z.object({ id: z.number(), isReviewed: z.boolean() }))
+        .mutation(async ({ input }) => {
+          await db.setExternalUpcomingReservationReviewed(
+            input.id,
+            input.isReviewed
+          );
+          return { success: true };
+        }),
+      listCloudbedsReservationCommunications: adminProcedure.query(async () =>
+        db.getExternalReservationCommunications()
+      ),
+      createCloudbedsReservationCommunication: adminProcedure
+        .input(
+          z.object({
+            externalReservationId: z.number(),
+            channel: z.enum(["email", "whatsapp", "other"]),
+            status: z.enum([
+              "pending",
+              "prepared",
+              "sent",
+              "failed",
+              "cancelled",
+            ]),
+            messageType: z.string().min(1).max(100).default("arrival"),
+            notes: z.string().max(2000).optional(),
+          })
+        )
+        .mutation(async ({ input, ctx }) => {
+          const id = await db.createExternalReservationCommunication({
+            ...input,
+            notes: input.notes ?? null,
+            createdBy: ctx.user.id,
+            sentAt: input.status === "sent" ? new Date() : null,
+          });
+          return { success: true, id };
+        }),
+      sendCloudbedsReservationEmail: adminProcedure
+        .input(
+          z.object({
+            externalReservationId: z.number(),
+            messageType: z.enum(["welcome", "online_checkin"]),
+            language: z.enum(["es", "en"]).default("es"),
+          })
+        )
+        .mutation(async ({ input, ctx }) => {
+          const reservation = await db.getExternalUpcomingReservationById(
+            input.externalReservationId
+          );
+          if (!reservation)
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: "No se encontró la reserva importada",
+            });
+          if (!reservation.guestEmail)
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message:
+                "La reserva no tiene un correo electrónico al que enviar el mensaje",
+            });
+          const language: ReservationMessageLanguage = input.language;
+          const context = {
+            guestName: reservation.guestName,
+            checkInDate: reservation.checkInDate,
+            checkOutDate: reservation.checkOutDate,
+            roomNumber: reservation.roomNumber,
+            roomType: reservation.roomType,
+            reservationCode: reservation.reservationCode,
+          };
+          if (input.messageType === "online_checkin") {
+            const invitation = await createOnlineCheckinFromExternalReservation(
+              reservation,
+              ctx.user.id,
+              requestOrigin(ctx.req)
+            );
+            const invitationMessage = buildOnlineCheckinInvitation(
+              context,
+              invitation.url,
+              language
+            );
+            const { sendEmail } = await import("./email");
+            const result = await sendEmail(
+              reservation.guestEmail,
+              invitationMessage.subject,
+              invitationMessage.html,
+              invitationMessage.text
+            );
+            await db.createExternalReservationCommunication({
+              externalReservationId: reservation.id,
+              channel: "email",
+              status: result.success ? "sent" : "failed",
+              messageType: "online_checkin",
+              notes: result.success
+                ? "Invitación de Check-in Online enviada por recepción"
+                : result.error || "No se pudo enviar la invitación",
+              sentAt: result.success ? new Date() : null,
+              createdBy: ctx.user.id,
+            });
+            if (!result.success)
+              throw new TRPCError({
+                code: "BAD_GATEWAY",
+                message: result.error || "No se pudo enviar el correo",
+              });
+            return { success: true, checkinUrl: invitation.url };
+          }
+          const message = buildReservationWelcomeEmail(context, language);
+          const { sendEmail } = await import("./email");
+          const result = await sendEmail(
+            reservation.guestEmail,
+            message.subject,
+            message.html,
+            message.text
+          );
+          await db.createExternalReservationCommunication({
+            externalReservationId: reservation.id,
+            channel: "email",
+            status: result.success ? "sent" : "failed",
+            messageType: "welcome",
+            notes: result.success
+              ? "Bienvenida enviada por recepción"
+              : result.error || "No se pudo enviar la bienvenida",
+            sentAt: result.success ? new Date() : null,
+            createdBy: ctx.user.id,
+          });
+          if (!result.success)
+            throw new TRPCError({
+              code: "BAD_GATEWAY",
+              message: result.error || "No se pudo enviar el correo",
+            });
+          return { success: true, checkinUrl: null };
+        }),
+      prepareCloudbedsReservationWhatsApp: adminProcedure
+        .input(
+          z.object({
+            externalReservationId: z.number(),
+            messageType: z.enum(["welcome", "online_checkin"]),
+            language: z.enum(["es", "en"]).default("es"),
+          })
+        )
+        .mutation(async ({ input, ctx }) => {
+          const reservation = await db.getExternalUpcomingReservationById(
+            input.externalReservationId
+          );
+          if (!reservation)
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: "No se encontró la reserva importada",
+            });
+          if (!reservation.guestPhone)
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message:
+                "La reserva no tiene un teléfono al que preparar WhatsApp",
+            });
+          const context = {
+            guestName: reservation.guestName,
+            checkInDate: reservation.checkInDate,
+            checkOutDate: reservation.checkOutDate,
+            roomNumber: reservation.roomNumber,
+            roomType: reservation.roomType,
+            reservationCode: reservation.reservationCode,
+          };
+          const invitation =
+            input.messageType === "online_checkin"
+              ? await createOnlineCheckinFromExternalReservation(
+                  reservation,
+                  ctx.user.id,
+                  requestOrigin(ctx.req)
+                )
+              : null;
+          const message = buildReservationWhatsAppMessage(
+            context,
+            input.messageType,
+            invitation?.url || null,
+            input.language
+          );
+          await db.createExternalReservationCommunication({
+            externalReservationId: reservation.id,
+            channel: "whatsapp",
+            status: "prepared",
+            messageType: input.messageType,
+            notes: `Borrador de ${input.messageType === "online_checkin" ? "Check-in Online" : "bienvenida"} preparado para confirmación manual`,
+            sentAt: null,
+            createdBy: ctx.user.id,
+          });
+          return { success: true, phone: reservation.guestPhone, message };
+        }),
     }),
-    
+
     // Manual cleanup of old guests
     cleanupOldGuests: protectedProcedure.mutation(async () => {
-      const { cleanupOldGuests } = await import('./cleanupOldGuests');
+      const { cleanupOldGuests } = await import("./cleanupOldGuests");
       const result = await cleanupOldGuests();
       return { success: true, deletedCount: result.deletedCount };
     }),

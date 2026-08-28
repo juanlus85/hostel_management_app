@@ -5,10 +5,10 @@ describe("normalizeUpcomingReservation", () => {
   it("extrae solo los datos operativos necesarios de una reserva futura", () => {
     const result = normalizeUpcomingReservation(
       { reservationID: "R-71", date: "2026-08-28", roomName: "15" },
-      { reservationID: "R-71", status: "confirmed", checkInDate: "2026-08-28", checkOutDate: "2026-08-30", sourceName: "Booking.com", balance: "125.4", guests: [{ firstName: "Ana", lastName: "García", email: "ana@example.com", phone: "+34955000000" }], rooms: [{ roomTypeName: "Twin", roomName: "15" }] },
+      { reservationID: "R-71", status: "confirmed", checkInDate: "2026-08-28", checkOutDate: "2026-08-30", sourceName: "Booking.com", balance: "125.4", notes: "Llegada tardía", guests: [{ firstName: "Ana", lastName: "García", email: "ana@example.com", phone: "+34955000000" }], rooms: [{ roomTypeName: "Twin", roomName: "15" }] },
       "2026-08-28",
     );
-    expect(result).toMatchObject({ sourceReservationId: "R-71", guestName: "Ana García", checkInDate: "2026-08-28", checkOutDate: "2026-08-30", roomType: "Twin", roomNumber: "15", reservationStatus: "confirmed", amountPending: "125.40" });
+    expect(result).toMatchObject({ sourceReservationId: "R-71", guestName: "Ana García", checkInDate: "2026-08-28", checkOutDate: "2026-08-30", roomType: "Twin", roomNumber: "15", reservationStatus: "confirmed", guestCount: 1, reservationNotes: "Llegada tardía", amountPending: "125.40" });
     expect(result?.rawData).not.toContain("undefined");
   });
 
@@ -62,5 +62,17 @@ describe("normalizeUpcomingReservation", () => {
       "2026-08-28",
     );
     expect(result).toMatchObject({ guestName: "Elena Soto", guestPhone: "+34600000789", checkOutDate: "2026-08-29" });
+  });
+
+  it("recupera notas mediante el endpoint de Cloudbeds sin bloquear la importación", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify([{ reservationID: "R-76", date: "2026-08-28" }]), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ reservation: { reservationID: "R-76", startDate: "2026-08-28", guestList: [{ guestName: "María Gil" }] } }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [{ reservationNote: "Cuna solicitada" }] }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const result = await fetchCloudbedsUpcomingReservations("cbat_test", "204754", ["2026-08-28"]);
+    expect(result[0]).toMatchObject({ guestCount: 1, reservationNotes: "Cuna solicitada" });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    vi.unstubAllGlobals();
   });
 });

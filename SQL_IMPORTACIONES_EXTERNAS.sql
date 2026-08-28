@@ -54,6 +54,8 @@ CREATE TABLE IF NOT EXISTS `external_upcoming_reservations` (
   `roomType` varchar(255),
   `roomNumber` varchar(100),
   `reservationStatus` varchar(80),
+  `guestCount` int,
+  `reservationNotes` text,
   `bookingSource` varchar(255),
   `amountPending` decimal(12,2) NOT NULL DEFAULT 0,
   `isReviewed` boolean NOT NULL DEFAULT false,
@@ -69,6 +71,12 @@ CREATE TABLE IF NOT EXISTS `external_upcoming_reservations` (
 -- Para instalaciones donde la tabla ya existe antes de esta ampliación.
 ALTER TABLE `external_upcoming_reservations`
   ADD COLUMN IF NOT EXISTS `amountPending` decimal(12,2) NOT NULL DEFAULT 0;
+
+ALTER TABLE `external_upcoming_reservations`
+  ADD COLUMN IF NOT EXISTS `guestCount` int;
+
+ALTER TABLE `external_upcoming_reservations`
+  ADD COLUMN IF NOT EXISTS `reservationNotes` text;
 
 CREATE TABLE IF NOT EXISTS `external_reservation_communications` (
   `id` int AUTO_INCREMENT NOT NULL,

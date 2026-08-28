@@ -1,84 +1,959 @@
 import { useMemo, useState } from "react";
-import { CalendarDays, CheckCircle2, Cloud, DatabaseZap, Download, ExternalLink, Loader2, Mail, MessageCircle, RefreshCw, ShieldCheck, Store, Users, WalletCards } from "lucide-react";
+import {
+  CalendarDays,
+  CheckCircle2,
+  Cloud,
+  DatabaseZap,
+  Download,
+  ExternalLink,
+  Loader2,
+  Mail,
+  MessageCircle,
+  RefreshCw,
+  ShieldCheck,
+  Store,
+  Users,
+  WalletCards,
+} from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
-const madridDate = (date: Date) => date.toLocaleDateString("en-CA", { timeZone: "Europe/Madrid" });
+const madridDate = (date: Date) =>
+  date.toLocaleDateString("en-CA", { timeZone: "Europe/Madrid" });
 const today = madridDate(new Date());
-const thirtyDaysStart = (() => { const date = new Date(`${today}T12:00:00`); date.setDate(date.getDate() - 29); return madridDate(date); })();
-const loyverseMinimumDate = (() => { const date = new Date(`${today}T12:00:00`); date.setDate(date.getDate() - 30); return madridDate(date); })();
-const thirdArrivalDate = (() => { const date = new Date(`${today}T12:00:00`); date.setDate(date.getDate() + 2); return madridDate(date); })();
+const thirtyDaysStart = (() => {
+  const date = new Date(`${today}T12:00:00`);
+  date.setDate(date.getDate() - 29);
+  return madridDate(date);
+})();
+const loyverseMinimumDate = (() => {
+  const date = new Date(`${today}T12:00:00`);
+  date.setDate(date.getDate() - 30);
+  return madridDate(date);
+})();
+const thirdArrivalDate = (() => {
+  const date = new Date(`${today}T12:00:00`);
+  date.setDate(date.getDate() + 2);
+  return madridDate(date);
+})();
 
-type ComparisonRow = { date: string; externalTotal: number; internalTotal: number; difference: number };
-type ComparisonData = { rows: ComparisonRow[]; scope: string; providerLabel: string } | undefined;
+type ComparisonRow = {
+  date: string;
+  externalTotal: number;
+  internalTotal: number;
+  difference: number;
+};
+type ComparisonData =
+  | { rows: ComparisonRow[]; scope: string; providerLabel: string }
+  | undefined;
 const asAmount = (value: string | number | null | undefined) => {
-  const parsed = typeof value === "number" ? value : Number(String(value ?? "").replace(",", "."));
+  const parsed =
+    typeof value === "number"
+      ? value
+      : Number(String(value ?? "").replace(",", "."));
   return Number.isFinite(parsed) ? parsed : 0;
 };
-const money = (value: string | number | null | undefined) => new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(asAmount(value));
-const dateTime = (value: Date | string | null | undefined) => value ? new Date(value).toLocaleString("es-ES") : "—";
+const money = (value: string | number | null | undefined) =>
+  new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(
+    asAmount(value)
+  );
+const dateTime = (value: Date | string | null | undefined) =>
+  value ? new Date(value).toLocaleString("es-ES") : "—";
+const reservationStatusLabel = (value: string | null | undefined) => {
+  const normalized = value
+    ?.trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
+  const labels: Record<string, string> = {
+    in_progress: "En curso",
+    confirmed: "Confirmada",
+    not_confirmed: "Sin confirmar",
+    cancelled: "Cancelada",
+    canceled: "Cancelada",
+    checked_in: "Check-in realizado",
+    checked_out: "Check-out realizado",
+    no_show: "No presentado",
+  };
+  return normalized ? labels[normalized] || value : "Sin estado";
+};
 
 function ConnectionBadge({ ready }: { ready: boolean }) {
-  return <Badge className={ready ? "bg-emerald-600 hover:bg-emerald-600" : "bg-slate-500 hover:bg-slate-500"}>{ready ? "Conectado" : "Pendiente de credenciales"}</Badge>;
+  return (
+    <Badge
+      className={
+        ready
+          ? "bg-emerald-600 hover:bg-emerald-600"
+          : "bg-slate-500 hover:bg-slate-500"
+      }
+    >
+      {ready ? "Conectado" : "Pendiente de credenciales"}
+    </Badge>
+  );
 }
 
-function ComparisonCard({ title, description, data, loading, emptyMessage }: { title: string; description: string; data: ComparisonData; loading: boolean; emptyMessage: string }) {
-  return <Card className="border-violet-200 shadow-sm">
-    <CardHeader><CardTitle>{title}</CardTitle><CardDescription>{description}</CardDescription></CardHeader>
-    <CardContent>{loading ? <div className="py-8 text-center text-sm text-muted-foreground"><Loader2 className="mx-auto mb-3 h-5 w-5 animate-spin" />Calculando comparación…</div> : data?.rows.length ? <>
-      <div className="mb-4 rounded-lg border border-violet-100 bg-violet-50 px-4 py-3 text-sm text-violet-950"><strong>Alcance interno:</strong> {data.scope}. Diferencia: <strong>externo − interno</strong>.</div>
-      <div className="overflow-x-auto"><table className="w-full min-w-[660px] text-left text-sm"><thead className="border-b text-xs uppercase text-muted-foreground"><tr><th className="px-3 py-3">Fecha</th><th className="px-3 py-3 text-right">{data.providerLabel}</th><th className="px-3 py-3 text-right">Caja interna</th><th className="px-3 py-3 text-right">Diferencia</th></tr></thead><tbody>{data.rows.map((row) => <tr className="border-b last:border-0" key={row.date}><td className="px-3 py-3 font-medium">{row.date}</td><td className="px-3 py-3 text-right">{money(row.externalTotal)}</td><td className="px-3 py-3 text-right">{money(row.internalTotal)}</td><td className={`px-3 py-3 text-right font-semibold ${row.difference === 0 ? "text-emerald-700" : row.difference > 0 ? "text-orange-700" : "text-rose-700"}`}>{money(row.difference)}</td></tr>)}</tbody></table></div>
-    </> : <div className="py-8 text-center text-sm text-muted-foreground"><WalletCards className="mx-auto mb-3 h-7 w-7" />{emptyMessage}</div>}</CardContent>
-  </Card>;
+function ComparisonCard({
+  title,
+  description,
+  data,
+  loading,
+  emptyMessage,
+}: {
+  title: string;
+  description: string;
+  data: ComparisonData;
+  loading: boolean;
+  emptyMessage: string;
+}) {
+  return (
+    <Card className="border-violet-200 shadow-sm">
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="py-8 text-center text-sm text-muted-foreground">
+            <Loader2 className="mx-auto mb-3 h-5 w-5 animate-spin" />
+            Calculando comparación…
+          </div>
+        ) : data?.rows.length ? (
+          <>
+            <div className="mb-4 rounded-lg border border-violet-100 bg-violet-50 px-4 py-3 text-sm text-violet-950">
+              <strong>Alcance interno:</strong> {data.scope}. Diferencia:{" "}
+              <strong>externo − interno</strong>.
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[660px] text-left text-sm">
+                <thead className="border-b text-xs uppercase text-muted-foreground">
+                  <tr>
+                    <th className="px-3 py-3">Fecha</th>
+                    <th className="px-3 py-3 text-right">
+                      {data.providerLabel}
+                    </th>
+                    <th className="px-3 py-3 text-right">Caja interna</th>
+                    <th className="px-3 py-3 text-right">Diferencia</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.rows.map(row => (
+                    <tr className="border-b last:border-0" key={row.date}>
+                      <td className="px-3 py-3 font-medium">{row.date}</td>
+                      <td className="px-3 py-3 text-right">
+                        {money(row.externalTotal)}
+                      </td>
+                      <td className="px-3 py-3 text-right">
+                        {money(row.internalTotal)}
+                      </td>
+                      <td
+                        className={`px-3 py-3 text-right font-semibold ${row.difference === 0 ? "text-emerald-700" : row.difference > 0 ? "text-orange-700" : "text-rose-700"}`}
+                      >
+                        {money(row.difference)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        ) : (
+          <div className="py-8 text-center text-sm text-muted-foreground">
+            <WalletCards className="mx-auto mb-3 h-7 w-7" />
+            {emptyMessage}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function ImportacionesExternas() {
   const [dateFrom, setDateFrom] = useState(thirtyDaysStart);
   const [dateTo, setDateTo] = useState(today);
   const [section, setSection] = useState<"cash" | "arrivals">("cash");
+  const [messageLanguage, setMessageLanguage] = useState<"es" | "en">("es");
   const utils = trpc.useUtils();
   const overview = trpc.checkin.externalImports.overview.useQuery();
-  const loyverseComparison = trpc.checkin.externalImports.comparison.useQuery({ dateFrom, dateTo, provider: "loyverse" });
-  const cloudbedsComparison = trpc.checkin.externalImports.comparison.useQuery({ dateFrom, dateTo, provider: "cloudbeds" });
-  const refresh = () => { utils.checkin.externalImports.overview.invalidate(); utils.checkin.externalImports.comparison.invalidate(); };
-  const importLoyverse = trpc.checkin.externalImports.importLoyverseDailyCash.useMutation({ onSuccess: (result) => { toast.success(`Loyverse importado: ${result.recordsImported} días`); refresh(); }, onError: (error) => toast.error(error.message) });
-  const importCloudbeds = trpc.checkin.externalImports.importCloudbedsDailyCash.useMutation({ onSuccess: (result) => { toast.success(`Cloudbeds importado: ${result.recordsImported} días`); refresh(); }, onError: (error) => toast.error(error.message) });
-  const upcomingReservations = trpc.checkin.externalImports.listCloudbedsUpcomingReservations.useQuery({ dateFrom: today, dateTo: thirdArrivalDate });
-  const communications = trpc.checkin.externalImports.listCloudbedsReservationCommunications.useQuery();
-  const refreshArrivals = () => { upcomingReservations.refetch(); communications.refetch(); utils.checkin.externalImports.overview.invalidate(); };
-  const importUpcomingReservations = trpc.checkin.externalImports.importCloudbedsUpcomingReservations.useMutation({ onSuccess: (result) => { toast.success(`Reservas importadas: ${result.recordsImported}`); refreshArrivals(); }, onError: (error) => toast.error(error.message) });
-  const setReviewed = trpc.checkin.externalImports.setCloudbedsUpcomingReservationReviewed.useMutation({ onSuccess: () => { upcomingReservations.refetch(); toast.success("Reserva revisada"); }, onError: (error) => toast.error(error.message) });
-  const registerCommunication = trpc.checkin.externalImports.createCloudbedsReservationCommunication.useMutation({ onSuccess: () => { communications.refetch(); toast.success("Comunicación registrada sin enviar ningún mensaje"); }, onError: (error) => toast.error(error.message) });
-  const totals = useMemo(() => (overview.data?.dailyCash || []).filter((record) => record.businessDate >= dateFrom && record.businessDate <= dateTo).reduce((sum, record) => ({ ...sum, [record.provider]: (sum[record.provider] || 0) + Number(record.totalSales || 0) }), {} as Record<string, number>), [overview.data?.dailyCash, dateFrom, dateTo]);
-  const pendingTotal = useMemo(() => (upcomingReservations.data || []).reduce((sum, reservation) => sum + asAmount(reservation.amountPending), 0), [upcomingReservations.data]);
+  const loyverseComparison = trpc.checkin.externalImports.comparison.useQuery({
+    dateFrom,
+    dateTo,
+    provider: "loyverse",
+  });
+  const cloudbedsComparison = trpc.checkin.externalImports.comparison.useQuery({
+    dateFrom,
+    dateTo,
+    provider: "cloudbeds",
+  });
+  const refresh = () => {
+    utils.checkin.externalImports.overview.invalidate();
+    utils.checkin.externalImports.comparison.invalidate();
+  };
+  const importLoyverse =
+    trpc.checkin.externalImports.importLoyverseDailyCash.useMutation({
+      onSuccess: result => {
+        toast.success(`Loyverse importado: ${result.recordsImported} días`);
+        refresh();
+      },
+      onError: error => toast.error(error.message),
+    });
+  const importCloudbeds =
+    trpc.checkin.externalImports.importCloudbedsDailyCash.useMutation({
+      onSuccess: result => {
+        toast.success(`Cloudbeds importado: ${result.recordsImported} días`);
+        refresh();
+      },
+      onError: error => toast.error(error.message),
+    });
+  const upcomingReservations =
+    trpc.checkin.externalImports.listCloudbedsUpcomingReservations.useQuery({
+      dateFrom: today,
+      dateTo: thirdArrivalDate,
+    });
+  const communications =
+    trpc.checkin.externalImports.listCloudbedsReservationCommunications.useQuery();
+  const refreshArrivals = () => {
+    upcomingReservations.refetch();
+    communications.refetch();
+    utils.checkin.externalImports.overview.invalidate();
+  };
+  const importUpcomingReservations =
+    trpc.checkin.externalImports.importCloudbedsUpcomingReservations.useMutation(
+      {
+        onSuccess: result => {
+          toast.success(`Reservas importadas: ${result.recordsImported}`);
+          refreshArrivals();
+        },
+        onError: error => toast.error(error.message),
+      }
+    );
+  const setReviewed =
+    trpc.checkin.externalImports.setCloudbedsUpcomingReservationReviewed.useMutation(
+      {
+        onSuccess: () => {
+          upcomingReservations.refetch();
+          toast.success("Reserva revisada");
+        },
+        onError: error => toast.error(error.message),
+      }
+    );
+  const sendReservationEmail =
+    trpc.checkin.externalImports.sendCloudbedsReservationEmail.useMutation({
+      onSuccess: (_result, variables) => {
+        communications.refetch();
+        toast.success(
+          variables.messageType === "welcome"
+            ? "Correo de bienvenida enviado"
+            : "Invitación de Check-in Online enviada"
+        );
+      },
+      onError: error => toast.error(error.message),
+    });
+  const prepareReservationWhatsApp =
+    trpc.checkin.externalImports.prepareCloudbedsReservationWhatsApp.useMutation({
+      onError: error => toast.error(error.message),
+    });
+  const sendEmailFromReservation = (
+    reservation: { id: number; guestEmail: string | null; guestName: string | null },
+    messageType: "welcome" | "online_checkin"
+  ) => {
+    const label =
+      messageType === "welcome"
+        ? "la bienvenida"
+        : "la invitación de Check-in Online";
+    if (!reservation.guestEmail) {
+      toast.error("La reserva no tiene un correo electrónico");
+      return;
+    }
+    if (
+      !window.confirm(
+        `¿Enviar ${label} a ${reservation.guestName || "este huésped"} (${reservation.guestEmail})?`
+      )
+    )
+      return;
+    sendReservationEmail.mutate({
+      externalReservationId: reservation.id,
+      messageType,
+      language: messageLanguage,
+    });
+  };
+  const openWhatsAppFromReservation = async (
+    reservation: { id: number },
+    messageType: "welcome" | "online_checkin"
+  ) => {
+    try {
+      const draft = await prepareReservationWhatsApp.mutateAsync({
+        externalReservationId: reservation.id,
+        messageType,
+        language: messageLanguage,
+      });
+      const phone = draft.phone.replace(/\D/g, "");
+      if (!phone) throw new Error("El teléfono de la reserva no es válido");
+      window.open(
+        `https://wa.me/${phone}?text=${encodeURIComponent(draft.message)}`,
+        "_blank",
+        "noopener,noreferrer"
+      );
+      communications.refetch();
+      toast.success("WhatsApp preparado. Confirma el envío desde WhatsApp.");
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "No se pudo preparar WhatsApp"
+      );
+    }
+  };
+  const totals = useMemo(
+    () =>
+      (overview.data?.dailyCash || [])
+        .filter(
+          record =>
+            record.businessDate >= dateFrom && record.businessDate <= dateTo
+        )
+        .reduce(
+          (sum, record) => ({
+            ...sum,
+            [record.provider]:
+              (sum[record.provider] || 0) + Number(record.totalSales || 0),
+          }),
+          {} as Record<string, number>
+        ),
+    [overview.data?.dailyCash, dateFrom, dateTo]
+  );
+  const pendingTotal = useMemo(
+    () =>
+      (upcomingReservations.data || []).reduce(
+        (sum, reservation) => sum + asAmount(reservation.amountPending),
+        0
+      ),
+    [upcomingReservations.data]
+  );
   const canImportCloudbeds = Boolean(overview.data?.connections.cloudbeds);
 
-  return <div className="space-y-6 p-4 sm:p-6 lg:p-8">
-    <header className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"><div><div className="mb-2 flex items-center gap-2 text-cyan-700"><DatabaseZap className="h-5 w-5" /><span className="text-sm font-semibold uppercase tracking-wide">Administración</span></div><h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Importaciones externas</h1><p className="mt-2 max-w-3xl text-sm text-muted-foreground">Consulta proveedores externos en un espacio aislado. Las importaciones nunca modifican las cajas, facturas, reservas ni métricas operativas.</p></div><div className="rounded-lg border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm text-cyan-950"><ShieldCheck className="mr-2 inline h-4 w-4" /><strong>Modo aislado.</strong> Datos guardados solo para revisión.</div></header>
+  return (
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+      <header className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <div className="mb-2 flex items-center gap-2 text-cyan-700">
+            <DatabaseZap className="h-5 w-5" />
+            <span className="text-sm font-semibold uppercase tracking-wide">
+              Administración
+            </span>
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+            Importaciones externas
+          </h1>
+          <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
+            Consulta proveedores externos en un espacio aislado. Las
+            importaciones nunca modifican las cajas, facturas, reservas ni
+            métricas operativas.
+          </p>
+        </div>
+        <div className="rounded-lg border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm text-cyan-950">
+          <ShieldCheck className="mr-2 inline h-4 w-4" />
+          <strong>Modo aislado.</strong> Datos guardados solo para revisión.
+        </div>
+      </header>
 
-    <div className="flex w-full gap-2 rounded-xl border bg-muted/40 p-1 sm:w-fit" role="tablist" aria-label="Secciones de importaciones"><Button variant={section === "cash" ? "default" : "ghost"} size="sm" onClick={() => setSection("cash")}><WalletCards className="mr-2 h-4 w-4" />Cajas y conciliación</Button><Button variant={section === "arrivals" ? "default" : "ghost"} size="sm" onClick={() => setSection("arrivals")}><CalendarDays className="mr-2 h-4 w-4" />Próximas reservas</Button></div>
-
-    {section === "cash" ? <div className="space-y-6">
-      <Card><CardHeader><CardTitle className="text-base">Período de importación y comparación</CardTitle><CardDescription>Loyverse admite hasta 31 días. Las dos fuentes se agrupan por jornada operativa de 07:00 a 07:00, hora de Sevilla.</CardDescription></CardHeader><CardContent className="grid gap-3 sm:grid-cols-2"><div className="space-y-2"><Label htmlFor="imports-from">Desde</Label><Input id="imports-from" type="date" value={dateFrom} min={loyverseMinimumDate} max={dateTo} onChange={(event) => setDateFrom(event.target.value)} /></div><div className="space-y-2"><Label htmlFor="imports-to">Hasta</Label><Input id="imports-to" type="date" value={dateTo} min={dateFrom} max={today} onChange={(event) => setDateTo(event.target.value)} /></div></CardContent></Card>
-
-      <div className="grid gap-4 xl:grid-cols-2">
-        <Card className="border-orange-200 shadow-sm"><CardHeader className="space-y-3"><div className="flex items-start justify-between gap-3"><div className="flex items-center gap-3"><div className="rounded-xl bg-orange-100 p-2.5 text-orange-700"><Store className="h-6 w-6" /></div><div><CardTitle>Loyverse</CardTitle><CardDescription>Ventas de Tienda desde recibos reales</CardDescription></div></div><ConnectionBadge ready={Boolean(overview.data?.connections.loyverse)} /></div><p className="text-sm text-muted-foreground">Se compara exclusivamente con la caja interna de <strong>Tienda</strong>.</p></CardHeader><CardContent><Button className="w-full bg-orange-600 hover:bg-orange-700" disabled={!overview.data?.connections.loyverse || importLoyverse.isPending} onClick={() => importLoyverse.mutate({ dateFrom, dateTo })}>{importLoyverse.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}{overview.data?.connections.loyverse ? "Importar ventas de Loyverse" : "Pendiente de token de Loyverse"}</Button></CardContent></Card>
-        <Card className="border-sky-200 shadow-sm"><CardHeader className="space-y-3"><div className="flex items-start justify-between gap-3"><div className="flex items-center gap-3"><div className="rounded-xl bg-sky-100 p-2.5 text-sky-700"><Cloud className="h-6 w-6" /></div><div><CardTitle>Cloudbeds</CardTitle><CardDescription>Pagos externos del Hostel</CardDescription></div></div><ConnectionBadge ready={canImportCloudbeds} /></div><p className="text-sm text-muted-foreground">Importa solo pagos contables y los compara exclusivamente con la caja de <strong>Hostel</strong>.</p></CardHeader><CardContent className="space-y-3"><div className="rounded-lg border border-sky-100 bg-sky-50 p-3 text-sm text-sky-950">Requiere <code>CLOUDBEDS_API_KEY</code>, <code>CLOUDBEDS_PROPERTY_ID</code> y permiso <code>read:payment</code>. No se almacenan datos personales de huéspedes.</div><Button className="w-full bg-sky-700 hover:bg-sky-800" disabled={!canImportCloudbeds || importCloudbeds.isPending} onClick={() => importCloudbeds.mutate({ dateFrom, dateTo })}>{importCloudbeds.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}{canImportCloudbeds ? "Importar pagos de Cloudbeds" : "Pendiente de API key y Property ID"}</Button><Button variant="outline" className="w-full" asChild><a href="https://developers.cloudbeds.com/docs/quickstart-guide-api-authentication-for-property-level-users" target="_blank" rel="noreferrer">Documentación de Cloudbeds <ExternalLink className="ml-2 h-4 w-4" /></a></Button></CardContent></Card>
+      <div
+        className="flex w-full gap-2 rounded-xl border bg-muted/40 p-1 sm:w-fit"
+        role="tablist"
+        aria-label="Secciones de importaciones"
+      >
+        <Button
+          variant={section === "cash" ? "default" : "ghost"}
+          size="sm"
+          onClick={() => setSection("cash")}
+        >
+          <WalletCards className="mr-2 h-4 w-4" />
+          Cajas y conciliación
+        </Button>
+        <Button
+          variant={section === "arrivals" ? "default" : "ghost"}
+          size="sm"
+          onClick={() => setSection("arrivals")}
+        >
+          <CalendarDays className="mr-2 h-4 w-4" />
+          Próximas reservas
+        </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3"><Card><CardContent className="pt-6"><p className="text-sm text-muted-foreground">Importaciones realizadas</p><p className="mt-2 text-3xl font-bold">{overview.data?.runs.length || 0}</p></CardContent></Card><Card><CardContent className="pt-6"><p className="text-sm text-muted-foreground">Ventas Loyverse del período</p><p className="mt-2 text-3xl font-bold">{money(totals.loyverse)}</p></CardContent></Card><Card><CardContent className="pt-6"><p className="text-sm text-muted-foreground">Pagos Cloudbeds del período</p><p className="mt-2 text-3xl font-bold">{money(totals.cloudbeds)}</p></CardContent></Card></div>
-      <ComparisonCard title="Loyverse frente a Tienda" description="Relación fija; no se selecciona negocio porque Loyverse corresponde a Tienda." data={loyverseComparison.data} loading={loyverseComparison.isLoading} emptyMessage="No hay ventas de Loyverse ni cierres de Tienda para este período." />
-      <ComparisonCard title="Cloudbeds frente a Hostel" description="Relación fija; los pagos importados se enfrentan al cierre interno de Hostel." data={cloudbedsComparison.data} loading={cloudbedsComparison.isLoading} emptyMessage="Aún no hay pagos importados desde Cloudbeds para comparar con Hostel." />
-      <Card><CardHeader className="flex flex-row items-center justify-between gap-3"><div><CardTitle>Historial de importaciones</CardTitle><CardDescription>Auditoría de cada ejecución, sin afectar datos operativos.</CardDescription></div><Button variant="outline" size="sm" onClick={() => overview.refetch()} disabled={overview.isFetching}><RefreshCw className={`mr-2 h-4 w-4 ${overview.isFetching ? "animate-spin" : ""}`} />Actualizar</Button></CardHeader><CardContent>{overview.isLoading ? <div className="py-10 text-center text-sm text-muted-foreground"><Loader2 className="mx-auto mb-3 h-5 w-5 animate-spin" />Cargando historial…</div> : overview.data?.runs.length ? <div className="overflow-x-auto"><table className="w-full min-w-[720px] text-left text-sm"><thead className="border-b text-xs uppercase text-muted-foreground"><tr><th className="px-3 py-3">Fuente</th><th className="px-3 py-3">Período</th><th className="px-3 py-3">Estado</th><th className="px-3 py-3 text-right">Registros</th><th className="px-3 py-3 text-right">Total</th><th className="px-3 py-3">Fecha</th></tr></thead><tbody>{overview.data.runs.map((run) => <tr className="border-b last:border-0" key={run.id}><td className="px-3 py-3 font-medium capitalize">{run.provider}</td><td className="px-3 py-3">{run.dateFrom || "—"} — {run.dateTo || "—"}</td><td className="px-3 py-3"><Badge variant={run.status === "completed" ? "default" : run.status === "failed" ? "destructive" : "secondary"}>{run.status}</Badge></td><td className="px-3 py-3 text-right">{run.recordsImported}</td><td className="px-3 py-3 text-right">{money(run.totalAmount)}</td><td className="px-3 py-3">{dateTime(run.createdAt)}</td></tr>)}</tbody></table></div> : <div className="py-10 text-center text-sm text-muted-foreground"><WalletCards className="mx-auto mb-3 h-7 w-7" />Aún no se ha realizado ninguna importación.</div>}</CardContent></Card>
-    </div> : <section className="external-arrivals space-y-5">
-      <Card className="border-cyan-200"><CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><CardTitle className="flex items-center gap-2"><Users className="h-5 w-5 text-cyan-700" />Llegadas de los próximos tres días</CardTitle><CardDescription>Desde {today} hasta {thirdArrivalDate}. Datos importados de Cloudbeds y aislados de reservas operativas.</CardDescription></div><ConnectionBadge ready={canImportCloudbeds} /></CardHeader><CardContent className="space-y-4"><div className="rounded-lg border border-cyan-100 bg-cyan-50 p-3 text-sm text-cyan-950">Importa llegada, salida, habitación, tipo de habitación y datos de contacto para preparación operativa. La importación no escribe en reservas, huéspedes ni mensajes de Cloudbeds.</div><Button className="w-full bg-cyan-700 hover:bg-cyan-800 sm:w-auto" disabled={!canImportCloudbeds || importUpcomingReservations.isPending} onClick={() => importUpcomingReservations.mutate()}>{importUpcomingReservations.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}{canImportCloudbeds ? "Importar próximas reservas" : "Pendiente de API key y Property ID"}</Button>{importUpcomingReservations.data?.diagnostics && <details className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700"><summary className="cursor-pointer font-semibold">Diagnóstico de estructura de la última importación</summary><p className="mt-2 text-muted-foreground">Solo se muestran nombres técnicos de campos; no contiene datos de huéspedes.</p><div className="mt-2 grid gap-2 sm:grid-cols-2"><p><strong>Asignación:</strong> {importUpcomingReservations.data.diagnostics.assignmentKeys.join(", ") || "sin campos"}</p><p><strong>Respuesta:</strong> {importUpcomingReservations.data.diagnostics.responseKeys.join(", ") || "sin campos"}</p><p><strong>Reserva:</strong> {importUpcomingReservations.data.diagnostics.detailKeys.join(", ") || "sin campos"}</p><p><strong>Huésped:</strong> {importUpcomingReservations.data.diagnostics.guestKeys.join(", ") || "sin campos"}</p><p className="sm:col-span-2"><strong>Habitación:</strong> {importUpcomingReservations.data.diagnostics.roomKeys.join(", ") || "sin campos"}</p><p className="sm:col-span-2"><strong>Estructura detectada:</strong> {Object.entries(importUpcomingReservations.data.diagnostics.fieldShapes).map(([key, value]) => `${key}: ${value}`).join(" · ")}</p></div></details>}</CardContent></Card>
+      {section === "cash" ? (
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">
+                Período de importación y comparación
+              </CardTitle>
+              <CardDescription>
+                Loyverse admite hasta 31 días. Las dos fuentes se agrupan por
+                jornada operativa de 07:00 a 07:00, hora de Sevilla.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="imports-from">Desde</Label>
+                <Input
+                  id="imports-from"
+                  type="date"
+                  value={dateFrom}
+                  min={loyverseMinimumDate}
+                  max={dateTo}
+                  onChange={event => setDateFrom(event.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="imports-to">Hasta</Label>
+                <Input
+                  id="imports-to"
+                  type="date"
+                  value={dateTo}
+                  min={dateFrom}
+                  max={today}
+                  onChange={event => setDateTo(event.target.value)}
+                />
+              </div>
+            </CardContent>
+          </Card>
 
-      <Card><CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><CardTitle>Cola de llegada, comunicaciones y cobro</CardTitle><CardDescription>Una única vista por reserva con estancia, contacto, saldo pendiente y acciones manuales. Ningún correo ni WhatsApp se envía desde esta pantalla.</CardDescription></div><Button variant="outline" size="sm" onClick={refreshArrivals} disabled={upcomingReservations.isFetching}><RefreshCw className={`mr-2 h-4 w-4 ${upcomingReservations.isFetching ? "animate-spin" : ""}`} />Actualizar</Button></CardHeader><CardContent>{upcomingReservations.isLoading ? <div className="py-10 text-center text-sm text-muted-foreground"><Loader2 className="mx-auto mb-3 h-5 w-5 animate-spin" />Cargando reservas importadas…</div> : upcomingReservations.data?.length ? <div className="overflow-x-auto"><table className="w-full min-w-[1100px] text-left text-sm"><thead className="border-b text-xs uppercase text-muted-foreground"><tr><th className="px-3 py-3">Huésped y contacto</th><th className="px-3 py-3">Estancia</th><th className="px-3 py-3">Habitación</th><th className="px-3 py-3 text-right">Pendiente</th><th className="px-3 py-3">Estado</th><th className="px-3 py-3">Acciones</th></tr></thead><tbody>{upcomingReservations.data.map((reservation) => { const logs = (communications.data || []).filter((log) => log.externalReservationId === reservation.id); const sent = logs.some((log) => log.status === "sent"); const amountPending = asAmount(reservation.amountPending); return <tr className="border-b align-top last:border-0" key={reservation.id}><td className="px-3 py-3"><p className="font-semibold">{reservation.guestName || "Huésped sin nombre"}</p><p className="mt-1 text-xs text-muted-foreground">{reservation.guestEmail || "Sin correo"}{reservation.guestPhone ? ` · ${reservation.guestPhone}` : ""}</p><p className="mt-1 text-xs text-muted-foreground">{reservation.bookingSource || "Origen no indicado"}</p></td><td className="px-3 py-3"><p><span className="text-muted-foreground">Entrada:</span> <strong>{reservation.checkInDate}</strong></p><p className="mt-1"><span className="text-muted-foreground">Salida:</span> {reservation.checkOutDate || "—"}</p></td><td className="px-3 py-3"><p className="font-medium">{reservation.roomNumber ? `Hab. ${reservation.roomNumber}` : "Sin asignar"}</p><p className="mt-1 max-w-56 text-xs text-muted-foreground">{reservation.roomType || "Tipo pendiente"}</p></td><td className={`px-3 py-3 text-right font-semibold ${amountPending > 0 ? "text-amber-700" : "text-emerald-700"}`}>{money(amountPending)}</td><td className="px-3 py-3"><div className="flex min-w-36 flex-col items-start gap-2"><Badge variant={reservation.isReviewed ? "default" : "secondary"}>{reservation.isReviewed ? "Revisada" : "Pendiente de revisión"}</Badge>{sent && <Badge className="bg-emerald-600 hover:bg-emerald-600">Mensaje registrado</Badge>}</div></td><td className="px-3 py-3"><div className="flex min-w-64 flex-wrap gap-2"><Button variant="outline" size="sm" disabled={setReviewed.isPending} onClick={() => setReviewed.mutate({ id: reservation.id, isReviewed: !reservation.isReviewed })}><CheckCircle2 className="mr-2 h-4 w-4" />{reservation.isReviewed ? "Quitar revisión" : "Marcar revisada"}</Button><Button variant="outline" size="sm" disabled={registerCommunication.isPending} onClick={() => registerCommunication.mutate({ externalReservationId: reservation.id, channel: "email", status: "prepared", messageType: "arrival" })}><Mail className="mr-2 h-4 w-4" />Preparar email</Button><Button variant="outline" size="sm" disabled={registerCommunication.isPending} onClick={() => registerCommunication.mutate({ externalReservationId: reservation.id, channel: "whatsapp", status: "sent", messageType: "arrival", notes: "Marcado manualmente desde Próximas reservas" })}><MessageCircle className="mr-2 h-4 w-4" />Registrar WhatsApp enviado</Button></div></td></tr>; })}</tbody><tfoot className="border-t bg-amber-50/60"><tr><td className="px-3 py-3 font-semibold text-amber-950" colSpan={3}>Saldo pendiente total de las llegadas mostradas</td><td className="px-3 py-3 text-right font-bold text-amber-800">{money(pendingTotal)}</td><td className="px-3 py-3 text-xs text-amber-950" colSpan={2}>Informativo según Cloudbeds; no modifica la caja.</td></tr></tfoot></table></div> : <div className="py-10 text-center text-sm text-muted-foreground"><CalendarDays className="mx-auto mb-3 h-7 w-7" />Importa las próximas reservas para preparar las llegadas.</div>}</CardContent></Card>
-    </section>}
-  </div>;
+          <div className="grid gap-4 xl:grid-cols-2">
+            <Card className="border-orange-200 shadow-sm">
+              <CardHeader className="space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-xl bg-orange-100 p-2.5 text-orange-700">
+                      <Store className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <CardTitle>Loyverse</CardTitle>
+                      <CardDescription>
+                        Ventas de Tienda desde recibos reales
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <ConnectionBadge
+                    ready={Boolean(overview.data?.connections.loyverse)}
+                  />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Se compara exclusivamente con la caja interna de{" "}
+                  <strong>Tienda</strong>.
+                </p>
+              </CardHeader>
+              <CardContent>
+                <Button
+                  className="w-full bg-orange-600 hover:bg-orange-700"
+                  disabled={
+                    !overview.data?.connections.loyverse ||
+                    importLoyverse.isPending
+                  }
+                  onClick={() => importLoyverse.mutate({ dateFrom, dateTo })}
+                >
+                  {importLoyverse.isPending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="mr-2 h-4 w-4" />
+                  )}
+                  {overview.data?.connections.loyverse
+                    ? "Importar ventas de Loyverse"
+                    : "Pendiente de token de Loyverse"}
+                </Button>
+              </CardContent>
+            </Card>
+            <Card className="border-sky-200 shadow-sm">
+              <CardHeader className="space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-xl bg-sky-100 p-2.5 text-sky-700">
+                      <Cloud className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <CardTitle>Cloudbeds</CardTitle>
+                      <CardDescription>
+                        Pagos externos del Hostel
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <ConnectionBadge ready={canImportCloudbeds} />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Importa solo pagos contables y los compara exclusivamente con
+                  la caja de <strong>Hostel</strong>.
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="rounded-lg border border-sky-100 bg-sky-50 p-3 text-sm text-sky-950">
+                  Requiere <code>CLOUDBEDS_API_KEY</code>,{" "}
+                  <code>CLOUDBEDS_PROPERTY_ID</code> y permiso{" "}
+                  <code>read:payment</code>. No se almacenan datos personales de
+                  huéspedes.
+                </div>
+                <Button
+                  className="w-full bg-sky-700 hover:bg-sky-800"
+                  disabled={!canImportCloudbeds || importCloudbeds.isPending}
+                  onClick={() => importCloudbeds.mutate({ dateFrom, dateTo })}
+                >
+                  {importCloudbeds.isPending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="mr-2 h-4 w-4" />
+                  )}
+                  {canImportCloudbeds
+                    ? "Importar pagos de Cloudbeds"
+                    : "Pendiente de API key y Property ID"}
+                </Button>
+                <Button variant="outline" className="w-full" asChild>
+                  <a
+                    href="https://developers.cloudbeds.com/docs/quickstart-guide-api-authentication-for-property-level-users"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Documentación de Cloudbeds{" "}
+                    <ExternalLink className="ml-2 h-4 w-4" />
+                  </a>
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardContent className="pt-6">
+                <p className="text-sm text-muted-foreground">
+                  Importaciones realizadas
+                </p>
+                <p className="mt-2 text-3xl font-bold">
+                  {overview.data?.runs.length || 0}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <p className="text-sm text-muted-foreground">
+                  Ventas Loyverse del período
+                </p>
+                <p className="mt-2 text-3xl font-bold">
+                  {money(totals.loyverse)}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <p className="text-sm text-muted-foreground">
+                  Pagos Cloudbeds del período
+                </p>
+                <p className="mt-2 text-3xl font-bold">
+                  {money(totals.cloudbeds)}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+          <ComparisonCard
+            title="Loyverse frente a Tienda"
+            description="Relación fija; no se selecciona negocio porque Loyverse corresponde a Tienda."
+            data={loyverseComparison.data}
+            loading={loyverseComparison.isLoading}
+            emptyMessage="No hay ventas de Loyverse ni cierres de Tienda para este período."
+          />
+          <ComparisonCard
+            title="Cloudbeds frente a Hostel"
+            description="Relación fija; los pagos importados se enfrentan al cierre interno de Hostel."
+            data={cloudbedsComparison.data}
+            loading={cloudbedsComparison.isLoading}
+            emptyMessage="Aún no hay pagos importados desde Cloudbeds para comparar con Hostel."
+          />
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between gap-3">
+              <div>
+                <CardTitle>Historial de importaciones</CardTitle>
+                <CardDescription>
+                  Auditoría de cada ejecución, sin afectar datos operativos.
+                </CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => overview.refetch()}
+                disabled={overview.isFetching}
+              >
+                <RefreshCw
+                  className={`mr-2 h-4 w-4 ${overview.isFetching ? "animate-spin" : ""}`}
+                />
+                Actualizar
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {overview.isLoading ? (
+                <div className="py-10 text-center text-sm text-muted-foreground">
+                  <Loader2 className="mx-auto mb-3 h-5 w-5 animate-spin" />
+                  Cargando historial…
+                </div>
+              ) : overview.data?.runs.length ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[720px] text-left text-sm">
+                    <thead className="border-b text-xs uppercase text-muted-foreground">
+                      <tr>
+                        <th className="px-3 py-3">Fuente</th>
+                        <th className="px-3 py-3">Período</th>
+                        <th className="px-3 py-3">Estado</th>
+                        <th className="px-3 py-3 text-right">Registros</th>
+                        <th className="px-3 py-3 text-right">Total</th>
+                        <th className="px-3 py-3">Fecha</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {overview.data.runs.map(run => (
+                        <tr className="border-b last:border-0" key={run.id}>
+                          <td className="px-3 py-3 font-medium capitalize">
+                            {run.provider}
+                          </td>
+                          <td className="px-3 py-3">
+                            {run.dateFrom || "—"} — {run.dateTo || "—"}
+                          </td>
+                          <td className="px-3 py-3">
+                            <Badge
+                              variant={
+                                run.status === "completed"
+                                  ? "default"
+                                  : run.status === "failed"
+                                    ? "destructive"
+                                    : "secondary"
+                              }
+                            >
+                              {run.status}
+                            </Badge>
+                          </td>
+                          <td className="px-3 py-3 text-right">
+                            {run.recordsImported}
+                          </td>
+                          <td className="px-3 py-3 text-right">
+                            {money(run.totalAmount)}
+                          </td>
+                          <td className="px-3 py-3">
+                            {dateTime(run.createdAt)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="py-10 text-center text-sm text-muted-foreground">
+                  <WalletCards className="mx-auto mb-3 h-7 w-7" />
+                  Aún no se ha realizado ninguna importación.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        <section className="external-arrivals space-y-5">
+          <Card className="border-cyan-200">
+            <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-cyan-700" />
+                  Llegadas de los próximos tres días
+                </CardTitle>
+                <CardDescription>
+                  Desde {today} hasta {thirdArrivalDate}. Datos importados de
+                  Cloudbeds y aislados de reservas operativas.
+                </CardDescription>
+              </div>
+              <ConnectionBadge ready={canImportCloudbeds} />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="rounded-lg border border-cyan-100 bg-cyan-50 p-3 text-sm text-cyan-950">
+                Importa llegada, salida, habitación, tipo de habitación y datos
+                de contacto para preparación operativa. La importación no
+                escribe en reservas, huéspedes ni mensajes de Cloudbeds.
+              </div>
+              <Button
+                className="w-full bg-cyan-700 hover:bg-cyan-800 sm:w-auto"
+                disabled={
+                  !canImportCloudbeds || importUpcomingReservations.isPending
+                }
+                onClick={() => importUpcomingReservations.mutate()}
+              >
+                {importUpcomingReservations.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="mr-2 h-4 w-4" />
+                )}
+                {canImportCloudbeds
+                  ? "Importar próximas reservas"
+                  : "Pendiente de API key y Property ID"}
+              </Button>
+              {importUpcomingReservations.data?.diagnostics && (
+                <details className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
+                  <summary className="cursor-pointer font-semibold">
+                    Diagnóstico de estructura de la última importación
+                  </summary>
+                  <p className="mt-2 text-muted-foreground">
+                    Solo se muestran nombres técnicos de campos; no contiene
+                    datos de huéspedes.
+                  </p>
+                  <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                    <p>
+                      <strong>Asignación:</strong>{" "}
+                      {importUpcomingReservations.data.diagnostics.assignmentKeys.join(
+                        ", "
+                      ) || "sin campos"}
+                    </p>
+                    <p>
+                      <strong>Respuesta:</strong>{" "}
+                      {importUpcomingReservations.data.diagnostics.responseKeys.join(
+                        ", "
+                      ) || "sin campos"}
+                    </p>
+                    <p>
+                      <strong>Reserva:</strong>{" "}
+                      {importUpcomingReservations.data.diagnostics.detailKeys.join(
+                        ", "
+                      ) || "sin campos"}
+                    </p>
+                    <p>
+                      <strong>Huésped:</strong>{" "}
+                      {importUpcomingReservations.data.diagnostics.guestKeys.join(
+                        ", "
+                      ) || "sin campos"}
+                    </p>
+                    <p className="sm:col-span-2">
+                      <strong>Habitación:</strong>{" "}
+                      {importUpcomingReservations.data.diagnostics.roomKeys.join(
+                        ", "
+                      ) || "sin campos"}
+                    </p>
+                    <p className="sm:col-span-2">
+                      <strong>Estructura detectada:</strong>{" "}
+                      {Object.entries(
+                        importUpcomingReservations.data.diagnostics.fieldShapes
+                      )
+                        .map(([key, value]) => `${key}: ${value}`)
+                        .join(" · ")}
+                    </p>
+                  </div>
+                </details>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <CardTitle>Cola de llegada, comunicaciones y cobro</CardTitle>
+                <CardDescription>
+                  Una única vista por reserva con estancia, contacto, estado,
+                  notas, saldo pendiente y acciones revisadas por recepción.
+                  El correo se envía solo tras confirmar; WhatsApp abre un
+                  borrador para enviarlo manualmente.
+                </CardDescription>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex rounded-md border bg-background p-0.5 text-xs">
+                  <Button variant={messageLanguage === "es" ? "secondary" : "ghost"} size="sm" className="h-7 px-2" onClick={() => setMessageLanguage("es")}>ES</Button>
+                  <Button variant={messageLanguage === "en" ? "secondary" : "ghost"} size="sm" className="h-7 px-2" onClick={() => setMessageLanguage("en")}>EN</Button>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={refreshArrivals}
+                  disabled={upcomingReservations.isFetching}
+                >
+                  <RefreshCw
+                    className={`mr-2 h-4 w-4 ${upcomingReservations.isFetching ? "animate-spin" : ""}`}
+                  />
+                  Actualizar
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {upcomingReservations.isLoading ? (
+                <div className="py-10 text-center text-sm text-muted-foreground">
+                  <Loader2 className="mx-auto mb-3 h-5 w-5 animate-spin" />
+                  Cargando reservas importadas…
+                </div>
+              ) : upcomingReservations.data?.length ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[1280px] text-left text-sm">
+                    <thead className="border-b text-xs uppercase text-muted-foreground">
+                      <tr>
+                        <th className="px-3 py-3">Huésped y contacto</th>
+                        <th className="px-3 py-3">Estancia</th>
+                        <th className="px-3 py-3">Habitación</th>
+                        <th className="px-3 py-3 text-center">Huéspedes</th>
+                        <th className="px-3 py-3 text-right">Pendiente</th>
+                        <th className="px-3 py-3">Estado y notas</th>
+                        <th className="px-3 py-3">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {upcomingReservations.data.map(reservation => {
+                        const logs = (communications.data || []).filter(
+                          log => log.externalReservationId === reservation.id
+                        );
+                        const sent = logs.some(log => log.status === "sent");
+                        const amountPending = asAmount(
+                          reservation.amountPending
+                        );
+                        return (
+                          <tr
+                            className="border-b align-top last:border-0"
+                            key={reservation.id}
+                          >
+                            <td className="px-3 py-3">
+                              <p className="font-semibold">
+                                {reservation.guestName || "Huésped sin nombre"}
+                              </p>
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                {reservation.guestEmail || "Sin correo"}
+                                {reservation.guestPhone
+                                  ? ` · ${reservation.guestPhone}`
+                                  : ""}
+                              </p>
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                {reservation.bookingSource ||
+                                  "Origen no indicado"}
+                              </p>
+                            </td>
+                            <td className="px-3 py-3">
+                              <p>
+                                <span className="text-muted-foreground">
+                                  Entrada:
+                                </span>{" "}
+                                <strong>{reservation.checkInDate}</strong>
+                              </p>
+                              <p className="mt-1">
+                                <span className="text-muted-foreground">
+                                  Salida:
+                                </span>{" "}
+                                {reservation.checkOutDate || "—"}
+                              </p>
+                            </td>
+                            <td className="px-3 py-3">
+                              <p className="font-medium">
+                                {reservation.roomNumber
+                                  ? `Hab. ${reservation.roomNumber}`
+                                  : "Sin asignar"}
+                              </p>
+                              <p className="mt-1 max-w-56 text-xs text-muted-foreground">
+                                {reservation.roomType || "Tipo pendiente"}
+                              </p>
+                            </td>
+                            <td className="px-3 py-3 text-center font-semibold">
+                              {reservation.guestCount ?? "—"}
+                            </td>
+                            <td
+                              className={`px-3 py-3 text-right font-semibold ${amountPending > 0 ? "text-amber-700" : "text-emerald-700"}`}
+                            >
+                              {money(amountPending)}
+                            </td>
+                            <td className="px-3 py-3">
+                              <div className="flex min-w-52 flex-col items-start gap-2">
+                                <Badge variant="outline">
+                                  {reservationStatusLabel(
+                                    reservation.reservationStatus
+                                  )}
+                                </Badge>
+                                <Badge
+                                  variant={
+                                    reservation.isReviewed
+                                      ? "default"
+                                      : "secondary"
+                                  }
+                                >
+                                  {reservation.isReviewed
+                                    ? "Revisada"
+                                    : "Pendiente de revisión"}
+                                </Badge>
+                                {sent && (
+                                  <Badge className="bg-emerald-600 hover:bg-emerald-600">
+                                    Mensaje registrado
+                                  </Badge>
+                                )}
+                                <p className="max-w-72 whitespace-pre-wrap text-xs leading-5 text-muted-foreground">
+                                  {reservation.reservationNotes ||
+                                    "Sin notas de reserva"}
+                                </p>
+                              </div>
+                            </td>
+                            <td className="px-3 py-3">
+                              <div className="flex min-w-64 flex-wrap gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={setReviewed.isPending}
+                                  onClick={() =>
+                                    setReviewed.mutate({
+                                      id: reservation.id,
+                                      isReviewed: !reservation.isReviewed,
+                                    })
+                                  }
+                                >
+                                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                                  {reservation.isReviewed
+                                    ? "Quitar revisión"
+                                    : "Marcar revisada"}
+                                </Button>
+                                <Button variant="outline" size="sm" disabled={sendReservationEmail.isPending} onClick={() => sendEmailFromReservation(reservation, "welcome")}>
+                                  <Mail className="mr-2 h-4 w-4" />Enviar bienvenida
+                                </Button>
+                                <Button variant="outline" size="sm" disabled={sendReservationEmail.isPending} onClick={() => sendEmailFromReservation(reservation, "online_checkin")}>
+                                  <Mail className="mr-2 h-4 w-4" />Enviar Check-in
+                                </Button>
+                                <Button variant="outline" size="sm" disabled={prepareReservationWhatsApp.isPending} onClick={() => openWhatsAppFromReservation(reservation, "welcome")}>
+                                  <MessageCircle className="mr-2 h-4 w-4" />WhatsApp bienvenida
+                                </Button>
+                                <Button variant="outline" size="sm" disabled={prepareReservationWhatsApp.isPending} onClick={() => openWhatsAppFromReservation(reservation, "online_checkin")}>
+                                  <MessageCircle className="mr-2 h-4 w-4" />WhatsApp Check-in
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot className="border-t bg-amber-50/60">
+                      <tr>
+                        <td
+                          className="px-3 py-3 font-semibold text-amber-950"
+                          colSpan={4}
+                        >
+                          Saldo pendiente total de las llegadas mostradas
+                        </td>
+                        <td className="px-3 py-3 text-right font-bold text-amber-800">
+                          {money(pendingTotal)}
+                        </td>
+                        <td
+                          className="px-3 py-3 text-xs text-amber-950"
+                          colSpan={2}
+                        >
+                          Informativo según Cloudbeds; no modifica la caja.
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              ) : (
+                <div className="py-10 text-center text-sm text-muted-foreground">
+                  <CalendarDays className="mx-auto mb-3 h-7 w-7" />
+                  Importa las próximas reservas para preparar las llegadas.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </section>
+      )}
+    </div>
+  );
 }
