@@ -54,4 +54,13 @@ describe("normalizeUpcomingReservation", () => {
     );
     expect(result).toMatchObject({ guestPhone: "+34600000123", checkOutDate: "2026-08-31", roomType: "Cama en dormitorio", roomNumber: "12" });
   });
+
+  it("extrae teléfono cuando guestList está indexado por identificador", () => {
+    const result = normalizeUpcomingReservation(
+      { reservationID: "R-75", date: "2026-08-28" },
+      { reservationID: "R-75", startDate: "2026-08-28", endDate: "2026-08-29", guestList: { "185676926": { guestName: "Elena Soto", phone: "+34600000789" } } },
+      "2026-08-28",
+    );
+    expect(result).toMatchObject({ guestName: "Elena Soto", guestPhone: "+34600000789", checkOutDate: "2026-08-29" });
+  });
 });

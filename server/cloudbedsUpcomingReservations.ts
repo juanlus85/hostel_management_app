@@ -68,6 +68,8 @@ function firstGuest(detail: Record<string, unknown>) {
   if (Array.isArray(guests)) return asRecord(guests[0]);
   const guestContainer = asRecord(guests);
   if (Array.isArray(guestContainer.data)) return asRecord(guestContainer.data[0]);
+  const indexedGuest = Object.values(guestContainer).map(asRecord).find((candidate) => Object.keys(candidate).length > 0);
+  if (indexedGuest) return indexedGuest;
   return asRecord(detail.guest ?? detail.primaryGuest ?? detail.primary_guest ?? detail.mainGuest ?? detail.main_guest ?? guests);
 }
 
