@@ -29,4 +29,13 @@ describe("normalizeUpcomingReservation", () => {
     expect(result[0]).toMatchObject({ guestName: "Lucía Martín", guestEmail: "lucia@example.com", guestPhone: "+34955000111", checkOutDate: "2026-08-30", roomType: "Twin", roomNumber: "15" });
     vi.unstubAllGlobals();
   });
+
+  it("reconoce las variantes de salida, habitación y teléfono del detalle de Cloudbeds", () => {
+    const result = normalizeUpcomingReservation(
+      { reservationID: "R-73", date: "2026-08-28", room_type: "Dormitorio" },
+      { reservationID: "R-73", check_in: "2026-08-28", dateDeparture: "2026-08-31", primary_guest: { first_name: "Marta", last_name: "López", mobile_phone_number: "+34600000123" }, assigned_room: { name: "12", room_type: { name: "Cama en dormitorio" } } },
+      "2026-08-28",
+    );
+    expect(result).toMatchObject({ guestPhone: "+34600000123", checkOutDate: "2026-08-31", roomType: "Cama en dormitorio", roomNumber: "12" });
+  });
 });

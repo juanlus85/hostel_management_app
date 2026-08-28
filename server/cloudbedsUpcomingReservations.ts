@@ -50,9 +50,9 @@ function firstGuest(detail: Record<string, unknown>) {
 }
 
 function firstRoom(detail: Record<string, unknown>) {
-  const rooms = detail.rooms ?? detail.accommodations ?? detail.reservationRooms ?? detail.reservation_rooms ?? detail.roomAssignments ?? detail.room_assignments;
+  const rooms = detail.rooms ?? detail.accommodations ?? detail.reservationRooms ?? detail.reservation_rooms ?? detail.roomAssignments ?? detail.room_assignments ?? detail.roomList ?? detail.room_list ?? detail.assignedRooms ?? detail.assigned_rooms ?? detail.roomDetails ?? detail.room_details;
   if (Array.isArray(rooms)) return asRecord(rooms[0]);
-  return asRecord(detail.room ?? detail.accommodation);
+  return asRecord(detail.room ?? detail.accommodation ?? detail.assignedRoom ?? detail.assigned_room ?? detail.roomDetail ?? detail.room_detail);
 }
 
 function unwrapReservationDetail(payload: unknown) {
@@ -84,6 +84,7 @@ export function normalizeUpcomingReservation(assignment: CloudbedsReservationAss
   const detailRecord = asRecord(detail);
   const guest = firstGuest(detailRecord);
   const room = firstRoom(detailRecord);
+  const roomTypeRecord = asRecord(room.roomType ?? room.room_type ?? detailRecord.roomType ?? detailRecord.room_type);
   const sourceReservationId = reservationId(detailRecord) ?? reservationId(assignmentRecord);
   const checkInDate = firstText(detailRecord.checkInDate, detailRecord.check_in_date, detailRecord.arrivalDate, detailRecord.arrival_date, detailRecord.checkIn, detailRecord.check_in, assignmentRecord.checkInDate, assignmentRecord.check_in_date, assignmentRecord.date) ?? fallbackDate;
   if (!sourceReservationId || !/^\d{4}-\d{2}-\d{2}$/.test(checkInDate)) return null;
@@ -92,11 +93,11 @@ export function normalizeUpcomingReservation(assignment: CloudbedsReservationAss
     reservationCode: firstText(detailRecord.reservationCode, detailRecord.reservation_code, detailRecord.confirmationCode, detailRecord.confirmation_code, detailRecord.confirmationNumber, detailRecord.confirmation_number, assignmentRecord.reservationCode),
     guestName: firstText(guest.name, guest.fullName, guest.full_name, guest.guestName, guest.guest_name, detailRecord.guestName, detailRecord.guest_name, `${text(guest.firstName) ?? text(guest.first_name) ?? ""} ${text(guest.lastName) ?? text(guest.last_name) ?? ""}`.trim()),
     guestEmail: firstText(guest.email, guest.emailAddress, guest.email_address, guest.email_address_1, detailRecord.guestEmail, detailRecord.guest_email),
-    guestPhone: firstText(guest.phone, guest.phoneNumber, guest.phone_number, guest.mobile, guest.mobilePhone, guest.mobile_phone, detailRecord.guestPhone, detailRecord.guest_phone),
+    guestPhone: firstText(guest.phone, guest.phoneNumber, guest.phone_number, guest.mobile, guest.mobilePhone, guest.mobile_phone, guest.phoneMobile, guest.phone_mobile, guest.mobilePhoneNumber, guest.mobile_phone_number, guest.cellPhone, guest.cell_phone, detailRecord.guestPhone, detailRecord.guest_phone, detailRecord.phone, detailRecord.phoneNumber),
     checkInDate,
-    checkOutDate: firstText(detailRecord.checkOutDate, detailRecord.check_out_date, detailRecord.departureDate, detailRecord.departure_date, detailRecord.checkOut, detailRecord.check_out, assignmentRecord.checkOutDate, assignmentRecord.check_out_date),
-    roomType: firstText(room.roomTypeName, room.room_type_name, room.roomType, room.room_type, detailRecord.roomTypeName, detailRecord.room_type_name, assignmentRecord.roomTypeName, assignmentRecord.room_type_name),
-    roomNumber: firstText(room.roomName, room.room_name, room.roomNumber, room.room_number, room.room_number_display, detailRecord.roomNumber, detailRecord.room_number, assignmentRecord.roomName, assignmentRecord.room_number),
+    checkOutDate: firstText(detailRecord.checkOutDate, detailRecord.check_out_date, detailRecord.departureDate, detailRecord.departure_date, detailRecord.dateDeparture, detailRecord.date_departure, detailRecord.departure, detailRecord.checkOut, detailRecord.check_out, assignmentRecord.checkOutDate, assignmentRecord.check_out_date, assignmentRecord.dateDeparture, assignmentRecord.date_departure),
+    roomType: firstText(room.roomTypeName, room.room_type_name, room.roomTypeNameDisplay, room.room_type_name_display, room.roomType, room.room_type, roomTypeRecord.name, roomTypeRecord.roomTypeName, roomTypeRecord.room_type_name, detailRecord.roomTypeName, detailRecord.room_type_name, detailRecord.roomType, detailRecord.room_type, assignmentRecord.roomTypeName, assignmentRecord.room_type_name, assignmentRecord.roomType, assignmentRecord.room_type),
+    roomNumber: firstText(room.roomName, room.room_name, room.roomNumber, room.room_number, room.room_number_display, room.name, room.number, detailRecord.roomNumber, detailRecord.room_number, detailRecord.roomName, detailRecord.room_name, assignmentRecord.roomName, assignmentRecord.room_number, assignmentRecord.roomNumber, assignmentRecord.room_name),
     reservationStatus: firstText(detailRecord.status, detailRecord.reservationStatus, detailRecord.reservation_status, assignmentRecord.status),
     bookingSource: firstText(detailRecord.sourceName, detailRecord.source_name, detailRecord.source, assignmentRecord.sourceName, assignmentRecord.source_name),
     // Se conserva solo trazabilidad técnica; los datos personales usados están normalizados en columnas explícitas.
