@@ -1078,10 +1078,10 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Enviar email de confirmación
 
 ### Componentes Auxiliares
-- [ ] SignaturePad para firma digital
+- [x] SignaturePad para firma digital
 - [ ] GuestFormFields para formulario de huésped
 - [ ] GuestCard para tarjetas de huéspedes
-- [ ] EditGuestModal para edición
+- [x] EditGuestModal para edición
 
 ### Funcionalidades Adicionales
 - [x] Generación de PDF con todos los datos y firma
