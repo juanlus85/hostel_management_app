@@ -59,6 +59,17 @@ function reservationId(record: Record<string, unknown>) {
   return firstText(record.reservationID, record.reservationId, record.reservation_id, record.id);
 }
 
+export function getNextMadridCalendarDates(now = new Date(), count = 3) {
+  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Madrid", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(now);
+  const values = Object.fromEntries(parts.filter((part) => part.type !== "literal").map((part) => [part.type, part.value]));
+  const start = new Date(Date.UTC(Number(values.year), Number(values.month) - 1, Number(values.day)));
+  return Array.from({ length: count }, (_, index) => {
+    const date = new Date(start);
+    date.setUTCDate(start.getUTCDate() + index);
+    return date.toISOString().slice(0, 10);
+  });
+}
+
 export function normalizeUpcomingReservation(assignment: CloudbedsReservationAssignment, detail: CloudbedsReservationDetail, fallbackDate: string): ImportedUpcomingReservation | null {
   const assignmentRecord = asRecord(assignment);
   const detailRecord = asRecord(detail);

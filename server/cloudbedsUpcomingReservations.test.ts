@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeUpcomingReservation } from "./cloudbedsUpcomingReservations";
+import { getNextMadridCalendarDates, normalizeUpcomingReservation } from "./cloudbedsUpcomingReservations";
 
 describe("normalizeUpcomingReservation", () => {
   it("extrae solo los datos operativos necesarios de una reserva futura", () => {
@@ -10,5 +10,9 @@ describe("normalizeUpcomingReservation", () => {
     );
     expect(result).toMatchObject({ sourceReservationId: "R-71", guestName: "Ana García", checkInDate: "2026-08-28", checkOutDate: "2026-08-30", roomType: "Twin", roomNumber: "15", reservationStatus: "confirmed" });
     expect(result?.rawData).not.toContain("undefined");
+  });
+
+  it("calcula tres fechas de llegada de Madrid sin depender del formato regional", () => {
+    expect(getNextMadridCalendarDates(new Date("2026-08-27T12:00:00.000Z"))).toEqual(["2026-08-27", "2026-08-28", "2026-08-29"]);
   });
 });

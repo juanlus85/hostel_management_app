@@ -17,7 +17,7 @@ import { isAllowedDocumentType } from "../shared/countries";
 import { compareCashByDate } from "../shared/externalCashComparison";
 import { fetchLoyverseReceipts, getLoyverseOperationalWindow } from "./loyverseReceipts";
 import { aggregateCloudbedsPaymentsByOperationalDay, fetchCloudbedsTransactions } from "./cloudbedsTransactions";
-import { fetchCloudbedsUpcomingReservations } from "./cloudbedsUpcomingReservations";
+import { fetchCloudbedsUpcomingReservations, getNextMadridCalendarDates } from "./cloudbedsUpcomingReservations";
 
 // Admin-only procedure
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -2531,15 +2531,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
         const apiKey = process.env.CLOUDBEDS_API_KEY;
         const propertyId = process.env.CLOUDBEDS_PROPERTY_ID;
         if (!apiKey || !propertyId) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Configura CLOUDBEDS_API_KEY y CLOUDBEDS_PROPERTY_ID para importar reservas" });
-        const formatter = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Madrid", year: "numeric", month: "2-digit", day: "2-digit" });
-        const todayInMadrid = formatter.format(new Date());
-        const [month, day, year] = todayInMadrid.split("/");
-        const start = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
-        const dates = Array.from({ length: 3 }, (_, index) => {
-          const date = new Date(start);
-          date.setUTCDate(start.getUTCDate() + index);
-          return date.toISOString().slice(0, 10);
-        });
+        const dates = getNextMadridCalendarDates();
         const runId = await db.createExternalImportRun({ provider: "cloudbeds", importType: "future", status: "running", dateFrom: dates[0], dateTo: dates[2], createdBy: ctx.user.id, startedAt: new Date(), metadata: JSON.stringify({ source: "Cloudbeds PMS API", scope: "reservation assignments and reservation details", isolated: true }) });
         try {
           const reservations = await fetchCloudbedsUpcomingReservations(apiKey, propertyId, dates);
