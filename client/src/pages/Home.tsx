@@ -47,6 +47,7 @@ export default function Home() {
   const [period, setPeriod] = useState<PeriodType>("month");
   const [customStartDate, setCustomStartDate] = useState("");
   const [customEndDate, setCustomEndDate] = useState("");
+  const isAdmin = user?.role === "admin";
   
   // Get date range based on selected period
   const dateRange = useMemo(() => {
@@ -102,6 +103,13 @@ export default function Home() {
   }[period];
 
   const { data: businesses } = trpc.businesses.list.useQuery();
+  const provisionalExternalCash = trpc.dashboard.provisionalExternalCash.useQuery(undefined, {
+    enabled: isAdmin,
+    retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnMount: "always",
+    staleTime: 0,
+  });
   
   const hostelId = businesses?.find(b => b.code === "hostel")?.id;
   const tiendaId = businesses?.find(b => b.code === "tienda")?.id;
@@ -160,7 +168,6 @@ export default function Home() {
   const BusinessIcon = selectedBusiness === "hostel" ? Building2 : 
                        selectedBusiness === "tienda" ? Store : Building2;
   
-  const isAdmin = user?.role === "admin";
   const supplierExpenses = useMemo(() => {
     if (selectedBusiness === "hostel") return hostelSupplierExpenses || [];
     if (selectedBusiness === "tienda") return tiendaSupplierExpenses || [];
@@ -261,6 +268,16 @@ export default function Home() {
       </div>
 
       {/* Stats Grid - Solo visible para admin */}
+      {isAdmin && <div className="grid gap-4 md:grid-cols-2">
+        <Card className="border-violet-200 bg-violet-50/40">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">X provisional Tienda</CardTitle><Store className="h-4 w-4 text-violet-700" /></CardHeader>
+          <CardContent>{provisionalExternalCash.isLoading ? <div className="text-sm text-muted-foreground">Actualizando Loyverse…</div> : <><div className="text-2xl font-bold text-violet-700">€{Number(provisionalExternalCash.data?.tienda.total || 0).toFixed(2)}</div><p className="text-xs text-muted-foreground">Loyverse · jornada {provisionalExternalCash.data?.tienda.businessDate || "—"} · {Number(provisionalExternalCash.data?.tienda.receiptCount || 0)} recibos</p><p className="mt-1 text-xs font-medium text-violet-700">En curso desde las 07:00 · no guarda ni cierra caja</p></>}</CardContent>
+        </Card>
+        <Card className="border-cyan-200 bg-cyan-50/40">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">X provisional Hostel</CardTitle><Building2 className="h-4 w-4 text-cyan-700" /></CardHeader>
+          <CardContent>{provisionalExternalCash.isLoading ? <div className="text-sm text-muted-foreground">Actualizando Cloudbeds…</div> : <><div className="text-2xl font-bold text-cyan-700">€{Number(provisionalExternalCash.data?.hostel.total || 0).toFixed(2)}</div><p className="text-xs text-muted-foreground">Cloudbeds · fecha de servicio {provisionalExternalCash.data?.hostel.serviceDate || "—"} · {provisionalExternalCash.data?.hostel.paymentCount || 0} pagos</p><p className="mt-1 text-xs font-medium text-cyan-700">En curso · no guarda ni cierra caja</p></>}</CardContent>
+        </Card>
+      </div>}
       {isAdmin && (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
           <Card>

@@ -13,6 +13,7 @@ import { hasInvitationEmail, onlineGuestToken } from "../shared/onlineCheckinGue
 import { checkoutNotificationContent, shouldCreateCheckoutNotification } from "../shared/roomCheckoutNotifications";
 import { normalizedDocumentSupport, requiresDocumentSupport } from "../shared/documentSupport";
 import { aggregateLoyverseReceiptsByOperationalDay, loyverseReceiptDate } from "../shared/loyverseDailyCash";
+import { currentLoyverseOperationalDate, madridDateParts, sumLoyverseReceiptsForOperationalDay } from "../shared/provisionalExternalCash";
 import { isAllowedDocumentType } from "../shared/countries";
 import { compareCashByDate } from "../shared/externalCashComparison";
 import { fetchLoyverseReceipts, getLoyverseOperationalWindow } from "./loyverseReceipts";
@@ -1137,6 +1138,39 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
       endDate: z.string(),
     })).query(async ({ input }) => {
       return db.getDailyWithdrawals(input.businessId, input.startDate, input.endDate);
+    }),
+    provisionalExternalCash: adminProcedure.query(async () => {
+      const now = new Date();
+      const loyverseDate = currentLoyverseOperationalDate(now);
+      const cloudbedsDate = madridDateParts(now).date;
+      const loyverseToken = process.env.LOYVERSE_ACCESS_TOKEN;
+      const cloudbedsApiKey = process.env.CLOUDBEDS_API_KEY;
+      const cloudbedsPropertyId = process.env.CLOUDBEDS_PROPERTY_ID;
+
+      const tienda = await (async () => {
+        if (!loyverseToken) return { status: "not_configured" as const, businessDate: loyverseDate, total: "0.00", receiptCount: 0 };
+        try {
+          const { start } = getLoyverseOperationalWindow(loyverseDate);
+          const receipts = await fetchLoyverseReceipts(loyverseToken, start, now.toISOString());
+          const summary = sumLoyverseReceiptsForOperationalDay(receipts, loyverseDate);
+          return { status: "ready" as const, businessDate: loyverseDate, total: summary.total.toFixed(2), receiptCount: summary.receiptCount };
+        } catch {
+          return { status: "unavailable" as const, businessDate: loyverseDate, total: "0.00", receiptCount: 0 };
+        }
+      })();
+
+      const hostel = await (async () => {
+        if (!cloudbedsApiKey || !cloudbedsPropertyId) return { status: "not_configured" as const, serviceDate: cloudbedsDate, total: "0.00", paymentCount: 0 };
+        try {
+          const payments = await fetchCloudbedsTransactions(cloudbedsApiKey, cloudbedsPropertyId, cloudbedsDate, cloudbedsDate);
+          const row = aggregateCloudbedsPaymentsByOperationalDay(payments, 0, cloudbedsPropertyId).find((item) => item.businessDate === cloudbedsDate);
+          return { status: "ready" as const, serviceDate: cloudbedsDate, total: row?.totalSales ?? "0.00", paymentCount: payments.length };
+        } catch {
+          return { status: "unavailable" as const, serviceDate: cloudbedsDate, total: "0.00", paymentCount: 0 };
+        }
+      })();
+
+      return { generatedAt: now.toISOString(), tienda, hostel };
     }),
   }),
 

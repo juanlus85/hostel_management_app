@@ -1196,6 +1196,9 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Ocultar DNI/NIF y NIE en el selector visual de Check-in Online para terceros países
 
 ## Importaciones externas
+- [x] Añadir al Dashboard X provisional Tienda desde Loyverse y X provisional Hostel desde Cloudbeds al abrir la página
+- [x] Mantener los importes provisionales separados de cierres y cajas internas
+- [x] Ejecutar las consultas externas únicamente al cargar o reabrir Dashboard, sin proceso periódico
 - [x] Crear menú administrativo de importaciones externas, independiente de los datos operativos actuales
 - [x] Añadir configuración segura de Loyverse mediante secreto de entorno y validar la conexión
 - [x] Crear almacenamiento aislado para ejecuciones y datos importados
