@@ -1221,6 +1221,7 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [ ] Corregir el mapeo de próximas reservas de Cloudbeds que importa asignaciones sin huésped, contacto ni detalles de estancia
 - [ ] Completar salida, número y tipo de habitación, y teléfono en las próximas reservas importadas desde Cloudbeds
 - [ ] Registrar de forma segura las claves reales devueltas por Cloudbeds para terminar el mapeo de reservas
+- [ ] Registrar y mostrar solo la estructura no sensible de una respuesta de reserva y su asignación para corregir los campos vacíos
 - [x] Guardar de forma aislada datos de estancia y contacto necesarios para comunicaciones operativas
 - [x] Añadir estado y trazabilidad de mensajes por reserva sin realizar envíos automáticos
 - [x] Preparar acciones futuras útiles de llegada, revisión y comunicación sin mezclar datos operativos

@@ -17,7 +17,7 @@ import { isAllowedDocumentType } from "../shared/countries";
 import { compareCashByDate } from "../shared/externalCashComparison";
 import { fetchLoyverseReceipts, getLoyverseOperationalWindow } from "./loyverseReceipts";
 import { aggregateCloudbedsPaymentsByOperationalDay, fetchCloudbedsTransactions, getCloudbedsBookingPrepayment } from "./cloudbedsTransactions";
-import { fetchCloudbedsUpcomingReservations, getNextMadridCalendarDates } from "./cloudbedsUpcomingReservations";
+import { fetchCloudbedsUpcomingReservations, getNextMadridCalendarDates, type CloudbedsReservationFieldDiagnostics } from "./cloudbedsUpcomingReservations";
 
 // Admin-only procedure
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -2547,10 +2547,11 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
         const dates = getNextMadridCalendarDates();
         const runId = await db.createExternalImportRun({ provider: "cloudbeds", importType: "future", status: "running", dateFrom: dates[0], dateTo: dates[2], createdBy: ctx.user.id, startedAt: new Date(), metadata: JSON.stringify({ source: "Cloudbeds PMS API", scope: "reservation assignments and reservation details", isolated: true }) });
         try {
-          const reservations = await fetchCloudbedsUpcomingReservations(apiKey, propertyId, dates);
+          let diagnostics: CloudbedsReservationFieldDiagnostics | undefined;
+          const reservations = await fetchCloudbedsUpcomingReservations(apiKey, propertyId, dates, (value) => { diagnostics = value; });
           await db.upsertExternalUpcomingReservations(reservations.map((reservation) => ({ ...reservation, importRunId: runId, provider: "cloudbeds" })));
-          await db.updateExternalImportRun(runId, { status: "completed", recordsImported: reservations.length, finishedAt: new Date() });
-          return { success: true, runId, dates, recordsImported: reservations.length };
+          await db.updateExternalImportRun(runId, { status: "completed", recordsImported: reservations.length, metadata: JSON.stringify({ source: "Cloudbeds PMS API", scope: "reservation assignments and reservation details", isolated: true, diagnostics }), finishedAt: new Date() });
+          return { success: true, runId, dates, recordsImported: reservations.length, diagnostics };
         } catch (error) {
           const message = error instanceof Error ? error.message : "Error no identificado al importar las reservas de Cloudbeds";
           await db.updateExternalImportRun(runId, { status: "failed", errorMessage: message, finishedAt: new Date() });

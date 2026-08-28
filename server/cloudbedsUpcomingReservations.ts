@@ -16,6 +16,14 @@ export type ImportedUpcomingReservation = {
   rawData: string;
 };
 
+export type CloudbedsReservationFieldDiagnostics = {
+  assignmentKeys: string[];
+  responseKeys: string[];
+  detailKeys: string[];
+  guestKeys: string[];
+  roomKeys: string[];
+};
+
 function text(value: unknown): string | null {
   if (typeof value === "string" && value.trim()) return value.trim();
   if (typeof value === "number") return String(value);
@@ -119,9 +127,15 @@ async function getJson(url: URL, apiKey: string) {
   return payload;
 }
 
-export async function fetchCloudbedsUpcomingReservations(apiKey: string, propertyId: string, dates: string[]) {
+export async function fetchCloudbedsUpcomingReservations(
+  apiKey: string,
+  propertyId: string,
+  dates: string[],
+  onDiagnostics?: (diagnostics: CloudbedsReservationFieldDiagnostics) => void,
+) {
   const imported: ImportedUpcomingReservation[] = [];
   const seen = new Set<string>();
+  let diagnosticsReported = false;
   for (const date of dates) {
     const assignmentsUrl = new URL("https://api.cloudbeds.com/api/v1.3/getReservationAssignments");
     assignmentsUrl.searchParams.set("propertyID", propertyId);
@@ -134,7 +148,20 @@ export async function fetchCloudbedsUpcomingReservations(apiKey: string, propert
       const detailUrl = new URL("https://api.cloudbeds.com/api/v1.3/getReservation");
       detailUrl.searchParams.set("propertyID", propertyId);
       detailUrl.searchParams.set("reservationID", id);
-      const detail = unwrapReservationDetail(await getJson(detailUrl, apiKey));
+      const detailPayload = await getJson(detailUrl, apiKey);
+      const detail = unwrapReservationDetail(detailPayload);
+      if (!diagnosticsReported) {
+        const guest = firstGuest(detail);
+        const room = firstRoom(detail);
+        onDiagnostics?.({
+          assignmentKeys: Object.keys(assignment).sort(),
+          responseKeys: Object.keys(asRecord(detailPayload)).sort(),
+          detailKeys: Object.keys(detail).sort(),
+          guestKeys: Object.keys(guest).sort(),
+          roomKeys: Object.keys(room).sort(),
+        });
+        diagnosticsReported = true;
+      }
       const reservation = normalizeUpcomingReservation(assignment, detail, date);
       if (reservation) imported.push(reservation);
     }

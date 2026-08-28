@@ -39,8 +39,10 @@ describe("normalizeUpcomingReservation", () => {
         roomAssignments: [{ room_number: "18", room_type_name: "Habitación privada" }],
       }] }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
-    const result = await fetchCloudbedsUpcomingReservations("cbat_test", "204754", ["2026-08-28"]);
+    let diagnostics: { detailKeys: string[]; guestKeys: string[]; roomKeys: string[] } | undefined;
+    const result = await fetchCloudbedsUpcomingReservations("cbat_test", "204754", ["2026-08-28"], (value) => { diagnostics = value; });
     expect(result[0]).toMatchObject({ guestName: "Carlos Ruiz", guestPhone: "+34600000456", checkOutDate: "2026-08-31", roomType: "Habitación privada", roomNumber: "18" });
+    expect(diagnostics).toMatchObject({ detailKeys: expect.arrayContaining(["date_departure", "guestList", "roomAssignments"]), guestKeys: expect.arrayContaining(["mobile_phone_number"]), roomKeys: expect.arrayContaining(["room_type_name"]) });
     vi.unstubAllGlobals();
   });
 
