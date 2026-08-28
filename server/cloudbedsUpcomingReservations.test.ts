@@ -30,6 +30,20 @@ describe("normalizeUpcomingReservation", () => {
     vi.unstubAllGlobals();
   });
 
+  it("extrae el detalle cuando Cloudbeds lo devuelve dentro de data", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify([{ reservationID: "R-74", date: "2026-08-28" }]), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [{
+        reservationID: "R-74", check_in_date: "2026-08-28", date_departure: "2026-08-31",
+        guestList: [{ first_name: "Carlos", last_name: "Ruiz", mobile_phone_number: "+34600000456" }],
+        roomAssignments: [{ room_number: "18", room_type_name: "Habitación privada" }],
+      }] }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const result = await fetchCloudbedsUpcomingReservations("cbat_test", "204754", ["2026-08-28"]);
+    expect(result[0]).toMatchObject({ guestName: "Carlos Ruiz", guestPhone: "+34600000456", checkOutDate: "2026-08-31", roomType: "Habitación privada", roomNumber: "18" });
+    vi.unstubAllGlobals();
+  });
+
   it("reconoce las variantes de salida, habitación y teléfono del detalle de Cloudbeds", () => {
     const result = normalizeUpcomingReservation(
       { reservationID: "R-73", date: "2026-08-28", room_type: "Dormitorio" },

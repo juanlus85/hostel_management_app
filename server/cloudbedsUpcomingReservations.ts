@@ -58,6 +58,10 @@ function firstRoom(detail: Record<string, unknown>) {
 function unwrapReservationDetail(payload: unknown) {
   const root = asRecord(payload);
   for (const key of ["reservation", "data", "result", "reservationDetails", "reservation_details"]) {
+    if (Array.isArray(root[key])) {
+      const first = asRecord(root[key][0]);
+      if (Object.keys(first).length > 0) return first;
+    }
     const nested = asRecord(root[key]);
     if (Object.keys(nested).length > 0) return nested;
   }
