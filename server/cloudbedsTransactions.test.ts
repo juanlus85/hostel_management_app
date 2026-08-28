@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { aggregateCloudbedsPaymentsByOperationalDay, fetchCloudbedsTransactions } from "./cloudbedsTransactions";
+import { aggregateCloudbedsPaymentsByOperationalDay, fetchCloudbedsTransactions, getCloudbedsBookingPrepayment } from "./cloudbedsTransactions";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -23,5 +23,14 @@ describe("aggregateCloudbedsPaymentsByOperationalDay", () => {
     expect(transactions).toHaveLength(1);
     expect(fetchMock).toHaveBeenCalledWith("https://api.cloudbeds.com/accounting/v1.0/transactions", expect.objectContaining({ headers: expect.objectContaining({ "X-Property-ID": "204754", Authorization: "Bearer cbat_private" }) }));
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({ filters: { and: [{ field: "service_date", operator: "greater_than_or_equal" }, { field: "service_date", operator: "less_than_or_equal" }] }, limit: 1100 });
+  });
+
+  it("extrae solo el prepago Booking de la fecha de servicio solicitada", () => {
+    const result = getCloudbedsBookingPrepayment([
+      { id: "1", internalCode: "9300", amount: "-229.76", serviceDate: "2026-08-26", paymentTypeName: "PREPAID BOOKING" },
+      { id: "2", internalCode: "9300", amount: "-49.00", serviceDate: "2026-08-26", paymentTypeName: "Tarjeta de Crédito/Débito Cliente" },
+      { id: "3", internalCode: "9300", amount: "-100.00", serviceDate: "2026-08-27", paymentTypeName: "PREPAID BOOKING" },
+    ], "2026-08-26");
+    expect(result).toEqual({ total: "229.76", paymentCount: 1 });
   });
 });

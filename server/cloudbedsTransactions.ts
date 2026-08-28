@@ -26,6 +26,28 @@ function serviceDate(transaction: CloudbedsTransaction) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : "";
 }
 
+function paymentDescription(transaction: CloudbedsTransaction) {
+  return Object.entries(transaction as Record<string, unknown>)
+    .filter(([key, value]) => /payment|type|method|name|description|category/i.test(key) && typeof value === "string")
+    .map(([, value]) => String(value).toUpperCase())
+    .join(" · ");
+}
+
+export function getCloudbedsBookingPrepayment(transactions: CloudbedsTransaction[], targetServiceDate: string) {
+  let total = 0;
+  let paymentCount = 0;
+  for (const transaction of transactions) {
+    const code = transactionCode(transaction);
+    const label = paymentDescription(transaction);
+    if (serviceDate(transaction) !== targetServiceDate || !/^9\d{3}(?:A|V)?$/.test(code) || !/PREPAID\s*BOOKING|BOOKING\s*PREPAID/.test(label)) continue;
+    const amount = -Number(transaction.amount || 0);
+    if (!Number.isFinite(amount)) continue;
+    total += amount;
+    paymentCount += 1;
+  }
+  return { total: total.toFixed(2), paymentCount };
+}
+
 export function aggregateCloudbedsPaymentsByOperationalDay(transactions: CloudbedsTransaction[], importRunId: number, propertyId: string) {
   const days = new Map<string, { total: number; cash: number; nonCash: number; transactions: Array<Record<string, unknown>> }>();
   for (const transaction of transactions) {

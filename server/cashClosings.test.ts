@@ -96,6 +96,7 @@ describe("cashClosings router", () => {
     const caller = appRouter.createCaller(ctx);
 
     expect(caller.cashClosings.importCloudbedsZ).toBeDefined();
+    expect(caller.cashClosings.importCloudbedsBookingPrepayment).toBeDefined();
   });
 });
 

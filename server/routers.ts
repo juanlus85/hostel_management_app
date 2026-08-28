@@ -16,7 +16,7 @@ import { aggregateLoyverseReceiptsByOperationalDay, loyverseReceiptDate } from "
 import { isAllowedDocumentType } from "../shared/countries";
 import { compareCashByDate } from "../shared/externalCashComparison";
 import { fetchLoyverseReceipts, getLoyverseOperationalWindow } from "./loyverseReceipts";
-import { aggregateCloudbedsPaymentsByOperationalDay, fetchCloudbedsTransactions } from "./cloudbedsTransactions";
+import { aggregateCloudbedsPaymentsByOperationalDay, fetchCloudbedsTransactions, getCloudbedsBookingPrepayment } from "./cloudbedsTransactions";
 import { fetchCloudbedsUpcomingReservations, getNextMadridCalendarDates } from "./cloudbedsUpcomingReservations";
 
 // Admin-only procedure
@@ -1237,6 +1237,19 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
       const record = aggregateCloudbedsPaymentsByOperationalDay(transactions, 0, propertyId).find((item) => item.businessDate === input.date);
       const paymentCount = record ? (JSON.parse(record.rawData || "[]") as unknown[]).length : 0;
       return { zReading: record?.totalSales ?? "0.00", paymentCount, serviceDate: input.date };
+    }),
+    importCloudbedsBookingPrepayment: protectedProcedure.input(z.object({
+      businessId: z.number(),
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    })).mutation(async ({ input }) => {
+      const apiKey = process.env.CLOUDBEDS_API_KEY;
+      const propertyId = process.env.CLOUDBEDS_PROPERTY_ID;
+      if (!apiKey || !propertyId) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Configura CLOUDBEDS_API_KEY y CLOUDBEDS_PROPERTY_ID para importar el prepago Booking" });
+      const business = (await db.getAllBusinesses()).find((item) => item.id === input.businessId);
+      if (business?.code !== "hostel") throw new TRPCError({ code: "BAD_REQUEST", message: "La importación de prepago Booking de Cloudbeds solo está disponible para la caja de Hostel" });
+      const transactions = await fetchCloudbedsTransactions(apiKey, propertyId, input.date, input.date);
+      const result = getCloudbedsBookingPrepayment(transactions, input.date);
+      return { prepaidBooking: result.total, paymentCount: result.paymentCount, serviceDate: input.date };
     }),
   }),
 

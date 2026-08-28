@@ -114,6 +114,15 @@ export default function Caja() {
     onError: (error) => toast.error(error.message),
   });
 
+  const importCloudbedsBookingPrepayment = trpc.cashClosings.importCloudbedsBookingPrepayment.useMutation({
+    onSuccess: (result) => {
+      setPrepaidBooking(result.prepaidBooking);
+      setHasUserEdited(true);
+      toast.success(`Prepago Booking cargado: ${result.prepaidBooking} € (${result.paymentCount} cobros)`);
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
   const closeClosing = trpc.cashClosings.close.useMutation({
     onSuccess: () => {
       refetchClosing();
@@ -666,6 +675,12 @@ export default function Caja() {
                   <Button variant="outline" size="sm" className="w-full" disabled={!currentBusinessId || importCloudbedsZ.isPending} onClick={() => importCloudbedsZ.mutate({ businessId: currentBusinessId ?? 0, date: currentDate })}>
                     {importCloudbedsZ.isPending ? <Download className="mr-2 h-4 w-4 animate-pulse" /> : <Download className="mr-2 h-4 w-4" />}
                     Importar Z de Cloudbeds
+                  </Button>
+                )}
+                {selectedBusiness === "hostel" && !isClosed && (
+                  <Button variant="outline" size="sm" className="w-full" disabled={!currentBusinessId || importCloudbedsBookingPrepayment.isPending} onClick={() => importCloudbedsBookingPrepayment.mutate({ businessId: currentBusinessId ?? 0, date: currentDate })}>
+                    {importCloudbedsBookingPrepayment.isPending ? <Download className="mr-2 h-4 w-4 animate-pulse" /> : <Download className="mr-2 h-4 w-4" />}
+                    Importar Prepago Booking de Cloudbeds
                   </Button>
                 )}
                 {selectedBusiness === "hostel" && !isClosed && <p className="text-xs text-muted-foreground">Carga los pagos del informe de conciliación de Cloudbeds por fecha de servicio. Guarda o cierra la caja después para conservarla.</p>}
