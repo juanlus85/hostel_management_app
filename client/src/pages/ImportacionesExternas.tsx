@@ -101,7 +101,15 @@ const isArchivedReservationStatus = (value: string | null | undefined) => {
     ?.trim()
     .toLowerCase()
     .replace(/[\s-]+/g, "_");
-  return ["checked_in", "checked_out", "check_in", "check_out", "cancelled", "canceled", "cancel"].includes(normalized || "");
+  return [
+    "checked_in",
+    "checked_out",
+    "check_in",
+    "check_out",
+    "cancelled",
+    "canceled",
+    "cancel",
+  ].includes(normalized || "");
 };
 
 function ConnectionBadge({ ready }: { ready: boolean }) {
@@ -411,7 +419,11 @@ export default function ImportacionesExternas() {
     [overview.data?.dailyCash, dateFrom, dateTo]
   );
   const visibleUpcomingReservations = useMemo(
-    () => (upcomingReservations.data || []).filter(reservation => !isArchivedReservationStatus(reservation.reservationStatus)),
+    () =>
+      (upcomingReservations.data || []).filter(
+        reservation =>
+          !isArchivedReservationStatus(reservation.reservationStatus)
+      ),
     [upcomingReservations.data]
   );
   const pendingTotal = useMemo(
@@ -1090,7 +1102,8 @@ export default function ImportacionesExternas() {
               ) : (
                 <div className="py-10 text-center text-sm text-muted-foreground">
                   <CalendarDays className="mx-auto mb-3 h-7 w-7" />
-                  No hay llegadas pendientes después de ocultar las reservas con Check-in, Check-out o canceladas.
+                  No hay llegadas pendientes después de ocultar las reservas con
+                  Check-in, Check-out o canceladas.
                 </div>
               )}
             </CardContent>

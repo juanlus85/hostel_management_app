@@ -1231,6 +1231,7 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Incorporar `guestPhone` y `guestCellPhone` de Cloudbeds al teléfono mostrado en próximas reservas
 - [x] Ocultar de próximas reservas las estancias con estado de check-in, check-out o cancelada
 - [x] Reutilizar códigos de acceso de la habitación base 42 para las subhabitaciones 42-1, 42-2 y 42-3
+- [x] Consultar exactamente la tabla de Códigos de Check-in al crear una invitación desde una reserva externa
 - [x] Mostrar el importe pendiente de cada reserva importada desde Cloudbeds en la cola de llegadas
 - [x] Mover el saldo pendiente a una zona visible y confirmar su actualización al reimportar reservas existentes
 - [x] Unificar saldo pendiente y cola de próximas reservas de Cloudbeds en una única tabla homogénea

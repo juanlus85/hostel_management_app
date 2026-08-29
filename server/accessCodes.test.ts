@@ -4,6 +4,7 @@ import { findAccessCodeForRoom } from "../shared/accessCodes";
 describe("códigos de acceso por habitación", () => {
   const codes = [
     { roomNumber: "42", roomCode: "BASE42" },
+    { roomNumber: "4", roomCode: "ROOM4" },
     { roomNumber: "15", roomCode: "ROOM15" },
   ];
 
@@ -14,8 +15,21 @@ describe("códigos de acceso por habitación", () => {
   });
 
   it("prioriza un código específico y no aproxima números no relacionados", () => {
-    const withSpecific = [...codes, { roomNumber: "42-1", roomCode: "SPECIFIC42_1" }];
-    expect(findAccessCodeForRoom(withSpecific, "42-1")?.roomCode).toBe("SPECIFIC42_1");
+    const withSpecific = [
+      ...codes,
+      { roomNumber: "42-1", roomCode: "SPECIFIC42_1" },
+    ];
+    expect(findAccessCodeForRoom(withSpecific, "42-1")?.roomCode).toBe(
+      "SPECIFIC42_1"
+    );
     expect(findAccessCodeForRoom(codes, "421")?.roomCode).toBeUndefined();
+  });
+
+  it("tolera las etiquetas de habitación y formatos numéricos de importaciones externas", () => {
+    expect(findAccessCodeForRoom(codes, "Habitación 4")?.roomCode).toBe(
+      "ROOM4"
+    );
+    expect(findAccessCodeForRoom(codes, "Room 15.0")?.roomCode).toBe("ROOM15");
+    expect(findAccessCodeForRoom(codes, "Hab. 42-2")?.roomCode).toBe("BASE42");
   });
 });
