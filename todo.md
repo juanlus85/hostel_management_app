@@ -1229,6 +1229,8 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Usar `startDate`, `endDate`, `guestList` y `assigned` confirmados por Cloudbeds para completar los campos operativos
 - [x] Extraer el teléfono desde `guestList` cuando Cloudbeds devuelve los huéspedes indexados por identificador
 - [x] Incorporar `guestPhone` y `guestCellPhone` de Cloudbeds al teléfono mostrado en próximas reservas
+- [x] Ocultar de próximas reservas las estancias con estado de check-in, check-out o cancelada
+- [x] Reutilizar códigos de acceso de la habitación base 42 para las subhabitaciones 42-1, 42-2 y 42-3
 - [x] Mostrar el importe pendiente de cada reserva importada desde Cloudbeds en la cola de llegadas
 - [x] Mover el saldo pendiente a una zona visible y confirmar su actualización al reimportar reservas existentes
 - [x] Unificar saldo pendiente y cola de próximas reservas de Cloudbeds en una única tabla homogénea
@@ -1239,6 +1241,8 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [ ] Definir la activación automática de comunicaciones sin realizar envíos no confirmados
 - [x] Implementar mensajería manual revisada por recepción: correo SMTP y WhatsApp con mensaje preparado
 - [x] Corregir la ruta tRPC de envío de correo de reserva no encontrada desde Importaciones externas
+- [ ] Resolver la instancia desactualizada que sigue devolviendo una ruta tRPC de correo inexistente
+- [ ] Verificar el proceso PM2 y el directorio efectivo que atienden el dominio de producción
 - [x] Añadir plantillas de bienvenida editables en español e inglés para comunicaciones de reservas
 - [x] Permitir personalizar y previsualizar cada mensaje de bienvenida antes de enviarlo
 - [ ] Ejecutar `SQL_MENSAJERIA_RESERVAS.sql` en el VPS antes de usar enlaces precompletados en producción

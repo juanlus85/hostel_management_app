@@ -40,6 +40,7 @@ import {
   sumLoyverseReceiptsForOperationalDay,
 } from "../shared/provisionalExternalCash";
 import { isAllowedDocumentType } from "../shared/countries";
+import { findAccessCodeForRoom } from "../shared/accessCodes";
 import { compareCashByDate } from "../shared/externalCashComparison";
 import {
   fetchLoyverseReceipts,
@@ -205,9 +206,7 @@ async function createOnlineCheckinFromExternalReservation(
         "Asigna una habitación con código de acceso antes de enviar el Check-in Online",
     });
   const accessCodeList = await db.getAllAccessCodes();
-  const room = accessCodeList.find(
-    code => code.roomNumber === reservation.roomNumber
-  );
+  const room = findAccessCodeForRoom(accessCodeList, reservation.roomNumber);
   if (!room || room.roomNumber === "ENTRADA")
     throw new TRPCError({
       code: "BAD_REQUEST",
@@ -236,8 +235,8 @@ async function createOnlineCheckinFromExternalReservation(
     reservationOrigin: externalReservationOrigin(reservation.bookingSource),
     checkInDate: reservation.checkInDate,
     checkOutDate,
-    roomNumber: room.roomNumber,
-    roomType: room.roomType,
+    roomNumber: reservation.roomNumber,
+    roomType: reservation.roomType || room.roomType,
     roomCode: room.roomCode,
     entranceCode:
       room.entranceCode ||

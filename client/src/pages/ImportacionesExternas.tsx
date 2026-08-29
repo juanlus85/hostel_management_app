@@ -96,6 +96,13 @@ const reservationStatusLabel = (value: string | null | undefined) => {
   };
   return normalized ? labels[normalized] || value : "Sin estado";
 };
+const isArchivedReservationStatus = (value: string | null | undefined) => {
+  const normalized = value
+    ?.trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
+  return ["checked_in", "checked_out", "check_in", "check_out", "cancelled", "canceled", "cancel"].includes(normalized || "");
+};
 
 function ConnectionBadge({ ready }: { ready: boolean }) {
   return (
@@ -403,13 +410,17 @@ export default function ImportacionesExternas() {
         ),
     [overview.data?.dailyCash, dateFrom, dateTo]
   );
+  const visibleUpcomingReservations = useMemo(
+    () => (upcomingReservations.data || []).filter(reservation => !isArchivedReservationStatus(reservation.reservationStatus)),
+    [upcomingReservations.data]
+  );
   const pendingTotal = useMemo(
     () =>
-      (upcomingReservations.data || []).reduce(
+      visibleUpcomingReservations.reduce(
         (sum, reservation) => sum + asAmount(reservation.amountPending),
         0
       ),
-    [upcomingReservations.data]
+    [visibleUpcomingReservations]
   );
   const canImportCloudbeds = Boolean(overview.data?.connections.cloudbeds);
 
@@ -870,7 +881,7 @@ export default function ImportacionesExternas() {
                   <Loader2 className="mx-auto mb-3 h-5 w-5 animate-spin" />
                   Cargando reservas importadas…
                 </div>
-              ) : upcomingReservations.data?.length ? (
+              ) : visibleUpcomingReservations.length ? (
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[1280px] text-left text-sm">
                     <thead className="border-b text-xs uppercase text-muted-foreground">
@@ -885,7 +896,7 @@ export default function ImportacionesExternas() {
                       </tr>
                     </thead>
                     <tbody>
-                      {upcomingReservations.data.map(reservation => {
+                      {visibleUpcomingReservations.map(reservation => {
                         const logs = (communications.data || []).filter(
                           log => log.externalReservationId === reservation.id
                         );
@@ -1079,7 +1090,7 @@ export default function ImportacionesExternas() {
               ) : (
                 <div className="py-10 text-center text-sm text-muted-foreground">
                   <CalendarDays className="mx-auto mb-3 h-7 w-7" />
-                  Importa las próximas reservas para preparar las llegadas.
+                  No hay llegadas pendientes después de ocultar las reservas con Check-in, Check-out o canceladas.
                 </div>
               )}
             </CardContent>
