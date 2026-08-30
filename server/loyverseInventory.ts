@@ -1,5 +1,6 @@
 export type LoyverseInventoryProduct = {
   handle: string;
+  legacyHandle: string;
   ref: string;
   name: string;
   category: string;
@@ -27,6 +28,18 @@ const decimal = (value: unknown) => {
   const number = Number(String(value ?? "").replace(",", "."));
   return Number.isFinite(number) ? number.toFixed(3) : "0.000";
 };
+
+export function compactLoyverseHandle(itemId: string, variantId: string) {
+  const source = `${itemId}:${variantId}`;
+  let first = 0x811c9dc5;
+  let second = 0x01000193;
+  for (let index = 0; index < source.length; index += 1) {
+    const code = source.charCodeAt(index);
+    first = Math.imul(first ^ code, 0x01000193);
+    second = Math.imul(second ^ (code + index), 0x85ebca6b);
+  }
+  return `lv_${(first >>> 0).toString(36)}${(second >>> 0).toString(36)}`;
+}
 
 async function fetchAll(accessToken: string, resource: string, key: string) {
   const rows: Record<string, unknown>[] = [];
@@ -108,7 +121,8 @@ export function normalizeLoyverseInventory(
           : itemName;
       const stock = stockByVariant.get(`${itemId}:${variantId}`) ?? 0;
       return {
-        handle: `loyverse:${itemId}:${variantId}`,
+        handle: compactLoyverseHandle(itemId, variantId),
+        legacyHandle: `loyverse:${itemId}:${variantId}`,
         ref: asText(variant.sku ?? item.sku ?? itemId),
         name,
         category:

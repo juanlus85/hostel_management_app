@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { normalizeLoyverseInventory } from "./loyverseInventory";
+import {
+  compactLoyverseHandle,
+  normalizeLoyverseInventory,
+} from "./loyverseInventory";
 
 describe("catálogo de Loyverse", () => {
   it("normaliza producto, familia, coste, precio y stock de sus variantes", () => {
@@ -25,7 +28,8 @@ describe("catálogo de Loyverse", () => {
     );
     expect(products).toEqual([
       {
-        handle: "loyverse:I-1:V-1",
+        handle: compactLoyverseHandle("I-1", "V-1"),
+        legacyHandle: "loyverse:I-1:V-1",
         ref: "B-01",
         name: "Bocata · Pollo",
         category: "Bocatas",
@@ -34,5 +38,6 @@ describe("catálogo de Loyverse", () => {
         inStock: "12.000",
       },
     ]);
+    expect(compactLoyverseHandle("a".repeat(200), "b".repeat(200)).length).toBeLessThan(40);
   });
 });

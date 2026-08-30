@@ -2681,6 +2681,7 @@ export async function replaceAllInventoryProducts(
 export async function syncLoyverseInventoryProducts(
   products: Array<{
     handle: string;
+    legacyHandle: string;
     ref: string;
     name: string;
     category: string;
@@ -2694,19 +2695,17 @@ export async function syncLoyverseInventoryProducts(
   const { inventoryProducts } = await import("../drizzle/schema");
   const { eq } = await import("drizzle-orm");
   const existing = await db.select().from(inventoryProducts);
-  const byHandle = new Map(
-    existing
-      .filter(product => product.handle?.startsWith("loyverse:"))
-      .map(product => [product.handle, product])
-  );
+  const byHandle = new Map(existing.map(product => [product.handle, product]));
   let created = 0;
   let updated = 0;
   for (const product of products) {
-    const current = byHandle.get(product.handle);
+    const current =
+      byHandle.get(product.handle) ?? byHandle.get(product.legacyHandle);
     if (current) {
       await db
         .update(inventoryProducts)
         .set({
+          handle: product.handle,
           ref: product.ref,
           name: product.name,
           category: product.category,
@@ -2717,7 +2716,8 @@ export async function syncLoyverseInventoryProducts(
         .where(eq(inventoryProducts.id, current.id));
       updated += 1;
     } else {
-      await db.insert(inventoryProducts).values(product);
+      const { legacyHandle: _legacyHandle, ...values } = product;
+      await db.insert(inventoryProducts).values(values);
       created += 1;
     }
   }
