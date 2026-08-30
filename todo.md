@@ -1211,6 +1211,9 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Añadir controles + y − para modificar cajas a pedir en Bocatas
 - [x] Añadir un reinicio que ponga a cero las unidades a pedir sin perder productos vinculados
 - [x] Convertir Pedidos generales en una tabla de artículos con cantidad, stock actual y total previsto
+- [x] Crear una plantilla persistente de Pedidos generales con productos vinculados de Loyverse
+- [x] Permitir asignar productos, aumentar o reducir unidades y reiniciar cantidades en la plantilla general
+- [x] Mostrar y actualizar existencias de Loyverse dentro de la plantilla general de pedidos
 - [ ] Ejecutar `SQL_LOYVERSE_INVENTARIO.sql` en el VPS antes de usar vínculos de productos Loyverse
 - [x] Añadir al Dashboard X provisional Tienda desde Loyverse y X provisional Hostel desde Cloudbeds al abrir la página
 - [x] Mantener los importes provisionales separados de cierres y cajas internas
