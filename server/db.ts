@@ -2717,7 +2717,19 @@ export async function syncLoyverseInventoryProducts(
       updated += 1;
     } else {
       const { legacyHandle: _legacyHandle, ...values } = product;
-      await db.insert(inventoryProducts).values(values);
+      await db
+        .insert(inventoryProducts)
+        .values(values)
+        .onDuplicateKeyUpdate({
+          set: {
+            ref: product.ref,
+            name: product.name,
+            category: product.category,
+            cost: product.cost,
+            price: product.price,
+            inStock: product.inStock,
+          },
+        });
       created += 1;
     }
   }

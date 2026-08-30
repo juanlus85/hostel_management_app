@@ -40,4 +40,16 @@ describe("catálogo de Loyverse", () => {
     ]);
     expect(compactLoyverseHandle("a".repeat(200), "b".repeat(200)).length).toBeLessThan(40);
   });
+
+  it("acota los textos externos y evita devolver un producto duplicado", () => {
+    const products = normalizeLoyverseInventory(
+      [{ id: "I-2", item_name: "x".repeat(300), category_name: "y".repeat(120), variants: [{ id: "V-2", sku: "z".repeat(70) }] }, { id: "I-2", item_name: "repetido", variants: [{ id: "V-2" }] }],
+      [],
+      []
+    );
+    expect(products).toHaveLength(1);
+    expect(products[0].name.length).toBeLessThanOrEqual(255);
+    expect(products[0].ref.length).toBeLessThanOrEqual(50);
+    expect(products[0].category.length).toBeLessThanOrEqual(100);
+  });
 });

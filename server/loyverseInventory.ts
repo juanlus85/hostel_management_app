@@ -24,6 +24,9 @@ const asText = (value: unknown) =>
     ? String(value).trim()
     : "";
 
+const boundedText = (value: unknown, maximum: number) =>
+  asText(value).slice(0, maximum);
+
 const decimal = (value: unknown) => {
   const number = Number(String(value ?? "").replace(",", "."));
   return Number.isFinite(number) ? number.toFixed(3) : "0.000";
@@ -103,7 +106,7 @@ export function normalizeLoyverseInventory(
         Number(decimal(level.in_stock ?? level.inStock))
     );
   }
-  return items.flatMap(item => {
+  const products = items.flatMap(item => {
     const itemId = asText(item.id);
     if (!itemId) return [];
     const variants =
@@ -113,8 +116,8 @@ export function normalizeLoyverseInventory(
     return variants.map(variant => {
       const variantId = asText(variant.id) || itemId;
       const itemName =
-        asText(item.item_name ?? item.name) || "Producto sin nombre";
-      const variantName = asText(variant.variant_name ?? variant.name);
+        boundedText(item.item_name ?? item.name, 255) || "Producto sin nombre";
+      const variantName = boundedText(variant.variant_name ?? variant.name, 120);
       const name =
         variantName && variantName.toLowerCase() !== "default"
           ? `${itemName} · ${variantName}`
@@ -123,11 +126,11 @@ export function normalizeLoyverseInventory(
       return {
         handle: compactLoyverseHandle(itemId, variantId),
         legacyHandle: `loyverse:${itemId}:${variantId}`,
-        ref: asText(variant.sku ?? item.sku ?? itemId),
+        ref: boundedText(variant.sku ?? item.sku ?? itemId, 50),
         name,
         category:
           categoryNames.get(asText(item.category_id ?? item.categoryId)) ||
-          asText(item.category_name) ||
+          boundedText(item.category_name, 100) ||
           "Sin familia",
         cost: decimal(variant.cost ?? item.cost),
         price: decimal(variant.price ?? item.price ?? item.default_price),
@@ -135,6 +138,7 @@ export function normalizeLoyverseInventory(
       };
     });
   });
+  return Array.from(new Map(products.map(product => [product.handle, product])).values());
 }
 
 export async function fetchLoyverseInventory(accessToken: string) {
