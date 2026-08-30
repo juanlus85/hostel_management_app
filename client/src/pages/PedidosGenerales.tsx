@@ -315,6 +315,25 @@ export default function PedidosGenerales() {
     }
   };
 
+  const resetOrderQuantities = async (order: any) => {
+    const itemsToReset = (order.items || []).filter(
+      (item: any) => (Number(item.quantity) || 0) > 0
+    );
+    if (itemsToReset.length === 0) return;
+    if (!confirm(`¿Poner a cero las unidades a pedir de ${order.supplier}?`)) return;
+    try {
+      await Promise.all(
+        itemsToReset.map((item: any) =>
+          updateItemMutation.mutateAsync({ id: item.id, quantity: "0" })
+        )
+      );
+      toast.success(`Unidades a pedir de ${order.supplier} reiniciadas`);
+      refetch();
+    } catch (error) {
+      toast.error("No se pudieron reiniciar las cantidades del pedido");
+    }
+  };
+
   const handleDeleteOrder = async (orderId: number) => {
     if (!confirm("¿Eliminar este pedido?")) return;
     try {
@@ -393,6 +412,16 @@ ${order.notes ? `\nNotas: ${order.notes}` : ""}
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Pedidos a Proveedores</h2>
+        <div className="flex items-center gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => syncLoyverseMutation.mutate()}
+          disabled={syncLoyverseMutation.isPending}
+        >
+          <RefreshCw className={`mr-2 h-4 w-4 ${syncLoyverseMutation.isPending ? "animate-spin" : ""}`} />
+          Actualizar todo el stock
+        </Button>
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
             <Button>
@@ -549,6 +578,7 @@ ${order.notes ? `\nNotas: ${order.notes}` : ""}
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <div className="grid gap-4">
@@ -698,9 +728,7 @@ ${order.notes ? `\nNotas: ${order.notes}` : ""}
                         </tr>
                       </thead>
                       <tbody>
-                        {order.items
-                          .filter((i: any) => parseInt(i.quantity) > 0)
-                          .map((item: any) => {
+                        {order.items.map((item: any) => {
                             const linkedProduct = products.find(
                               product => product.handle === item.loyverseProductHandle
                             );
