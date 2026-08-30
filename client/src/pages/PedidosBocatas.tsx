@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Copy, Save, RotateCcw, RefreshCw } from "lucide-react";
+import { Copy, Save, RotateCcw, RefreshCw, Minus, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 type ProductGroup = {
@@ -156,6 +156,23 @@ export default function PedidosBocatas() {
     setProducts(newProducts);
   };
 
+  const adjustBoxes = (index: number, amount: number) => {
+    setProducts(current =>
+      current.map((product, productIndex) =>
+        productIndex === index
+          ? { ...product, boxesToOrder: Math.max(0, product.boxesToOrder + amount) }
+          : product
+      )
+    );
+  };
+
+  const resetBoxesToOrder = () => {
+    setProducts(current =>
+      current.map(product => ({ ...product, boxesToOrder: 0 }))
+    );
+    toast.success("Unidades a pedir reiniciadas");
+  };
+
   const updateUnits = (index: number, value: string) => {
     const newProducts = [...products];
     newProducts[index].currentUnits = parseInt(value) || 0;
@@ -266,6 +283,10 @@ export default function PedidosBocatas() {
           <Button variant="outline" onClick={handleReset}>
             <RotateCcw className="mr-2 h-4 w-4" />
             Reiniciar
+          </Button>
+          <Button variant="outline" onClick={resetBoxesToOrder}>
+            <RotateCcw className="mr-2 h-4 w-4" />
+            Reiniciar a pedir
           </Button>
           <Button variant="outline" onClick={handleCopy}>
             <Copy className="mr-2 h-4 w-4" />
@@ -379,17 +400,21 @@ export default function PedidosBocatas() {
                             </Select>
                           </td>
                           <td className="p-2 text-center">
-                            <Input
-                              type="number"
-                              min="0"
-                              step="1"
-                              value={product.boxesToOrder || ""}
-                              onChange={e =>
-                                updateBoxes(actualIndex, e.target.value)
-                              }
-                              className="text-center font-semibold"
-                              placeholder="0"
-                            />
+                            <div className="flex items-center gap-1">
+                              <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={() => adjustBoxes(actualIndex, -1)} disabled={product.boxesToOrder === 0} aria-label={`Quitar una caja de ${product.name}`}><Minus className="h-4 w-4" /></Button>
+                              <Input
+                                type="number"
+                                min="0"
+                                step="1"
+                                value={product.boxesToOrder || ""}
+                                onChange={e =>
+                                  updateBoxes(actualIndex, e.target.value)
+                                }
+                                className="min-w-14 text-center font-semibold"
+                                placeholder="0"
+                              />
+                              <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={() => adjustBoxes(actualIndex, 1)} aria-label={`Añadir una caja de ${product.name}`}><Plus className="h-4 w-4" /></Button>
+                            </div>
                           </td>
                           <td className="p-2 text-center">
                             <Input

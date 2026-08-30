@@ -658,53 +658,49 @@ ${order.notes ? `\nNotas: ${order.notes}` : ""}
             </CardHeader>
             <CardContent>
               {order.items && order.items.length > 0 ? (
-                <div className="space-y-2">
-                  {order.items
-                    .filter((i: any) => parseInt(i.quantity) > 0)
-                    .map((item: any) => {
-                      const linkedProduct = products.find(
-                        product => product.handle === item.loyverseProductHandle
-                      );
-                      return (
-                        <div
-                          key={item.id}
-                          className="flex items-center justify-between py-2 border-b last:border-0"
-                        >
-                          <div>
-                            <span className="font-medium">{item.itemName}</span>
-                            <span className="text-muted-foreground ml-2">
-                              x{parseInt(item.quantity)}
-                            </span>
-                            {item.unit && (
-                              <span className="text-muted-foreground ml-1">
-                                ({item.unit})
-                              </span>
-                            )}
-                            {linkedProduct && (
-                              <span className="ml-2 text-xs font-medium text-emerald-700">
-                                Stock Loyverse: {linkedProduct.inStock}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => openEditItem(item)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleDeleteItem(item.id)}
-                            >
-                              <X className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </div>
-                      );
-                    })}
+                <div className="space-y-3">
+                  <div className="overflow-x-auto rounded-md border">
+                    <table className="w-full min-w-[680px] text-sm">
+                      <thead className="bg-blue-50 text-left">
+                        <tr>
+                          <th className="p-3 font-semibold">Artículo</th>
+                          <th className="p-3 text-center font-semibold">Pedir</th>
+                          <th className="p-3 text-center font-semibold">Hay</th>
+                          <th className="p-3 text-center font-semibold">Total previsto</th>
+                          <th className="p-3 text-right font-semibold">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {order.items
+                          .filter((i: any) => parseInt(i.quantity) > 0)
+                          .map((item: any) => {
+                            const linkedProduct = products.find(
+                              product => product.handle === item.loyverseProductHandle
+                            );
+                            const quantity = parseInt(item.quantity) || 0;
+                            const stock = linkedProduct ? Number(linkedProduct.inStock) || 0 : null;
+                            const projectedTotal = stock === null ? null : stock + quantity;
+                            return (
+                              <tr key={item.id} className="border-t hover:bg-muted/40">
+                                <td className="p-3">
+                                  <p className="font-medium">{item.itemName}</p>
+                                  {item.unit && <p className="text-xs text-muted-foreground">{item.unit}</p>}
+                                </td>
+                                <td className="p-3 text-center font-semibold">{quantity}</td>
+                                <td className="p-3 text-center">{stock === null ? "—" : stock}</td>
+                                <td className="p-3 text-center font-bold text-blue-700">{projectedTotal === null ? "—" : projectedTotal}</td>
+                                <td className="p-3">
+                                  <div className="flex justify-end gap-1">
+                                    <Button size="sm" variant="ghost" onClick={() => openEditItem(item)} aria-label={`Editar ${item.itemName}`}><Pencil className="h-4 w-4" /></Button>
+                                    <Button size="sm" variant="ghost" onClick={() => handleDeleteItem(item.id)} aria-label={`Eliminar ${item.itemName}`}><X className="h-4 w-4 text-destructive" /></Button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                      </tbody>
+                    </table>
+                  </div>
                   <div className="pt-2">
                     <Button
                       size="sm"
