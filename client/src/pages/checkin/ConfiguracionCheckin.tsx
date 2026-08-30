@@ -47,6 +47,12 @@ export default function ConfiguracionCheckin() {
     welcomeMessageEn: "",
     reservationWelcomeEmailEs: "",
     reservationWelcomeEmailEn: "",
+    reservationCheckinEmailEs: "",
+    reservationCheckinEmailEn: "",
+    reservationWelcomeWhatsappEs: "",
+    reservationWelcomeWhatsappEn: "",
+    reservationCheckinWhatsappEs: "",
+    reservationCheckinWhatsappEn: "",
     arrivalMapUrl: "",
     arrivalIntroEs: "",
     arrivalIntroEn: "",
@@ -88,6 +94,16 @@ export default function ConfiguracionCheckin() {
         welcomeMessageEn: settings.welcomeMessageEn || "",
         reservationWelcomeEmailEs: settings.reservationWelcomeEmailEs || "",
         reservationWelcomeEmailEn: settings.reservationWelcomeEmailEn || "",
+        reservationCheckinEmailEs: settings.reservationCheckinEmailEs || "",
+        reservationCheckinEmailEn: settings.reservationCheckinEmailEn || "",
+        reservationWelcomeWhatsappEs:
+          settings.reservationWelcomeWhatsappEs || "",
+        reservationWelcomeWhatsappEn:
+          settings.reservationWelcomeWhatsappEn || "",
+        reservationCheckinWhatsappEs:
+          settings.reservationCheckinWhatsappEs || "",
+        reservationCheckinWhatsappEn:
+          settings.reservationCheckinWhatsappEn || "",
         arrivalMapUrl: settings.arrivalMapUrl || "",
         arrivalIntroEs: settings.arrivalIntroEs || "",
         arrivalIntroEn: settings.arrivalIntroEn || "",
@@ -496,6 +512,110 @@ export default function ConfiguracionCheckin() {
                 placeholder="Hello {{NOMBRE_HUESPED}}, thank you for your reservation at {{NOMBRE_HOSTEL}}. We look forward to welcoming you on {{FECHA_LLEGADA}}."
                 rows={7}
               />
+            </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <Label htmlFor="reservationCheckinEmailEs">
+                  Plantilla de invitación Check-in por correo (Español)
+                </Label>
+                <Textarea
+                  id="reservationCheckinEmailEs"
+                  value={formData.reservationCheckinEmailEs}
+                  onChange={e =>
+                    setFormData({
+                      ...formData,
+                      reservationCheckinEmailEs: e.target.value,
+                    })
+                  }
+                  placeholder="Hola {{NOMBRE_HUESPED}}, completa tu Check-in Online aquí: {{ENLACE_CHECKIN}}"
+                  rows={6}
+                />
+              </div>
+              <div>
+                <Label htmlFor="reservationCheckinEmailEn">
+                  Online Check-in email template (English)
+                </Label>
+                <Textarea
+                  id="reservationCheckinEmailEn"
+                  value={formData.reservationCheckinEmailEn}
+                  onChange={e =>
+                    setFormData({
+                      ...formData,
+                      reservationCheckinEmailEn: e.target.value,
+                    })
+                  }
+                  placeholder="Hello {{NOMBRE_HUESPED}}, complete your Online Check-in here: {{ENLACE_CHECKIN}}"
+                  rows={6}
+                />
+              </div>
+              <div>
+                <Label htmlFor="reservationWelcomeWhatsappEs">
+                  Plantilla WhatsApp de bienvenida (Español)
+                </Label>
+                <Textarea
+                  id="reservationWelcomeWhatsappEs"
+                  value={formData.reservationWelcomeWhatsappEs}
+                  onChange={e =>
+                    setFormData({
+                      ...formData,
+                      reservationWelcomeWhatsappEs: e.target.value,
+                    })
+                  }
+                  placeholder="Hola {{NOMBRE_HUESPED}}, te esperamos el {{FECHA_LLEGADA}}."
+                  rows={5}
+                />
+              </div>
+              <div>
+                <Label htmlFor="reservationWelcomeWhatsappEn">
+                  Welcome WhatsApp template (English)
+                </Label>
+                <Textarea
+                  id="reservationWelcomeWhatsappEn"
+                  value={formData.reservationWelcomeWhatsappEn}
+                  onChange={e =>
+                    setFormData({
+                      ...formData,
+                      reservationWelcomeWhatsappEn: e.target.value,
+                    })
+                  }
+                  placeholder="Hello {{NOMBRE_HUESPED}}, we look forward to welcoming you on {{FECHA_LLEGADA}}."
+                  rows={5}
+                />
+              </div>
+              <div>
+                <Label htmlFor="reservationCheckinWhatsappEs">
+                  Plantilla WhatsApp de Check-in (Español)
+                </Label>
+                <Textarea
+                  id="reservationCheckinWhatsappEs"
+                  value={formData.reservationCheckinWhatsappEs}
+                  onChange={e =>
+                    setFormData({
+                      ...formData,
+                      reservationCheckinWhatsappEs: e.target.value,
+                    })
+                  }
+                  placeholder="Hola {{NOMBRE_HUESPED}}, completa tu Check-in Online aquí: {{ENLACE_CHECKIN}}"
+                  rows={6}
+                />
+              </div>
+              <div>
+                <Label htmlFor="reservationCheckinWhatsappEn">
+                  Online Check-in WhatsApp template (English)
+                </Label>
+                <Textarea
+                  id="reservationCheckinWhatsappEn"
+                  value={formData.reservationCheckinWhatsappEn}
+                  onChange={e =>
+                    setFormData({
+                      ...formData,
+                      reservationCheckinWhatsappEn: e.target.value,
+                    })
+                  }
+                  placeholder="Hello {{NOMBRE_HUESPED}}, complete your Online Check-in here: {{ENLACE_CHECKIN}}"
+                  rows={6}
+                />
+              </div>
             </div>
             <div>
               <Label htmlFor="arrivalMapUrl">URL del mapa de llegada</Label>

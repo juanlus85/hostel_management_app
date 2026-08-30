@@ -56,6 +56,11 @@ const thirdArrivalDate = (() => {
   date.setDate(date.getDate() + 2);
   return madridDate(date);
 })();
+const previousArrivalDate = (() => {
+  const date = new Date(`${today}T12:00:00`);
+  date.setDate(date.getDate() - 1);
+  return madridDate(date);
+})();
 
 type ComparisonRow = {
   date: string;
@@ -210,7 +215,15 @@ export default function ImportacionesExternas() {
     reservationId: number;
     guestName: string;
     guestEmail: string;
+    messageType: "welcome" | "online_checkin";
     subject: string;
+    message: string;
+  } | null>(null);
+  const [whatsAppEditor, setWhatsAppEditor] = useState<{
+    reservationId: number;
+    guestName: string;
+    guestPhone: string;
+    messageType: "welcome" | "online_checkin";
     message: string;
   } | null>(null);
   const utils = trpc.useUtils();
@@ -247,7 +260,7 @@ export default function ImportacionesExternas() {
     });
   const upcomingReservations =
     trpc.checkin.externalImports.listCloudbedsUpcomingReservations.useQuery({
-      dateFrom: today,
+      dateFrom: previousArrivalDate,
       dateTo: thirdArrivalDate,
     });
   const communications =
@@ -281,7 +294,7 @@ export default function ImportacionesExternas() {
     trpc.checkin.externalImports.sendCloudbedsReservationEmail.useMutation({
       onSuccess: (_result, variables) => {
         communications.refetch();
-        if (variables.messageType === "welcome") setWelcomeEditor(null);
+        setWelcomeEditor(null);
         toast.success(
           variables.messageType === "welcome"
             ? "Correo de bienvenida enviado"
@@ -302,11 +315,14 @@ export default function ImportacionesExternas() {
         onError: error => toast.error(error.message),
       }
     );
-  const editWelcomeForReservation = async (reservation: {
-    id: number;
-    guestEmail: string | null;
-    guestName: string | null;
-  }) => {
+  const editEmailForReservation = async (
+    reservation: {
+      id: number;
+      guestEmail: string | null;
+      guestName: string | null;
+    },
+    messageType: "welcome" | "online_checkin"
+  ) => {
     if (!reservation.guestEmail) {
       toast.error("La reserva no tiene un correo electrónico");
       return;
@@ -315,51 +331,26 @@ export default function ImportacionesExternas() {
       const draft = await prepareReservationWelcome.mutateAsync({
         externalReservationId: reservation.id,
         language: messageLanguage,
+        messageType,
       });
       setWelcomeEditor({
         reservationId: reservation.id,
         guestName: reservation.guestName || "este huésped",
         guestEmail: reservation.guestEmail,
+        messageType,
         subject: draft.subject,
         message: draft.text,
       });
     } catch (error) {
       toast.error(
-        error instanceof Error
-          ? error.message
-          : "No se pudo preparar la bienvenida"
+        error instanceof Error ? error.message : "No se pudo preparar el correo"
       );
     }
-  };
-  const sendEmailFromReservation = (
-    reservation: {
-      id: number;
-      guestEmail: string | null;
-      guestName: string | null;
-    },
-    messageType: "online_checkin"
-  ) => {
-    const label = "la invitación de Check-in Online";
-    if (!reservation.guestEmail) {
-      toast.error("La reserva no tiene un correo electrónico");
-      return;
-    }
-    if (
-      !window.confirm(
-        `¿Enviar ${label} a ${reservation.guestName || "este huésped"} (${reservation.guestEmail})?`
-      )
-    )
-      return;
-    sendReservationEmail.mutate({
-      externalReservationId: reservation.id,
-      messageType,
-      language: messageLanguage,
-    });
   };
   const sendEditedWelcome = () => {
     if (!welcomeEditor) return;
     if (!welcomeEditor.subject.trim() || !welcomeEditor.message.trim()) {
-      toast.error("Indica el asunto y el mensaje de bienvenida");
+      toast.error("Indica el asunto y el contenido del correo");
       return;
     }
     if (
@@ -370,14 +361,18 @@ export default function ImportacionesExternas() {
       return;
     sendReservationEmail.mutate({
       externalReservationId: welcomeEditor.reservationId,
-      messageType: "welcome",
+      messageType: welcomeEditor.messageType,
       language: messageLanguage,
       subject: welcomeEditor.subject,
       message: welcomeEditor.message,
     });
   };
-  const openWhatsAppFromReservation = async (
-    reservation: { id: number },
+  const editWhatsAppForReservation = async (
+    reservation: {
+      id: number;
+      guestName: string | null;
+      guestPhone: string | null;
+    },
     messageType: "welcome" | "online_checkin"
   ) => {
     try {
@@ -385,6 +380,31 @@ export default function ImportacionesExternas() {
         externalReservationId: reservation.id,
         messageType,
         language: messageLanguage,
+      });
+      setWhatsAppEditor({
+        reservationId: reservation.id,
+        guestName: reservation.guestName || "este huésped",
+        guestPhone: draft.phone,
+        messageType,
+        message: draft.message,
+      });
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "No se pudo preparar WhatsApp"
+      );
+    }
+  };
+  const openEditedWhatsApp = async () => {
+    if (!whatsAppEditor?.message.trim()) {
+      toast.error("Indica el mensaje de WhatsApp");
+      return;
+    }
+    try {
+      const draft = await prepareReservationWhatsApp.mutateAsync({
+        externalReservationId: whatsAppEditor.reservationId,
+        messageType: whatsAppEditor.messageType,
+        language: messageLanguage,
+        message: whatsAppEditor.message,
       });
       const phone = draft.phone.replace(/\D/g, "");
       if (!phone) throw new Error("El teléfono de la reserva no es válido");
@@ -394,6 +414,7 @@ export default function ImportacionesExternas() {
         "noopener,noreferrer"
       );
       communications.refetch();
+      setWhatsAppEditor(null);
       toast.success("WhatsApp preparado. Confirma el envío desde WhatsApp.");
     } catch (error) {
       toast.error(
@@ -759,11 +780,12 @@ export default function ImportacionesExternas() {
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <Users className="h-5 w-5 text-cyan-700" />
-                  Llegadas de los próximos tres días
+                  Llegadas pendientes desde ayer y los próximos tres días
                 </CardTitle>
                 <CardDescription>
-                  Desde {today} hasta {thirdArrivalDate}. Datos importados de
-                  Cloudbeds y aislados de reservas operativas.
+                  Desde {previousArrivalDate} hasta {thirdArrivalDate}. Se
+                  ocultan reservas con Check-in, Check-out o canceladas. Datos
+                  importados de Cloudbeds y aislados de reservas operativas.
                 </CardDescription>
               </div>
               <ConnectionBadge ready={canImportCloudbeds} />
@@ -1020,7 +1042,10 @@ export default function ImportacionesExternas() {
                                   size="sm"
                                   disabled={prepareReservationWelcome.isPending}
                                   onClick={() =>
-                                    editWelcomeForReservation(reservation)
+                                    editEmailForReservation(
+                                      reservation,
+                                      "welcome"
+                                    )
                                   }
                                 >
                                   <Mail className="mr-2 h-4 w-4" />
@@ -1029,9 +1054,9 @@ export default function ImportacionesExternas() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  disabled={sendReservationEmail.isPending}
+                                  disabled={prepareReservationWelcome.isPending}
                                   onClick={() =>
-                                    sendEmailFromReservation(
+                                    editEmailForReservation(
                                       reservation,
                                       "online_checkin"
                                     )
@@ -1047,7 +1072,7 @@ export default function ImportacionesExternas() {
                                     prepareReservationWhatsApp.isPending
                                   }
                                   onClick={() =>
-                                    openWhatsAppFromReservation(
+                                    editWhatsAppForReservation(
                                       reservation,
                                       "welcome"
                                     )
@@ -1063,7 +1088,7 @@ export default function ImportacionesExternas() {
                                     prepareReservationWhatsApp.isPending
                                   }
                                   onClick={() =>
-                                    openWhatsAppFromReservation(
+                                    editWhatsAppForReservation(
                                       reservation,
                                       "online_checkin"
                                     )
@@ -1116,7 +1141,7 @@ export default function ImportacionesExternas() {
       >
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Personalizar bienvenida</DialogTitle>
+            <DialogTitle>Personalizar correo</DialogTitle>
             <DialogDescription>
               Revisa y adapta el mensaje para{" "}
               {welcomeEditor?.guestName || "la reserva"} antes de enviarlo a{" "}
@@ -1169,7 +1194,53 @@ export default function ImportacionesExternas() {
               {sendReservationEmail.isPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              Enviar bienvenida
+              {welcomeEditor?.messageType === "online_checkin"
+                ? "Enviar Check-in"
+                : "Enviar bienvenida"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={Boolean(whatsAppEditor)}
+        onOpenChange={open => !open && setWhatsAppEditor(null)}
+      >
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Personalizar WhatsApp</DialogTitle>
+            <DialogDescription>
+              Revisa el mensaje para {whatsAppEditor?.guestName || "la reserva"}
+              . WhatsApp se abrirá después para que confirmes el envío
+              manualmente.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label htmlFor="whatsapp-message">Mensaje</Label>
+            <Textarea
+              id="whatsapp-message"
+              className="min-h-64"
+              value={whatsAppEditor?.message || ""}
+              onChange={event =>
+                setWhatsAppEditor(current =>
+                  current
+                    ? { ...current, message: event.target.value }
+                    : current
+                )
+              }
+            />
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setWhatsAppEditor(null)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={openEditedWhatsApp}
+              disabled={prepareReservationWhatsApp.isPending}
+            >
+              {prepareReservationWhatsApp.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Abrir WhatsApp
             </Button>
           </DialogFooter>
         </DialogContent>

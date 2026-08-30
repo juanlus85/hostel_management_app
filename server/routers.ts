@@ -59,6 +59,8 @@ import {
 import type { ExternalUpcomingReservation } from "../drizzle/schema";
 import {
   buildConfiguredReservationWelcome,
+  buildConfiguredOnlineCheckinEmail,
+  buildConfiguredReservationWhatsApp,
   buildEditedReservationEmail,
   buildOnlineCheckinInvitation,
   buildReservationWelcomeEmail,
@@ -3875,6 +3877,12 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             welcomeMessageEn: z.string().optional(),
             reservationWelcomeEmailEs: z.string().max(10000).optional(),
             reservationWelcomeEmailEn: z.string().max(10000).optional(),
+            reservationCheckinEmailEs: z.string().max(10000).optional(),
+            reservationCheckinEmailEn: z.string().max(10000).optional(),
+            reservationWelcomeWhatsappEs: z.string().max(10000).optional(),
+            reservationWelcomeWhatsappEn: z.string().max(10000).optional(),
+            reservationCheckinWhatsappEs: z.string().max(10000).optional(),
+            reservationCheckinWhatsappEn: z.string().max(10000).optional(),
             arrivalMapUrl: z.string().url().or(z.literal("")).optional(),
             arrivalIntroEs: z.string().optional(),
             arrivalIntroEn: z.string().optional(),
@@ -4163,7 +4171,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
               message:
                 "Configura CLOUDBEDS_API_KEY y CLOUDBEDS_PROPERTY_ID para importar reservas",
             });
-          const dates = getNextMadridCalendarDates();
+          const dates = getNextMadridCalendarDates(new Date(), 4, -1);
           const runId = await db.createExternalImportRun({
             provider: "cloudbeds",
             importType: "future",
@@ -4309,22 +4317,40 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             reservationCode: reservation.reservationCode,
           };
           if (input.messageType === "online_checkin") {
-            const invitation = await createOnlineCheckinFromExternalReservation(
-              reservation,
-              ctx.user.id,
-              requestOrigin(ctx.req)
-            );
-            const invitationMessage = buildOnlineCheckinInvitation(
-              context,
-              invitation.url,
-              language
-            );
+            const customMessage =
+              input.subject && input.message
+                ? buildEditedReservationEmail(input.subject, input.message)
+                : null;
+            const invitation = customMessage
+              ? null
+              : await createOnlineCheckinFromExternalReservation(
+                  reservation,
+                  ctx.user.id,
+                  requestOrigin(ctx.req)
+                );
+            const settings = await db.getHostelSettings();
+            const configuredInvitation =
+              customMessage ||
+              buildConfiguredOnlineCheckinEmail(
+                language === "en"
+                  ? settings?.reservationCheckinEmailEn
+                  : settings?.reservationCheckinEmailEs,
+                context,
+                invitation!.url,
+                language,
+                {
+                  name: settings?.hostelName,
+                  address: settings?.hostelAddress,
+                  phone: settings?.hostelPhone,
+                  email: settings?.hostelEmail,
+                }
+              );
             const { sendEmail } = await import("./email");
             const result = await sendEmail(
               reservation.guestEmail,
-              invitationMessage.subject,
-              invitationMessage.html,
-              invitationMessage.text
+              configuredInvitation.subject,
+              configuredInvitation.html,
+              configuredInvitation.text
             );
             await db.createExternalReservationCommunication({
               externalReservationId: reservation.id,
@@ -4342,7 +4368,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
                 code: "BAD_GATEWAY",
                 message: result.error || "No se pudo enviar el correo",
               });
-            return { success: true, checkinUrl: invitation.url };
+            return { success: true, checkinUrl: invitation?.url || null };
           }
           const settings = await db.getHostelSettings();
           const configuredTemplate =
@@ -4393,9 +4419,12 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           z.object({
             externalReservationId: z.number(),
             language: z.enum(["es", "en"]).default("es"),
+            messageType: z
+              .enum(["welcome", "online_checkin"])
+              .default("welcome"),
           })
         )
-        .mutation(async ({ input }) => {
+        .mutation(async ({ input, ctx }) => {
           const reservation = await db.getExternalUpcomingReservationById(
             input.externalReservationId
           );
@@ -4413,6 +4442,27 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             roomType: reservation.roomType,
             reservationCode: reservation.reservationCode,
           };
+          if (input.messageType === "online_checkin") {
+            const invitation = await createOnlineCheckinFromExternalReservation(
+              reservation,
+              ctx.user.id,
+              requestOrigin(ctx.req)
+            );
+            return buildConfiguredOnlineCheckinEmail(
+              input.language === "en"
+                ? settings?.reservationCheckinEmailEn
+                : settings?.reservationCheckinEmailEs,
+              context,
+              invitation.url,
+              input.language,
+              {
+                name: settings?.hostelName,
+                address: settings?.hostelAddress,
+                phone: settings?.hostelPhone,
+                email: settings?.hostelEmail,
+              }
+            );
+          }
           const template =
             input.language === "en"
               ? settings?.reservationWelcomeEmailEn
@@ -4435,6 +4485,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             externalReservationId: z.number(),
             messageType: z.enum(["welcome", "online_checkin"]),
             language: z.enum(["es", "en"]).default("es"),
+            message: z.string().trim().min(1).max(10000).optional(),
           })
         )
         .mutation(async ({ input, ctx }) => {
@@ -4461,18 +4512,34 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             reservationCode: reservation.reservationCode,
           };
           const invitation =
-            input.messageType === "online_checkin"
+            input.messageType === "online_checkin" && !input.message?.trim()
               ? await createOnlineCheckinFromExternalReservation(
                   reservation,
                   ctx.user.id,
                   requestOrigin(ctx.req)
                 )
               : null;
-          const message = buildReservationWhatsAppMessage(
+          const settings = await db.getHostelSettings();
+          const configuredTemplate =
+            input.messageType === "online_checkin"
+              ? input.language === "en"
+                ? settings?.reservationCheckinWhatsappEn
+                : settings?.reservationCheckinWhatsappEs
+              : input.language === "en"
+                ? settings?.reservationWelcomeWhatsappEn
+                : settings?.reservationWelcomeWhatsappEs;
+          const templatedMessage = buildConfiguredReservationWhatsApp(
+            configuredTemplate,
             context,
             input.messageType,
             invitation?.url || null,
-            input.language
+            input.language,
+            {
+              name: settings?.hostelName,
+              address: settings?.hostelAddress,
+              phone: settings?.hostelPhone,
+              email: settings?.hostelEmail,
+            }
           );
           await db.createExternalReservationCommunication({
             externalReservationId: reservation.id,
@@ -4483,7 +4550,11 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             sentAt: null,
             createdBy: ctx.user.id,
           });
-          return { success: true, phone: reservation.guestPhone, message };
+          return {
+            success: true,
+            phone: reservation.guestPhone,
+            message: input.message?.trim() || templatedMessage,
+          };
         }),
     }),
 

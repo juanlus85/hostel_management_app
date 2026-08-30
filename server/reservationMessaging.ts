@@ -1,6 +1,7 @@
 import { renderArrivalTemplate } from "../shared/arrivalTemplate";
 
 export type ReservationMessageLanguage = "es" | "en";
+export type ReservationMessageType = "welcome" | "online_checkin";
 
 export type ReservationMessageContext = {
   guestName: string | null;
@@ -99,6 +100,84 @@ export function buildEditedReservationEmail(subject: string, text: string) {
     text: cleanText,
     html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#1f2937;line-height:1.6;white-space:pre-line">${escapeHtml(cleanText)}</div>`,
   };
+}
+
+export function renderConfiguredReservationMessage(
+  template: string | null | undefined,
+  context: ReservationMessageContext,
+  hostel: {
+    name?: string | null;
+    address?: string | null;
+    phone?: string | null;
+    email?: string | null;
+  },
+  checkinUrl: string | null = null
+) {
+  if (!template?.trim()) return null;
+  return renderArrivalTemplate(template, {
+    guestName: context.guestName,
+    roomNumber: context.roomNumber,
+    roomType: context.roomType,
+    hostelName: hostel.name || "The Spot Central Hostel",
+    hostelAddress: hostel.address,
+    hostelPhone: hostel.phone,
+    hostelEmail: hostel.email,
+    checkInDate: context.checkInDate,
+    checkOutDate: context.checkOutDate,
+    entranceCode: null,
+    roomCode: null,
+  })
+    .replace(/\{\{\s*ENLACE_CHECKIN\s*\}\}/gi, checkinUrl || "")
+    .trim();
+}
+
+export function buildConfiguredOnlineCheckinEmail(
+  template: string | null | undefined,
+  context: ReservationMessageContext,
+  checkinUrl: string,
+  language: ReservationMessageLanguage,
+  hostel: {
+    name?: string | null;
+    address?: string | null;
+    phone?: string | null;
+    email?: string | null;
+  }
+) {
+  const text = renderConfiguredReservationMessage(
+    template,
+    context,
+    hostel,
+    checkinUrl
+  );
+  if (!text) return buildOnlineCheckinInvitation(context, checkinUrl, language);
+  const subject =
+    language === "en"
+      ? "Complete your online check-in · The Spot Central Hostel"
+      : "Completa tu Check-in Online · The Spot Central Hostel";
+  return {
+    subject,
+    text,
+    html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#1f2937;line-height:1.6;white-space:pre-line">${escapeHtml(text)}</div>`,
+  };
+}
+
+export function buildConfiguredReservationWhatsApp(
+  template: string | null | undefined,
+  context: ReservationMessageContext,
+  messageType: ReservationMessageType,
+  checkinUrl: string | null,
+  language: ReservationMessageLanguage,
+  hostel: {
+    name?: string | null;
+    address?: string | null;
+    phone?: string | null;
+    email?: string | null;
+  }
+) {
+  return (
+    renderConfiguredReservationMessage(template, context, hostel, checkinUrl) ||
+    buildReservationWhatsAppMessage(context, messageType, checkinUrl, language)
+  );
 }
 
 export function buildOnlineCheckinInvitation(

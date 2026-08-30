@@ -16,3 +16,21 @@ ALTER TABLE `hostel_settings_checkin`
 
 ALTER TABLE `hostel_settings_checkin`
   ADD COLUMN IF NOT EXISTS `reservationWelcomeEmailEn` text NULL;
+
+ALTER TABLE `hostel_settings_checkin`
+  ADD COLUMN IF NOT EXISTS `reservationCheckinEmailEs` text NULL;
+
+ALTER TABLE `hostel_settings_checkin`
+  ADD COLUMN IF NOT EXISTS `reservationCheckinEmailEn` text NULL;
+
+ALTER TABLE `hostel_settings_checkin`
+  ADD COLUMN IF NOT EXISTS `reservationWelcomeWhatsappEs` text NULL;
+
+ALTER TABLE `hostel_settings_checkin`
+  ADD COLUMN IF NOT EXISTS `reservationWelcomeWhatsappEn` text NULL;
+
+ALTER TABLE `hostel_settings_checkin`
+  ADD COLUMN IF NOT EXISTS `reservationCheckinWhatsappEs` text NULL;
+
+ALTER TABLE `hostel_settings_checkin`
+  ADD COLUMN IF NOT EXISTS `reservationCheckinWhatsappEn` text NULL;

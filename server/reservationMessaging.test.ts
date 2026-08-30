@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   buildConfiguredReservationWelcome,
+  buildConfiguredOnlineCheckinEmail,
+  buildConfiguredReservationWhatsApp,
   buildOnlineCheckinInvitation,
   buildReservationWelcomeEmail,
   buildReservationWhatsAppMessage,
@@ -61,5 +63,31 @@ describe("mensajería manual de reservas", () => {
     );
     expect(message.text).not.toContain("{{CODIGO_ENTRADA}}");
     expect(message.text).not.toMatch(/\*\d{4}\*/);
+  });
+
+  it("sustituye el enlace en una invitación de Check-in configurable", () => {
+    const message = buildConfiguredOnlineCheckinEmail(
+      "Hola {{NOMBRE_HUESPED}}, entra aquí: {{ENLACE_CHECKIN}}",
+      context,
+      "https://management.example/checkin-online/token",
+      "es",
+      { name: "The Spot" }
+    );
+    expect(message.text).toContain("Hola Ana <García>");
+    expect(message.text).toContain(
+      "https://management.example/checkin-online/token"
+    );
+  });
+
+  it("aplica una plantilla de WhatsApp antes de abrir la conversación", () => {
+    const message = buildConfiguredReservationWhatsApp(
+      "Hola {{NOMBRE_HUESPED}}, llegada: {{FECHA_LLEGADA}}.",
+      context,
+      "welcome",
+      null,
+      "es",
+      { name: "The Spot" }
+    );
+    expect(message).toBe("Hola Ana <García>, llegada: 2026-08-30.");
   });
 });
