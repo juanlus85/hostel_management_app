@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import {
   Plus,
+  Minus,
   Copy,
   Check,
   X,
@@ -37,16 +38,9 @@ import {
 } from "@shared/orderHistory";
 
 const UNITS = ["unidades", "packs", "cajas", "kg", "litros"];
-const GENERAL_TEMPLATE_KEY = "pedidos_generales_loyverse_template";
 const isLoyverseProduct = (handle?: string | null): handle is string =>
   typeof handle === "string" &&
   (handle.startsWith("lv_") || handle.startsWith("loyverse:"));
-
-type GeneralTemplateLine = {
-  id: string;
-  productId: string;
-  quantity: number;
-};
 
 export default function PedidosGenerales() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -67,18 +61,6 @@ export default function PedidosGenerales() {
   const [orderView, setOrderView] = useState<"current" | "history">("current");
   const [historyStatus, setHistoryStatus] = useState<OrderHistoryStatus>("all");
   const [historyPeriod, setHistoryPeriod] = useState<OrderHistoryPeriod>("90");
-  const [generalTemplate, setGeneralTemplate] = useState<GeneralTemplateLine[]>(
-    () => {
-      try {
-        const saved = localStorage.getItem(GENERAL_TEMPLATE_KEY);
-        return saved
-          ? JSON.parse(saved)
-          : [{ id: "general-1", productId: "", quantity: 0 }];
-      } catch {
-        return [{ id: "general-1", productId: "", quantity: 0 }];
-      }
-    }
-  );
 
   const { data: orders = [], refetch } = trpc.ordersPedidos.list.useQuery();
   const { data: products = [], refetch: refetchProducts } =
@@ -97,49 +79,6 @@ export default function PedidosGenerales() {
     },
     onError: error => toast.error(error.message),
   });
-
-  useEffect(() => {
-    localStorage.setItem(GENERAL_TEMPLATE_KEY, JSON.stringify(generalTemplate));
-  }, [generalTemplate]);
-
-  const updateTemplateLine = (
-    id: string,
-    changes: Partial<GeneralTemplateLine>
-  ) => {
-    setGeneralTemplate(current =>
-      current.map(line => (line.id === id ? { ...line, ...changes } : line))
-    );
-  };
-
-  const adjustTemplateQuantity = (id: string, amount: number) => {
-    setGeneralTemplate(current =>
-      current.map(line =>
-        line.id === id
-          ? { ...line, quantity: Math.max(0, line.quantity + amount) }
-          : line
-      )
-    );
-  };
-
-  const addTemplateLine = () => {
-    setGeneralTemplate(current => [
-      ...current,
-      { id: `general-${Date.now()}-${current.length}`, productId: "", quantity: 0 },
-    ]);
-  };
-
-  const removeTemplateLine = (id: string) => {
-    setGeneralTemplate(current =>
-      current.length > 1 ? current.filter(line => line.id !== id) : current
-    );
-  };
-
-  const resetTemplateQuantities = () => {
-    setGeneralTemplate(current =>
-      current.map(line => ({ ...line, quantity: 0 }))
-    );
-    toast.success("Unidades a pedir reiniciadas");
-  };
 
   const handleCreateOrder = async () => {
     if (!supplierName.trim()) {
@@ -348,6 +287,19 @@ export default function PedidosGenerales() {
       refetch();
     } catch (error) {
       toast.error("Error al actualizar estado");
+    }
+  };
+
+  const updateOrderItemQuantity = async (item: any, quantity: number) => {
+    try {
+      await updateItemMutation.mutateAsync({
+        id: item.id,
+        quantity: Math.max(0, quantity).toString(),
+        unit: item.unit || undefined,
+      });
+      refetch();
+    } catch (error) {
+      toast.error("No se pudo actualizar la cantidad");
     }
   };
 
@@ -587,73 +539,6 @@ ${order.notes ? `\nNotas: ${order.notes}` : ""}
         </Dialog>
       </div>
 
-      <Card>
-        <CardHeader className="bg-blue-50">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <CardTitle className="text-lg">Plantilla de pedido general</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Asigna productos de Loyverse y prepara cantidades antes de crear el pedido al proveedor.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button size="sm" variant="outline" onClick={() => syncLoyverseMutation.mutate()} disabled={syncLoyverseMutation.isPending}>
-                <RefreshCw className={`mr-2 h-4 w-4 ${syncLoyverseMutation.isPending ? "animate-spin" : ""}`} />
-                Actualizar stock
-              </Button>
-              <Button size="sm" variant="outline" onClick={resetTemplateQuantities}>Reiniciar a pedir</Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-sm">
-              <thead className="bg-blue-100 text-left">
-                <tr>
-                  <th className="p-3 font-semibold">Producto en Loyverse</th>
-                  <th className="w-52 p-3 text-center font-semibold">Pedir</th>
-                  <th className="p-3 text-center font-semibold">Hay</th>
-                  <th className="p-3 text-center font-semibold">Total previsto</th>
-                  <th className="w-16 p-3" />
-                </tr>
-              </thead>
-              <tbody>
-                {generalTemplate.map(line => {
-                  const product = products.find(item => item.id.toString() === line.productId);
-                  const stock = product && isLoyverseProduct(product.handle) ? Number(product.inStock) || 0 : null;
-                  return (
-                    <tr key={line.id} className="border-t hover:bg-blue-50/50">
-                      <td className="p-2">
-                        <Select value={line.productId || "__none__"} onValueChange={value => updateTemplateLine(line.id, { productId: value === "__none__" ? "" : value })}>
-                          <SelectTrigger><SelectValue placeholder="Seleccionar producto" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="__none__">Sin asignar</SelectItem>
-                            {products.filter(item => isLoyverseProduct(item.handle)).map(item => (
-                              <SelectItem key={item.id} value={item.id.toString()}>{item.name} · Stock: {item.inStock}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </td>
-                      <td className="p-2">
-                        <div className="flex items-center justify-center gap-1">
-                          <Button type="button" variant="outline" size="icon" className="h-9 w-9" onClick={() => adjustTemplateQuantity(line.id, -1)} disabled={line.quantity === 0} aria-label="Quitar una unidad"><X className="h-3 w-3" /></Button>
-                          <Input type="number" min="0" step="1" value={line.quantity || ""} onChange={event => updateTemplateLine(line.id, { quantity: Math.max(0, Number.parseInt(event.target.value, 10) || 0) })} className="w-16 text-center font-semibold" placeholder="0" />
-                          <Button type="button" variant="outline" size="icon" className="h-9 w-9" onClick={() => adjustTemplateQuantity(line.id, 1)} aria-label="Añadir una unidad"><Plus className="h-4 w-4" /></Button>
-                        </div>
-                      </td>
-                      <td className="p-3 text-center">{stock === null ? "—" : stock}</td>
-                      <td className="p-3 text-center font-bold text-blue-700">{stock === null ? "—" : stock + line.quantity}</td>
-                      <td className="p-2 text-right"><Button type="button" variant="ghost" size="icon" onClick={() => removeTemplateLine(line.id)} disabled={generalTemplate.length === 1} aria-label="Quitar fila"><X className="h-4 w-4 text-destructive" /></Button></td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          <div className="p-3"><Button type="button" variant="outline" className="w-full" onClick={addTemplateLine}><Plus className="mr-2 h-4 w-4" />Añadir artículo</Button></div>
-        </CardContent>
-      </Card>
-
       <div className="grid gap-4">
         <div className="flex flex-col gap-3 rounded-lg border bg-muted/20 p-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1">
@@ -815,7 +700,13 @@ ${order.notes ? `\nNotas: ${order.notes}` : ""}
                                   <p className="font-medium">{item.itemName}</p>
                                   {item.unit && <p className="text-xs text-muted-foreground">{item.unit}</p>}
                                 </td>
-                                <td className="p-3 text-center font-semibold">{quantity}</td>
+                                <td className="p-2">
+                                  <div className="flex items-center justify-center gap-1">
+                                    <Button type="button" variant="outline" size="icon" className="h-8 w-8" onClick={() => updateOrderItemQuantity(item, quantity - 1)} disabled={quantity === 0 || updateItemMutation.isPending} aria-label={`Quitar una unidad de ${item.itemName}`}><Minus className="h-3.5 w-3.5" /></Button>
+                                    <Input type="number" min="0" step="1" defaultValue={quantity} key={`${item.id}-${quantity}`} onBlur={event => updateOrderItemQuantity(item, Number.parseInt(event.target.value, 10) || 0)} className="h-8 w-16 text-center font-semibold" aria-label={`Unidades a pedir de ${item.itemName}`} />
+                                    <Button type="button" variant="outline" size="icon" className="h-8 w-8" onClick={() => updateOrderItemQuantity(item, quantity + 1)} disabled={updateItemMutation.isPending} aria-label={`Añadir una unidad a ${item.itemName}`}><Plus className="h-3.5 w-3.5" /></Button>
+                                  </div>
+                                </td>
                                 <td className="p-3 text-center">{stock === null ? "—" : stock}</td>
                                 <td className="p-3 text-center font-bold text-blue-700">{projectedTotal === null ? "—" : projectedTotal}</td>
                                 <td className="p-3">
