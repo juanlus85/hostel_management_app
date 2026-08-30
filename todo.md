@@ -1196,6 +1196,12 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Ocultar DNI/NIF y NIE en el selector visual de Check-in Online para terceros países
 
 ## Importaciones externas
+- [x] Sincronizar manualmente productos, familias, coste, PVP y existencias desde Loyverse en Inventario
+- [x] Añadir un botón de actualizar existencias de Loyverse dentro de Inventario
+- [x] Vincular y conservar productos de Loyverse en las plantillas de pedidos generales
+- [x] Vincular y conservar productos de Loyverse en las plantillas de pedidos de bocatas
+- [x] Mostrar las existencias actualizadas de Loyverse al preparar un pedido
+- [ ] Ejecutar `SQL_LOYVERSE_INVENTARIO.sql` en el VPS antes de usar vínculos de productos Loyverse
 - [x] Añadir al Dashboard X provisional Tienda desde Loyverse y X provisional Hostel desde Cloudbeds al abrir la página
 - [x] Mantener los importes provisionales separados de cierres y cajas internas
 - [x] Ejecutar las consultas externas únicamente al cargar o reabrir Dashboard, sin proceso periódico

@@ -46,6 +46,7 @@ import {
   fetchLoyverseReceipts,
   getLoyverseOperationalWindow,
 } from "./loyverseReceipts";
+import { fetchLoyverseInventory } from "./loyverseInventory";
 import {
   aggregateCloudbedsPaymentsByOperationalDay,
   fetchCloudbedsTransactions,
@@ -2819,6 +2820,35 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
         await db.replaceAllInventoryProducts(input.products);
         return { success: true };
       }),
+    syncLoyverse: adminProcedure.mutation(async () => {
+      const accessToken = process.env.LOYVERSE_ACCESS_TOKEN?.trim();
+      if (!accessToken) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Falta configurar el token de acceso de Loyverse",
+        });
+      }
+      const products = await fetchLoyverseInventory(accessToken);
+      const result = await db.syncLoyverseInventoryProducts(products);
+      return { ...result, syncedAt: new Date().toISOString() };
+    }),
+    loyverseBindings: adminProcedure.query(async () => {
+      return db.getLoyverseOrderProductBindings();
+    }),
+    setLoyverseBinding: adminProcedure
+      .input(
+        z.object({
+          templateKey: z.string().min(1).max(160),
+          loyverseProductHandle: z.string().max(160).nullable(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        await db.setLoyverseOrderProductBinding(
+          input.templateKey,
+          input.loyverseProductHandle
+        );
+        return { success: true };
+      }),
   }),
 
   // ==================== ORDERS (Pedidos) ====================
@@ -2875,6 +2905,8 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           productName: z.string(),
           quantity: z.string(),
           unit: z.string().optional(),
+          loyverseProductHandle: z.string().max(160).optional(),
+          loyverseStockAtSelection: z.string().max(32).optional(),
         })
       )
       .mutation(async ({ input }) => {

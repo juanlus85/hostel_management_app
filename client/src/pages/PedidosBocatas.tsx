@@ -1,10 +1,17 @@
-import { useState, useEffect } from 'react';
-import { trpc } from '@/lib/trpc';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Copy, Save, RotateCcw } from 'lucide-react';
-import { toast } from 'sonner';
+import { useState, useEffect } from "react";
+import { trpc } from "@/lib/trpc";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Copy, Save, RotateCcw, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 
 type ProductGroup = {
   title: string;
@@ -14,45 +21,45 @@ type ProductGroup = {
 
 const PRODUCT_GROUPS: ProductGroup[] = [
   {
-    title: 'Bocatas',
+    title: "Bocatas",
     unitsPerBox: 6,
     products: [
-      'Burguer',
-      'Lomo al Mojo',
-      'Serranito',
-      'Lomo W',
-      'Frankfurt',
-      'Tortilla',
-      'Empanado',
-      'BBQ',
-      'Pollo Bacon',
-      'Carbonara',
-      'York',
-      'Serrano',
-      'Piripi',
+      "Burguer",
+      "Lomo al Mojo",
+      "Serranito",
+      "Lomo W",
+      "Frankfurt",
+      "Tortilla",
+      "Empanado",
+      "BBQ",
+      "Pollo Bacon",
+      "Carbonara",
+      "York",
+      "Serrano",
+      "Piripi",
     ],
   },
   {
-    title: 'Tostas',
+    title: "Tostas",
     unitsPerBox: 6,
     products: [
-      'Tosta Barbacoa',
-      'Tosta Carbonara',
-      'Tosta Pollo Bacon',
-      'Tosta Rulo Cabra',
-      'Tosta 3 Quesos',
-      'Tosta York',
+      "Tosta Barbacoa",
+      "Tosta Carbonara",
+      "Tosta Pollo Bacon",
+      "Tosta Rulo Cabra",
+      "Tosta 3 Quesos",
+      "Tosta York",
     ],
   },
   {
-    title: 'Bocapizzas',
+    title: "Bocapizzas",
     unitsPerBox: 16,
     products: [
-      'Bocapizza York',
-      'Bocapizza Bacon',
-      'Bocapizza BBQ',
-      'Bocapizza 4Q',
-      'Bocapizza Atun',
+      "Bocapizza York",
+      "Bocapizza Bacon",
+      "Bocapizza BBQ",
+      "Bocapizza 4Q",
+      "Bocapizza Atun",
     ],
   },
 ];
@@ -61,13 +68,16 @@ type ProductData = {
   name: string;
   boxesToOrder: number;
   currentUnits: number;
+  loyverseProductHandle?: string;
 };
 
-const STORAGE_KEY = 'bocatas_pedido_draft';
+const STORAGE_KEY = "bocatas_pedido_draft";
 
 export default function PedidosBocatas() {
-  const [orderDate, setOrderDate] = useState(new Date().toISOString().split('T')[0]);
-  
+  const [orderDate, setOrderDate] = useState(
+    new Date().toISOString().split("T")[0]
+  );
+
   // Inicializar productos
   const initialProducts: ProductData[] = PRODUCT_GROUPS.flatMap(group =>
     group.products.map(name => ({
@@ -76,11 +86,41 @@ export default function PedidosBocatas() {
       currentUnits: 0,
     }))
   );
-  
+
   const [products, setProducts] = useState<ProductData[]>(initialProducts);
 
   const createMutation = trpc.chefOrders.create.useMutation();
   const { data: latestOrder } = trpc.chefOrders.getLatest.useQuery();
+  const { data: loyverseProducts = [], refetch: refetchLoyverseProducts } =
+    trpc.inventoryProducts.list.useQuery();
+  const { data: loyverseBindings = [] } =
+    trpc.inventoryProducts.loyverseBindings.useQuery();
+  const setLoyverseBinding =
+    trpc.inventoryProducts.setLoyverseBinding.useMutation();
+  const syncLoyverseMutation = trpc.inventoryProducts.syncLoyverse.useMutation({
+    onSuccess: result => {
+      toast.success(`Stock actualizado: ${result.total} productos de Loyverse`);
+      refetchLoyverseProducts();
+    },
+    onError: error => toast.error(error.message),
+  });
+
+  useEffect(() => {
+    if (!loyverseBindings.length) return;
+    setProducts(current =>
+      current.map(product => {
+        const binding = loyverseBindings.find(
+          item => item.templateKey === `chef:${product.name}`
+        );
+        return binding
+          ? {
+              ...product,
+              loyverseProductHandle: binding.loyverseProductHandle || undefined,
+            }
+          : product;
+      })
+    );
+  }, [loyverseBindings]);
 
   // Cargar datos del localStorage al montar el componente
   useEffect(() => {
@@ -95,7 +135,7 @@ export default function PedidosBocatas() {
           setOrderDate(parsed.orderDate);
         }
       } catch (error) {
-        console.error('Error loading saved order:', error);
+        console.error("Error loading saved order:", error);
       }
     }
   }, []);
@@ -122,8 +162,25 @@ export default function PedidosBocatas() {
     setProducts(newProducts);
   };
 
+  const setLinkedProduct = (index: number, handle: string) => {
+    const product = products[index];
+    const loyverseProductHandle = handle === "__none__" ? undefined : handle;
+    setProducts(current =>
+      current.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, loyverseProductHandle } : item
+      )
+    );
+    setLoyverseBinding.mutate(
+      {
+        templateKey: `chef:${product.name}`,
+        loyverseProductHandle: loyverseProductHandle || null,
+      },
+      { onError: error => toast.error(error.message) }
+    );
+  };
+
   const calculateTotal = (product: ProductData, unitsPerBox: number) => {
-    return (product.boxesToOrder * unitsPerBox) + product.currentUnits;
+    return product.boxesToOrder * unitsPerBox + product.currentUnits;
   };
 
   const getTotalBoxes = () => {
@@ -135,35 +192,37 @@ export default function PedidosBocatas() {
     const fullSets = Math.floor(total / 25);
     const remainder = total % 25;
     if (remainder === 0) {
-      return fullSets === 1 ? '25' : `${fullSets * 25}`;
+      return fullSets === 1 ? "25" : `${fullSets * 25}`;
     }
     return `${total} (${fullSets * 25}+${remainder})`;
   };
 
   const handleReset = () => {
-    if (!confirm('¿Borrar el pedido actual y empezar de cero?')) return;
+    if (!confirm("¿Borrar el pedido actual y empezar de cero?")) return;
     setProducts(initialProducts);
-    setOrderDate(new Date().toISOString().split('T')[0]);
+    setOrderDate(new Date().toISOString().split("T")[0]);
     localStorage.removeItem(STORAGE_KEY);
-    toast.success('Pedido reiniciado');
+    toast.success("Pedido reiniciado");
   };
 
   const handleSave = async () => {
     try {
       await createMutation.mutateAsync({ orderDate });
-      toast.success('Pedido guardado correctamente');
+      toast.success("Pedido guardado correctamente");
     } catch (error) {
-      toast.error('Error al guardar pedido');
+      toast.error("Error al guardar pedido");
     }
   };
 
   const handleCopy = () => {
     let text = `PEDIDO BOCATAS DEL CHEF\nFecha: ${orderDate}\n\n`;
-    
+
     PRODUCT_GROUPS.forEach(group => {
-      const groupProducts = products.filter(p => group.products.includes(p.name));
+      const groupProducts = products.filter(p =>
+        group.products.includes(p.name)
+      );
       const hasOrders = groupProducts.some(p => p.boxesToOrder > 0);
-      
+
       if (hasOrders) {
         text += `${group.title} (${group.unitsPerBox} unidades por caja):\n`;
         groupProducts.forEach(p => {
@@ -171,15 +230,15 @@ export default function PedidosBocatas() {
             text += `  ${p.name}: ${p.boxesToOrder} cajas\n`;
           }
         });
-        text += '\n';
+        text += "\n";
       }
     });
-    
+
     const totalBoxes = getTotalBoxes();
     text += `Total Cajas a Pedir: ${formatTotalBoxes(totalBoxes)}`;
 
     navigator.clipboard.writeText(text);
-    toast.success('Pedido copiado al portapapeles');
+    toast.success("Pedido copiado al portapapeles");
   };
 
   let productIndex = 0;
@@ -189,9 +248,21 @@ export default function PedidosBocatas() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Pedidos Bocatas del Chef</h2>
-          <p className="text-sm text-muted-foreground">Gestión especializada con cálculos automáticos y guardado automático</p>
+          <p className="text-sm text-muted-foreground">
+            Gestión especializada con cálculos automáticos y guardado automático
+          </p>
         </div>
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => syncLoyverseMutation.mutate()}
+            disabled={syncLoyverseMutation.isPending}
+          >
+            <RefreshCw
+              className={`mr-2 h-4 w-4 ${syncLoyverseMutation.isPending ? "animate-spin" : ""}`}
+            />
+            Actualizar stock
+          </Button>
           <Button variant="outline" onClick={handleReset}>
             <RotateCcw className="mr-2 h-4 w-4" />
             Reiniciar
@@ -212,20 +283,30 @@ export default function PedidosBocatas() {
           <CardTitle>Fecha del pedido</CardTitle>
         </CardHeader>
         <CardContent>
-          <Input type="date" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} className="max-w-xs" />
+          <Input
+            type="date"
+            value={orderDate}
+            onChange={e => setOrderDate(e.target.value)}
+            className="max-w-xs"
+          />
         </CardContent>
       </Card>
 
       {PRODUCT_GROUPS.map((group, groupIndex) => {
         const startIndex = productIndex;
-        const groupProducts = products.slice(startIndex, startIndex + group.products.length);
+        const groupProducts = products.slice(
+          startIndex,
+          startIndex + group.products.length
+        );
         productIndex += group.products.length;
 
         return (
           <Card key={groupIndex}>
             <CardHeader className="bg-blue-50">
               <CardTitle className="text-lg">{group.title}</CardTitle>
-              <p className="text-sm text-muted-foreground">{group.unitsPerBox} unidades por caja</p>
+              <p className="text-sm text-muted-foreground">
+                {group.unitsPerBox} unidades por caja
+              </p>
             </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
@@ -233,30 +314,79 @@ export default function PedidosBocatas() {
                   <thead className="bg-blue-100 border-b-2 border-blue-300">
                     <tr>
                       <th className="text-left p-3 font-semibold">Artículo</th>
-                      <th className="text-center p-3 font-semibold w-32">Pedir (Cajas)</th>
-                      <th className="text-center p-3 font-semibold w-32">Hay (Unidades)</th>
-                      <th className="text-center p-3 font-semibold w-32 bg-blue-200">Total (Unidades)</th>
+                      <th className="text-left p-3 font-semibold min-w-56">
+                        Producto en Loyverse
+                      </th>
+                      <th className="text-center p-3 font-semibold w-32">
+                        Pedir (Cajas)
+                      </th>
+                      <th className="text-center p-3 font-semibold w-32">
+                        Hay (Unidades)
+                      </th>
+                      <th className="text-center p-3 font-semibold w-32 bg-blue-200">
+                        Total (Unidades)
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {groupProducts.map((product, idx) => {
                       const actualIndex = startIndex + idx;
-                      const total = calculateTotal(product, group.unitsPerBox);
+                      const linkedProduct = loyverseProducts.find(
+                        item => item.handle === product.loyverseProductHandle
+                      );
+                      const currentUnits = linkedProduct
+                        ? Number(linkedProduct.inStock) || 0
+                        : product.currentUnits;
+                      const total =
+                        product.boxesToOrder * group.unitsPerBox + currentUnits;
                       const hasOrder = product.boxesToOrder > 0;
 
                       return (
-                        <tr 
-                          key={actualIndex} 
-                          className={`border-b hover:bg-blue-50 ${hasOrder ? 'bg-blue-50' : ''}`}
+                        <tr
+                          key={actualIndex}
+                          className={`border-b hover:bg-blue-50 ${hasOrder ? "bg-blue-50" : ""}`}
                         >
                           <td className="p-3 font-medium">{product.name}</td>
+                          <td className="p-2">
+                            <Select
+                              value={
+                                product.loyverseProductHandle || "__none__"
+                              }
+                              onValueChange={value =>
+                                setLinkedProduct(actualIndex, value)
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Seleccionar producto" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__none__">
+                                  Sin vincular
+                                </SelectItem>
+                                {loyverseProducts
+                                  .filter(item =>
+                                    item.handle?.startsWith("loyverse:")
+                                  )
+                                  .map(item => (
+                                    <SelectItem
+                                      key={item.handle}
+                                      value={item.handle!}
+                                    >
+                                      {item.name} · Stock: {item.inStock}
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                          </td>
                           <td className="p-2 text-center">
                             <Input
                               type="number"
                               min="0"
                               step="1"
-                              value={product.boxesToOrder || ''}
-                              onChange={(e) => updateBoxes(actualIndex, e.target.value)}
+                              value={product.boxesToOrder || ""}
+                              onChange={e =>
+                                updateBoxes(actualIndex, e.target.value)
+                              }
                               className="text-center font-semibold"
                               placeholder="0"
                             />
@@ -266,14 +396,19 @@ export default function PedidosBocatas() {
                               type="number"
                               min="0"
                               step="1"
-                              value={product.currentUnits || ''}
-                              onChange={(e) => updateUnits(actualIndex, e.target.value)}
+                              value={currentUnits || ""}
+                              onChange={e =>
+                                updateUnits(actualIndex, e.target.value)
+                              }
+                              disabled={Boolean(linkedProduct)}
                               className="text-center"
                               placeholder="0"
                             />
                           </td>
                           <td className="p-3 text-center bg-blue-50">
-                            <span className={`font-bold text-lg ${hasOrder ? 'text-blue-600' : 'text-gray-600'}`}>
+                            <span
+                              className={`font-bold text-lg ${hasOrder ? "text-blue-600" : "text-gray-600"}`}
+                            >
                               {total}
                             </span>
                           </td>
@@ -306,7 +441,8 @@ export default function PedidosBocatas() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              Fecha: {latestOrder.orderDate} · Guardado el {new Date(latestOrder.createdAt).toLocaleString('es-ES')}
+              Fecha: {latestOrder.orderDate} · Guardado el{" "}
+              {new Date(latestOrder.createdAt).toLocaleString("es-ES")}
             </p>
           </CardContent>
         </Card>

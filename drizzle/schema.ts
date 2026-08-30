@@ -264,6 +264,11 @@ export const orderItems = mysqlTable("order_items", {
   quantity: decimal("quantity", { precision: 10, scale: 2 }).notNull(),
   unitPrice: decimal("unitPrice", { precision: 10, scale: 2 }),
   totalPrice: decimal("totalPrice", { precision: 10, scale: 2 }),
+  loyverseProductHandle: varchar("loyverseProductHandle", { length: 160 }),
+  loyverseStockAtSelection: decimal("loyverseStockAtSelection", {
+    precision: 12,
+    scale: 3,
+  }),
   received: boolean("received").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -271,6 +276,20 @@ export const orderItems = mysqlTable("order_items", {
 
 export type OrderItem = typeof orderItems.$inferSelect;
 export type InsertOrderItem = typeof orderItems.$inferInsert;
+
+// ==================== VÍNCULOS DE PLANTILLAS DE PEDIDO CON LOYVERSE ====================
+export const loyverseOrderProductBindings = mysqlTable(
+  "loyverse_order_product_bindings",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    templateKey: varchar("templateKey", { length: 160 }).notNull().unique(),
+    loyverseProductHandle: varchar("loyverseProductHandle", { length: 160 }),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  }
+);
+
+export type LoyverseOrderProductBinding =
+  typeof loyverseOrderProductBindings.$inferSelect;
 
 // ==================== INCIDENTS (Incidencias) ====================
 export const incidents = mysqlTable("incidents", {

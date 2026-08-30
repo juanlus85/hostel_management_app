@@ -1,18 +1,42 @@
-import { useState } from 'react';
-import { trpc } from '@/lib/trpc';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Copy, Check, X, Calendar, Pencil } from 'lucide-react';
-import { toast } from 'sonner';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { filterOrderHistory, type OrderHistoryPeriod, type OrderHistoryStatus } from '@shared/orderHistory';
+import { useState } from "react";
+import { trpc } from "@/lib/trpc";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Plus,
+  Copy,
+  Check,
+  X,
+  Calendar,
+  Pencil,
+  RefreshCw,
+} from "lucide-react";
+import { toast } from "sonner";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  filterOrderHistory,
+  type OrderHistoryPeriod,
+  type OrderHistoryStatus,
+} from "@shared/orderHistory";
 
-const UNITS = ['unidades', 'packs', 'cajas', 'kg', 'litros'];
+const UNITS = ["unidades", "packs", "cajas", "kg", "litros"];
 
 export default function PedidosGenerales() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -22,20 +46,21 @@ export default function PedidosGenerales() {
   const [editingOrderId, setEditingOrderId] = useState<number | null>(null);
   const [addingToOrderId, setAddingToOrderId] = useState<number | null>(null);
   const [editingItem, setEditingItem] = useState<any>(null);
-  const [supplierName, setSupplierName] = useState('');
-  const [estimatedDate, setEstimatedDate] = useState('');
-  const [notes, setNotes] = useState('');
+  const [supplierName, setSupplierName] = useState("");
+  const [estimatedDate, setEstimatedDate] = useState("");
+  const [notes, setNotes] = useState("");
   const [currentOrderId, setCurrentOrderId] = useState<number | null>(null);
-  const [selectedProductId, setSelectedProductId] = useState('');
-  const [customProductName, setCustomProductName] = useState('');
-  const [quantity, setQuantity] = useState('');
-  const [unit, setUnit] = useState('unidades');
-  const [orderView, setOrderView] = useState<'current' | 'history'>('current');
-  const [historyStatus, setHistoryStatus] = useState<OrderHistoryStatus>('all');
-  const [historyPeriod, setHistoryPeriod] = useState<OrderHistoryPeriod>('90');
+  const [selectedProductId, setSelectedProductId] = useState("");
+  const [customProductName, setCustomProductName] = useState("");
+  const [quantity, setQuantity] = useState("");
+  const [unit, setUnit] = useState("unidades");
+  const [orderView, setOrderView] = useState<"current" | "history">("current");
+  const [historyStatus, setHistoryStatus] = useState<OrderHistoryStatus>("all");
+  const [historyPeriod, setHistoryPeriod] = useState<OrderHistoryPeriod>("90");
 
   const { data: orders = [], refetch } = trpc.ordersPedidos.list.useQuery();
-  const { data: products = [] } = trpc.inventoryProducts.list.useQuery();
+  const { data: products = [], refetch: refetchProducts } =
+    trpc.inventoryProducts.list.useQuery();
   const { data: suppliers = [] } = trpc.suppliers.list.useQuery();
   const createMutation = trpc.ordersPedidos.create.useMutation();
   const updateMutation = trpc.ordersPedidos.update.useMutation();
@@ -43,10 +68,17 @@ export default function PedidosGenerales() {
   const addItemMutation = trpc.ordersPedidos.addItem.useMutation();
   const updateItemMutation = trpc.ordersPedidos.updateItem.useMutation();
   const deleteItemMutation = trpc.ordersPedidos.deleteItem.useMutation();
+  const syncLoyverseMutation = trpc.inventoryProducts.syncLoyverse.useMutation({
+    onSuccess: result => {
+      toast.success(`Stock actualizado: ${result.total} productos de Loyverse`);
+      refetchProducts();
+    },
+    onError: error => toast.error(error.message),
+  });
 
   const handleCreateOrder = async () => {
     if (!supplierName.trim()) {
-      toast.error('El nombre del proveedor es obligatorio');
+      toast.error("El nombre del proveedor es obligatorio");
       return;
     }
     try {
@@ -55,29 +87,29 @@ export default function PedidosGenerales() {
         estimatedDate: estimatedDate || undefined,
         notes: notes || undefined,
       });
-      toast.success('Pedido creado correctamente');
+      toast.success("Pedido creado correctamente");
       setCurrentOrderId(result.id);
-      setSupplierName('');
-      setEstimatedDate('');
-      setNotes('');
+      setSupplierName("");
+      setEstimatedDate("");
+      setNotes("");
       refetch();
     } catch (error) {
-      toast.error('Error al crear pedido');
+      toast.error("Error al crear pedido");
     }
   };
 
   const openEditOrder = (order: any) => {
     setEditingOrderId(order.id);
-    setSupplierName(order.supplier || '');
-    setEstimatedDate(order.expectedDelivery || '');
-    setNotes(order.notes || '');
+    setSupplierName(order.supplier || "");
+    setEstimatedDate(order.expectedDelivery || "");
+    setNotes(order.notes || "");
     setIsEditOpen(true);
   };
 
   const handleUpdateOrder = async () => {
     if (!editingOrderId) return;
     if (!supplierName.trim()) {
-      toast.error('El nombre del proveedor es obligatorio');
+      toast.error("El nombre del proveedor es obligatorio");
       return;
     }
     try {
@@ -87,22 +119,22 @@ export default function PedidosGenerales() {
         estimatedDate: estimatedDate || undefined,
         notes: notes || undefined,
       });
-      toast.success('Pedido actualizado correctamente');
+      toast.success("Pedido actualizado correctamente");
       setIsEditOpen(false);
       setEditingOrderId(null);
-      setSupplierName('');
-      setEstimatedDate('');
-      setNotes('');
+      setSupplierName("");
+      setEstimatedDate("");
+      setNotes("");
       refetch();
     } catch (error) {
-      toast.error('Error al actualizar pedido');
+      toast.error("Error al actualizar pedido");
     }
   };
 
   const openEditItem = (item: any) => {
     setEditingItem(item);
-    setQuantity(item.quantity || '');
-    setUnit(item.unit || 'unidades');
+    setQuantity(item.quantity || "");
+    setUnit(item.unit || "unidades");
     setIsEditItemOpen(true);
   };
 
@@ -115,126 +147,163 @@ export default function PedidosGenerales() {
         quantity: qty.toString(),
         unit: unit || undefined,
       });
-      toast.success('Artículo actualizado correctamente');
+      toast.success("Artículo actualizado correctamente");
       setIsEditItemOpen(false);
       setEditingItem(null);
-      setQuantity('');
-      setUnit('unidades');
+      setQuantity("");
+      setUnit("unidades");
       refetch();
     } catch (error) {
-      toast.error('Error al actualizar artículo');
+      toast.error("Error al actualizar artículo");
     }
   };
 
   const openAddItemToOrder = (orderId: number) => {
     setAddingToOrderId(orderId);
-    setSelectedProductId('');
-    setCustomProductName('');
-    setQuantity('');
-    setUnit('unidades');
+    setSelectedProductId("");
+    setCustomProductName("");
+    setQuantity("");
+    setUnit("unidades");
     setIsAddItemOpen(true);
   };
 
   const handleAddItemToExistingOrder = async () => {
     if (!addingToOrderId) return;
-    
-    const productName = selectedProductId === '_custom' 
-      ? customProductName.trim() 
-      : products.find(p => p.id.toString() === selectedProductId)?.name || '';
-    
+    const selectedProduct = products.find(
+      p => p.id.toString() === selectedProductId
+    );
+    const productName =
+      selectedProductId === "_custom"
+        ? customProductName.trim()
+        : selectedProduct?.name || "";
+
     if (!productName) {
-      toast.error('Selecciona un producto o escribe un nombre');
+      toast.error("Selecciona un producto o escribe un nombre");
       return;
     }
-    
+
     const qty = parseInt(quantity) || 1;
-    
+
     try {
       await addItemMutation.mutateAsync({
         orderId: addingToOrderId,
         productName,
         quantity: qty.toString(),
         unit: unit || undefined,
+        loyverseProductHandle: selectedProduct?.handle?.startsWith("loyverse:")
+          ? selectedProduct.handle
+          : undefined,
+        loyverseStockAtSelection: selectedProduct?.handle?.startsWith(
+          "loyverse:"
+        )
+          ? String(selectedProduct.inStock)
+          : undefined,
       });
-      toast.success('Producto añadido');
+      toast.success("Producto añadido");
       setIsAddItemOpen(false);
       setAddingToOrderId(null);
-      setSelectedProductId('');
-      setCustomProductName('');
-      setQuantity('');
-      setUnit('unidades');
+      setSelectedProductId("");
+      setCustomProductName("");
+      setQuantity("");
+      setUnit("unidades");
       refetch();
     } catch (error) {
-      toast.error('Error al añadir producto');
+      toast.error("Error al añadir producto");
     }
   };
 
   const handleAddItem = async () => {
     if (!currentOrderId) return;
-    
-    const productName = selectedProductId === '_custom' 
-      ? customProductName.trim() 
-      : products.find(p => p.id.toString() === selectedProductId)?.name || '';
-    
+    const selectedProduct = products.find(
+      p => p.id.toString() === selectedProductId
+    );
+    const productName =
+      selectedProductId === "_custom"
+        ? customProductName.trim()
+        : selectedProduct?.name || "";
+
     if (!productName) {
-      toast.error('Selecciona un producto o escribe un nombre');
+      toast.error("Selecciona un producto o escribe un nombre");
       return;
     }
-    
+
     const qty = parseInt(quantity) || 1;
-    
+
     try {
       await addItemMutation.mutateAsync({
         orderId: currentOrderId,
         productName,
         quantity: qty.toString(),
         unit: unit || undefined,
+        loyverseProductHandle: selectedProduct?.handle?.startsWith("loyverse:")
+          ? selectedProduct.handle
+          : undefined,
+        loyverseStockAtSelection: selectedProduct?.handle?.startsWith(
+          "loyverse:"
+        )
+          ? String(selectedProduct.inStock)
+          : undefined,
       });
-      toast.success('Producto añadido');
-      setSelectedProductId('');
-      setCustomProductName('');
-      setQuantity('');
-      setUnit('unidades');
+      toast.success("Producto añadido");
+      setSelectedProductId("");
+      setCustomProductName("");
+      setQuantity("");
+      setUnit("unidades");
       refetch();
     } catch (error) {
-      toast.error('Error al añadir producto');
+      toast.error("Error al añadir producto");
     }
   };
 
-  const handleChangeStatus = async (orderId: number, newStatus: 'pending' | 'ordered' | 'delivered') => {
+  const handleChangeStatus = async (
+    orderId: number,
+    newStatus: "pending" | "ordered" | "delivered"
+  ) => {
     try {
-      if (newStatus === 'pending') {
-        await updateMutation.mutateAsync({ id: orderId, isOrdered: false, isReceived: false });
-      } else if (newStatus === 'ordered') {
-        await updateMutation.mutateAsync({ id: orderId, isOrdered: true, isReceived: false });
-      } else if (newStatus === 'delivered') {
-        await updateMutation.mutateAsync({ id: orderId, isOrdered: true, isReceived: true });
+      if (newStatus === "pending") {
+        await updateMutation.mutateAsync({
+          id: orderId,
+          isOrdered: false,
+          isReceived: false,
+        });
+      } else if (newStatus === "ordered") {
+        await updateMutation.mutateAsync({
+          id: orderId,
+          isOrdered: true,
+          isReceived: false,
+        });
+      } else if (newStatus === "delivered") {
+        await updateMutation.mutateAsync({
+          id: orderId,
+          isOrdered: true,
+          isReceived: true,
+        });
       }
-      toast.success('Estado actualizado correctamente');
+      toast.success("Estado actualizado correctamente");
       refetch();
     } catch (error) {
-      toast.error('Error al actualizar estado');
+      toast.error("Error al actualizar estado");
     }
   };
 
   const handleDeleteOrder = async (orderId: number) => {
-    if (!confirm('¿Eliminar este pedido?')) return;
+    if (!confirm("¿Eliminar este pedido?")) return;
     try {
       await deleteMutation.mutateAsync({ id: orderId });
-      toast.success('Pedido eliminado');
+      toast.success("Pedido eliminado");
       refetch();
     } catch (error) {
-      toast.error('Error al eliminar pedido');
+      toast.error("Error al eliminar pedido");
     }
   };
 
   const handleDeleteItem = async (itemId: number) => {
     try {
       await deleteItemMutation.mutateAsync({ id: itemId });
-      toast.success('Producto eliminado');
+      toast.success("Producto eliminado");
       refetch();
     } catch (error) {
-      toast.error('Error al eliminar producto');
+      toast.error("Error al eliminar producto");
     }
   };
 
@@ -243,38 +312,53 @@ export default function PedidosGenerales() {
 PEDIDO A ${order.supplier?.toUpperCase()}
 
 PRODUCTOS:
-${order.items?.filter((i: any) => parseInt(i.quantity) > 0).map((item: any) => 
-  `- ${item.itemName}: ${parseInt(item.quantity)}`
-).join('\n')}
+${order.items
+  ?.filter((i: any) => parseInt(i.quantity) > 0)
+  .map((item: any) => `- ${item.itemName}: ${parseInt(item.quantity)}`)
+  .join("\n")}
 
-${order.notes ? `\nNotas: ${order.notes}` : ''}
+${order.notes ? `\nNotas: ${order.notes}` : ""}
     `.trim();
-    
+
     navigator.clipboard.writeText(text);
-    toast.success('Pedido copiado al portapapeles');
+    toast.success("Pedido copiado al portapapeles");
   };
 
   const getStatusBadge = (order: any) => {
-    if (order.status === 'delivered') return <Badge className="bg-green-600">Recibido</Badge>;
-    if (order.status === 'ordered') return <Badge className="bg-blue-600">Ordenado</Badge>;
-    return <Badge variant="outline" className="border-amber-500 text-amber-600">Pendiente de pedir</Badge>;
+    if (order.status === "delivered")
+      return <Badge className="bg-green-600">Recibido</Badge>;
+    if (order.status === "ordered")
+      return <Badge className="bg-blue-600">Ordenado</Badge>;
+    return (
+      <Badge variant="outline" className="border-amber-500 text-amber-600">
+        Pendiente de pedir
+      </Badge>
+    );
   };
 
-  const getStatusValue = (order: any): 'pending' | 'ordered' | 'delivered' => {
-    if (order.status === 'delivered') return 'delivered';
-    if (order.status === 'ordered') return 'ordered';
-    return 'pending';
+  const getStatusValue = (order: any): "pending" | "ordered" | "delivered" => {
+    if (order.status === "delivered") return "delivered";
+    if (order.status === "ordered") return "ordered";
+    return "pending";
   };
 
-  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' });
-  const currentOrders = orders.filter((order: any) => order.status === 'pending' || order.status === 'ordered');
+  const today = new Date().toLocaleDateString("en-CA", {
+    timeZone: "Europe/Madrid",
+  });
+  const currentOrders = orders.filter(
+    (order: any) => order.status === "pending" || order.status === "ordered"
+  );
   const historicOrders = filterOrderHistory(
-    orders.filter((order: any) => order.status === 'delivered' || order.status === 'cancelled'),
+    orders.filter(
+      (order: any) =>
+        order.status === "delivered" || order.status === "cancelled"
+    ),
     historyStatus,
     historyPeriod,
-    today,
+    today
   );
-  const visibleOrders = orderView === 'current' ? currentOrders : historicOrders;
+  const visibleOrders =
+    orderView === "current" ? currentOrders : historicOrders;
 
   return (
     <div className="space-y-6">
@@ -301,15 +385,17 @@ ${order.notes ? `\nNotas: ${order.notes}` : ''}
                     </SelectTrigger>
                     <SelectContent>
                       {suppliers.map((s: any) => (
-                        <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                        <SelectItem key={s.id} value={s.name}>
+                          {s.name}
+                        </SelectItem>
                       ))}
                       <SelectItem value="_custom">Otro (escribir)</SelectItem>
                     </SelectContent>
                   </Select>
-                  {supplierName === '_custom' && (
-                    <Input 
-                      value={supplierName === '_custom' ? '' : supplierName}
-                      onChange={(e) => setSupplierName(e.target.value)} 
+                  {supplierName === "_custom" && (
+                    <Input
+                      value={supplierName === "_custom" ? "" : supplierName}
+                      onChange={e => setSupplierName(e.target.value)}
                       placeholder="Nombre del proveedor"
                       className="mt-2"
                     />
@@ -317,37 +403,69 @@ ${order.notes ? `\nNotas: ${order.notes}` : ''}
                 </div>
                 <div>
                   <Label>Fecha estimada entrega</Label>
-                  <Input type="date" value={estimatedDate} onChange={(e) => setEstimatedDate(e.target.value)} />
+                  <Input
+                    type="date"
+                    value={estimatedDate}
+                    onChange={e => setEstimatedDate(e.target.value)}
+                  />
                 </div>
               </div>
               <div>
                 <Label>Notas</Label>
-                <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notas adicionales..." rows={2} />
+                <Textarea
+                  value={notes}
+                  onChange={e => setNotes(e.target.value)}
+                  placeholder="Notas adicionales..."
+                  rows={2}
+                />
               </div>
-              <Button onClick={handleCreateOrder} className="w-full">Crear Pedido</Button>
+              <Button onClick={handleCreateOrder} className="w-full">
+                Crear Pedido
+              </Button>
 
               {currentOrderId && (
                 <div className="border-t pt-4 space-y-4">
-                  <h3 className="font-semibold">Añadir productos al pedido</h3>
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="font-semibold">
+                      Añadir productos al pedido
+                    </h3>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => syncLoyverseMutation.mutate()}
+                      disabled={syncLoyverseMutation.isPending}
+                    >
+                      <RefreshCw
+                        className={`mr-2 h-4 w-4 ${syncLoyverseMutation.isPending ? "animate-spin" : ""}`}
+                      />
+                      Actualizar stock
+                    </Button>
+                  </div>
                   <div>
                     <Label>Producto *</Label>
-                    <Select value={selectedProductId} onValueChange={setSelectedProductId}>
+                    <Select
+                      value={selectedProductId}
+                      onValueChange={setSelectedProductId}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Selecciona un producto" />
                       </SelectTrigger>
                       <SelectContent>
-                        {products.map((p) => (
+                        {products.map(p => (
                           <SelectItem key={p.id} value={p.id.toString()}>
-                            {p.name} {p.category && `(${p.category})`}
+                            {p.name} {p.category && `(${p.category})`}{" "}
+                            {p.handle?.startsWith("loyverse:") &&
+                              `· Stock: ${p.inStock}`}
                           </SelectItem>
                         ))}
                         <SelectItem value="_custom">Otro (escribir)</SelectItem>
                       </SelectContent>
                     </Select>
-                    {selectedProductId === '_custom' && (
-                      <Input 
-                        value={customProductName} 
-                        onChange={(e) => setCustomProductName(e.target.value)} 
+                    {selectedProductId === "_custom" && (
+                      <Input
+                        value={customProductName}
+                        onChange={e => setCustomProductName(e.target.value)}
                         placeholder="Nombre del producto"
                         className="mt-2"
                       />
@@ -356,13 +474,13 @@ ${order.notes ? `\nNotas: ${order.notes}` : ''}
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <Label>Cantidad *</Label>
-                      <Input 
-                        type="number" 
-                        min="1" 
-                        step="1" 
-                        value={quantity} 
-                        onChange={(e) => setQuantity(e.target.value)} 
-                        placeholder="1" 
+                      <Input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={quantity}
+                        onChange={e => setQuantity(e.target.value)}
+                        placeholder="1"
                       />
                     </div>
                     <div>
@@ -372,15 +490,31 @@ ${order.notes ? `\nNotas: ${order.notes}` : ''}
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {UNITS.map((u) => (
-                            <SelectItem key={u} value={u}>{u}</SelectItem>
+                          {UNITS.map(u => (
+                            <SelectItem key={u} value={u}>
+                              {u}
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
-                  <Button onClick={handleAddItem} variant="outline" className="w-full">Añadir Producto</Button>
-                  <Button onClick={() => { setIsCreateOpen(false); setCurrentOrderId(null); }} className="w-full">Finalizar</Button>
+                  <Button
+                    onClick={handleAddItem}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    Añadir Producto
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setIsCreateOpen(false);
+                      setCurrentOrderId(null);
+                    }}
+                    className="w-full"
+                  >
+                    Finalizar
+                  </Button>
                 </div>
               )}
             </div>
@@ -392,14 +526,68 @@ ${order.notes ? `\nNotas: ${order.notes}` : ''}
         <div className="flex flex-col gap-3 rounded-lg border bg-muted/20 p-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1">
             <p className="text-sm font-medium">Consulta de pedidos</p>
-            <p className="text-xs text-muted-foreground">Los pedidos recibidos y cancelados permanecen disponibles para consulta.</p>
+            <p className="text-xs text-muted-foreground">
+              Los pedidos recibidos y cancelados permanecen disponibles para
+              consulta.
+            </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant={orderView === 'current' ? 'default' : 'outline'} onClick={() => setOrderView('current')}>Pedidos activos ({currentOrders.length})</Button>
-            <Button size="sm" variant={orderView === 'history' ? 'default' : 'outline'} onClick={() => setOrderView('history')}>Historial</Button>
+            <Button
+              size="sm"
+              variant={orderView === "current" ? "default" : "outline"}
+              onClick={() => setOrderView("current")}
+            >
+              Pedidos activos ({currentOrders.length})
+            </Button>
+            <Button
+              size="sm"
+              variant={orderView === "history" ? "default" : "outline"}
+              onClick={() => setOrderView("history")}
+            >
+              Historial
+            </Button>
           </div>
         </div>
-        {orderView === 'history' && <div className="grid gap-3 rounded-lg border p-3 sm:grid-cols-2"><div className="space-y-2"><Label>Estado</Label><Select value={historyStatus} onValueChange={(value) => setHistoryStatus(value as OrderHistoryStatus)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Recibidos y cancelados</SelectItem><SelectItem value="delivered">Solo recibidos</SelectItem><SelectItem value="cancelled">Solo cancelados</SelectItem></SelectContent></Select></div><div className="space-y-2"><Label>Periodo</Label><Select value={historyPeriod} onValueChange={(value) => setHistoryPeriod(value as OrderHistoryPeriod)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="30">Últimos 30 días</SelectItem><SelectItem value="90">Últimos 90 días</SelectItem><SelectItem value="all">Todo el historial</SelectItem></SelectContent></Select></div></div>}
+        {orderView === "history" && (
+          <div className="grid gap-3 rounded-lg border p-3 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Estado</Label>
+              <Select
+                value={historyStatus}
+                onValueChange={value =>
+                  setHistoryStatus(value as OrderHistoryStatus)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Recibidos y cancelados</SelectItem>
+                  <SelectItem value="delivered">Solo recibidos</SelectItem>
+                  <SelectItem value="cancelled">Solo cancelados</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Periodo</Label>
+              <Select
+                value={historyPeriod}
+                onValueChange={value =>
+                  setHistoryPeriod(value as OrderHistoryPeriod)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="30">Últimos 30 días</SelectItem>
+                  <SelectItem value="90">Últimos 90 días</SelectItem>
+                  <SelectItem value="all">Todo el historial</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
         {visibleOrders.map((order: any) => (
           <Card key={order.id}>
             <CardHeader className="pb-3">
@@ -407,13 +595,20 @@ ${order.notes ? `\nNotas: ${order.notes}` : ''}
                 <div className="flex-1">
                   <CardTitle className="text-xl">{order.supplier}</CardTitle>
                   <div className="flex items-center gap-2 mt-2">
-                    <Select value={getStatusValue(order)} onValueChange={(val) => handleChangeStatus(order.id, val as any)}>
+                    <Select
+                      value={getStatusValue(order)}
+                      onValueChange={val =>
+                        handleChangeStatus(order.id, val as any)
+                      }
+                    >
                       <SelectTrigger className="w-48">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="pending">
-                          <span className="text-amber-600">Pendiente de pedir</span>
+                          <span className="text-amber-600">
+                            Pendiente de pedir
+                          </span>
                         </SelectItem>
                         <SelectItem value="ordered">
                           <span className="text-blue-600">Ordenado</span>
@@ -426,19 +621,33 @@ ${order.notes ? `\nNotas: ${order.notes}` : ''}
                     {(order.actualDelivery || order.expectedDelivery) && (
                       <div className="flex items-center gap-1 text-sm text-muted-foreground">
                         <Calendar className="h-3 w-3" />
-                        {order.status === 'delivered' ? `Recibido: ${order.actualDelivery || order.expectedDelivery}` : order.expectedDelivery}
+                        {order.status === "delivered"
+                          ? `Recibido: ${order.actualDelivery || order.expectedDelivery}`
+                          : order.expectedDelivery}
                       </div>
                     )}
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button size="sm" variant="outline" onClick={() => openEditOrder(order)}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openEditOrder(order)}
+                  >
                     <Pencil className="h-4 w-4" />
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => copyOrderToClipboard(order)}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => copyOrderToClipboard(order)}
+                  >
                     <Copy className="h-4 w-4" />
                   </Button>
-                  <Button size="sm" variant="destructive" onClick={() => handleDeleteOrder(order.id)}>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => handleDeleteOrder(order.id)}
+                  >
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
@@ -447,25 +656,59 @@ ${order.notes ? `\nNotas: ${order.notes}` : ''}
             <CardContent>
               {order.items && order.items.length > 0 ? (
                 <div className="space-y-2">
-                  {order.items.filter((i: any) => parseInt(i.quantity) > 0).map((item: any) => (
-                    <div key={item.id} className="flex items-center justify-between py-2 border-b last:border-0">
-                      <div>
-                        <span className="font-medium">{item.itemName}</span>
-                        <span className="text-muted-foreground ml-2">x{parseInt(item.quantity)}</span>
-                        {item.unit && <span className="text-muted-foreground ml-1">({item.unit})</span>}
-                      </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="ghost" onClick={() => openEditItem(item)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={() => handleDeleteItem(item.id)}>
-                          <X className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+                  {order.items
+                    .filter((i: any) => parseInt(i.quantity) > 0)
+                    .map((item: any) => {
+                      const linkedProduct = products.find(
+                        product => product.handle === item.loyverseProductHandle
+                      );
+                      return (
+                        <div
+                          key={item.id}
+                          className="flex items-center justify-between py-2 border-b last:border-0"
+                        >
+                          <div>
+                            <span className="font-medium">{item.itemName}</span>
+                            <span className="text-muted-foreground ml-2">
+                              x{parseInt(item.quantity)}
+                            </span>
+                            {item.unit && (
+                              <span className="text-muted-foreground ml-1">
+                                ({item.unit})
+                              </span>
+                            )}
+                            {linkedProduct && (
+                              <span className="ml-2 text-xs font-medium text-emerald-700">
+                                Stock Loyverse: {linkedProduct.inStock}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => openEditItem(item)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleDeleteItem(item.id)}
+                            >
+                              <X className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   <div className="pt-2">
-                    <Button size="sm" variant="outline" onClick={() => openAddItemToOrder(order.id)} className="w-full">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => openAddItemToOrder(order.id)}
+                      className="w-full"
+                    >
                       <Plus className="mr-2 h-4 w-4" />
                       Añadir artículo
                     </Button>
@@ -473,8 +716,15 @@ ${order.notes ? `\nNotas: ${order.notes}` : ''}
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">Sin productos añadidos</p>
-                  <Button size="sm" variant="outline" onClick={() => openAddItemToOrder(order.id)} className="w-full">
+                  <p className="text-sm text-muted-foreground">
+                    Sin productos añadidos
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openAddItemToOrder(order.id)}
+                    className="w-full"
+                  >
                     <Plus className="mr-2 h-4 w-4" />
                     Añadir artículo
                   </Button>
@@ -488,7 +738,15 @@ ${order.notes ? `\nNotas: ${order.notes}` : ''}
             </CardContent>
           </Card>
         ))}
-        {visibleOrders.length === 0 && <Card><CardContent className="py-10 text-center text-sm text-muted-foreground">{orderView === 'history' ? 'No hay pedidos que coincidan con los filtros seleccionados.' : 'No hay pedidos activos. Los pedidos recibidos se conservan en el historial.'}</CardContent></Card>}
+        {visibleOrders.length === 0 && (
+          <Card>
+            <CardContent className="py-10 text-center text-sm text-muted-foreground">
+              {orderView === "history"
+                ? "No hay pedidos que coincidan con los filtros seleccionados."
+                : "No hay pedidos activos. Los pedidos recibidos se conservan en el historial."}
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
@@ -505,15 +763,17 @@ ${order.notes ? `\nNotas: ${order.notes}` : ''}
                 </SelectTrigger>
                 <SelectContent>
                   {suppliers.map((s: any) => (
-                    <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                    <SelectItem key={s.id} value={s.name}>
+                      {s.name}
+                    </SelectItem>
                   ))}
                   <SelectItem value="_custom">Otro (escribir)</SelectItem>
                 </SelectContent>
               </Select>
-              {supplierName === '_custom' && (
-                <Input 
-                  value={supplierName === '_custom' ? '' : supplierName}
-                  onChange={(e) => setSupplierName(e.target.value)} 
+              {supplierName === "_custom" && (
+                <Input
+                  value={supplierName === "_custom" ? "" : supplierName}
+                  onChange={e => setSupplierName(e.target.value)}
                   placeholder="Nombre del proveedor"
                   className="mt-2"
                 />
@@ -521,13 +781,24 @@ ${order.notes ? `\nNotas: ${order.notes}` : ''}
             </div>
             <div>
               <Label>Fecha estimada entrega</Label>
-              <Input type="date" value={estimatedDate} onChange={(e) => setEstimatedDate(e.target.value)} />
+              <Input
+                type="date"
+                value={estimatedDate}
+                onChange={e => setEstimatedDate(e.target.value)}
+              />
             </div>
             <div>
               <Label>Notas</Label>
-              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notas adicionales..." rows={2} />
+              <Textarea
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                placeholder="Notas adicionales..."
+                rows={2}
+              />
             </div>
-            <Button onClick={handleUpdateOrder} className="w-full">Guardar Cambios</Button>
+            <Button onClick={handleUpdateOrder} className="w-full">
+              Guardar Cambios
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -540,18 +811,22 @@ ${order.notes ? `\nNotas: ${order.notes}` : ''}
           <div className="space-y-4">
             <div>
               <Label>Producto</Label>
-              <Input value={editingItem?.itemName || ''} disabled className="bg-muted" />
+              <Input
+                value={editingItem?.itemName || ""}
+                disabled
+                className="bg-muted"
+              />
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <Label>Cantidad *</Label>
-                <Input 
-                  type="number" 
-                  min="1" 
-                  step="1" 
-                  value={quantity} 
-                  onChange={(e) => setQuantity(e.target.value)} 
-                  placeholder="1" 
+                <Input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={quantity}
+                  onChange={e => setQuantity(e.target.value)}
+                  placeholder="1"
                 />
               </div>
               <div>
@@ -561,14 +836,18 @@ ${order.notes ? `\nNotas: ${order.notes}` : ''}
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {UNITS.map((u) => (
-                      <SelectItem key={u} value={u}>{u}</SelectItem>
+                    {UNITS.map(u => (
+                      <SelectItem key={u} value={u}>
+                        {u}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
-            <Button onClick={handleUpdateItem} className="w-full">Guardar Cambios</Button>
+            <Button onClick={handleUpdateItem} className="w-full">
+              Guardar Cambios
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -581,23 +860,28 @@ ${order.notes ? `\nNotas: ${order.notes}` : ''}
           <div className="space-y-4">
             <div>
               <Label>Producto *</Label>
-              <Select value={selectedProductId} onValueChange={setSelectedProductId}>
+              <Select
+                value={selectedProductId}
+                onValueChange={setSelectedProductId}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecciona un producto" />
                 </SelectTrigger>
                 <SelectContent>
-                  {products.map((p) => (
+                  {products.map(p => (
                     <SelectItem key={p.id} value={p.id.toString()}>
-                      {p.name} {p.category && `(${p.category})`}
+                      {p.name} {p.category && `(${p.category})`}{" "}
+                      {p.handle?.startsWith("loyverse:") &&
+                        `· Stock: ${p.inStock}`}
                     </SelectItem>
                   ))}
                   <SelectItem value="_custom">Otro (escribir)</SelectItem>
                 </SelectContent>
               </Select>
-              {selectedProductId === '_custom' && (
-                <Input 
-                  value={customProductName} 
-                  onChange={(e) => setCustomProductName(e.target.value)} 
+              {selectedProductId === "_custom" && (
+                <Input
+                  value={customProductName}
+                  onChange={e => setCustomProductName(e.target.value)}
                   placeholder="Nombre del producto"
                   className="mt-2"
                 />
@@ -606,13 +890,13 @@ ${order.notes ? `\nNotas: ${order.notes}` : ''}
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <Label>Cantidad *</Label>
-                <Input 
-                  type="number" 
-                  min="1" 
-                  step="1" 
-                  value={quantity} 
-                  onChange={(e) => setQuantity(e.target.value)} 
-                  placeholder="1" 
+                <Input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={quantity}
+                  onChange={e => setQuantity(e.target.value)}
+                  placeholder="1"
                 />
               </div>
               <div>
@@ -622,14 +906,18 @@ ${order.notes ? `\nNotas: ${order.notes}` : ''}
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {UNITS.map((u) => (
-                      <SelectItem key={u} value={u}>{u}</SelectItem>
+                    {UNITS.map(u => (
+                      <SelectItem key={u} value={u}>
+                        {u}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
-            <Button onClick={handleAddItemToExistingOrder} className="w-full">Añadir Artículo</Button>
+            <Button onClick={handleAddItemToExistingOrder} className="w-full">
+              Añadir Artículo
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
