@@ -745,7 +745,7 @@ export type InsertHistoricalCashData = typeof historicalCashData.$inferInsert;
 // ==================== INVENTORY PRODUCTS ====================
 export const inventoryProducts = mysqlTable("inventory_products", {
   id: int("id").autoincrement().primaryKey(),
-  handle: varchar("handle", { length: 100 }).unique(), // Identificador único del CSV
+  handle: varchar("handle", { length: 160 }).unique(), // Identificador único del CSV o de Loyverse
   ref: varchar("ref", { length: 50 }), // Referencia del producto
   name: varchar("name", { length: 255 }).notNull(), // Nombre del producto
   category: varchar("category", { length: 100 }), // Categoría

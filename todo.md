@@ -1201,6 +1201,7 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Vincular y conservar productos de Loyverse en las plantillas de pedidos generales
 - [x] Vincular y conservar productos de Loyverse en las plantillas de pedidos de bocatas
 - [x] Mostrar las existencias actualizadas de Loyverse al preparar un pedido
+- [x] Ampliar el identificador de catálogo de Loyverse para aceptar sus referencias completas durante la sincronización
 - [ ] Ejecutar `SQL_LOYVERSE_INVENTARIO.sql` en el VPS antes de usar vínculos de productos Loyverse
 - [x] Añadir al Dashboard X provisional Tienda desde Loyverse y X provisional Hostel desde Cloudbeds al abrir la página
 - [x] Mantener los importes provisionales separados de cierres y cajas internas

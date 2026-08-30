@@ -1,0 +1,1 @@
+ALTER TABLE `inventory_products` MODIFY COLUMN `handle` varchar(160);

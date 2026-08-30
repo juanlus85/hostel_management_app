@@ -15,3 +15,6 @@ ALTER TABLE `order_items`
 
 ALTER TABLE `order_items`
   ADD COLUMN IF NOT EXISTS `loyverseStockAtSelection` decimal(12,3) NULL;
+
+ALTER TABLE `inventory_products`
+  MODIFY COLUMN `handle` varchar(160) NULL;
