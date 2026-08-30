@@ -1206,6 +1206,8 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Usar una clave compacta de Loyverse para evitar que identificadores externos extensos bloqueen la sincronización
 - [x] Normalizar valores de productos de Loyverse que incumplan restricciones del catálogo local
 - [x] Corregir el mapeo de precio de venta y existencias reales de productos importados desde Loyverse
+- [x] Corregir la extracción de existencias de Loyverse cuando la respuesta usa otra estructura de inventario
+- [x] Mostrar todos los productos sincronizados de Loyverse al vincular artículos en Pedidos Bocatas
 - [ ] Ejecutar `SQL_LOYVERSE_INVENTARIO.sql` en el VPS antes de usar vínculos de productos Loyverse
 - [x] Añadir al Dashboard X provisional Tienda desde Loyverse y X provisional Hostel desde Cloudbeds al abrir la página
 - [x] Mantener los importes provisionales separados de cierres y cajas internas

@@ -37,6 +37,9 @@ import {
 } from "@shared/orderHistory";
 
 const UNITS = ["unidades", "packs", "cajas", "kg", "litros"];
+const isLoyverseProduct = (handle?: string | null): handle is string =>
+  typeof handle === "string" &&
+  (handle.startsWith("lv_") || handle.startsWith("loyverse:"));
 
 export default function PedidosGenerales() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -172,6 +175,10 @@ export default function PedidosGenerales() {
     const selectedProduct = products.find(
       p => p.id.toString() === selectedProductId
     );
+    const selectedLoyverseProduct =
+      selectedProduct && isLoyverseProduct(selectedProduct.handle)
+        ? selectedProduct
+        : undefined;
     const productName =
       selectedProductId === "_custom"
         ? customProductName.trim()
@@ -190,13 +197,9 @@ export default function PedidosGenerales() {
         productName,
         quantity: qty.toString(),
         unit: unit || undefined,
-        loyverseProductHandle: selectedProduct?.handle?.startsWith("loyverse:")
-          ? selectedProduct.handle
-          : undefined,
-        loyverseStockAtSelection: selectedProduct?.handle?.startsWith(
-          "loyverse:"
-        )
-          ? String(selectedProduct.inStock)
+        loyverseProductHandle: selectedLoyverseProduct?.handle ?? undefined,
+        loyverseStockAtSelection: selectedLoyverseProduct
+          ? String(selectedLoyverseProduct.inStock)
           : undefined,
       });
       toast.success("Producto añadido");
@@ -217,6 +220,10 @@ export default function PedidosGenerales() {
     const selectedProduct = products.find(
       p => p.id.toString() === selectedProductId
     );
+    const selectedLoyverseProduct =
+      selectedProduct && isLoyverseProduct(selectedProduct.handle)
+        ? selectedProduct
+        : undefined;
     const productName =
       selectedProductId === "_custom"
         ? customProductName.trim()
@@ -235,13 +242,9 @@ export default function PedidosGenerales() {
         productName,
         quantity: qty.toString(),
         unit: unit || undefined,
-        loyverseProductHandle: selectedProduct?.handle?.startsWith("loyverse:")
-          ? selectedProduct.handle
-          : undefined,
-        loyverseStockAtSelection: selectedProduct?.handle?.startsWith(
-          "loyverse:"
-        )
-          ? String(selectedProduct.inStock)
+        loyverseProductHandle: selectedLoyverseProduct?.handle ?? undefined,
+        loyverseStockAtSelection: selectedLoyverseProduct
+          ? String(selectedLoyverseProduct.inStock)
           : undefined,
       });
       toast.success("Producto añadido");
@@ -455,7 +458,7 @@ ${order.notes ? `\nNotas: ${order.notes}` : ""}
                         {products.map(p => (
                           <SelectItem key={p.id} value={p.id.toString()}>
                             {p.name} {p.category && `(${p.category})`}{" "}
-                            {p.handle?.startsWith("loyverse:") &&
+                            {isLoyverseProduct(p.handle) &&
                               `· Stock: ${p.inStock}`}
                           </SelectItem>
                         ))}
@@ -871,7 +874,7 @@ ${order.notes ? `\nNotas: ${order.notes}` : ""}
                   {products.map(p => (
                     <SelectItem key={p.id} value={p.id.toString()}>
                       {p.name} {p.category && `(${p.category})`}{" "}
-                      {p.handle?.startsWith("loyverse:") &&
+                      {isLoyverseProduct(p.handle) &&
                         `· Stock: ${p.inStock}`}
                     </SelectItem>
                   ))}

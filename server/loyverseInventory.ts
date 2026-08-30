@@ -112,7 +112,7 @@ export function normalizeLoyverseInventory(
         ? item.variants.map(asRecord)
         : [item];
     return variants.map(variant => {
-      const variantId = asText(variant.id) || itemId;
+      const variantId = asText(variant.variant_id ?? variant.id) || itemId;
       const itemName =
         boundedText(item.item_name ?? item.name, 255) || "Producto sin nombre";
       const variantName = boundedText(variant.variant_name ?? variant.name, 120);

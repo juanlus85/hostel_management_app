@@ -365,7 +365,7 @@ export default function PedidosBocatas() {
                                 </SelectItem>
                                 {loyverseProducts
                                   .filter(item =>
-                                    item.handle?.startsWith("loyverse:")
+                                    item.handle?.startsWith("lv_") || item.handle?.startsWith("loyverse:")
                                   )
                                   .map(item => (
                                     <SelectItem
