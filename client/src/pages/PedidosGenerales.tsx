@@ -303,6 +303,18 @@ export default function PedidosGenerales() {
     }
   };
 
+  const updateOrderItemUnitsPerPackage = async (item: any, units: number) => {
+    try {
+      await updateItemMutation.mutateAsync({
+        id: item.id,
+        unitsPerPackage: Math.max(1, units).toString(),
+      });
+      refetch();
+    } catch (error) {
+      toast.error("No se pudieron actualizar las unidades por paquete");
+    }
+  };
+
   const handleDeleteOrder = async (orderId: number) => {
     if (!confirm("¿Eliminar este pedido?")) return;
     try {
@@ -678,7 +690,8 @@ ${order.notes ? `\nNotas: ${order.notes}` : ""}
                       <thead className="bg-blue-50 text-left">
                         <tr>
                           <th className="p-3 font-semibold">Artículo</th>
-                          <th className="p-3 text-center font-semibold">Pedir</th>
+                          <th className="p-3 text-center font-semibold">Pedir<br />(paquetes)</th>
+                          <th className="p-3 text-center font-semibold">Unid. /<br />paquete</th>
                           <th className="p-3 text-center font-semibold">Hay</th>
                           <th className="p-3 text-center font-semibold">Total previsto</th>
                           <th className="p-3 text-right font-semibold">Acciones</th>
@@ -692,8 +705,9 @@ ${order.notes ? `\nNotas: ${order.notes}` : ""}
                               product => product.handle === item.loyverseProductHandle
                             );
                             const quantity = parseInt(item.quantity) || 0;
+                            const unitsPerPackage = Math.max(1, Number(item.unitsPerPackage) || 1);
                             const stock = linkedProduct ? Number(linkedProduct.inStock) || 0 : null;
-                            const projectedTotal = stock === null ? null : stock + quantity;
+                            const projectedTotal = stock === null ? null : stock + quantity * unitsPerPackage;
                             return (
                               <tr key={item.id} className="border-t hover:bg-muted/40">
                                 <td className="p-3">
@@ -706,6 +720,9 @@ ${order.notes ? `\nNotas: ${order.notes}` : ""}
                                     <Input type="number" min="0" step="1" defaultValue={quantity} key={`${item.id}-${quantity}`} onBlur={event => updateOrderItemQuantity(item, Number.parseInt(event.target.value, 10) || 0)} className="h-8 w-16 text-center font-semibold" aria-label={`Unidades a pedir de ${item.itemName}`} />
                                     <Button type="button" variant="outline" size="icon" className="h-8 w-8" onClick={() => updateOrderItemQuantity(item, quantity + 1)} disabled={updateItemMutation.isPending} aria-label={`Añadir una unidad a ${item.itemName}`}><Plus className="h-3.5 w-3.5" /></Button>
                                   </div>
+                                </td>
+                                <td className="p-2 text-center">
+                                  <Input type="number" min="1" step="1" defaultValue={unitsPerPackage} key={`${item.id}-package-${unitsPerPackage}`} onBlur={event => updateOrderItemUnitsPerPackage(item, Number.parseInt(event.target.value, 10) || 1)} className="mx-auto h-8 w-20 text-center font-semibold" aria-label={`Unidades por paquete de ${item.itemName}`} />
                                 </td>
                                 <td className="p-3 text-center">{stock === null ? "—" : stock}</td>
                                 <td className="p-3 text-center font-bold text-blue-700">{projectedTotal === null ? "—" : projectedTotal}</td>

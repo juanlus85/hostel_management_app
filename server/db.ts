@@ -2889,6 +2889,7 @@ export async function createOrderItemForProduct(data: {
   productName: string;
   quantity: string;
   unit?: string;
+  unitsPerPackage?: string;
   loyverseProductHandle?: string;
   loyverseStockAtSelection?: string;
 }) {
@@ -2905,6 +2906,7 @@ export async function createOrderItemForProduct(data: {
     orderId: data.orderId,
     itemName,
     quantity: data.quantity,
+    unitsPerPackage: data.unitsPerPackage ?? "1",
     loyverseProductHandle: data.loyverseProductHandle,
     loyverseStockAtSelection: data.loyverseStockAtSelection,
   });
@@ -2918,6 +2920,7 @@ export async function updateOrderItemDetails(
     productName?: string;
     quantity?: string;
     unit?: string;
+    unitsPerPackage?: string;
   }>
 ) {
   const db = await getDb();
@@ -2947,6 +2950,9 @@ export async function updateOrderItemDetails(
   }
 
   if (data.quantity !== undefined) updateData.quantity = data.quantity;
+  if (data.unitsPerPackage !== undefined) {
+    updateData.unitsPerPackage = data.unitsPerPackage;
+  }
 
   await db.update(orderItems).set(updateData).where(eq(orderItems.id, id));
 }

@@ -2905,6 +2905,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           productName: z.string(),
           quantity: z.string(),
           unit: z.string().optional(),
+          unitsPerPackage: z.string().max(32).optional(),
           loyverseProductHandle: z.string().max(160).optional(),
           loyverseStockAtSelection: z.string().max(32).optional(),
         })
@@ -2920,6 +2921,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           productName: z.string().optional(),
           quantity: z.string().optional(),
           unit: z.string().optional(),
+          unitsPerPackage: z.string().max(32).optional(),
         })
       )
       .mutation(async ({ input }) => {

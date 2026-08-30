@@ -1216,6 +1216,8 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Mostrar y actualizar existencias de Loyverse dentro de la plantilla general de pedidos
 - [x] Retirar la plantilla general añadida y mantener el flujo de pedidos agrupados por proveedor
 - [x] Añadir controles + y − y edición directa de cantidad en cada línea de pedido general
+- [x] Añadir y guardar unidades por paquete en cada línea de Pedidos generales
+- [x] Calcular el total previsto de Pedidos generales usando paquetes por unidades, sin afectar Bocatas
 - [ ] Ejecutar `SQL_LOYVERSE_INVENTARIO.sql` en el VPS antes de usar vínculos de productos Loyverse
 - [x] Añadir al Dashboard X provisional Tienda desde Loyverse y X provisional Hostel desde Cloudbeds al abrir la página
 - [x] Mantener los importes provisionales separados de cierres y cajas internas

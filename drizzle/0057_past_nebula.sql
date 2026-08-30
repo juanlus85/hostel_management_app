@@ -1,0 +1,1 @@
+ALTER TABLE `order_items` ADD `unitsPerPackage` decimal(10,2) DEFAULT '1.00' NOT NULL;

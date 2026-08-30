@@ -262,6 +262,9 @@ export const orderItems = mysqlTable("order_items", {
   inventoryItemId: int("inventoryItemId"),
   itemName: varchar("itemName", { length: 255 }).notNull(),
   quantity: decimal("quantity", { precision: 10, scale: 2 }).notNull(),
+  unitsPerPackage: decimal("unitsPerPackage", { precision: 10, scale: 2 })
+    .default("1.00")
+    .notNull(),
   unitPrice: decimal("unitPrice", { precision: 10, scale: 2 }),
   totalPrice: decimal("totalPrice", { precision: 10, scale: 2 }),
   loyverseProductHandle: varchar("loyverseProductHandle", { length: 160 }),
