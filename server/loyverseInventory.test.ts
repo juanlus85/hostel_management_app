@@ -18,13 +18,13 @@ describe("catálogo de Loyverse", () => {
               variant_name: "Pollo",
               sku: "B-01",
               cost: "1.2",
-              price: "3.5",
+              default_price: "3.5",
             },
           ],
         },
       ],
       [{ id: "C-1", name: "Bocatas" }],
-      [{ item_id: "I-1", variant_id: "V-1", in_stock: "12" }]
+      [{ variant_id: "V-1", in_stock: "12" }]
     );
     expect(products).toEqual([
       {

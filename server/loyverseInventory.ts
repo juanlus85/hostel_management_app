@@ -100,11 +100,9 @@ export function normalizeLoyverseInventory(
     const itemId = asText(level.item_id ?? level.itemId);
     const variantId = asText(level.variant_id ?? level.variantId ?? itemId);
     const key = `${itemId}:${variantId}`;
-    stockByVariant.set(
-      key,
-      (stockByVariant.get(key) || 0) +
-        Number(decimal(level.in_stock ?? level.inStock))
-    );
+    const amount = Number(decimal(level.in_stock ?? level.inStock));
+    stockByVariant.set(key, (stockByVariant.get(key) || 0) + amount);
+    stockByVariant.set(variantId, (stockByVariant.get(variantId) || 0) + amount);
   }
   const products = items.flatMap(item => {
     const itemId = asText(item.id);
@@ -122,7 +120,10 @@ export function normalizeLoyverseInventory(
         variantName && variantName.toLowerCase() !== "default"
           ? `${itemName} · ${variantName}`
           : itemName;
-      const stock = stockByVariant.get(`${itemId}:${variantId}`) ?? 0;
+      const stock =
+        stockByVariant.get(`${itemId}:${variantId}`) ??
+        stockByVariant.get(variantId) ??
+        0;
       return {
         handle: compactLoyverseHandle(itemId, variantId),
         legacyHandle: `loyverse:${itemId}:${variantId}`,
@@ -133,7 +134,12 @@ export function normalizeLoyverseInventory(
           boundedText(item.category_name, 100) ||
           "Sin familia",
         cost: decimal(variant.cost ?? item.cost),
-        price: decimal(variant.price ?? item.price ?? item.default_price),
+        price: decimal(
+          variant.default_price ??
+            variant.price ??
+            item.default_price ??
+            item.price
+        ),
         inStock: stock.toFixed(3),
       };
     });
