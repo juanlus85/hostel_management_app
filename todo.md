@@ -95,6 +95,7 @@
 
 ### Facturas
 - [x] Permitir subir imagen o PDF
+- [x] Permitir sustituir el PDF adjunto al editar una factura y eliminar el archivo anterior tras guardar el nuevo
 - [x] OCR integrado (usa LLM para extraer datos de imágenes)
 - [x] Simplificar campos: solo total, nº factura, proveedor, forma de pago
 - [x] Formas de pago: Cuenta Bancaria, Tarjeta, Ana, Juanlu, Caja Hostel, Caja Tienda, Caja Fuerte, Caja Fuerte Cambio, Otros

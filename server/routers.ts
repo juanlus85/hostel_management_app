@@ -47,6 +47,7 @@ import {
   getLoyverseOperationalWindow,
 } from "./loyverseReceipts";
 import { fetchLoyverseInventory } from "./loyverseInventory";
+import { deleteLocalInvoiceAttachment } from "./localInvoiceAttachments";
 import {
   aggregateCloudbedsPaymentsByOperationalDay,
   fetchCloudbedsTransactions,
@@ -923,7 +924,32 @@ export const appRouter = router({
       )
       .mutation(async ({ input, ctx }) => {
         const { id, resendEmail, ...data } = input;
+        const existingInvoice = data.imageUrl
+          ? await db.getInvoiceById(id)
+          : null;
         await db.updateInvoice(id, data);
+
+        if (
+          data.imageUrl &&
+          existingInvoice?.imageUrl &&
+          existingInvoice.imageUrl !== data.imageUrl
+        ) {
+          try {
+            deleteLocalInvoiceAttachment(existingInvoice.imageUrl);
+          } catch (error) {
+            await db.updateInvoice(id, {
+              imageUrl: existingInvoice.imageUrl,
+              imageKey: existingInvoice.imageKey || undefined,
+            });
+            deleteLocalInvoiceAttachment(data.imageUrl);
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message:
+                "No se pudo eliminar el archivo anterior. La factura conserva su adjunto original.",
+              cause: error,
+            });
+          }
+        }
 
         // Si se solicita reenviar email y hay imagen
         if (resendEmail && data.imageUrl) {

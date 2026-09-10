@@ -1118,6 +1118,9 @@ export default function Facturas() {
                     Reemplazar archivo
                   </Button>
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  Al confirmar un archivo nuevo, el adjunto anterior se elimina del servidor.
+                </p>
               </div>
             )}
           </div>
