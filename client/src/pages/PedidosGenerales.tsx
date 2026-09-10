@@ -691,6 +691,16 @@ ${order.notes ? `\nNotas: ${order.notes}` : ""}
                   <Button
                     size="sm"
                     variant="outline"
+                    onClick={() => resetOrderQuantities(order)}
+                    disabled={updateItemMutation.isPending}
+                    title="Reiniciar unidades a pedir"
+                  >
+                    <RefreshCw className="mr-1 h-4 w-4" />
+                    Reiniciar a pedir
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
                     onClick={() => openEditOrder(order)}
                   >
                     <Pencil className="h-4 w-4" />
