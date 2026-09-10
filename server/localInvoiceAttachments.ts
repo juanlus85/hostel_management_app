@@ -31,3 +31,26 @@ export function deleteLocalInvoiceAttachment(
   fs.unlinkSync(filePath);
   return true;
 }
+
+export async function deleteInvoiceWithLocalAttachment<T>(
+  fileUrl: string | null | undefined,
+  deleteInvoiceRecord: () => Promise<T>,
+  uploadsDirectory = path.join(process.cwd(), "uploads", "invoices")
+): Promise<T> {
+  const filePath = resolveLocalInvoiceAttachmentPath(fileUrl, uploadsDirectory);
+  const attachmentBackup =
+    filePath && fs.existsSync(filePath) ? fs.readFileSync(filePath) : null;
+
+  if (filePath && attachmentBackup) {
+    fs.unlinkSync(filePath);
+  }
+
+  try {
+    return await deleteInvoiceRecord();
+  } catch (error) {
+    if (filePath && attachmentBackup && !fs.existsSync(filePath)) {
+      fs.writeFileSync(filePath, attachmentBackup);
+    }
+    throw error;
+  }
+}

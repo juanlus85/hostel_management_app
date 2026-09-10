@@ -47,7 +47,10 @@ import {
   getLoyverseOperationalWindow,
 } from "./loyverseReceipts";
 import { fetchLoyverseInventory } from "./loyverseInventory";
-import { deleteLocalInvoiceAttachment } from "./localInvoiceAttachments";
+import {
+  deleteInvoiceWithLocalAttachment,
+  deleteLocalInvoiceAttachment,
+} from "./localInvoiceAttachments";
 import {
   aggregateCloudbedsPaymentsByOperationalDay,
   fetchCloudbedsTransactions,
@@ -977,7 +980,10 @@ export const appRouter = router({
     delete: protectedProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
-        await db.deleteInvoice(input.id);
+        const invoice = await db.getInvoiceById(input.id);
+        await deleteInvoiceWithLocalAttachment(invoice?.imageUrl, () =>
+          db.deleteInvoice(input.id)
+        );
         return { success: true };
       }),
     uploadFile: protectedProcedure
