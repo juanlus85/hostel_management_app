@@ -1081,7 +1081,7 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 ### Componentes Auxiliares
 - [x] SignaturePad para firma digital
 - [ ] GuestFormFields para formulario de huésped
-- [ ] GuestCard para tarjetas de huéspedes
+- [x] GuestCard para tarjetas de huéspedes
 - [x] EditGuestModal para edición
 
 ### Funcionalidades Adicionales
