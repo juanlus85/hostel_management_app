@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeCloudbedsAvailability } from "./cloudbedsAvailability";
+import { cloudbedsRateUpdateForm, normalizeCloudbedsAvailability } from "./cloudbedsAvailability";
 
 describe("normalizeCloudbedsAvailability", () => {
   it("normaliza precios y habitaciones disponibles por tipo y día", () => {
@@ -8,6 +8,7 @@ describe("normalizeCloudbedsAvailability", () => {
         {
           roomTypeID: "double",
           roomTypeName: "Habitación Doble",
+          rateID: "rate-double-base",
           detailedRates: [
             { date: "2026-10-12", roomsAvailable: "3", roomRate: "89.50" },
             { date: "2026-10-13", roomsAvailable: "2", roomRate: "99" },
@@ -21,7 +22,7 @@ describe("normalizeCloudbedsAvailability", () => {
         roomTypeId: "double",
         roomTypeName: "Habitación Doble",
         days: [
-          expect.objectContaining({ date: "2026-10-12", roomsAvailable: 3, roomRate: 89.5 }),
+          expect.objectContaining({ date: "2026-10-12", roomsAvailable: 3, roomRate: 89.5, rateId: "rate-double-base" }),
           expect.objectContaining({ date: "2026-10-13", roomsAvailable: 2, roomRate: 99 }),
         ],
       }),
@@ -92,5 +93,15 @@ describe("normalizeCloudbedsAvailability", () => {
 
     expect(result.roomTypes[0]?.days).toHaveLength(1);
     expect(result.roomTypes[0]?.days[0]?.date).toBe("2026-10-12");
+  });
+
+  it("prepara un cambio de precio para una única fecha", () => {
+    const form = cloudbedsRateUpdateForm("rate-123", "2026-10-12", 85.5);
+    expect(JSON.parse(form.get("rates") || "[]")).toEqual([
+      {
+        rateID: "rate-123",
+        interval: [{ startDate: "2026-10-12", endDate: "2026-10-12", rate: 85.5 }],
+      },
+    ]);
   });
 });

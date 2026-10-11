@@ -3,6 +3,7 @@ export type CloudbedsAvailabilityDay = {
   roomsAvailable: number | null;
   roomRate: number | null;
   totalRate: number | null;
+  rateId: string | null;
   restrictions: {
     closedToArrival: boolean | null;
     closedToDeparture: boolean | null;
@@ -29,6 +30,7 @@ type Candidate = {
   roomTypeId: string;
   roomTypeName: string;
   ratePlanName: string | null;
+  rateId: string | null;
   score: number;
   days: CloudbedsAvailabilityDay[];
 };
@@ -72,7 +74,7 @@ function dateValue(...values: unknown[]) {
   return text && /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : null;
 }
 
-function readDailyRate(value: unknown, dateFallback?: string): CloudbedsAvailabilityDay | null {
+function readDailyRate(value: unknown, dateFallback?: string, inheritedRateId: string | null = null): CloudbedsAvailabilityDay | null {
   const record = asRecord(value);
   const rate = asRecord(record.rate);
   const availability = asRecord(record.availability);
@@ -114,6 +116,7 @@ function readDailyRate(value: unknown, dateFallback?: string): CloudbedsAvailabi
     roomsAvailable,
     roomRate,
     totalRate,
+    rateId: stringValue(record.rateID, record.rateId, record.rate_id, inheritedRateId),
     restrictions: {
       closedToArrival: booleanValue(record.closedToArrival, record.closed_to_arrival, record.cta),
       closedToDeparture: booleanValue(record.closedToDeparture, record.closed_to_departure, record.ctd),
@@ -123,23 +126,23 @@ function readDailyRate(value: unknown, dateFallback?: string): CloudbedsAvailabi
   };
 }
 
-function directDailyRates(record: JsonRecord) {
+function directDailyRates(record: JsonRecord, inheritedRateId: string | null = null) {
   const dailyKeys = ["detailedRates", "detailed_rates", "dailyRates", "daily_rates", "rateDetails", "rate_details", "rates"];
   const output: CloudbedsAvailabilityDay[] = [];
-  const ownRate = readDailyRate(record);
+  const ownRate = readDailyRate(record, undefined, inheritedRateId);
   if (ownRate) output.push(ownRate);
   for (const key of dailyKeys) {
     const value = record[key];
     if (Array.isArray(value)) {
       for (const item of value) {
-        const parsed = readDailyRate(item);
+        const parsed = readDailyRate(item, undefined, inheritedRateId);
         if (parsed) output.push(parsed);
       }
       continue;
     }
     const map = asRecord(value);
     for (const [date, item] of Object.entries(map)) {
-      const parsed = readDailyRate(item, date);
+      const parsed = readDailyRate(item, date, inheritedRateId);
       if (parsed) output.push(parsed);
     }
   }
@@ -188,11 +191,13 @@ function collectCandidates(value: unknown, candidates: Candidate[], inherited: P
   if (!Object.keys(record).length) return;
 
   const context = roomContext(record, inherited);
-  const days = directDailyRates(record);
+  const rateId = stringValue(record.rateID, record.rateId, record.rate_id, record.id);
+  const days = directDailyRates(record, rateId);
   if (context && days.length) {
     candidates.push({
       ...context,
       ratePlanName: stringValue(record.ratePlanName, record.rate_plan_name, record.ratePlanNamePublic),
+      rateId,
       score: ratePlanScore(record),
       days,
     });
@@ -218,7 +223,7 @@ export function normalizeCloudbedsAvailability(payload: unknown, startDate: stri
       if (day.date < startDate || day.date > endDate) continue;
       const existing = room.byDate.get(day.date);
       if (!existing || candidate.score < existing.score) {
-        room.byDate.set(day.date, { day, score: candidate.score, ratePlanName: candidate.ratePlanName });
+        room.byDate.set(day.date, { day: { ...day, rateId: day.rateId || candidate.rateId }, score: candidate.score, ratePlanName: candidate.ratePlanName });
       }
     }
     selected.set(candidate.roomTypeId, room);
@@ -269,4 +274,40 @@ export async function fetchCloudbedsAvailability(apiKey: string, propertyId: str
     throw new Error("Cloudbeds respondió sin tipos de habitación para este período. Revisa que haya tarifas públicas y que la API key tenga permiso de tarifas y disponibilidad.");
   }
   return normalized;
+}
+
+export function cloudbedsRateUpdateForm(rateId: string, date: string, rate: number) {
+  const form = new URLSearchParams();
+  form.set("rates", JSON.stringify([
+    {
+      rateID: rateId,
+      interval: [{ startDate: date, endDate: date, rate }],
+    },
+  ]));
+  return form;
+}
+
+export async function updateCloudbedsRate(apiKey: string, rateId: string, date: string, rate: number) {
+  const response = await fetch("https://api.cloudbeds.com/api/v1.3/putRate", {
+    method: "POST",
+    headers: {
+      "x-api-key": apiKey,
+      Accept: "application/json",
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: cloudbedsRateUpdateForm(rateId, date, rate).toString(),
+  });
+  const raw = await response.text();
+  let payload: JsonRecord;
+  try {
+    payload = asRecord(JSON.parse(raw));
+  } catch {
+    throw new Error(`Cloudbeds devolvió una respuesta no JSON (HTTP ${response.status}).`);
+  }
+  if (!response.ok || payload.success !== true) {
+    throw new Error(stringValue(payload.message, payload.error) || `Cloudbeds no aceptó la actualización de precio (HTTP ${response.status}).`);
+  }
+  return {
+    jobReferenceId: stringValue(payload.jobReferenceID, payload.jobReferenceId),
+  };
 }

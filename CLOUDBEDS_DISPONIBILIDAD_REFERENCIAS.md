@@ -1,10 +1,7 @@
-# Referencias para disponibilidad y precios de Cloudbeds
 
-Cloudbeds documenta que el endpoint `getRatePlans`, al consultar un rango con `detailedRates=true`, devuelve tarifas diarias, disponibilidad y restricciones. El campo `roomsAvailable` corresponde a las habitaciones disponibles por tipo (`roomTypeID`); todas las tarifas de un mismo tipo de habitación comparten esa disponibilidad. Si no se indica ocupación, `roomRate` y `totalRate` representan el precio por defecto. Para evitar duplicar tarifas derivadas, la vista operativa debe tomar una tarifa por tipo y día, priorizando la tarifa base si la respuesta la identifica.
+## Actualización confirmada de tarifas
 
-La aplicación implementará una importación manual y de solo lectura. Usará el rango de siete días desde la fecha seleccionada y no modificará disponibilidad, precios ni reservas en Cloudbeds.
+Cloudbeds documenta `POST /api/v1.3/putRate` para actualizar tarifas de una tarifa base (no derivada). La petición admite varias tarifas y, para cada `rateID`, uno o varios intervalos con `startDate`, `endDate`, `rate` y opcionalmente `blocked`. Se procesa de forma asíncrona y devuelve `jobReferenceID`; Cloudbeds limita la operación a 30 intervalos. La interfaz debe cambiar solamente una fecha y un precio por operación, mostrando antes una confirmación con habitación, fecha, importe anterior y nuevo. No debe actualizar planes derivados.
 
-## Fuentes
-
-- https://developers.cloudbeds.com/docs/booking-engine — Guía *Booking Engine*, sección **Retrieve ARI**: `getRatePlans` + `detailedRates`, `roomsAvailable`, `roomRate` y `totalRate`.
-- https://www.cloudbeds.com/api/ — Descripción pública de la API de Cloudbeds y sus superficies de Operations, Reservations y Distribution.
+- https://developers.cloudbeds.com/reference/post_putrate-2 — `putRate`, esquema `rates[] → rateID, interval[] → startDate, endDate, rate, blocked` y procesamiento asíncrono.
+- https://developers.cloudbeds.com/docs/booking-engine — `rateID` es único por combinación de tipo de habitación y tarifa, y se usa para actualizaciones de tarifa.

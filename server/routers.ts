@@ -61,7 +61,7 @@ import {
   getNextMadridCalendarDates,
   type CloudbedsReservationFieldDiagnostics,
 } from "./cloudbedsUpcomingReservations";
-import { fetchCloudbedsAvailability } from "./cloudbedsAvailability";
+import { fetchCloudbedsAvailability, updateCloudbedsRate } from "./cloudbedsAvailability";
 import type { ExternalUpcomingReservation } from "../drizzle/schema";
 import {
   buildConfiguredReservationWelcome,
@@ -1117,6 +1117,27 @@ export const appRouter = router({
           };
         } catch (error) {
           const message = error instanceof Error ? error.message : "No se pudo consultar la disponibilidad de Cloudbeds.";
+          throw new TRPCError({ code: "BAD_GATEWAY", message });
+        }
+      }),
+    updateRate: adminProcedure
+      .input(z.object({
+        rateId: z.string().min(1),
+        date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        rate: z.number().min(0).max(10000),
+      }))
+      .mutation(async ({ input }) => {
+        const apiKey = process.env.CLOUDBEDS_API_KEY;
+        if (!apiKey) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: "Configura CLOUDBEDS_API_KEY para actualizar precios.",
+          });
+        }
+        try {
+          return await updateCloudbedsRate(apiKey, input.rateId, input.date, input.rate);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "No se pudo actualizar el precio en Cloudbeds.";
           throw new TRPCError({ code: "BAD_GATEWAY", message });
         }
       }),

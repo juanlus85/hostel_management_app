@@ -1758,3 +1758,9 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Aplicar los filtros de Facturas también a las facturas emitidas.
 - [x] Crear Disponibilidad Hostel: importar manualmente desde Cloudbeds disponibilidad y precios por tipo de habitación para la semana próxima.
 - [ ] Adaptar el lector de Disponibilidad Hostel a la estructura real de respuesta de Cloudbeds cuando no detecta tipos de habitación.
+
+## Ajustes de Disponibilidad Hostel
+- [x] Cargar automáticamente la disponibilidad de Cloudbeds una vez al entrar en el módulo.
+- [x] Corregir el solapamiento de la columna de habitación al desplazar la tabla desde móvil.
+- [x] Ordenar los tipos de habitación según el orden operativo definido.
+- [x] Permitir editar una tarifa de habitación desde Disponibilidad Hostel y confirmar antes de actualizarla en Cloudbeds.
