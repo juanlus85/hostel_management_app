@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { BedDouble, CalendarDays, Cloud, Euro, Loader2, Pencil, RefreshCw, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -48,6 +48,7 @@ export default function DisponibilidadHostel() {
   const [newRate, setNewRate] = useState("");
   const [pendingRateChange, setPendingRateChange] = useState<PendingRateChange | null>(null);
   const [section, setSection] = useState<"reservations" | "availability">("reservations");
+  const autoLoadedAvailabilityDate = useRef<string | null>(null);
 
   const importWeekMutation = trpc.cloudbedsAvailability.importWeek.useMutation({
     onSuccess: result => {
@@ -55,13 +56,15 @@ export default function DisponibilidadHostel() {
     },
     onError: error => toast.error(error.message),
   });
-  const loadAvailability = useCallback(() => {
+  const loadAvailability = () => {
     if (startDate) importWeekMutation.mutate({ startDate });
-  }, [importWeekMutation.mutate, startDate]);
+  };
 
   useEffect(() => {
-    loadAvailability();
-  }, [loadAvailability]);
+    if (section !== "availability" || !startDate || autoLoadedAvailabilityDate.current === startDate) return;
+    autoLoadedAvailabilityDate.current = startDate;
+    importWeekMutation.mutate({ startDate });
+  }, [section, startDate]);
 
   const updateRate = trpc.cloudbedsAvailability.updateRate.useMutation({
     onSuccess: result => {
@@ -109,7 +112,7 @@ export default function DisponibilidadHostel() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div>
-          <div className="mb-2 flex items-center gap-2 text-sky-700"><Cloud className="h-5 w-5" /><span className="text-sm font-semibold">Cloudbeds · carga al abrir</span></div>
+          <div className="mb-2 flex items-center gap-2 text-sky-700"><Cloud className="h-5 w-5" /><span className="text-sm font-semibold">Cloudbeds · carga al abrir cada pestaña</span></div>
           <h1 className="text-2xl font-bold tracking-tight">Disponibilidad Hostel</h1>
           <p className="mt-1 text-muted-foreground">Disponibilidad y precio final con IVA incluido por tipo de habitación para los próximos siete días.</p>
         </div>
