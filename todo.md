@@ -1750,3 +1750,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Mejorar el Dashboard principal con accesos rápidos que preseleccionen negocio y abran caja, facturas recibidas, facturas emitidas o turnos semanales.
 - [x] Incorporar Organizus como negocio visible para facturas recibidas y ampliar búsquedas y filtros de facturas y otros gastos/ingresos.
 - [x] Corregir la migración pendiente de `otros_gastos.type` para que el Resumen Semanal y los filtros de gastos no queden bloqueados en instalaciones existentes.
+- [x] Reubicar las acciones rápidas como tercera fila del Dashboard, antes de Gastos por proveedor.
