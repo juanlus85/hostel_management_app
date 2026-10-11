@@ -4391,8 +4391,20 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             return { reservation, payments: null, paymentWarning: "No hay credenciales de Cloudbeds configuradas para consultar los movimientos." };
           }
           try {
-            const payments = await fetchCloudbedsReservationPayments(apiKey, propertyId, reservation.sourceReservationId);
-            return { reservation, payments, paymentWarning: null };
+            const [payments, snapshot] = await Promise.all([
+              fetchCloudbedsReservationPayments(apiKey, propertyId, reservation.sourceReservationId),
+              fetchCloudbedsReservationSnapshot(apiKey, propertyId, reservation.sourceReservationId),
+            ]);
+            const updatedReservation = {
+              ...reservation,
+              reservationStatus: snapshot.reservationStatus ?? reservation.reservationStatus,
+              amountPending: snapshot.amountPending ?? reservation.amountPending,
+            };
+            await db.updateExternalUpcomingReservationCloudbeds(reservation.id, {
+              reservationStatus: updatedReservation.reservationStatus,
+              ...(snapshot.amountPending !== null ? { amountPending: snapshot.amountPending } : {}),
+            });
+            return { reservation: updatedReservation, payments, paymentWarning: null };
           } catch (error) {
             return {
               reservation,

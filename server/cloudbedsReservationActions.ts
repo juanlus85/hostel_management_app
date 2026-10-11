@@ -31,8 +31,13 @@ function firstText(...values: unknown[]) {
 function asList(value: unknown): ApiRecord[] {
   if (Array.isArray(value)) return value.map(asRecord);
   const record = asRecord(value);
-  for (const key of ["data", "paymentMethods", "methods", "results"]) {
+  for (const key of ["data", "paymentMethods", "payment_methods", "paymentMethodList", "payment_method_list", "methods", "results", "items"]) {
     if (Array.isArray(record[key])) return record[key].map(asRecord);
+    const nested = asRecord(record[key]);
+    if (Object.keys(nested).length) {
+      const nestedList = asList(nested);
+      if (nestedList.length) return nestedList;
+    }
   }
   return [];
 }
@@ -80,8 +85,8 @@ async function cloudbedsJson(url: URL, apiKey: string, init?: RequestInit) {
 export function normalizeCloudbedsPaymentMethods(payload: unknown): CloudbedsPaymentMethod[] {
   const methods = asList(payload)
     .map(method => {
-      const value = firstText(method.type, method.paymentType, method.payment_type, method.code, method.value, method.id, method.paymentMethodID, method.payment_method_id);
-      const label = firstText(method.name, method.displayName, method.display_name, method.paymentMethodName, method.payment_method_name, method.label, value);
+      const value = firstText(method.type, method.paymentType, method.payment_type, method.paymentMethod, method.payment_method, method.methodType, method.method_type, method.code, method.value, method.id, method.paymentMethodID, method.payment_method_id);
+      const label = firstText(method.name, method.displayName, method.display_name, method.paymentMethodName, method.payment_method_name, method.paymentTypeName, method.payment_type_name, method.methodName, method.method_name, method.description, method.label, value);
       return value && label ? { value, label } : null;
     })
     .filter((method): method is CloudbedsPaymentMethod => Boolean(method));

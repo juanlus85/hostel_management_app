@@ -35,3 +35,11 @@ Fuente adicional:
 
 - https://myfrontdesk.cloudbeds.com/hc/en-us/articles/235146587-Classic-calendar-Everything-you-need-to-know
 - https://myfrontdesk.cloudbeds.com/hc/en-us/articles/18387139910939-Manage-reservations-on-the-Classic-calendar
+
+## Métodos de pago activos
+
+Cloudbeds documenta `getPaymentMethods` en `GET /api/v1.3/getPaymentMethods`. La operación recibe `propertyID` y permite `lang=es`; devuelve la lista de métodos activos de la propiedad. El lector de la aplicación admite tanto las listas directas como respuestas anidadas y variantes de los nombres de los campos para mantener la compatibilidad con respuestas de diferentes configuraciones.
+
+Fuente:
+
+- https://developers.cloudbeds.com/reference/get_getpaymentmethods-2

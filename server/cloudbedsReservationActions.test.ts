@@ -20,6 +20,15 @@ describe("acciones de reserva Cloudbeds", () => {
     ]);
   });
 
+  it("acepta métodos anidados y los nombres alternativos de Cloudbeds", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ data: {
+      paymentMethods: [{ payment_method: "bank_transfer", payment_type_name: "Transferencia bancaria" }],
+    } }), { status: 200 })));
+    await expect(fetchCloudbedsPaymentMethods("cbat_test", "204754")).resolves.toEqual([
+      { value: "bank_transfer", label: "Transferencia bancaria" },
+    ]);
+  });
+
   it("registra el pago con el método y el importe confirmados", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ success: true }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);

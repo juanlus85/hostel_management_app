@@ -1779,3 +1779,6 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Permitir cambiar el estado de una reserva mediante confirmación y actualización en Cloudbeds.
 - [x] Ajustar la agenda para que un check-out y un check-in del mismo día compartan carril sin solaparse, replicando los límites de estancia de Cloudbeds.
 - [x] Corregir el ancho de las medias celdas de entrada y salida para que las barras consecutivas ocupen toda su estancia visible.
+- [x] Mostrar en el detalle de reserva los cargos pendientes y la diferencia de movimientos sin confundirla con el saldo oficial de Cloudbeds.
+- [x] Resaltar con un marco amarillo toda la columna del día actual en la agenda de reservas.
+- [x] Corregir la consulta de métodos de pago activos de Cloudbeds en el formulario Añadir pago.
