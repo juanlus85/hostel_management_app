@@ -41,6 +41,7 @@ import { toast } from "sonner";
 const madridDate = (date: Date) =>
   date.toLocaleDateString("en-CA", { timeZone: "Europe/Madrid" });
 const today = madridDate(new Date());
+const arrivalWindowDays = 15;
 const thirtyDaysStart = (() => {
   const date = new Date(`${today}T12:00:00`);
   date.setDate(date.getDate() - 29);
@@ -53,7 +54,7 @@ const loyverseMinimumDate = (() => {
 })();
 const lastArrivalDate = (() => {
   const date = new Date(`${today}T12:00:00`);
-  date.setDate(date.getDate() + 3);
+  date.setDate(date.getDate() + arrivalWindowDays - 2);
   return madridDate(date);
 })();
 const previousArrivalDate = (() => {
@@ -780,7 +781,7 @@ export default function ImportacionesExternas() {
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <Users className="h-5 w-5 text-cyan-700" />
-                  Llegadas pendientes desde ayer y los próximos tres días
+                  Llegadas pendientes desde ayer y los próximos trece días
                 </CardTitle>
                 <CardDescription>
                   Desde {previousArrivalDate} hasta {lastArrivalDate}. Se

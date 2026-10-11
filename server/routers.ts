@@ -4308,13 +4308,13 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
               message:
                 "Configura CLOUDBEDS_API_KEY y CLOUDBEDS_PROPERTY_ID para importar reservas",
             });
-          const dates = getNextMadridCalendarDates(new Date(), 5, -1);
+          const dates = getNextMadridCalendarDates(new Date(), 15, -1);
           const runId = await db.createExternalImportRun({
             provider: "cloudbeds",
             importType: "future",
             status: "running",
             dateFrom: dates[0],
-            dateTo: dates[4],
+            dateTo: dates.at(-1) || dates[0],
             createdBy: ctx.user.id,
             startedAt: new Date(),
             metadata: JSON.stringify({

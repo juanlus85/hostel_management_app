@@ -246,7 +246,7 @@ export function AvailabilityReservations() {
           </div>
         </div>
       </CardContent>
-    </Card> : <Card className="border-dashed"><CardContent className="flex flex-col items-center justify-center py-16 text-center"><CalendarDays className="mb-3 h-8 w-8 text-sky-700" /><h2 className="font-semibold">No hay reservas para este período</h2><p className="mt-2 max-w-md text-sm text-muted-foreground">Pulsa “Actualizar reservas” para importar la agenda de ayer, hoy y los próximos tres días desde Cloudbeds.</p></CardContent></Card>}
+    </Card> : <Card className="border-dashed"><CardContent className="flex flex-col items-center justify-center py-16 text-center"><CalendarDays className="mb-3 h-8 w-8 text-sky-700" /><h2 className="font-semibold">No hay reservas para este período</h2><p className="mt-2 max-w-md text-sm text-muted-foreground">Pulsa “Actualizar reservas” para importar la agenda de ayer, hoy y los trece días siguientes desde Cloudbeds.</p></CardContent></Card>}
 
     <Dialog open={selectedId !== null} onOpenChange={open => { if (!open) setSelectedId(null); }}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
