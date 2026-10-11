@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { BedDouble, CalendarDays, CreditCard, Loader2, PencilLine, PlusCircle, RefreshCw, Send, StickyNote } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -110,7 +110,7 @@ function agendaCardGridStyle(card: { startSlot: number; endSlot: number; lane: n
   };
 }
 
-export function AvailabilityReservations() {
+export function AvailabilityReservations({ autoImport = false }: { autoImport?: boolean }) {
   const { user } = useAuth();
   const [window] = useState(getReservationWindow);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -127,6 +127,12 @@ export function AvailabilityReservations() {
     },
     onError: error => toast.error(error.message),
   });
+  const hasImportedOnEntry = useRef(false);
+  useEffect(() => {
+    if (!autoImport || hasImportedOnEntry.current) return;
+    hasImportedOnEntry.current = true;
+    importReservations.mutate();
+  }, [autoImport, importReservations.mutate]);
   const detail = trpc.checkin.externalImports.getCloudbedsUpcomingReservationDetail.useQuery(
     { id: selectedId ?? 0 },
     { enabled: selectedId !== null, retry: false },
@@ -187,8 +193,8 @@ export function AvailabilityReservations() {
     setPendingStatus({ status: statusEditor, label });
   };
 
-  return <div className="space-y-5">
-    <Card className="border-sky-100 shadow-sm">
+  return <div className="flex flex-col gap-5">
+    <Card className="order-2 border-sky-100 shadow-sm">
       <CardHeader className="flex flex-col gap-4 py-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <CardTitle className="flex items-center gap-2"><CalendarDays className="h-5 w-5 text-sky-700" />Agenda de reservas</CardTitle>
