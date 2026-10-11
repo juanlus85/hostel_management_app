@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertCircle, BedDouble, CalendarDays, Cloud, Euro, Loader2, Pencil, RefreshCw, Send } from "lucide-react";
+import { BedDouble, CalendarDays, Cloud, Euro, Loader2, Pencil, RefreshCw, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -84,17 +84,6 @@ export default function DisponibilidadHostel() {
     [availability]
   );
 
-  const summary = useMemo(() => {
-    if (!availability) return null;
-    return availability.roomTypes.reduce((acc, room) => {
-      room.days.forEach(day => {
-        if (day.roomsAvailable !== null) acc.available += day.roomsAvailable;
-        if (day.roomsAvailable === 0) acc.soldOut += 1;
-      });
-      return acc;
-    }, { available: 0, soldOut: 0 });
-  }, [availability]);
-
   const openRateEditor = (roomTypeName: string, date: string, rateId: string | null, currentRate: number | null) => {
     if (!rateId || currentRate === null) {
       toast.error("Cloudbeds no ha devuelto un identificador editable para esta tarifa. Actualiza la consulta o revisa que sea una tarifa base.");
@@ -131,19 +120,6 @@ export default function DisponibilidadHostel() {
         </div>
       </div>
 
-      <Card className="border-sky-100 bg-gradient-to-r from-sky-50/80 via-background to-cyan-50/60">
-        <CardContent className="flex flex-col gap-3 p-4 text-sm sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex gap-3"><AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-sky-700" /><p>La disponibilidad se consulta automáticamente al abrir y al cambiar el período. No hay sincronización periódica. {isAdmin ? "Cada precio se modifica de forma individual y requiere una confirmación antes de enviarlo a Cloudbeds." : ""}</p></div>
-          {availability?.fetchedAt && <p className="shrink-0 text-xs text-muted-foreground">Actualizado: {new Date(availability.fetchedAt).toLocaleString("es-ES")}</p>}
-        </CardContent>
-      </Card>
-
-      {availability && summary && <div className="grid gap-4 md:grid-cols-3">
-        <Card><CardHeader className="pb-2"><CardDescription>Tipos de habitación</CardDescription><CardTitle className="text-3xl text-sky-800">{availability.roomTypes.length}</CardTitle></CardHeader><CardContent className="text-sm text-muted-foreground">Con tarifa o disponibilidad en el período.</CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardDescription>Unidades disponibles</CardDescription><CardTitle className="text-3xl text-emerald-700">{summary.available}</CardTitle></CardHeader><CardContent className="text-sm text-muted-foreground">Suma de disponibilidad por día y tipo.</CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardDescription>Fechas agotadas</CardDescription><CardTitle className="text-3xl text-rose-700">{summary.soldOut}</CardTitle></CardHeader><CardContent className="text-sm text-muted-foreground">Combinaciones sin unidades disponibles.</CardContent></Card>
-      </div>}
-
       {!availability && !importWeekMutation.isPending && <Card className="border-dashed"><CardContent className="flex flex-col items-center justify-center py-16 text-center"><div className="mb-4 rounded-full bg-sky-100 p-4 text-sky-700"><BedDouble className="h-8 w-8" /></div><h2 className="font-semibold">No se ha podido cargar el calendario</h2><p className="mt-2 max-w-lg text-sm text-muted-foreground">Pulsa “Actualizar disponibilidad” para repetir la consulta manual a Cloudbeds.</p></CardContent></Card>}
 
       {importWeekMutation.isPending && !availability && <Card><CardContent className="flex items-center justify-center gap-3 py-16 text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin text-sky-700" />Consultando disponibilidad y precios en Cloudbeds…</CardContent></Card>}
@@ -156,7 +132,7 @@ export default function DisponibilidadHostel() {
               <thead className="bg-muted/60"><tr><th className="sticky left-0 z-30 w-[190px] min-w-[190px] border-b bg-muted px-3 py-3 text-left font-semibold shadow-[8px_0_12px_-12px_rgba(15,23,42,0.65)] sm:w-[240px] sm:min-w-[240px] sm:px-4">Tipo de habitación</th>{days.map(day => <th key={day} className="min-w-[108px] border-b border-l px-3 py-3 text-center font-semibold capitalize">{displayDate(day)}</th>)}</tr></thead>
               <tbody>{roomTypes.map((room, index) => {
                 const byDate = new Map(room.days.map(day => [day.date, day]));
-                return <tr key={room.roomTypeId} className={index % 2 ? "bg-muted/20" : "bg-background"}><td className="sticky left-0 z-20 w-[190px] min-w-[190px] border-b bg-background px-3 py-4 align-top shadow-[8px_0_12px_-12px_rgba(15,23,42,0.65)] sm:w-[240px] sm:min-w-[240px] sm:px-4"><p className="font-semibold leading-snug">{room.roomTypeName}</p>{room.ratePlanName && <p className="mt-1 text-xs text-muted-foreground">Tarifa: {room.ratePlanName}</p>}</td>{days.map(date => { const day = byDate.get(date); const currentRate = day?.roomRate ?? day?.totalRate ?? null; return <td key={date} className="border-b border-l px-3 py-3 text-center align-top">{day ? <div className="space-y-2"><span className={`inline-flex rounded-full px-2 py-1 text-xs font-bold ${stockTone(day.roomsAvailable)}`}>{day.roomsAvailable === null ? "— plazas" : `${day.roomsAvailable} ${day.roomsAvailable === 1 ? "unidad" : "unidades"}`}</span><div className="flex items-center justify-center gap-1 font-semibold text-slate-800"><Euro className="h-3.5 w-3.5 text-sky-700" />{money(currentRate)}</div>{isAdmin && <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs text-sky-700 hover:text-sky-900" onClick={() => openRateEditor(room.roomTypeName, date, day.rateId, currentRate)}><Pencil className="mr-1 h-3.5 w-3.5" />Precio</Button>}{(day.restrictions.closedToArrival || day.restrictions.closedToDeparture || day.restrictions.minimumStay) && <p className="text-[10px] text-muted-foreground">{day.restrictions.closedToArrival ? "Sin entrada" : day.restrictions.closedToDeparture ? "Sin salida" : `Mín. ${day.restrictions.minimumStay} noches`}</p>}</div> : <span className="text-muted-foreground">—</span>}</td>; })}</tr>})}</tbody>
+                return <tr key={room.roomTypeId} className={index % 2 ? "bg-muted/20" : "bg-background"}><td className="sticky left-0 z-20 w-[190px] min-w-[190px] border-b bg-background px-3 py-4 align-top shadow-[8px_0_12px_-12px_rgba(15,23,42,0.65)] sm:w-[240px] sm:min-w-[240px] sm:px-4"><p className="font-semibold leading-snug">{room.roomTypeName}</p>{room.ratePlanName && <p className="mt-1 text-xs text-muted-foreground">Tarifa: {room.ratePlanName}</p>}</td>{days.map(date => { const day = byDate.get(date); const currentRate = day?.roomRate ?? day?.totalRate ?? null; const hasRestrictions = Boolean(day?.restrictions.closedToArrival || day?.restrictions.closedToDeparture || (day?.restrictions.minimumStay && day.restrictions.minimumStay > 0)); return <td key={date} className="border-b border-l px-3 py-3 text-center align-top">{day ? <div className="space-y-2"><span className={`inline-flex rounded-full px-2 py-1 text-xs font-bold ${stockTone(day.roomsAvailable)}`}>{day.roomsAvailable === null ? "— plazas" : `${day.roomsAvailable} ${day.roomsAvailable === 1 ? "unidad" : "unidades"}`}</span><div className="flex items-center justify-center gap-1 font-semibold text-slate-800"><Euro className="h-3.5 w-3.5 text-sky-700" />{money(currentRate)}</div>{isAdmin && <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs text-sky-700 hover:text-sky-900" onClick={() => openRateEditor(room.roomTypeName, date, day.rateId, currentRate)}><Pencil className="mr-1 h-3.5 w-3.5" />Precio</Button>}{hasRestrictions && <p className="text-[10px] text-muted-foreground">{day.restrictions.closedToArrival ? "Sin entrada" : day.restrictions.closedToDeparture ? "Sin salida" : `Mín. ${day.restrictions.minimumStay} noches`}</p>}</div> : <span className="text-muted-foreground">—</span>}</td>; })}</tr>})}</tbody>
             </table>
           </div>
         </CardContent>
