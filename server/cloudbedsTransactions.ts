@@ -1,6 +1,10 @@
 export type CloudbedsTransaction = {
   id?: string | number;
   amount?: string | number;
+  sourceId?: string | number;
+  source_id?: string | number;
+  parentId?: string | number;
+  parent_id?: string | number;
   internalCode?: string;
   internalTransactionCode?: string;
   internal_code?: string;
@@ -49,6 +53,11 @@ export type CloudbedsReservationPayments = {
   paidTotal: number;
   refundedTotal: number;
   chargeTotal: number;
+};
+
+type InternalReservationMovement = CloudbedsReservationMovement & {
+  isTaxCharge: boolean;
+  parentId: string | null;
 };
 
 function transactionCode(transaction: CloudbedsTransaction) {
@@ -113,7 +122,7 @@ function isAccommodationCharge(movement: CloudbedsReservationMovement) {
 }
 
 export function summarizeCloudbedsReservationTransactions(transactions: CloudbedsTransaction[]): CloudbedsReservationPayments {
-  const movementsWithTaxFlag = transactions.map(transaction => {
+  const movementsWithTaxFlag: InternalReservationMovement[] = transactions.map(transaction => {
     const kind = isReservationPayment(transaction) ? "payment" as const : "charge" as const;
     const label = textField(
       transaction.paymentMethodName,
@@ -136,10 +145,11 @@ export function summarizeCloudbedsReservationTransactions(transactions: Cloudbed
       kind,
       label,
       isTaxCharge: kind === "charge" && isTaxCharge(transaction),
+      parentId: textField(transaction.parentId, transaction.parent_id),
     };
   });
-  const movements: CloudbedsReservationMovement[] = [];
-  const deferredTaxes: Array<CloudbedsReservationMovement & { isTaxCharge: boolean }> = [];
+  const movements: InternalReservationMovement[] = [];
+  const deferredTaxes: InternalReservationMovement[] = [];
   for (const movement of movementsWithTaxFlag) {
     if (movement.isTaxCharge) {
       deferredTaxes.push(movement);
@@ -150,8 +160,7 @@ export function summarizeCloudbedsReservationTransactions(transactions: Cloudbed
   for (const tax of deferredTaxes) {
     const target = [...movements].reverse().find(movement =>
       movement.kind === "charge" &&
-      isAccommodationCharge(movement) &&
-      movement.serviceDate === tax.serviceDate
+      (movement.id === tax.parentId || (!tax.parentId && isAccommodationCharge(movement) && movement.serviceDate === tax.serviceDate))
     );
     if (target) {
       target.amount += tax.amount;
@@ -167,7 +176,8 @@ export function summarizeCloudbedsReservationTransactions(transactions: Cloudbed
     } else if (movement.amount > 0) {
       summary.chargeTotal += movement.amount;
     }
-    summary.movements.push(movement);
+    const { parentId: _parentId, ...publicMovement } = movement;
+    summary.movements.push(publicMovement);
     return summary;
   }, { movements: [], paidTotal: 0, refundedTotal: 0, chargeTotal: 0 });
 }
@@ -256,17 +266,15 @@ export async function fetchCloudbedsTransactions(apiKey: string, propertyId: str
 }
 
 export async function fetchCloudbedsReservationPayments(apiKey: string, propertyId: string, reservationId: string) {
-  const all: CloudbedsTransaction[] = [];
-  let pageToken: string | undefined;
-  for (let page = 0; page < 50; page += 1) {
+  const fetchPages = async (filters: Array<Record<string, string>>) => {
+    const records: CloudbedsTransaction[] = [];
+    let pageToken: string | undefined;
+    for (let page = 0; page < 50; page += 1) {
     const response = await fetch("https://api.cloudbeds.com/accounting/v1.0/transactions", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "X-Property-ID": propertyId, "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({
-        filters: { and: [
-          { field: "source_identifier", operator: "equals", value: reservationId },
-          { field: "source_kind", operator: "equals", value: "RESERVATION" },
-        ] },
+        filters: { and: filters },
         pageToken,
         // Cloudbeds documenta `limit` y `sort`; los campos pageSize/orderBy se
         // ignoraban en algunas cuentas y podían dejar fuera noches posteriores.
@@ -279,10 +287,29 @@ export async function fetchCloudbedsReservationPayments(apiKey: string, property
     try { payload = JSON.parse(body) as CloudbedsResponse; }
     catch { throw new Error(`Cloudbeds devolvió una respuesta no JSON (HTTP ${response.status}). Revisa el permiso read:payment.`); }
     if (!response.ok) throw new Error(payload.message || `Cloudbeds respondió HTTP ${response.status}. Verifica el permiso read:payment.`);
-    all.push(...(payload.transactions || payload.content || []));
+    records.push(...(payload.transactions || payload.content || []));
     const token = getNextPageToken(payload);
     if (!token) break;
     pageToken = token;
-  }
-  return summarizeCloudbedsReservationTransactions(all);
+    }
+    return records;
+  };
+
+  // `source_identifier` es el identificador público de la reserva. En algunas
+  // propiedades solo devuelve una subreserva; cada movimiento expone además el
+  // `sourceId` interno del folio principal. Consultarlo devuelve todas las
+  // noches, impuestos y pagos asociados a la reserva completa.
+  const initial = await fetchPages([
+    { field: "source_identifier", operator: "equals", value: reservationId },
+    { field: "source_kind", operator: "equals", value: "RESERVATION" },
+  ]);
+  const sourceIds = Array.from(new Set(initial.map(transaction => textField(transaction.sourceId, transaction.source_id)).filter((value): value is string => Boolean(value))));
+  const fullFolio = sourceIds.length
+    ? (await Promise.all(sourceIds.map(sourceId => fetchPages([
+        { field: "source_id", operator: "equals", value: sourceId },
+        { field: "source_kind", operator: "equals", value: "RESERVATION" },
+      ])))).flat()
+    : initial;
+  const unique = Array.from(new Map(fullFolio.map(transaction => [textField(transaction.id) ?? `${transaction.sourceId ?? transaction.source_id ?? ""}-${transaction.internalCode ?? transaction.internalTransactionCode ?? ""}-${transaction.amount ?? ""}-${transaction.serviceDate ?? transaction.service_date ?? ""}`, transaction])).values());
+  return summarizeCloudbedsReservationTransactions(unique);
 }

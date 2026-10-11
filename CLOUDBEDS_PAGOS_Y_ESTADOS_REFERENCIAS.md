@@ -52,3 +52,12 @@ Fuentes:
 
 - https://developers.cloudbeds.com/docs/accounting
 - https://github.com/cloudbeds/openapi-specs/blob/main/src/accounting-v1.0-openapi.json
+
+## Conciliación de estancias con varias noches
+
+En Accounting API, `sourceId` identifica el folio interno de una reserva y `subSourceId` diferencia las habitaciones o subreservas que la componen. Por ello, tras localizar una reserva mediante `source_identifier`, la aplicación vuelve a consultar cada `sourceId` devuelto con `source_kind=RESERVATION`; así recupera todas las noches, cargos, tasas y pagos del folio. Los impuestos se vinculan al movimiento padre mediante `parentId`, evitando sumarlos a una habitación distinta si comparten fecha de servicio.
+
+Fuentes:
+
+- https://developers.cloudbeds.com/docs/accounting
+- https://developers.cloudbeds.com/docs/example-1-update-room-price-and-routed-transactions

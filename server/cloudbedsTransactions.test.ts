@@ -62,6 +62,18 @@ describe("aggregateCloudbedsPaymentsByOperationalDay", () => {
     ]);
   });
 
+  it("asocia cada impuesto al cargo padre aunque existan varias habitaciones en la misma fecha", () => {
+    const summary = summarizeCloudbedsReservationTransactions([
+      { id: "room-a", internalCode: "4100", amount: "100", description: "Alojamiento A", serviceDate: "2026-10-11" },
+      { id: "room-b", internalCode: "4100", amount: "200", description: "Alojamiento B", serviceDate: "2026-10-11" },
+      { id: "tax-b", internalCode: "4200", amount: "20", description: "IVA", parentId: "room-b", serviceDate: "2026-10-11" },
+    ]);
+    expect(summary.movements).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: "room-a", amount: 100 }),
+      expect.objectContaining({ id: "room-b", amount: 220, label: "Alojamiento (IVA incluido)" }),
+    ]));
+  });
+
   it("consulta todos los movimientos de la reserva seleccionada, incluso varias noches paginadas", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ transactions: [
@@ -89,5 +101,26 @@ describe("aggregateCloudbedsPaymentsByOperationalDay", () => {
       sort: [{ field: "service_date", direction: "asc" }],
     });
     expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toMatchObject({ pageToken: "page-2" });
+  });
+
+  it("amplía al folio completo cuando Cloudbeds devuelve sourceId interno", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ transactions: [
+        { id: "first", sourceId: "folio-1", internalCode: "4100", amount: "100", description: "Alojamiento", serviceDate: "2026-10-10" },
+      ], nextPageToken: null }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ transactions: [
+        { id: "first", sourceId: "folio-1", internalCode: "4100", amount: "100", description: "Alojamiento", serviceDate: "2026-10-10" },
+        { id: "second", sourceId: "folio-1", internalCode: "4100", amount: "120", description: "Alojamiento", serviceDate: "2026-10-11" },
+      ], nextPageToken: null }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const result = await fetchCloudbedsReservationPayments("cbat_private", "204754", "R-234");
+    expect(result.chargeTotal).toBe(220);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toMatchObject({
+      filters: { and: [
+        { field: "source_id", operator: "equals", value: "folio-1" },
+        { field: "source_kind", operator: "equals", value: "RESERVATION" },
+      ] },
+    });
   });
 });
