@@ -1757,3 +1757,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Al abrir Disponibilidad desde Resumen Semanal, saltar a la última semana con datos registrados.
 - [x] Aplicar los filtros de Facturas también a las facturas emitidas.
 - [x] Crear Disponibilidad Hostel: importar manualmente desde Cloudbeds disponibilidad y precios por tipo de habitación para la semana próxima.
+- [ ] Adaptar el lector de Disponibilidad Hostel a la estructura real de respuesta de Cloudbeds cuando no detecta tipos de habitación.

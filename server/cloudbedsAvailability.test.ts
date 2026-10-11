@@ -57,6 +57,27 @@ describe("normalizeCloudbedsAvailability", () => {
     });
   });
 
+  it("lee tarifas cuando Cloudbeds las anida dentro de rates", () => {
+    const result = normalizeCloudbedsAvailability({
+      data: [{
+        roomTypeID: "shared",
+        roomTypeName: "Cama en dormitorio compartido",
+        rates: [{
+          ratePlanID: "bar",
+          ratePlanName: "BAR",
+          isBaseRate: true,
+          rates: [{ date: "2026-10-12", roomsAvailable: "8", roomRate: "24.00" }],
+        }],
+      }],
+    }, "2026-10-12", "2026-10-18");
+
+    expect(result.roomTypes).toEqual([expect.objectContaining({
+      roomTypeId: "shared",
+      roomTypeName: "Cama en dormitorio compartido",
+      days: [expect.objectContaining({ roomsAvailable: 8, roomRate: 24 })],
+    })]);
+  });
+
   it("descarta días fuera del período solicitado", () => {
     const result = normalizeCloudbedsAvailability({
       data: [{

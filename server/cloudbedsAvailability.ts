@@ -74,6 +74,8 @@ function dateValue(...values: unknown[]) {
 
 function readDailyRate(value: unknown, dateFallback?: string): CloudbedsAvailabilityDay | null {
   const record = asRecord(value);
+  const rate = asRecord(record.rate);
+  const availability = asRecord(record.availability);
   const date = dateValue(
     record.date,
     record.rateDate,
@@ -89,14 +91,20 @@ function readDailyRate(value: unknown, dateFallback?: string): CloudbedsAvailabi
     record.rooms_available,
     record.availableRooms,
     record.available_rooms,
-    record.availability
+    record.availability,
+    availability.roomsAvailable,
+    availability.rooms_available,
+    record.available
   );
   const roomRate = numericValue(
     record.roomRate,
     record.room_rate,
     record.rate,
     record.baseRate,
-    record.base_rate
+    record.base_rate,
+    rate.amount,
+    rate.value,
+    rate.price
   );
   const totalRate = numericValue(record.totalRate, record.total_rate, roomRate);
 
@@ -118,6 +126,8 @@ function readDailyRate(value: unknown, dateFallback?: string): CloudbedsAvailabi
 function directDailyRates(record: JsonRecord) {
   const dailyKeys = ["detailedRates", "detailed_rates", "dailyRates", "daily_rates", "rateDetails", "rate_details", "rates"];
   const output: CloudbedsAvailabilityDay[] = [];
+  const ownRate = readDailyRate(record);
+  if (ownRate) output.push(ownRate);
   for (const key of dailyKeys) {
     const value = record[key];
     if (Array.isArray(value)) {
@@ -188,8 +198,7 @@ function collectCandidates(value: unknown, candidates: Candidate[], inherited: P
     });
   }
 
-  for (const [key, child] of Object.entries(record)) {
-    if (["detailedRates", "detailed_rates", "dailyRates", "daily_rates", "rateDetails", "rate_details"].includes(key)) continue;
+  for (const [, child] of Object.entries(record)) {
     if (child && typeof child === "object") collectCandidates(child, candidates, context ?? inherited, depth + 1);
   }
 }
@@ -235,6 +244,8 @@ export async function fetchCloudbedsAvailability(apiKey: string, propertyId: str
   url.searchParams.set("propertyIDs", propertyId);
   url.searchParams.set("startDate", startDate);
   url.searchParams.set("endDate", endDate);
+  url.searchParams.set("adults", "1");
+  url.searchParams.set("children", "0");
   url.searchParams.set("detailedRates", "true");
   url.searchParams.set("includeSharedRooms", "true");
 
