@@ -50,10 +50,10 @@ describe("normalizeUpcomingReservation", () => {
     ).toEqual(["2026-08-27", "2026-08-28", "2026-08-29"]);
   });
 
-  it("incluye ayer junto a los próximos tres días cuando se solicita un rango operativo ampliado", () => {
+  it("incluye ayer, hoy y los tres días siguientes para la agenda operativa", () => {
     expect(
-      getNextMadridCalendarDates(new Date("2026-08-27T12:00:00.000Z"), 4, -1)
-    ).toEqual(["2026-08-26", "2026-08-27", "2026-08-28", "2026-08-29"]);
+      getNextMadridCalendarDates(new Date("2026-08-27T12:00:00.000Z"), 5, -1)
+    ).toEqual(["2026-08-26", "2026-08-27", "2026-08-28", "2026-08-29", "2026-08-30"]);
   });
 
   it("desanida el detalle real de una reserva antes de extraer huésped y habitación", async () => {

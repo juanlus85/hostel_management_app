@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { aggregateCloudbedsPaymentsByOperationalDay, fetchCloudbedsTransactions, getCloudbedsBookingPrepayment } from "./cloudbedsTransactions";
+import { aggregateCloudbedsPaymentsByOperationalDay, fetchCloudbedsReservationPayments, fetchCloudbedsTransactions, getCloudbedsBookingPrepayment, summarizeCloudbedsReservationTransactions } from "./cloudbedsTransactions";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -32,5 +32,36 @@ describe("aggregateCloudbedsPaymentsByOperationalDay", () => {
       { id: "3", internalCode: "9300", amount: "-100.00", serviceDate: "2026-08-27", paymentTypeName: "PREPAID BOOKING" },
     ], "2026-08-26");
     expect(result).toEqual({ total: "229.76", paymentCount: 1 });
+  });
+
+  it("resume pagos, devoluciones y cargos de una reserva sin guardar los datos", () => {
+    const summary = summarizeCloudbedsReservationTransactions([
+      { id: "pay-1", internalCode: "9300", amount: "-120", paymentTypeName: "Tarjeta", currency: "EUR" },
+      { id: "charge-1", internalCode: "4100", amount: "160", description: "Alojamiento", currency: "EUR" },
+      { id: "refund-1", internalCode: "9300", amount: "20", paymentTypeName: "Tarjeta", currency: "EUR" },
+    ]);
+    expect(summary).toMatchObject({
+      paidTotal: 120,
+      refundedTotal: 20,
+      chargeTotal: 160,
+    });
+    expect(summary.movements).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: "pay-1", kind: "payment", label: "Tarjeta" }),
+      expect.objectContaining({ id: "charge-1", kind: "charge", label: "Alojamiento" }),
+    ]));
+  });
+
+  it("consulta solo los movimientos de la reserva seleccionada", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ transactions: [{ id: "pay-1", internalCode: "9300", amount: "-50" }], nextPageToken: null }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const result = await fetchCloudbedsReservationPayments("cbat_private", "204754", "R-234");
+    expect(result.paidTotal).toBe(50);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({
+      filters: { and: [
+        { field: "source_identifier", operator: "equals", value: "R-234" },
+        { field: "source_kind", operator: "equals", value: "RESERVATION" },
+      ] },
+      pageSize: 100,
+    });
   });
 });

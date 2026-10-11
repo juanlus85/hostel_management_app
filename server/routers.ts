@@ -53,6 +53,7 @@ import {
 } from "./localInvoiceAttachments";
 import {
   aggregateCloudbedsPaymentsByOperationalDay,
+  fetchCloudbedsReservationPayments,
   fetchCloudbedsTransactions,
   getCloudbedsBookingPrepayment,
 } from "./cloudbedsTransactions";
@@ -4289,7 +4290,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             throw new TRPCError({ code: "BAD_GATEWAY", message });
           }
         }),
-      importCloudbedsUpcomingReservations: adminProcedure.mutation(
+      importCloudbedsUpcomingReservations: protectedProcedure.mutation(
         async ({ ctx }) => {
           const apiKey = process.env.CLOUDBEDS_API_KEY;
           const propertyId = process.env.CLOUDBEDS_PROPERTY_ID;
@@ -4299,13 +4300,13 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
               message:
                 "Configura CLOUDBEDS_API_KEY y CLOUDBEDS_PROPERTY_ID para importar reservas",
             });
-          const dates = getNextMadridCalendarDates(new Date(), 4, -1);
+          const dates = getNextMadridCalendarDates(new Date(), 5, -1);
           const runId = await db.createExternalImportRun({
             provider: "cloudbeds",
             importType: "future",
             status: "running",
             dateFrom: dates[0],
-            dateTo: dates[2],
+            dateTo: dates[4],
             createdBy: ctx.user.id,
             startedAt: new Date(),
             metadata: JSON.stringify({
@@ -4363,7 +4364,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           }
         }
       ),
-      listCloudbedsUpcomingReservations: adminProcedure
+      listCloudbedsUpcomingReservations: protectedProcedure
         .input(
           z.object({
             dateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -4373,6 +4374,27 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
         .query(async ({ input }) =>
           db.getExternalUpcomingReservations(input.dateFrom, input.dateTo)
         ),
+      getCloudbedsUpcomingReservationDetail: protectedProcedure
+        .input(z.object({ id: z.number() }))
+        .query(async ({ input }) => {
+          const reservation = await db.getExternalUpcomingReservationById(input.id);
+          if (!reservation) throw new TRPCError({ code: "NOT_FOUND", message: "No se encontró la reserva importada" });
+          const apiKey = process.env.CLOUDBEDS_API_KEY;
+          const propertyId = process.env.CLOUDBEDS_PROPERTY_ID;
+          if (!apiKey || !propertyId) {
+            return { reservation, payments: null, paymentWarning: "No hay credenciales de Cloudbeds configuradas para consultar los movimientos." };
+          }
+          try {
+            const payments = await fetchCloudbedsReservationPayments(apiKey, propertyId, reservation.sourceReservationId);
+            return { reservation, payments, paymentWarning: null };
+          } catch (error) {
+            return {
+              reservation,
+              payments: null,
+              paymentWarning: error instanceof Error ? error.message : "No se han podido consultar los movimientos de esta reserva.",
+            };
+          }
+        }),
       setCloudbedsUpcomingReservationReviewed: adminProcedure
         .input(z.object({ id: z.number(), isReviewed: z.boolean() }))
         .mutation(async ({ input }) => {

@@ -51,9 +51,9 @@ const loyverseMinimumDate = (() => {
   date.setDate(date.getDate() - 30);
   return madridDate(date);
 })();
-const thirdArrivalDate = (() => {
+const lastArrivalDate = (() => {
   const date = new Date(`${today}T12:00:00`);
-  date.setDate(date.getDate() + 2);
+  date.setDate(date.getDate() + 3);
   return madridDate(date);
 })();
 const previousArrivalDate = (() => {
@@ -261,7 +261,7 @@ export default function ImportacionesExternas() {
   const upcomingReservations =
     trpc.checkin.externalImports.listCloudbedsUpcomingReservations.useQuery({
       dateFrom: previousArrivalDate,
-      dateTo: thirdArrivalDate,
+      dateTo: lastArrivalDate,
     });
   const communications =
     trpc.checkin.externalImports.listCloudbedsReservationCommunications.useQuery();
@@ -783,7 +783,7 @@ export default function ImportacionesExternas() {
                   Llegadas pendientes desde ayer y los próximos tres días
                 </CardTitle>
                 <CardDescription>
-                  Desde {previousArrivalDate} hasta {thirdArrivalDate}. Se
+                  Desde {previousArrivalDate} hasta {lastArrivalDate}. Se
                   ocultan reservas con Check-in, Check-out o canceladas. Datos
                   importados de Cloudbeds y aislados de reservas operativas.
                 </CardDescription>
