@@ -65,6 +65,7 @@ import { APP_RELEASE_LABEL } from "@shared/appRelease";
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
   { icon: Calendar, label: "Turnos", path: "/turnos" },
+  { icon: BedDouble, label: "Disponibilidad Hostel", path: "/disponibilidad-hostel" },
   { icon: Wallet, label: "Caja", path: "/caja" },
   { icon: Receipt, label: "Facturas", path: "/facturas" },
   { icon: DollarSign, label: "Gastos/Ingresos", path: "/otros-gastos", adminOnly: true },
@@ -78,6 +79,7 @@ const menuItems = [
 
 const housekeepingMenuItems = [
   { icon: Calendar, label: "Turnos", path: "/turnos" },
+  { icon: BedDouble, label: "Disponibilidad Hostel", path: "/disponibilidad-hostel" },
   { icon: CheckSquare, label: "Tareas", path: "/tareas" },
   { icon: AlertTriangle, label: "Incidencias", path: "/incidencias" },
   { icon: Package, label: "Inventario", path: "/inventario" },
@@ -95,7 +97,6 @@ const adminMenuItems = [
   { icon: Users, label: "Empleados", path: "/empleados" },
   { icon: Truck, label: "Proveedores", path: "/proveedores" },
   { icon: FileArchive, label: "Cierre Trimestral", path: "/cierre-trimestral" },
-  { icon: BedDouble, label: "Disponibilidad Hostel", path: "/disponibilidad-hostel" },
   { icon: DatabaseZap, label: "Importaciones externas", path: "/importaciones-externas" },
   { icon: Settings, label: "Configuracion", path: "/configuracion" },
 ];

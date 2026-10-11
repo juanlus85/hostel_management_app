@@ -1767,3 +1767,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Extraer el identificador real de tarifa de la respuesta de Cloudbeds para habilitar cambios de precio en las tarifas base.
 - [x] Codificar la colección rates de putRate en el formato de formulario que exige Cloudbeds.
 - [ ] Quitar el cero técnico junto al botón Precio y eliminar los bloques informativos innecesarios de Disponibilidad Hostel.
+- [x] Mover Disponibilidad Hostel debajo de Turnos y habilitar su acceso para todos los usuarios autenticados.

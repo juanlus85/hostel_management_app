@@ -1086,7 +1086,7 @@ export const appRouter = router({
   }),
 
   cloudbedsAvailability: router({
-    importWeek: adminProcedure
+    importWeek: protectedProcedure
       .input(z.object({ startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) }))
       .mutation(async ({ input }) => {
         const apiKey = process.env.CLOUDBEDS_API_KEY;
