@@ -35,7 +35,7 @@ type PendingStatus = { status: CloudbedsStatus; label: string };
 
 function getReservationWindow() {
   const today = new Date(`${madridDate(new Date())}T12:00:00`);
-  const dates = Array.from({ length: 5 }, (_, index) => {
+  const dates = Array.from({ length: 15 }, (_, index) => {
     const date = new Date(today);
     date.setDate(date.getDate() + index - 1);
     return madridDate(date);

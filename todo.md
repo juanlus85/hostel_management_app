@@ -1787,3 +1787,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Conciliar cargos y pagos de reservas multinoches usando los identificadores contables de habitación/subreserva de Cloudbeds y consolidar IVA correctamente.
 - [x] Compactar la agenda de Reservas en móvil para reducir la columna de tipo/habitación y priorizar los días y estancias.
 - [x] Auditar y corregir la conciliación de cargos/pagos cuando el saldo oficial de Cloudbeds es cero pero los movimientos muestran diferencia.
+- [x] Ampliar la ventana de Reservas a 15 días, manteniendo ayer y hoy como primeros días visibles.
