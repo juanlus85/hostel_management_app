@@ -1765,3 +1765,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Ordenar los tipos de habitación según el orden operativo definido.
 - [x] Permitir editar una tarifa de habitación desde Disponibilidad Hostel y confirmar antes de actualizarla en Cloudbeds.
 - [x] Extraer el identificador real de tarifa de la respuesta de Cloudbeds para habilitar cambios de precio en las tarifas base.
+- [x] Codificar la colección rates de putRate en el formato de formulario que exige Cloudbeds.

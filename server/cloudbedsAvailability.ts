@@ -281,12 +281,13 @@ export async function fetchCloudbedsAvailability(apiKey: string, propertyId: str
 
 export function cloudbedsRateUpdateForm(rateId: string, date: string, rate: number) {
   const form = new URLSearchParams();
-  form.set("rates", JSON.stringify([
-    {
-      rateID: rateId,
-      interval: [{ startDate: date, endDate: date, rate }],
-    },
-  ]));
+  // Cloudbeds espera una colección en formulario, no un JSON serializado dentro
+  // de un único campo. La notación con corchetes forma rates[0].interval[0]
+  // en el cuerpo application/x-www-form-urlencoded.
+  form.set("rates[0][rateID]", rateId);
+  form.set("rates[0][interval][0][startDate]", date);
+  form.set("rates[0][interval][0][endDate]", date);
+  form.set("rates[0][interval][0][rate]", String(rate));
   return form;
 }
 

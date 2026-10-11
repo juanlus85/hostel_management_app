@@ -118,11 +118,11 @@ describe("normalizeCloudbedsAvailability", () => {
 
   it("prepara un cambio de precio para una única fecha", () => {
     const form = cloudbedsRateUpdateForm("rate-123", "2026-10-12", 85.5);
-    expect(JSON.parse(form.get("rates") || "[]")).toEqual([
-      {
-        rateID: "rate-123",
-        interval: [{ startDate: "2026-10-12", endDate: "2026-10-12", rate: 85.5 }],
-      },
-    ]);
+    expect(Object.fromEntries(form.entries())).toEqual({
+      "rates[0][rateID]": "rate-123",
+      "rates[0][interval][0][startDate]": "2026-10-12",
+      "rates[0][interval][0][endDate]": "2026-10-12",
+      "rates[0][interval][0][rate]": "85.5",
+    });
   });
 });
