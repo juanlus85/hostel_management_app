@@ -295,21 +295,14 @@ export async function fetchCloudbedsReservationPayments(apiKey: string, property
     return records;
   };
 
-  // `source_identifier` es el identificador público de la reserva. En algunas
-  // propiedades solo devuelve una subreserva; cada movimiento expone además el
-  // `sourceId` interno del folio principal. Consultarlo devuelve todas las
-  // noches, impuestos y pagos asociados a la reserva completa.
+  // Para reservas, Cloudbeds documenta `source_identifier` como el filtro que
+  // devuelve el folio completo. `sourceId` identifica internamente la fuente,
+  // pero no debe sustituir el resultado anterior: podía reducir el folio a un
+  // subconjunto de movimientos y dejar fuera cargos o ajustes legítimos.
   const initial = await fetchPages([
     { field: "source_identifier", operator: "equals", value: reservationId },
     { field: "source_kind", operator: "equals", value: "RESERVATION" },
   ]);
-  const sourceIds = Array.from(new Set(initial.map(transaction => textField(transaction.sourceId, transaction.source_id)).filter((value): value is string => Boolean(value))));
-  const fullFolio = sourceIds.length
-    ? (await Promise.all(sourceIds.map(sourceId => fetchPages([
-        { field: "source_id", operator: "equals", value: sourceId },
-        { field: "source_kind", operator: "equals", value: "RESERVATION" },
-      ])))).flat()
-    : initial;
-  const unique = Array.from(new Map(fullFolio.map(transaction => [textField(transaction.id) ?? `${transaction.sourceId ?? transaction.source_id ?? ""}-${transaction.internalCode ?? transaction.internalTransactionCode ?? ""}-${transaction.amount ?? ""}-${transaction.serviceDate ?? transaction.service_date ?? ""}`, transaction])).values());
+  const unique = Array.from(new Map(initial.map(transaction => [textField(transaction.id) ?? `${transaction.sourceId ?? transaction.source_id ?? ""}-${transaction.internalCode ?? transaction.internalTransactionCode ?? ""}-${transaction.amount ?? ""}-${transaction.serviceDate ?? transaction.service_date ?? ""}`, transaction])).values());
   return summarizeCloudbedsReservationTransactions(unique);
 }

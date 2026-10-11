@@ -61,3 +61,9 @@ Fuentes:
 
 - https://developers.cloudbeds.com/docs/accounting
 - https://developers.cloudbeds.com/docs/example-1-update-room-price-and-routed-transactions
+
+## Filtro del folio de reserva
+
+Cloudbeds documenta `source_identifier` junto con `source_kind=RESERVATION` como el filtro para recuperar los movimientos de una reserva. En esa respuesta `sourceIdentifier` identifica la reserva completa y `subSourceIdentifier` diferencia subreservas/habitaciones. Por ello no se sustituye el resultado por una segunda búsqueda sobre `sourceId`: dicho identificador pertenece a la fuente interna y puede devolver solo una parte de los movimientos.
+
+Fuente: https://developers.cloudbeds.com/docs/accounting

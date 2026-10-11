@@ -103,11 +103,8 @@ describe("aggregateCloudbedsPaymentsByOperationalDay", () => {
     expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toMatchObject({ pageToken: "page-2" });
   });
 
-  it("amplía al folio completo cuando Cloudbeds devuelve sourceId interno", async () => {
+  it("conserva el folio completo devuelto por source_identifier", async () => {
     const fetchMock = vi.fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ transactions: [
-        { id: "first", sourceId: "folio-1", internalCode: "4100", amount: "100", description: "Alojamiento", serviceDate: "2026-10-10" },
-      ], nextPageToken: null }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ transactions: [
         { id: "first", sourceId: "folio-1", internalCode: "4100", amount: "100", description: "Alojamiento", serviceDate: "2026-10-10" },
         { id: "second", sourceId: "folio-1", internalCode: "4100", amount: "120", description: "Alojamiento", serviceDate: "2026-10-11" },
@@ -115,10 +112,10 @@ describe("aggregateCloudbedsPaymentsByOperationalDay", () => {
     vi.stubGlobal("fetch", fetchMock);
     const result = await fetchCloudbedsReservationPayments("cbat_private", "204754", "R-234");
     expect(result.chargeTotal).toBe(220);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toMatchObject({
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({
       filters: { and: [
-        { field: "source_id", operator: "equals", value: "folio-1" },
+        { field: "source_identifier", operator: "equals", value: "R-234" },
         { field: "source_kind", operator: "equals", value: "RESERVATION" },
       ] },
     });
