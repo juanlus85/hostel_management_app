@@ -1,0 +1,1 @@
+ALTER TABLE `guests` ADD `relationship` varchar(2);

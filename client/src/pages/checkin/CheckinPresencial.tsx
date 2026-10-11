@@ -16,6 +16,18 @@ import { Loader2, Plus, Trash2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { COUNTRIES, getAllowedDocumentTypes, PAYMENT_TYPES, GENDER_CODES } from "@/../../shared/countries";
 import { requiresDocumentSupport } from "@shared/documentSupport";
+import { calculateAge, isMinor } from "@shared/guestAge";
+
+const RELATIONSHIP_OPTIONS = [
+  { value: "HJ", label: "Hijo/a" },
+  { value: "NI", label: "Nieto/a" },
+  { value: "SB", label: "Sobrino/a" },
+  { value: "PM", label: "Persona mayor responsable" },
+  { value: "AB", label: "Abuelo/a" },
+  { value: "HR", label: "Hermano/a" },
+  { value: "TU", label: "Tutor/a" },
+  { value: "OT", label: "Otro" },
+];
 
 interface GuestData {
   firstName: string;
@@ -311,6 +323,11 @@ export default function CheckinPresencial() {
         return;
       }
 
+      if (isMinor(guest.birthDate) && !guest.relationship) {
+        toast.error(`Indique el parentesco del huésped menor de edad ${i + 1}`);
+        return;
+      }
+
       if (!guest.nationality) {
         toast.error(`La nacionalidad del huésped ${i + 1} es obligatoria`);
         return;
@@ -364,6 +381,7 @@ export default function CheckinPresencial() {
           gender: guest.gender as "Hombre" | "Mujer" | "Otro",
           nationality: guest.nationality === "OTRO" ? guest.nationalityOther : guest.nationality,
           birthDate: guest.birthDate,
+          relationship: isMinor(guest.birthDate) ? guest.relationship as "HJ" | "NI" | "SB" | "PM" | "AB" | "HR" | "TU" | "OT" : undefined,
           
           // Dirección compartida
           street: sharedAddress.street,
@@ -672,6 +690,8 @@ export default function CheckinPresencial() {
         const isSpanish = guest.nationality === "ESP";
         const country = COUNTRIES.find(c => c.code === guest.nationality);
         const isEU = country?.isEU || false;
+        const age = calculateAge(guest.birthDate);
+        const guestIsMinor = isMinor(guest.birthDate);
 
         return (
           <Card key={index} className="p-6">
@@ -810,7 +830,17 @@ export default function CheckinPresencial() {
                   value={guest.birthDate}
                   onChange={(e) => updateGuest(index, "birthDate", e.target.value)}
                 />
+                {age !== null && <p className={`mt-1 text-xs ${guestIsMinor ? "font-medium text-amber-700" : "text-muted-foreground"}`}>{age} años{guestIsMinor ? " · Menor de edad" : ""}</p>}
               </div>
+
+              {guestIsMinor && <div>
+                <Label htmlFor={`relationship-${index}`}>Parentesco del menor *</Label>
+                <Select value={guest.relationship || undefined} onValueChange={(value) => updateGuest(index, "relationship", value)}>
+                  <SelectTrigger id={`relationship-${index}`}><SelectValue placeholder="Seleccionar parentesco" /></SelectTrigger>
+                  <SelectContent>{RELATIONSHIP_OPTIONS.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
+                </Select>
+                <p className="mt-1 text-xs text-muted-foreground">Obligatorio para el parte de viajeros de un menor.</p>
+              </div>}
 
               <div>
                 <Label htmlFor={`phone-${index}`}>Teléfono</Label>

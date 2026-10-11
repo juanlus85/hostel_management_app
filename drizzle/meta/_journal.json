@@ -407,6 +407,13 @@
       "when": 1788072349437,
       "tag": "0057_past_nebula",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "5",
+      "when": 1791714723339,
+      "tag": "0058_furry_santa_claus",
+      "breakpoints": true
     }
   ]
 }

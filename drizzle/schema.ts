@@ -832,6 +832,7 @@ export const guests = mysqlTable("guests", {
   nationality: varchar("nationality", { length: 100 }),
   birthDate: varchar("birthDate", { length: 10 }), // YYYY-MM-DD
   documentExpiry: varchar("documentExpiry", { length: 10 }), // YYYY-MM-DD
+  relationship: varchar("relationship", { length: 2 }), // Parentesco, necesario para menores
 
   // Dirección
   street: varchar("street", { length: 255 }),

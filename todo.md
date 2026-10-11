@@ -1385,8 +1385,8 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 ## Ajustes Formulario Check-in
 - [x] Cantidad Abonada: valor por defecto "0" (editable)
 - [x] Cantidad Pendiente: valor por defecto "0" (editable)
-- [ ] Agregar campo "Parentesco" SOLO cuando hay menores de edad (<18 años) - EN PROGRESO
-- [ ] Calcular edad automáticamente desde fecha de nacimiento - EN PROGRESO
+- [x] Agregar campo "Parentesco" SOLO cuando hay menores de edad (<18 años) - EN PROGRESO
+- [x] Calcular edad automáticamente desde fecha de nacimiento - EN PROGRESO
 - [x] Documentar códigos oficiales de parentesco (HJ, NI, SB, PM, AB, HR, TU, OT)
 
 ## Funcionalidades CRUD Check-in
