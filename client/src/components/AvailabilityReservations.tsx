@@ -1,12 +1,15 @@
 import { useMemo, useState } from "react";
-import { BedDouble, CalendarDays, CreditCard, Loader2, RefreshCw, StickyNote } from "lucide-react";
+import { BedDouble, CalendarDays, CreditCard, Loader2, PencilLine, PlusCircle, RefreshCw, Send, StickyNote } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { buildReservationAgenda, type ReservationAgendaTone } from "@shared/reservationAgenda";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 const madridDate = (date: Date) => date.toLocaleDateString("en-CA", { timeZone: "Europe/Madrid" });
 const agendaToneClasses: Record<ReservationAgendaTone, string> = {
@@ -16,6 +19,19 @@ const agendaToneClasses: Record<ReservationAgendaTone, string> = {
   slate: "border-slate-400 bg-slate-400 text-white hover:bg-slate-500",
   rose: "border-rose-400 bg-rose-400 text-white hover:bg-rose-500",
 };
+
+const statusOptions = [
+  { value: "confirmed", label: "Confirmada" },
+  { value: "not_confirmed", label: "Sin confirmar" },
+  { value: "checked_in", label: "Check-in realizado" },
+  { value: "checked_out", label: "Check-out realizado" },
+  { value: "canceled", label: "Cancelada" },
+  { value: "no_show", label: "No presentado" },
+] as const;
+type CloudbedsStatus = typeof statusOptions[number]["value"];
+type PaymentDraft = { type: string; label: string; amount: string; description: string; isDeposit: boolean };
+type PendingPayment = PaymentDraft & { amountNumber: number };
+type PendingStatus = { status: CloudbedsStatus; label: string };
 
 function getReservationWindow() {
   const today = new Date(`${madridDate(new Date())}T12:00:00`);
@@ -62,22 +78,36 @@ function reservationStatus(value: string | null | undefined) {
     canceled: "Cancelada",
     checked_in: "Check-in realizado",
     checked_out: "Check-out realizado",
+    completed: "Check-out realizado",
     no_show: "No presentado",
   };
   return labels[status] || value || "Sin estado";
 }
 
+function editableStatus(value: string | null | undefined): CloudbedsStatus {
+  const normalized = value?.toLowerCase().replace(/[\s-]+/g, "_") || "";
+  if (normalized === "cancelled") return "canceled";
+  if (normalized === "completed") return "checked_out";
+  if (normalized === "in_progress") return "checked_in";
+  return statusOptions.some(option => option.value === normalized) ? normalized as CloudbedsStatus : "confirmed";
+}
+
 function statusTone(value: string | null | undefined) {
   const status = value?.toLowerCase().replace(/[\s-]+/g, "_") || "";
   if (["cancelled", "canceled", "no_show"].includes(status)) return "border-rose-200 bg-rose-50 text-rose-800";
-  if (["checked_in", "checked_out"].includes(status)) return "border-slate-200 bg-slate-50 text-slate-700";
-  if (status === "confirmed") return "border-emerald-200 bg-emerald-50 text-emerald-800";
-  return "border-amber-200 bg-amber-50 text-amber-800";
+  if (status === "checked_out") return "border-slate-200 bg-slate-50 text-slate-700";
+  if (status === "checked_in") return "border-emerald-200 bg-emerald-50 text-emerald-800";
+  return "border-sky-200 bg-sky-50 text-sky-800";
 }
 
 export function AvailabilityReservations() {
+  const { user } = useAuth();
   const [window] = useState(getReservationWindow);
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [paymentEditor, setPaymentEditor] = useState<PaymentDraft | null>(null);
+  const [pendingPayment, setPendingPayment] = useState<PendingPayment | null>(null);
+  const [statusEditor, setStatusEditor] = useState<CloudbedsStatus | null>(null);
+  const [pendingStatus, setPendingStatus] = useState<PendingStatus | null>(null);
   const utils = trpc.useUtils();
   const reservations = trpc.checkin.externalImports.listCloudbedsUpcomingReservations.useQuery({ dateFrom: window.dateFrom, dateTo: window.dateTo });
   const importReservations = trpc.checkin.externalImports.importCloudbedsUpcomingReservations.useMutation({
@@ -91,6 +121,31 @@ export function AvailabilityReservations() {
     { id: selectedId ?? 0 },
     { enabled: selectedId !== null, retry: false },
   );
+  const paymentMethods = trpc.checkin.externalImports.getCloudbedsPaymentMethods.useQuery(undefined, {
+    enabled: Boolean(paymentEditor && selectedId !== null && user?.role === "admin"),
+    retry: false,
+  });
+  const recordPayment = trpc.checkin.externalImports.recordCloudbedsReservationPayment.useMutation({
+    onSuccess: result => {
+      toast.success("Pago registrado en Cloudbeds");
+      if (result.syncWarning) toast.warning(result.syncWarning);
+      setPendingPayment(null);
+      setPaymentEditor(null);
+      utils.checkin.externalImports.listCloudbedsUpcomingReservations.invalidate({ dateFrom: window.dateFrom, dateTo: window.dateTo });
+      if (selectedId !== null) utils.checkin.externalImports.getCloudbedsUpcomingReservationDetail.invalidate({ id: selectedId });
+    },
+    onError: error => toast.error(error.message),
+  });
+  const updateStatus = trpc.checkin.externalImports.updateCloudbedsUpcomingReservationStatus.useMutation({
+    onSuccess: result => {
+      toast.success(`Estado actualizado en Cloudbeds: ${reservationStatus(result.status)}`);
+      setPendingStatus(null);
+      setStatusEditor(null);
+      utils.checkin.externalImports.listCloudbedsUpcomingReservations.invalidate({ dateFrom: window.dateFrom, dateTo: window.dateTo });
+      if (selectedId !== null) utils.checkin.externalImports.getCloudbedsUpcomingReservationDetail.invalidate({ id: selectedId });
+    },
+    onError: error => toast.error(error.message),
+  });
 
   const agenda = useMemo(() => buildReservationAgenda(reservations.data || [], window.dates), [reservations.data, window.dates]);
   const arrivalsByDate = useMemo(() => new Map(window.dates.map(date => [date, (reservations.data || []).filter(reservation => reservation.checkInDate === date).length])), [reservations.data, window.dates]);
@@ -98,6 +153,24 @@ export function AvailabilityReservations() {
   const reservation = detail.data?.reservation || selected;
   const payments = detail.data?.payments;
   const gridStyle = { gridTemplateColumns: `minmax(225px, 1.35fr) repeat(${window.dates.length}, minmax(142px, 1fr))` };
+  const canRecordPayments = user?.role === "admin";
+
+  const openPaymentEditor = () => {
+    const amountPending = Number(String(reservation?.amountPending ?? "0").replace(",", "."));
+    setPaymentEditor({ type: "", label: "", amount: Number.isFinite(amountPending) && amountPending > 0 ? amountPending.toFixed(2) : "", description: "", isDeposit: false });
+  };
+  const preparePayment = () => {
+    if (!paymentEditor) return;
+    const amountNumber = Number(paymentEditor.amount.replace(",", "."));
+    if (!paymentEditor.type || !paymentEditor.label) return toast.error("Selecciona un método de pago de Cloudbeds.");
+    if (!Number.isFinite(amountNumber) || amountNumber <= 0) return toast.error("Indica un importe de pago válido, superior a 0 €.");
+    setPendingPayment({ ...paymentEditor, amountNumber });
+  };
+  const prepareStatus = () => {
+    if (!statusEditor) return;
+    const label = statusOptions.find(option => option.value === statusEditor)?.label || statusEditor;
+    setPendingStatus({ status: statusEditor, label });
+  };
 
   return <div className="space-y-5">
     <Card className="border-sky-100 shadow-sm">
@@ -134,7 +207,6 @@ export function AvailabilityReservations() {
                 return <div key={date} className={`border-r px-3 py-3 text-center ${isToday ? "bg-sky-50 text-sky-800" : ""}`}><p className="text-[11px] font-semibold uppercase tracking-wide">{index === 0 ? "Ayer" : isToday ? "Hoy" : day.weekday}</p><p className="mt-0.5 text-2xl font-bold leading-none">{day.date}</p><p className="mt-1 text-[11px] capitalize text-muted-foreground">{day.month} · {arrivals} llegada{arrivals === 1 ? "" : "s"}</p></div>;
               })}
             </div>
-
             {agenda.map(group => <section key={group.key} className="border-b last:border-b-0">
               <div className="grid bg-slate-100/85" style={gridStyle}>
                 <div className="sticky left-0 z-20 border-r bg-slate-100 px-4 py-3 shadow-[8px_0_12px_-12px_rgba(15,23,42,0.5)]"><p className="flex items-center gap-2 text-sm font-bold text-slate-800"><BedDouble className="h-4 w-4 text-sky-700" />{group.label}</p><p className="mt-1 text-xs text-muted-foreground">{group.reservationsCount} reserva{group.reservationsCount === 1 ? "" : "s"}</p></div>
@@ -162,15 +234,39 @@ export function AvailabilityReservations() {
         {!reservation || detail.isLoading ? <div className="flex items-center justify-center gap-3 py-12 text-sm text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin text-sky-700" />Cargando detalle y pagos…</div> : <div className="space-y-5">
           <section className="grid gap-3 rounded-xl border bg-muted/30 p-4 sm:grid-cols-2">
             <div><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Huésped</p><p className="mt-1 font-semibold">{reservation.guestName || "Sin nombre"}</p><p className="mt-1 text-sm text-muted-foreground">{reservation.guestEmail || "Sin correo"}</p><p className="text-sm text-muted-foreground">{reservation.guestPhone || "Sin teléfono"}</p></div>
-            <div><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Estado</p><Badge variant="outline" className={`mt-1 ${statusTone(reservation.reservationStatus)}`}>{reservationStatus(reservation.reservationStatus)}</Badge><p className="mt-3 text-sm"><strong>Origen:</strong> {reservation.bookingSource || "No indicado"}</p><p className="mt-1 text-sm"><strong>Huéspedes:</strong> {reservation.guestCount ?? "—"}</p></div>
+            <div><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Estado</p><Badge variant="outline" className={`mt-1 ${statusTone(reservation.reservationStatus)}`}>{reservationStatus(reservation.reservationStatus)}</Badge><Button type="button" variant="outline" size="sm" className="mt-3 w-full sm:w-auto" onClick={() => setStatusEditor(editableStatus(reservation.reservationStatus))}><PencilLine className="mr-2 h-3.5 w-3.5" />Cambiar estado</Button><p className="mt-3 text-sm"><strong>Origen:</strong> {reservation.bookingSource || "No indicado"}</p><p className="mt-1 text-sm"><strong>Huéspedes:</strong> {reservation.guestCount ?? "—"}</p></div>
           </section>
           <section className="grid gap-3 rounded-xl border p-4 sm:grid-cols-2"><div><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Entrada</p><p className="mt-1 font-semibold">{formatDate(reservation.checkInDate)}</p></div><div><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Salida</p><p className="mt-1 font-semibold">{reservation.checkOutDate ? formatDate(reservation.checkOutDate) : "No indicada"}</p></div><div className="sm:col-span-2"><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Habitación</p><p className="mt-1 font-semibold">{reservation.roomNumber ? `Hab. ${reservation.roomNumber}` : "Sin asignar"}</p><p className="mt-1 text-sm text-muted-foreground">{reservation.roomType || "Tipo pendiente"}</p></div></section>
-          <section className="rounded-xl border p-4"><div className="flex items-center justify-between gap-3"><div><p className="flex items-center gap-2 font-semibold"><CreditCard className="h-4 w-4 text-sky-700" />Pagos y movimientos</p><p className="mt-1 text-sm text-muted-foreground">Saldo pendiente informado por Cloudbeds: <strong className={Number(reservation.amountPending) > 0 ? "text-amber-700" : "text-emerald-700"}>{money(reservation.amountPending)}</strong></p></div>{detail.isFetching && <Loader2 className="h-4 w-4 animate-spin text-sky-700" />}</div>
-            {payments ? <><div className="mt-4 grid gap-3 sm:grid-cols-3"><div className="rounded-lg bg-emerald-50 p-3"><p className="text-xs text-emerald-800">Cobrado</p><p className="mt-1 font-bold text-emerald-800">{money(payments.paidTotal)}</p></div><div className="rounded-lg bg-rose-50 p-3"><p className="text-xs text-rose-800">Devuelto</p><p className="mt-1 font-bold text-rose-800">{money(payments.refundedTotal)}</p></div><div className="rounded-lg bg-slate-50 p-3"><p className="text-xs text-slate-700">Cargos</p><p className="mt-1 font-bold text-slate-800">{money(payments.chargeTotal)}</p></div></div>{payments.movements.length ? <div className="mt-4 divide-y rounded-lg border">{payments.movements.map(movement => <div className="flex items-center justify-between gap-3 p-3 text-sm" key={movement.id || `${movement.label}-${movement.occurredAt}`}><div><p className="font-medium">{movement.label}</p><p className="text-xs text-muted-foreground">{movement.occurredAt ? new Date(movement.occurredAt).toLocaleString("es-ES") : movement.serviceDate || "Sin fecha"}</p></div><p className={movement.kind === "payment" ? "font-semibold text-emerald-700" : "font-semibold text-slate-800"}>{movement.kind === "payment" ? "Pago" : "Cargo"} · {money(Math.abs(movement.amount))}</p></div>)}</div> : <p className="mt-4 text-sm text-muted-foreground">Cloudbeds no ha devuelto movimientos para esta reserva.</p>}</> : <p className="mt-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{detail.data?.paymentWarning || "No se han podido cargar los movimientos de pago."}</p>}
+          <section className="rounded-xl border p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="flex items-center gap-2 font-semibold"><CreditCard className="h-4 w-4 text-sky-700" />Pagos y movimientos</p><p className="mt-1 text-sm text-muted-foreground">Saldo pendiente informado por Cloudbeds: <strong className={Number(reservation.amountPending) > 0 ? "text-rose-700" : "text-emerald-700"}>{money(reservation.amountPending)}</strong></p></div><div className="flex items-center gap-2">{detail.isFetching && <Loader2 className="h-4 w-4 animate-spin text-sky-700" />}{canRecordPayments && <Button type="button" size="sm" onClick={openPaymentEditor}><PlusCircle className="mr-2 h-4 w-4" />Añadir pago</Button>}</div></div>
+            {payments ? <><div className="mt-4 grid gap-3 sm:grid-cols-3"><div className="rounded-lg bg-emerald-50 p-3"><p className="text-xs text-emerald-800">Cobrado</p><p className="mt-1 font-bold text-emerald-800">{money(payments.paidTotal)}</p></div><div className="rounded-lg bg-rose-50 p-3"><p className="text-xs text-rose-800">Devuelto</p><p className="mt-1 font-bold text-rose-800">{money(payments.refundedTotal)}</p></div><div className="rounded-lg bg-slate-50 p-3"><p className="text-xs text-slate-700">Cargos con IVA incluido</p><p className="mt-1 font-bold text-slate-800">{money(payments.chargeTotal)}</p></div></div>{payments.movements.length ? <div className="mt-4 divide-y rounded-lg border">{payments.movements.map(movement => <div className="flex items-center justify-between gap-3 p-3 text-sm" key={movement.id || `${movement.label}-${movement.occurredAt}`}><div><p className="font-medium">{movement.label}</p><p className="text-xs text-muted-foreground">{movement.occurredAt ? new Date(movement.occurredAt).toLocaleString("es-ES") : movement.serviceDate || "Sin fecha"}</p></div><p className={movement.kind === "payment" ? "font-semibold text-emerald-700" : "font-semibold text-slate-800"}>{movement.kind === "payment" ? "Pago" : "Cargo"} · {money(Math.abs(movement.amount))}</p></div>)}</div> : <p className="mt-4 text-sm text-muted-foreground">Cloudbeds no ha devuelto movimientos para esta reserva.</p>}</> : <p className="mt-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{detail.data?.paymentWarning || "No se han podido cargar los movimientos de pago."}</p>}
           </section>
           <section className="rounded-xl border p-4"><p className="flex items-center gap-2 font-semibold"><StickyNote className="h-4 w-4 text-amber-600" />Notas de la reserva</p><p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{reservation.reservationNotes || "Sin notas importadas."}</p></section>
         </div>}
       </DialogContent>
     </Dialog>
+
+    <Dialog open={Boolean(paymentEditor)} onOpenChange={open => { if (!open) setPaymentEditor(null); }}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Registrar pago</DialogTitle><DialogDescription>Se registrará un pago ya recibido en el folio de Cloudbeds. No se procesan tarjetas ni se almacenan datos de pago.</DialogDescription></DialogHeader>
+        {paymentEditor && <div className="space-y-4"><div className="rounded-lg bg-muted/50 p-3 text-sm"><p className="font-semibold">{reservation?.guestName || "Reserva"}</p><p className="mt-1 text-muted-foreground">Saldo pendiente: {money(reservation?.amountPending)}</p></div><div className="space-y-2"><label htmlFor="payment-method" className="text-sm font-medium">Método de pago</label><select id="payment-method" value={paymentEditor.type} disabled={paymentMethods.isLoading || !paymentMethods.data?.length} onChange={event => { const method = paymentMethods.data?.find(item => item.value === event.target.value); setPaymentEditor(current => current ? { ...current, type: event.target.value, label: method?.label || "" } : current); }} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><option value="">{paymentMethods.isLoading ? "Cargando métodos de Cloudbeds…" : paymentMethods.data?.length ? "Selecciona un método" : "No hay métodos disponibles"}</option>{paymentMethods.data?.map(method => <option key={method.value} value={method.value}>{method.label}</option>)}</select>{paymentMethods.error && <p className="text-xs text-rose-700">{paymentMethods.error.message}</p>}</div><div className="space-y-2"><label htmlFor="payment-amount" className="text-sm font-medium">Importe recibido (€)</label><Input id="payment-amount" type="number" min="0.01" step="0.01" inputMode="decimal" value={paymentEditor.amount} onChange={event => setPaymentEditor(current => current ? { ...current, amount: event.target.value } : current)} /></div><div className="space-y-2"><label htmlFor="payment-description" className="text-sm font-medium">Referencia o nota <span className="text-muted-foreground">(opcional)</span></label><textarea id="payment-description" value={paymentEditor.description} onChange={event => setPaymentEditor(current => current ? { ...current, description: event.target.value } : current)} className="flex min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" placeholder="Ej. efectivo recibido en recepción" /></div><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={paymentEditor.isDeposit} onChange={event => setPaymentEditor(current => current ? { ...current, isDeposit: event.target.checked } : current)} />Registrar como depósito</label></div>}
+        <DialogFooter><Button variant="outline" onClick={() => setPaymentEditor(null)}>Cancelar</Button><Button onClick={preparePayment} disabled={paymentMethods.isLoading || !paymentMethods.data?.length}>Revisar pago</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <Dialog open={statusEditor !== null} onOpenChange={open => { if (!open) setStatusEditor(null); }}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Cambiar estado de reserva</DialogTitle><DialogDescription>El nuevo estado se enviará directamente a Cloudbeds. La reserva local se actualizará después de la confirmación.</DialogDescription></DialogHeader>
+        <div className="space-y-2"><label htmlFor="reservation-status" className="text-sm font-medium">Nuevo estado</label><select id="reservation-status" value={statusEditor || "confirmed"} onChange={event => setStatusEditor(event.target.value as CloudbedsStatus)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{statusOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>
+        <DialogFooter><Button variant="outline" onClick={() => setStatusEditor(null)}>Cancelar</Button><Button onClick={prepareStatus}>Revisar cambio</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <AlertDialog open={Boolean(pendingPayment)} onOpenChange={open => { if (!open) setPendingPayment(null); }}>
+      <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Confirmar pago en Cloudbeds</AlertDialogTitle><AlertDialogDescription>Este registro se añadirá al folio de la reserva en Cloudbeds. Revisa los datos antes de continuar.</AlertDialogDescription></AlertDialogHeader>{pendingPayment && <div className="rounded-lg border bg-muted/40 p-4 text-sm"><p><strong>Reserva:</strong> {reservation?.guestName || "Sin nombre"}</p><p><strong>Método:</strong> {pendingPayment.label}</p><p><strong>Importe:</strong> {money(pendingPayment.amountNumber)}</p><p><strong>Tipo:</strong> {pendingPayment.isDeposit ? "Depósito" : "Pago"}</p>{pendingPayment.description && <p><strong>Nota:</strong> {pendingPayment.description}</p>}</div>}<AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction disabled={recordPayment.isPending} onClick={() => selectedId !== null && pendingPayment && recordPayment.mutate({ id: selectedId, type: pendingPayment.type, amount: pendingPayment.amountNumber, description: pendingPayment.description || undefined, isDeposit: pendingPayment.isDeposit })}>{recordPayment.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}Registrar en Cloudbeds</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+    </AlertDialog>
+
+    <AlertDialog open={Boolean(pendingStatus)} onOpenChange={open => { if (!open) setPendingStatus(null); }}>
+      <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Confirmar cambio de estado</AlertDialogTitle><AlertDialogDescription>Este cambio modificará el estado de la reserva en Cloudbeds.</AlertDialogDescription></AlertDialogHeader>{pendingStatus && <div className="rounded-lg border bg-muted/40 p-4 text-sm"><p><strong>Reserva:</strong> {reservation?.guestName || "Sin nombre"}</p><p><strong>Estado actual:</strong> {reservationStatus(reservation?.reservationStatus)}</p><p><strong>Nuevo estado:</strong> {pendingStatus.label}</p></div>}<AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction disabled={updateStatus.isPending} onClick={() => selectedId !== null && pendingStatus && updateStatus.mutate({ id: selectedId, status: pendingStatus.status })}>{updateStatus.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}Actualizar en Cloudbeds</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+    </AlertDialog>
   </div>;
 }

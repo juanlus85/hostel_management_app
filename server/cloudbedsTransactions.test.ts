@@ -51,6 +51,17 @@ describe("aggregateCloudbedsPaymentsByOperationalDay", () => {
     ]));
   });
 
+  it("une el cargo de alojamiento y su IVA en una única línea", () => {
+    const summary = summarizeCloudbedsReservationTransactions([
+      { id: "room-1", internalCode: "4100", amount: "100", description: "Alojamiento habitación", serviceDate: "2026-10-11" },
+      { id: "tax-1", internalCode: "4200", amount: "10", description: "IVA alojamiento", serviceDate: "2026-10-11" },
+    ]);
+    expect(summary.chargeTotal).toBe(110);
+    expect(summary.movements).toEqual([
+      expect.objectContaining({ id: "room-1", amount: 110, label: "Alojamiento (IVA incluido)" }),
+    ]);
+  });
+
   it("consulta solo los movimientos de la reserva seleccionada", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ transactions: [{ id: "pay-1", internalCode: "9300", amount: "-50" }], nextPageToken: null }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);

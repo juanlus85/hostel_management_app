@@ -62,6 +62,12 @@ import {
   getNextMadridCalendarDates,
   type CloudbedsReservationFieldDiagnostics,
 } from "./cloudbedsUpcomingReservations";
+import {
+  fetchCloudbedsPaymentMethods,
+  fetchCloudbedsReservationSnapshot,
+  recordCloudbedsReservationPayment,
+  updateCloudbedsReservationStatus,
+} from "./cloudbedsReservationActions";
 import { fetchCloudbedsAvailability, updateCloudbedsRate } from "./cloudbedsAvailability";
 import type { ExternalUpcomingReservation } from "../drizzle/schema";
 import {
@@ -4393,6 +4399,92 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
               payments: null,
               paymentWarning: error instanceof Error ? error.message : "No se han podido consultar los movimientos de esta reserva.",
             };
+          }
+        }),
+      getCloudbedsPaymentMethods: protectedProcedure.query(async () => {
+        const apiKey = process.env.CLOUDBEDS_API_KEY;
+        const propertyId = process.env.CLOUDBEDS_PROPERTY_ID;
+        if (!apiKey || !propertyId) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: "Configura CLOUDBEDS_API_KEY y CLOUDBEDS_PROPERTY_ID para consultar los métodos de pago.",
+          });
+        }
+        try {
+          return await fetchCloudbedsPaymentMethods(apiKey, propertyId);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "No se han podido consultar los métodos de pago de Cloudbeds.";
+          throw new TRPCError({ code: "BAD_GATEWAY", message });
+        }
+      }),
+      recordCloudbedsReservationPayment: adminProcedure
+        .input(z.object({
+          id: z.number(),
+          type: z.string().trim().min(1).max(100),
+          amount: z.number().positive().max(100000),
+          description: z.string().trim().max(500).optional(),
+          isDeposit: z.boolean().default(false),
+        }))
+        .mutation(async ({ input }) => {
+          const reservation = await db.getExternalUpcomingReservationById(input.id);
+          if (!reservation) throw new TRPCError({ code: "NOT_FOUND", message: "No se encontró la reserva importada" });
+          const apiKey = process.env.CLOUDBEDS_API_KEY;
+          const propertyId = process.env.CLOUDBEDS_PROPERTY_ID;
+          if (!apiKey || !propertyId) {
+            throw new TRPCError({
+              code: "PRECONDITION_FAILED",
+              message: "Configura CLOUDBEDS_API_KEY y CLOUDBEDS_PROPERTY_ID para registrar pagos.",
+            });
+          }
+          try {
+            await recordCloudbedsReservationPayment({
+              apiKey,
+              propertyId,
+              reservationId: reservation.sourceReservationId,
+              type: input.type,
+              amount: input.amount,
+              description: input.description,
+              isDeposit: input.isDeposit,
+            });
+            let syncWarning: string | null = null;
+            try {
+              const snapshot = await fetchCloudbedsReservationSnapshot(apiKey, propertyId, reservation.sourceReservationId);
+              await db.updateExternalUpcomingReservationCloudbeds(reservation.id, {
+                reservationStatus: snapshot.reservationStatus ?? reservation.reservationStatus,
+                ...(snapshot.amountPending !== null ? { amountPending: snapshot.amountPending } : {}),
+              });
+            } catch {
+              syncWarning = "El pago se registró en Cloudbeds, pero no se pudo refrescar el saldo local. Actualiza las reservas para comprobarlo.";
+            }
+            return { success: true, syncWarning };
+          } catch (error) {
+            const message = error instanceof Error ? error.message : "No se pudo registrar el pago en Cloudbeds.";
+            throw new TRPCError({ code: "BAD_GATEWAY", message });
+          }
+        }),
+      updateCloudbedsUpcomingReservationStatus: protectedProcedure
+        .input(z.object({
+          id: z.number(),
+          status: z.enum(["confirmed", "not_confirmed", "canceled", "checked_in", "checked_out", "no_show"]),
+        }))
+        .mutation(async ({ input }) => {
+          const reservation = await db.getExternalUpcomingReservationById(input.id);
+          if (!reservation) throw new TRPCError({ code: "NOT_FOUND", message: "No se encontró la reserva importada" });
+          const apiKey = process.env.CLOUDBEDS_API_KEY;
+          const propertyId = process.env.CLOUDBEDS_PROPERTY_ID;
+          if (!apiKey || !propertyId) {
+            throw new TRPCError({
+              code: "PRECONDITION_FAILED",
+              message: "Configura CLOUDBEDS_API_KEY y CLOUDBEDS_PROPERTY_ID para cambiar el estado.",
+            });
+          }
+          try {
+            await updateCloudbedsReservationStatus({ apiKey, propertyId, reservationId: reservation.sourceReservationId, status: input.status });
+            await db.updateExternalUpcomingReservationCloudbeds(reservation.id, { reservationStatus: input.status });
+            return { success: true, status: input.status };
+          } catch (error) {
+            const message = error instanceof Error ? error.message : "No se pudo cambiar el estado en Cloudbeds.";
+            throw new TRPCError({ code: "BAD_GATEWAY", message });
           }
         }),
       setCloudbedsUpcomingReservationReviewed: adminProcedure

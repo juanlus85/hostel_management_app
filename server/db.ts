@@ -3328,6 +3328,21 @@ export async function getExternalUpcomingReservationById(
   return reservation || null;
 }
 
+export async function updateExternalUpcomingReservationCloudbeds(
+  id: number,
+  changes: { reservationStatus?: string | null; amountPending?: string }
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Base de datos no disponible");
+  await db
+    .update(externalUpcomingReservations)
+    .set({
+      ...changes,
+      importedAt: new Date(),
+    })
+    .where(eq(externalUpcomingReservations.id, id));
+}
+
 export async function upsertExternalUpcomingReservations(
   records: InsertExternalUpcomingReservation[]
 ) {

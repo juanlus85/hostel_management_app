@@ -1773,3 +1773,7 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Crear una subpestaña de reservas para ayer, hoy y los tres próximos días, con estado y detalle ampliado de huésped y pagos desde Cloudbeds.
 - [x] Rediseñar Reservas como agenda por tipo de habitación y días, con tarjetas coloreadas y avisos de saldo pendiente y notas.
 - [x] Ajustar los colores de reservas por estado de estancia y pago, y distribuir solapamientos en carriles con entrada y salida visibles.
+- [x] Mostrar precios de Disponibilidad Hostel con IVA incluido y consolidar alojamiento e IVA en los cargos de una reserva.
+- [x] Ajustar las filas de la agenda de reservas para evitar solapamientos incluso en asignaciones pendientes.
+- [x] Permitir registrar un pago de reserva mediante un formulario confirmado y enviarlo a Cloudbeds.
+- [x] Permitir cambiar el estado de una reserva mediante confirmación y actualización en Cloudbeds.

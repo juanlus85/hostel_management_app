@@ -85,8 +85,23 @@ function isReservationPayment(transaction: CloudbedsTransaction) {
   return /^9\d{3}(?:A|V)?\b/.test(transactionCode(transaction)) || /\bPAYMENT\b|\bPAGO\b|\bDEPOSIT\b|\bDEPÓSITO\b/.test(combined);
 }
 
+function isTaxCharge(transaction: CloudbedsTransaction) {
+  const combined = [
+    transaction.description,
+    transaction.notes,
+    transaction.transactionCategory,
+    transaction.transaction_category,
+    transaction.category,
+  ].filter((value): value is string => typeof value === "string").join(" ").toUpperCase();
+  return /\bIVA\b|\bVAT\b|\bTAX\b|IMPUESTO/.test(combined);
+}
+
+function isAccommodationCharge(movement: CloudbedsReservationMovement) {
+  return /HABITACI[ÓO]N|ALOJAMIENTO|ACCOMMODATION|ROOM|LODGING|STAY/i.test(movement.label);
+}
+
 export function summarizeCloudbedsReservationTransactions(transactions: CloudbedsTransaction[]): CloudbedsReservationPayments {
-  const movements = transactions.map(transaction => {
+  const movementsWithTaxFlag = transactions.map(transaction => {
     const kind = isReservationPayment(transaction) ? "payment" as const : "charge" as const;
     const label = textField(
       transaction.paymentMethodName,
@@ -108,8 +123,31 @@ export function summarizeCloudbedsReservationTransactions(transactions: Cloudbed
       serviceDate: textField(transaction.serviceDate, transaction.service_date),
       kind,
       label,
+      isTaxCharge: kind === "charge" && isTaxCharge(transaction),
     };
   });
+  const movements: CloudbedsReservationMovement[] = [];
+  const deferredTaxes: Array<CloudbedsReservationMovement & { isTaxCharge: boolean }> = [];
+  for (const movement of movementsWithTaxFlag) {
+    if (movement.isTaxCharge) {
+      deferredTaxes.push(movement);
+      continue;
+    }
+    movements.push(movement);
+  }
+  for (const tax of deferredTaxes) {
+    const target = [...movements].reverse().find(movement =>
+      movement.kind === "charge" &&
+      isAccommodationCharge(movement) &&
+      movement.serviceDate === tax.serviceDate
+    );
+    if (target) {
+      target.amount += tax.amount;
+      target.label = "Alojamiento (IVA incluido)";
+    } else {
+      movements.push({ ...tax, label: `${tax.label} (sin cargo de habitación asociado)` });
+    }
+  }
   return movements.reduce<CloudbedsReservationPayments>((summary, movement) => {
     if (movement.kind === "payment") {
       if (movement.amount < 0) summary.paidTotal += -movement.amount;
