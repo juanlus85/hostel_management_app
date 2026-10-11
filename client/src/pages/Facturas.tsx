@@ -15,6 +15,7 @@ import { findCommercialSupplier } from "@shared/supplierMatching";
 import { getSupportedInvoiceContentType } from "@shared/invoiceUpload";
 import { ISSUER_BUSINESSES, issuedInvoiceFileName, type IssuerBusiness } from "@shared/issuedInvoiceFileName";
 import { amountMatchesSearch } from "@shared/amountSearch";
+import { filterIssuedInvoices } from "@shared/issuedInvoiceFilters";
 import { useLocation } from "wouter";
 
 // Helper para formatear fecha como YYYY-MM-DD sin conversión de timezone
@@ -473,6 +474,11 @@ export default function Facturas() {
       amountMatchesSearch(inv.totalAmount, searchTerm)
     );
   }, [invoices, searchTerm]);
+
+  const filteredIssuedInvoices = useMemo(
+    () => filterIssuedInvoices(issuedInvoices || [], invoiceScope, searchTerm),
+    [issuedInvoices, invoiceScope, searchTerm]
+  );
 
   const businessLabel = selectedBusiness === "hostel" ? "Hostel" : selectedBusiness === "tienda" ? "Tienda" : "Ambos";
   const BusinessIcon = selectedBusiness === "hostel" ? Building2 : Store;
@@ -1047,9 +1053,9 @@ export default function Facturas() {
       <Card>
         <CardHeader>
           <CardTitle>Facturas emitidas</CardTitle>
-          <CardDescription>Documentos emitidos por The Spot Central Hostel, Sweet & Salty u Organizus.</CardDescription>
+          <CardDescription>Documentos emitidos filtrados por período, negocio y búsqueda actual.</CardDescription>
         </CardHeader>
-        <CardContent>{issuedInvoices?.length ? <div className="divide-y rounded-md border">{issuedInvoices.map((invoice) => <div key={invoice.id} className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-medium">{invoice.issuerBusiness} · {invoice.invoiceNumber || "Sin número"}</p><p className="text-sm text-muted-foreground">{invoice.invoiceDate}{invoice.recipient ? ` · ${invoice.recipient}` : ""}{invoice.totalAmount ? ` · €${invoice.totalAmount}` : ""}</p></div><div className="flex gap-2">{invoice.imageUrl && <Button size="sm" variant="outline" asChild><a href={invoice.imageUrl} target="_blank" rel="noreferrer"><FileDown className="mr-1 h-4 w-4" />Archivo</a></Button>}<Button size="sm" variant="outline" className="text-destructive" onClick={() => { if (confirm("¿Eliminar esta factura emitida?")) deleteIssuedInvoice.mutate({ id: invoice.id }); }}><Trash2 className="h-4 w-4" /></Button></div></div>)}</div> : <p className="py-3 text-sm text-muted-foreground">No hay facturas emitidas en el periodo seleccionado.</p>}</CardContent>
+        <CardContent>{filteredIssuedInvoices.length ? <div className="divide-y rounded-md border">{filteredIssuedInvoices.map((invoice) => <div key={invoice.id} className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-medium">{invoice.issuerBusiness} · {invoice.invoiceNumber || "Sin número"}</p><p className="text-sm text-muted-foreground">{invoice.invoiceDate}{invoice.recipient ? ` · ${invoice.recipient}` : ""}{invoice.totalAmount ? ` · €${invoice.totalAmount}` : ""}</p></div><div className="flex gap-2">{invoice.imageUrl && <Button size="sm" variant="outline" asChild><a href={invoice.imageUrl} target="_blank" rel="noreferrer"><FileDown className="mr-1 h-4 w-4" />Archivo</a></Button>}<Button size="sm" variant="outline" className="text-destructive" onClick={() => { if (confirm("¿Eliminar esta factura emitida?")) deleteIssuedInvoice.mutate({ id: invoice.id }); }}><Trash2 className="h-4 w-4" /></Button></div></div>)}</div> : <p className="py-3 text-sm text-muted-foreground">No hay facturas emitidas que coincidan con los filtros actuales.</p>}</CardContent>
       </Card>
 
       {/* Edit Dialog */}

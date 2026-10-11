@@ -47,7 +47,8 @@ import {
   ShoppingCart,
   ClipboardList,
   Sandwich,
-  DatabaseZap
+  DatabaseZap,
+  BedDouble
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState, createContext, useContext } from "react";
 import { useLocation } from "wouter";
@@ -94,6 +95,7 @@ const adminMenuItems = [
   { icon: Users, label: "Empleados", path: "/empleados" },
   { icon: Truck, label: "Proveedores", path: "/proveedores" },
   { icon: FileArchive, label: "Cierre Trimestral", path: "/cierre-trimestral" },
+  { icon: BedDouble, label: "Disponibilidad Hostel", path: "/disponibilidad-hostel" },
   { icon: DatabaseZap, label: "Importaciones externas", path: "/importaciones-externas" },
   { icon: Settings, label: "Configuracion", path: "/configuracion" },
 ];

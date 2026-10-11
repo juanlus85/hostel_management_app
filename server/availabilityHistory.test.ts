@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildAvailabilityHistory } from "../client/src/lib/availabilityHistory";
+import { buildAvailabilityHistory, latestAvailabilityWeekStart, weekOffsetFromCurrent } from "../client/src/lib/availabilityHistory";
 
 describe("buildAvailabilityHistory", () => {
   it("sums all availability sources only within the same exact weekly date", () => {
@@ -23,5 +23,15 @@ describe("buildAvailabilityHistory", () => {
 
     expect(yearsWithData).toEqual([2025, 2026]);
     expect(allWeeks.map((week) => week.key)).toEqual(["2025-12-29", "2026-01-05", "2026-01-12"]);
+  });
+
+  it("finds the latest recorded week and calculates its relative weekly offset", () => {
+    const latest = latestAvailabilityWeekStart([
+      { weekStart: "2026-02-02", amount: "10" },
+      { weekStart: "2026-02-16", amount: "20" },
+      { weekStart: "2026-02-09", amount: "30" },
+    ]);
+    expect(latest).toBe("2026-02-16");
+    expect(weekOffsetFromCurrent(latest!, new Date(2026, 1, 23))).toBe(-1);
   });
 });

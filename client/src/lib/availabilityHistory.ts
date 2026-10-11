@@ -42,3 +42,29 @@ export function buildAvailabilityHistory(records: AvailabilityRecord[] = []) {
     yearsWithData: Array.from(yearsWithData).sort((a, b) => a - b),
   };
 }
+
+function mondayKey(date: Date) {
+  const value = new Date(date);
+  const weekday = value.getDay();
+  value.setDate(value.getDate() + (weekday === 0 ? -6 : 1 - weekday));
+  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
+}
+
+function localDateFromKey(key: string) {
+  const [year, month, day] = key.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+export function latestAvailabilityWeekStart(records: AvailabilityRecord[] = []) {
+  const keys = records
+    .map(record => String(record.weekStart).slice(0, 10))
+    .filter(key => /^\d{4}-\d{2}-\d{2}$/.test(key));
+  return keys.sort((a, b) => b.localeCompare(a))[0] || null;
+}
+
+export function weekOffsetFromCurrent(latestWeekStart: string, now = new Date()) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(latestWeekStart)) return 0;
+  const currentMonday = localDateFromKey(mondayKey(now));
+  const targetMonday = localDateFromKey(latestWeekStart);
+  return Math.round((targetMonday.getTime() - currentMonday.getTime()) / (7 * 24 * 60 * 60 * 1000));
+}

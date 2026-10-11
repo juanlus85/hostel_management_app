@@ -11,7 +11,7 @@ import { Loader2, TrendingUp, Wallet, CreditCard, AlertTriangle, Package, CheckS
 import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Bar, Line } from 'react-chartjs-2';
-import { buildAvailabilityHistory } from '@/lib/availabilityHistory';
+import { buildAvailabilityHistory, latestAvailabilityWeekStart, weekOffsetFromCurrent } from '@/lib/availabilityHistory';
 import { buildWeeklyCashHistory, getRollingWeeklyCashRange } from "@shared/weeklyCashHistory";
 import {
   Chart as ChartJS,
@@ -145,6 +145,7 @@ export default function ResumenSemanal() {
   const isAdmin = user?.role === "admin";
   
   const [selectedWeek, setSelectedWeek] = useState(0); // 0 = esta semana, -1 = semana pasada, etc.
+  const [activeTab, setActiveTab] = useState("resumen");
   const [cashHistoryWeeks, setCashHistoryWeeks] = useState<4 | 12 | 52>(4);
 
   // Calcular rango de fechas de la semana seleccionada
@@ -282,6 +283,12 @@ export default function ResumenSemanal() {
   );
 
   const { data: allAvailabilityRecords } = trpc.weeklySummary.getAllAvailabilityRecords.useQuery();
+
+  const openAvailability = () => {
+    const latestWeek = latestAvailabilityWeekStart(allAvailabilityRecords || []);
+    if (latestWeek) setSelectedWeek(weekOffsetFromCurrent(latestWeek));
+    setActiveTab("disponibilidad");
+  };
 
   const upsertCashEnvelopeMutation = trpc.weeklySummary.upsertCashEnvelope.useMutation({
     onSuccess: () => {
@@ -493,11 +500,11 @@ export default function ResumenSemanal() {
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : (
-        <Tabs key={weekRange.startDate} defaultValue="resumen" className="space-y-4">
+        <Tabs key={weekRange.startDate} value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
             <TabsTrigger value="resumen">Resumen</TabsTrigger>
             <TabsTrigger value="sobres">Efectivo en Sobres</TabsTrigger>
-            <TabsTrigger value="disponibilidad">Disponibilidad</TabsTrigger>
+            <TabsTrigger value="disponibilidad" onClick={openAvailability}>Disponibilidad</TabsTrigger>
             <TabsTrigger value="historico">Histórico</TabsTrigger>
           </TabsList>
 

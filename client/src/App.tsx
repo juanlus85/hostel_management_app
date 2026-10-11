@@ -30,6 +30,7 @@ import CheckinAnticipadoPublico from "./pages/CheckinAnticipadoPublico";
 import CheckinOnlinePublico from "./pages/CheckinOnlinePublico";
 import TabletRegistroPolicia from "./pages/TabletRegistroPolicia";
 import ImportacionesExternas from "./pages/ImportacionesExternas";
+import DisponibilidadHostel from "./pages/DisponibilidadHostel";
 
 function Router() {
   return (
@@ -64,6 +65,7 @@ function Router() {
         <Route path="/checkin" component={CheckinUnificado} />
         <Route path="/tablet-registro" component={TabletRegistroPolicia} />
         <Route path="/importaciones-externas" component={ImportacionesExternas} />
+        <Route path="/disponibilidad-hostel" component={DisponibilidadHostel} />
         <Route path="/404" component={NotFound} />
         <Route component={NotFound} />
             </Switch>

@@ -61,6 +61,7 @@ import {
   getNextMadridCalendarDates,
   type CloudbedsReservationFieldDiagnostics,
 } from "./cloudbedsUpcomingReservations";
+import { fetchCloudbedsAvailability } from "./cloudbedsAvailability";
 import type { ExternalUpcomingReservation } from "../drizzle/schema";
 import {
   buildConfiguredReservationWelcome,
@@ -1081,6 +1082,43 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         await db.deleteIssuedInvoice(input.id);
         return { success: true };
+      }),
+  }),
+
+  cloudbedsAvailability: router({
+    importWeek: adminProcedure
+      .input(z.object({ startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) }))
+      .mutation(async ({ input }) => {
+        const apiKey = process.env.CLOUDBEDS_API_KEY;
+        const propertyId = process.env.CLOUDBEDS_PROPERTY_ID;
+        if (!apiKey || !propertyId) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: "Configura CLOUDBEDS_API_KEY y CLOUDBEDS_PROPERTY_ID para consultar disponibilidad.",
+          });
+        }
+        const start = new Date(`${input.startDate}T00:00:00`);
+        const displayEnd = new Date(start);
+        displayEnd.setDate(start.getDate() + 6);
+        const apiEnd = new Date(start);
+        apiEnd.setDate(start.getDate() + 7);
+        const toDateString = (date: Date) => [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
+        const displayEndDate = toDateString(displayEnd);
+        try {
+          const availability = await fetchCloudbedsAvailability(apiKey, propertyId, input.startDate, toDateString(apiEnd));
+          return {
+            ...availability,
+            endDate: displayEndDate,
+            roomTypes: availability.roomTypes.map(room => ({
+              ...room,
+              days: room.days.filter(day => day.date <= displayEndDate),
+            })).filter(room => room.days.length),
+            fetchedAt: new Date().toISOString(),
+          };
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "No se pudo consultar la disponibilidad de Cloudbeds.";
+          throw new TRPCError({ code: "BAD_GATEWAY", message });
+        }
       }),
   }),
 

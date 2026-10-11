@@ -1752,3 +1752,8 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Corregir la migración pendiente de `otros_gastos.type` para que el Resumen Semanal y los filtros de gastos no queden bloqueados en instalaciones existentes.
 - [x] Reubicar las acciones rápidas como tercera fila del Dashboard, antes de Gastos por proveedor.
 - [x] Abrir el formulario de nueva factura recibida directamente desde Acciones rápidas del Dashboard, sin navegar a Facturas.
+
+## Mejoras de disponibilidad y facturas
+- [x] Al abrir Disponibilidad desde Resumen Semanal, saltar a la última semana con datos registrados.
+- [x] Aplicar los filtros de Facturas también a las facturas emitidas.
+- [x] Crear Disponibilidad Hostel: importar manualmente desde Cloudbeds disponibilidad y precios por tipo de habitación para la semana próxima.
