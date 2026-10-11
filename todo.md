@@ -1783,3 +1783,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Resaltar con un marco amarillo toda la columna del día actual en la agenda de reservas.
 - [x] Corregir la consulta de métodos de pago activos de Cloudbeds en el formulario Añadir pago.
 - [x] Aceptar métodos de pago Cloudbeds devueltos como mapa de claves además de listas y estructuras anidadas.
+- [x] Corregir la carga y agregación de cargos de Cloudbeds para reservas de varias noches en el detalle de Reservas.

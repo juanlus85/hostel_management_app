@@ -24,7 +24,15 @@ export type CloudbedsTransaction = {
   created_at?: string;
 };
 
-type CloudbedsResponse = { transactions?: CloudbedsTransaction[]; content?: CloudbedsTransaction[]; nextPageToken?: string | null; message?: string; errors?: unknown };
+type CloudbedsResponse = {
+  transactions?: CloudbedsTransaction[];
+  content?: CloudbedsTransaction[];
+  nextPageToken?: string | null;
+  next_page_token?: string | null;
+  pagination?: { nextPageToken?: string | null; next_page_token?: string | null };
+  message?: string;
+  errors?: unknown;
+};
 
 export type CloudbedsReservationMovement = {
   id: string | null;
@@ -74,6 +82,10 @@ function textField(...values: unknown[]) {
 function numericAmount(value: unknown) {
   const amount = Number(String(value ?? "").replace(",", "."));
   return Number.isFinite(amount) ? amount : 0;
+}
+
+function getNextPageToken(payload: CloudbedsResponse) {
+  return payload.nextPageToken ?? payload.next_page_token ?? payload.pagination?.nextPageToken ?? payload.pagination?.next_page_token ?? null;
 }
 
 function isReservationPayment(transaction: CloudbedsTransaction) {
@@ -236,8 +248,9 @@ export async function fetchCloudbedsTransactions(apiKey: string, propertyId: str
     if (!response.ok) throw new Error(payload.message || `Cloudbeds respondió HTTP ${response.status}. Verifica la API key, el Property ID y el permiso read:payment.`);
     // Accounting API devuelve `transactions`; `content` se acepta solo como compatibilidad defensiva.
     all.push(...(payload.transactions || payload.content || []));
-    if (!payload.nextPageToken) break;
-    pageToken = payload.nextPageToken;
+    const token = getNextPageToken(payload);
+    if (!token) break;
+    pageToken = token;
   }
   return all;
 }
@@ -255,8 +268,10 @@ export async function fetchCloudbedsReservationPayments(apiKey: string, property
           { field: "source_kind", operator: "equals", value: "RESERVATION" },
         ] },
         pageToken,
-        pageSize: 100,
-        orderBy: [{ field: "transaction_datetime", direction: "asc" }],
+        // Cloudbeds documenta `limit` y `sort`; los campos pageSize/orderBy se
+        // ignoraban en algunas cuentas y podían dejar fuera noches posteriores.
+        limit: 1100,
+        sort: [{ field: "service_date", direction: "asc" }],
       }),
     });
     const body = await response.text();
@@ -265,8 +280,9 @@ export async function fetchCloudbedsReservationPayments(apiKey: string, property
     catch { throw new Error(`Cloudbeds devolvió una respuesta no JSON (HTTP ${response.status}). Revisa el permiso read:payment.`); }
     if (!response.ok) throw new Error(payload.message || `Cloudbeds respondió HTTP ${response.status}. Verifica el permiso read:payment.`);
     all.push(...(payload.transactions || payload.content || []));
-    if (!payload.nextPageToken) break;
-    pageToken = payload.nextPageToken;
+    const token = getNextPageToken(payload);
+    if (!token) break;
+    pageToken = token;
   }
   return summarizeCloudbedsReservationTransactions(all);
 }

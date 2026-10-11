@@ -43,3 +43,12 @@ Cloudbeds documenta `getPaymentMethods` en `GET /api/v1.3/getPaymentMethods`. La
 Fuente:
 
 - https://developers.cloudbeds.com/reference/get_getpaymentmethods-2
+
+## Cargos de estancias de varias noches
+
+La Accounting API de Cloudbeds pagina los resultados de `POST /accounting/v1.0/transactions`. El parámetro oficial es `limit` (hasta 1100) y el cursor se recibe en `nextPageToken`; la consulta debe repetir el cursor hasta que sea nulo. La aplicación utiliza el par `source_identifier` + `source_kind=RESERVATION`, que Cloudbeds documenta como el filtro requerido para recuperar todos los movimientos de una reserva. El lector también acepta la variante `next_page_token` observada en algunas respuestas.
+
+Fuentes:
+
+- https://developers.cloudbeds.com/docs/accounting
+- https://github.com/cloudbeds/openapi-specs/blob/main/src/accounting-v1.0-openapi.json

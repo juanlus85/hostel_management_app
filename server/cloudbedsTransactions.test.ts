@@ -62,17 +62,32 @@ describe("aggregateCloudbedsPaymentsByOperationalDay", () => {
     ]);
   });
 
-  it("consulta solo los movimientos de la reserva seleccionada", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ transactions: [{ id: "pay-1", internalCode: "9300", amount: "-50" }], nextPageToken: null }), { status: 200 }));
+  it("consulta todos los movimientos de la reserva seleccionada, incluso varias noches paginadas", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ transactions: [
+        { id: "night-1", internalCode: "4100", amount: "50", description: "Alojamiento", serviceDate: "2026-10-11" },
+      ], next_page_token: "page-2" }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ transactions: [
+        { id: "night-2", internalCode: "4100", amount: "60", description: "Alojamiento", serviceDate: "2026-10-12" },
+        { id: "pay-1", internalCode: "9300", amount: "-50" },
+      ], nextPageToken: null }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
     const result = await fetchCloudbedsReservationPayments("cbat_private", "204754", "R-234");
     expect(result.paidTotal).toBe(50);
+    expect(result.chargeTotal).toBe(110);
+    expect(result.movements).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: "night-1", amount: 50 }),
+      expect.objectContaining({ id: "night-2", amount: 60 }),
+    ]));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({
       filters: { and: [
         { field: "source_identifier", operator: "equals", value: "R-234" },
         { field: "source_kind", operator: "equals", value: "RESERVATION" },
       ] },
-      pageSize: 100,
+      limit: 1100,
+      sort: [{ field: "service_date", direction: "asc" }],
     });
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toMatchObject({ pageToken: "page-2" });
   });
 });
