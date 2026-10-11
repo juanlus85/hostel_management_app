@@ -1576,9 +1576,9 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 
 ## Error Columnas Duplicadas SQL - EN PROGRESO
 
-- [ ] Error al ejecutar script: "Nombre duplicado de columna 'documentExpiry'"
-- [ ] Algunas columnas ya existen en producción
-- [ ] Crear script SQL con verificación IF NOT EXISTS para cada columna
+- [x] Error al ejecutar script: "Nombre duplicado de columna 'documentExpiry'"
+- [x] Algunas columnas ya existen en producción
+- [x] Crear script SQL con verificación IF NOT EXISTS para cada columna
 - [ ] Probar script corregido
 
 
