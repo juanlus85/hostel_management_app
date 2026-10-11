@@ -10,6 +10,7 @@ import {
   or,
   like,
   notInArray,
+  isNull,
 } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { aggregateDailyCashSales } from "../shared/dailyCashSales";
@@ -3301,8 +3302,11 @@ export async function getExternalUpcomingReservations(
     .from(externalUpcomingReservations)
     .where(
       and(
-        gte(externalUpcomingReservations.checkInDate, dateFrom),
-        lte(externalUpcomingReservations.checkInDate, dateTo)
+        lte(externalUpcomingReservations.checkInDate, dateTo),
+        or(
+          gte(externalUpcomingReservations.checkOutDate, dateFrom),
+          isNull(externalUpcomingReservations.checkOutDate)
+        )
       )
     )
     .orderBy(

@@ -1771,3 +1771,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 
 ## Reservas en Disponibilidad Hostel
 - [x] Crear una subpestaña de reservas para ayer, hoy y los tres próximos días, con estado y detalle ampliado de huésped y pagos desde Cloudbeds.
+- [x] Rediseñar Reservas como agenda por tipo de habitación y días, con tarjetas coloreadas y avisos de saldo pendiente y notas.
