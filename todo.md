@@ -1790,3 +1790,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Ampliar la ventana de Reservas a 15 días, manteniendo ayer y hoy como primeros días visibles.
 - [x] Mostrar en el detalle de reserva el importe total previsto de Cloudbeds y separar los cargos ya contabilizados de las noches futuras.
 - [x] Ampliar la importación manual de reservas Cloudbeds a la misma ventana de 15 días que muestra la agenda.
+- [x] Mostrar la agenda de reservas debajo del calendario de disponibilidad y asegurar que su consulta lea reservas de los 15 días completos.

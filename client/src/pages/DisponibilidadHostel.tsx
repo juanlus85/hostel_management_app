@@ -47,7 +47,6 @@ export default function DisponibilidadHostel() {
   const [rateEditor, setRateEditor] = useState<RateEditor | null>(null);
   const [newRate, setNewRate] = useState("");
   const [pendingRateChange, setPendingRateChange] = useState<PendingRateChange | null>(null);
-  const [section, setSection] = useState<"availability" | "reservations">("availability");
 
   const importWeekMutation = trpc.cloudbedsAvailability.importWeek.useMutation({
     onSuccess: result => {
@@ -122,17 +121,11 @@ export default function DisponibilidadHostel() {
         </div>
       </div>
 
-      <div className="flex w-full gap-2 rounded-xl border bg-muted/40 p-1 sm:w-fit" role="tablist" aria-label="Secciones de disponibilidad">
-        <Button variant={section === "availability" ? "default" : "ghost"} size="sm" onClick={() => setSection("availability")}><BedDouble className="mr-2 h-4 w-4" />Disponibilidad y precios</Button>
-        <Button variant={section === "reservations" ? "default" : "ghost"} size="sm" onClick={() => setSection("reservations")}><CalendarDays className="mr-2 h-4 w-4" />Reservas</Button>
-      </div>
+      {!availability && !importWeekMutation.isPending && <Card className="border-dashed"><CardContent className="flex flex-col items-center justify-center py-16 text-center"><div className="mb-4 rounded-full bg-sky-100 p-4 text-sky-700"><BedDouble className="h-8 w-8" /></div><h2 className="font-semibold">No se ha podido cargar el calendario</h2><p className="mt-2 max-w-lg text-sm text-muted-foreground">Pulsa “Actualizar disponibilidad” para repetir la consulta manual a Cloudbeds.</p></CardContent></Card>}
 
-      {section === "availability" ? <>
-        {!availability && !importWeekMutation.isPending && <Card className="border-dashed"><CardContent className="flex flex-col items-center justify-center py-16 text-center"><div className="mb-4 rounded-full bg-sky-100 p-4 text-sky-700"><BedDouble className="h-8 w-8" /></div><h2 className="font-semibold">No se ha podido cargar el calendario</h2><p className="mt-2 max-w-lg text-sm text-muted-foreground">Pulsa “Actualizar disponibilidad” para repetir la consulta manual a Cloudbeds.</p></CardContent></Card>}
+      {importWeekMutation.isPending && !availability && <Card><CardContent className="flex items-center justify-center gap-3 py-16 text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin text-sky-700" />Consultando disponibilidad y precios en Cloudbeds…</CardContent></Card>}
 
-        {importWeekMutation.isPending && !availability && <Card><CardContent className="flex items-center justify-center gap-3 py-16 text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin text-sky-700" />Consultando disponibilidad y precios en Cloudbeds…</CardContent></Card>}
-
-        {availability && <Card className="overflow-hidden">
+      {availability && <Card className="overflow-hidden">
         <CardHeader><CardTitle className="flex items-center gap-2"><BedDouble className="h-5 w-5 text-sky-700" />Calendario de precios y disponibilidad</CardTitle><CardDescription>Precio final con IVA incluido. Verde: buena disponibilidad · ámbar: pocas unidades · rojo: agotado. Las habitaciones siguen el orden operativo del Hostel.</CardDescription></CardHeader>
         <CardContent className="p-0">
           <div className="isolate overflow-x-auto overscroll-x-contain">
@@ -145,7 +138,8 @@ export default function DisponibilidadHostel() {
           </div>
         </CardContent>
         </Card>}
-      </> : <AvailabilityReservations />}
+
+      <AvailabilityReservations />
 
       <Dialog open={Boolean(rateEditor)} onOpenChange={open => { if (!open) setRateEditor(null); }}>
         <DialogContent>

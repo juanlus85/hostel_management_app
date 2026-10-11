@@ -1,0 +1,16 @@
+import { describe, expect, it } from "vitest";
+import { getReservationWindowRange } from "../client/src/lib/reservationWindow";
+
+describe("getReservationWindowRange", () => {
+  it("consulta desde ayer hasta trece días después de hoy", () => {
+    expect(getReservationWindowRange("2026-10-11")).toEqual({
+      dates: [
+        "2026-10-10", "2026-10-11", "2026-10-12", "2026-10-13", "2026-10-14",
+        "2026-10-15", "2026-10-16", "2026-10-17", "2026-10-18", "2026-10-19",
+        "2026-10-20", "2026-10-21", "2026-10-22", "2026-10-23", "2026-10-24",
+      ],
+      dateFrom: "2026-10-10",
+      dateTo: "2026-10-24",
+    });
+  });
+});

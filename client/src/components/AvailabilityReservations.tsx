@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { getReservationWindowRange } from "@/lib/reservationWindow";
 
 const madridDate = (date: Date) => date.toLocaleDateString("en-CA", { timeZone: "Europe/Madrid" });
 const agendaToneClasses: Record<ReservationAgendaTone, string> = {
@@ -34,13 +35,7 @@ type PendingPayment = PaymentDraft & { amountNumber: number };
 type PendingStatus = { status: CloudbedsStatus; label: string };
 
 function getReservationWindow() {
-  const today = new Date(`${madridDate(new Date())}T12:00:00`);
-  const dates = Array.from({ length: 15 }, (_, index) => {
-    const date = new Date(today);
-    date.setDate(date.getDate() + index - 1);
-    return madridDate(date);
-  });
-  return { dates, dateFrom: dates[0], dateTo: dates[4] };
+  return getReservationWindowRange(madridDate(new Date()));
 }
 
 function formatDate(date: string) {
