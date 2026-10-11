@@ -16,9 +16,12 @@ import {
   ArrowDownRight,
   CalendarDays,
   Download,
-  FileText
+  FileText,
+  ReceiptText,
+  CalendarRange
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useLocation } from "wouter";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { aggregateSupplierExpenses } from "@shared/supplierExpenses";
@@ -43,7 +46,8 @@ function formatDateLocal(date: Date): string {
 
 export default function Home() {
   const { user } = useAuth();
-  const { selectedBusiness } = useBusinessContext();
+  const { selectedBusiness, setSelectedBusiness } = useBusinessContext();
+  const [, setLocation] = useLocation();
   const [period, setPeriod] = useState<PeriodType>("month");
   const [customStartDate, setCustomStartDate] = useState("");
   const [customEndDate, setCustomEndDate] = useState("");
@@ -216,6 +220,10 @@ export default function Home() {
       doc.save(`DASHBOARD_${dateRange.startDate}_${dateRange.endDate}.pdf`);
       toast.success("Informe PDF exportado correctamente");
     } catch { toast.error("No se pudo exportar el informe PDF"); }
+  };
+  const openQuickAction = (path: string, business?: "hostel" | "tienda" | "all") => {
+    if (business) setSelectedBusiness(business);
+    setLocation(path);
   };
 
   return (
@@ -419,46 +427,30 @@ export default function Home() {
       <Card>
         <CardHeader>
           <CardTitle>Acciones rápidas</CardTitle>
-          <CardDescription>Accesos directos a las funciones más usadas</CardDescription>
+          <CardDescription>Operaciones frecuentes listas para abrir, con el negocio correcto ya seleccionado.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <a href="/caja" className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
-              <div className="p-2 rounded-md bg-primary/10">
-                <Wallet className="h-4 w-4 text-primary" />
-              </div>
-              <div>
-                <p className="font-medium text-sm">Abrir caja</p>
-                <p className="text-xs text-muted-foreground">Iniciar turno</p>
-              </div>
-            </a>
-            <a href="/facturas" className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
-              <div className="p-2 rounded-md bg-secondary/10">
-                <TrendingDown className="h-4 w-4 text-secondary" />
-              </div>
-              <div>
-                <p className="font-medium text-sm">Registrar gasto</p>
-                <p className="text-xs text-muted-foreground">Añadir factura</p>
-              </div>
-            </a>
-            <a href="/incidencias" className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
-              <div className="p-2 rounded-md bg-orange-500/10">
-                <AlertTriangle className="h-4 w-4 text-orange-500" />
-              </div>
-              <div>
-                <p className="font-medium text-sm">Nueva incidencia</p>
-                <p className="text-xs text-muted-foreground">Reportar problema</p>
-              </div>
-            </a>
-            <a href="/inventario" className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
-              <div className="p-2 rounded-md bg-green-500/10">
-                <Package className="h-4 w-4 text-green-500" />
-              </div>
-              <div>
-                <p className="font-medium text-sm">Ver inventario</p>
-                <p className="text-xs text-muted-foreground">Stock actual</p>
-              </div>
-            </a>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            <button onClick={() => openQuickAction("/caja", "hostel")} className="group flex items-center gap-3 rounded-xl border border-cyan-100 bg-cyan-50/30 p-3 text-left transition-all hover:-translate-y-0.5 hover:border-cyan-300 hover:bg-cyan-50 hover:shadow-sm">
+              <div className="rounded-lg bg-cyan-100 p-2.5"><Building2 className="h-4 w-4 text-cyan-700" /></div>
+              <div><p className="text-sm font-semibold">Hacer caja Hostel</p><p className="text-xs text-muted-foreground">Día actual</p></div>
+            </button>
+            <button onClick={() => openQuickAction("/caja", "tienda")} className="group flex items-center gap-3 rounded-xl border border-violet-100 bg-violet-50/30 p-3 text-left transition-all hover:-translate-y-0.5 hover:border-violet-300 hover:bg-violet-50 hover:shadow-sm">
+              <div className="rounded-lg bg-violet-100 p-2.5"><Store className="h-4 w-4 text-violet-700" /></div>
+              <div><p className="text-sm font-semibold">Hacer caja Tienda</p><p className="text-xs text-muted-foreground">Día actual</p></div>
+            </button>
+            <button onClick={() => openQuickAction("/facturas?new=received", "all")} className="group flex items-center gap-3 rounded-xl border border-emerald-100 bg-emerald-50/30 p-3 text-left transition-all hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-sm">
+              <div className="rounded-lg bg-emerald-100 p-2.5"><ReceiptText className="h-4 w-4 text-emerald-700" /></div>
+              <div><p className="text-sm font-semibold">Factura recibida</p><p className="text-xs text-muted-foreground">Registrar gasto</p></div>
+            </button>
+            <button onClick={() => openQuickAction("/facturas?new=issued", "all")} className="group flex items-center gap-3 rounded-xl border border-amber-100 bg-amber-50/30 p-3 text-left transition-all hover:-translate-y-0.5 hover:border-amber-300 hover:bg-amber-50 hover:shadow-sm">
+              <div className="rounded-lg bg-amber-100 p-2.5"><FileText className="h-4 w-4 text-amber-700" /></div>
+              <div><p className="text-sm font-semibold">Factura emitida</p><p className="text-xs text-muted-foreground">Crear y adjuntar</p></div>
+            </button>
+            <button onClick={() => openQuickAction("/turnos?view=week")} className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-left transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-100 hover:shadow-sm">
+              <div className="rounded-lg bg-slate-200 p-2.5"><CalendarRange className="h-4 w-4 text-slate-700" /></div>
+              <div><p className="text-sm font-semibold">Turnos semanales</p><p className="text-xs text-muted-foreground">Ver planificación</p></div>
+            </button>
           </div>
         </CardContent>
       </Card>

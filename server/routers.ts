@@ -384,6 +384,9 @@ export const appRouter = router({
       .query(async ({ input }) => {
         return db.getBusinessByCode(input.code);
       }),
+    ensureOrganizus: protectedProcedure.mutation(async () => {
+      return db.ensureOrganizusBusiness();
+    }),
     initialize: adminProcedure.mutation(async () => {
       await db.initializeBusinesses();
       return { success: true };

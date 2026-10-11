@@ -1744,3 +1744,9 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Exportar un PDF mensual con las horas de todos los trabajadores.
 - [x] Exportar un PDF de un trabajador concreto para uno o varios meses seleccionados.
 - [x] Desglosar en el PDF las horas de cada mes y el total acumulado cuando se seleccionen varios meses.
+
+## Mejoras de dashboard, resumen y filtros
+- [x] Añadir al Resumen Semanal gráficas separadas de cajas Hostel y Tienda para 4, 12 o 52 semanas, con desglose de las cuatro semanas recientes.
+- [x] Mejorar el Dashboard principal con accesos rápidos que preseleccionen negocio y abran caja, facturas recibidas, facturas emitidas o turnos semanales.
+- [x] Incorporar Organizus como negocio visible para facturas recibidas y ampliar búsquedas y filtros de facturas y otros gastos/ingresos.
+- [x] Corregir la migración pendiente de `otros_gastos.type` para que el Resumen Semanal y los filtros de gastos no queden bloqueados en instalaciones existentes.

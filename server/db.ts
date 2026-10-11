@@ -269,6 +269,27 @@ export async function createBusiness(data: InsertBusiness) {
   await db.insert(businesses).values(data);
 }
 
+export async function ensureOrganizusBusiness() {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const existing = await getBusinessByCode("organizus");
+  if (existing) return existing;
+
+  await db
+    .insert(businesses)
+    .values({
+      name: "Organizus",
+      code: "organizus",
+      description: "Organizus",
+    })
+    .onDuplicateKeyUpdate({
+      set: { name: "Organizus", description: "Organizus", isActive: true },
+    });
+
+  return getBusinessByCode("organizus");
+}
+
 export async function initializeBusinesses() {
   const db = await getDb();
   if (!db) return;
@@ -283,6 +304,8 @@ export async function initializeBusinesses() {
       { name: "Sweet & Salty", code: "tienda", description: "Tienda/Café" },
     ]);
   }
+
+  await ensureOrganizusBusiness();
 }
 
 // ==================== SHIFTS ====================

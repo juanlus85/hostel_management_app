@@ -7,15 +7,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Loader2, TrendingUp, Wallet, CreditCard, AlertTriangle, Package, CheckSquare, Calendar, ChevronLeft, ChevronRight, Plus, Pencil, Trash2, BarChart3 } from "lucide-react";
+import { Loader2, TrendingUp, Wallet, CreditCard, AlertTriangle, Package, CheckSquare, Calendar, ChevronLeft, ChevronRight, Plus, Pencil, Trash2, BarChart3, Store, Building2, Landmark, CircleDollarSign } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { Line } from 'react-chartjs-2';
+import { Bar, Line } from 'react-chartjs-2';
 import { buildAvailabilityHistory } from '@/lib/availabilityHistory';
+import { buildWeeklyCashHistory, getRollingWeeklyCashRange } from "@shared/weeklyCashHistory";
 import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
+  BarElement,
   PointElement,
   LineElement,
   Title,
@@ -28,6 +30,7 @@ import {
 ChartJS.register(
   CategoryScale,
   LinearScale,
+  BarElement,
   PointElement,
   LineElement,
   Title,
@@ -142,6 +145,7 @@ export default function ResumenSemanal() {
   const isAdmin = user?.role === "admin";
   
   const [selectedWeek, setSelectedWeek] = useState(0); // 0 = esta semana, -1 = semana pasada, etc.
+  const [cashHistoryWeeks, setCashHistoryWeeks] = useState<4 | 12 | 52>(4);
 
   // Calcular rango de fechas de la semana seleccionada
   const weekRange = useMemo(() => {
@@ -180,6 +184,36 @@ export default function ResumenSemanal() {
   const { data: businesses } = trpc.businesses.list.useQuery();
   const hostelId = businesses?.find(b => b.code === "hostel")?.id;
   const tiendaId = businesses?.find(b => b.code === "tienda")?.id;
+  const cashHistoryRange = useMemo(() => getRollingWeeklyCashRange(cashHistoryWeeks), [cashHistoryWeeks]);
+
+  const { data: hostelCashClosings } = trpc.cashClosings.list.useQuery(
+    { businessId: hostelId!, startDate: cashHistoryRange.startDate, endDate: cashHistoryRange.endDate },
+    { enabled: !!hostelId && !!cashHistoryRange.startDate && !!cashHistoryRange.endDate }
+  );
+  const { data: tiendaCashClosings } = trpc.cashClosings.list.useQuery(
+    { businessId: tiendaId!, startDate: cashHistoryRange.startDate, endDate: cashHistoryRange.endDate },
+    { enabled: !!tiendaId && !!cashHistoryRange.startDate && !!cashHistoryRange.endDate }
+  );
+
+  const hostelWeeklyCash = useMemo(
+    () => buildWeeklyCashHistory(hostelCashClosings || [], cashHistoryWeeks),
+    [hostelCashClosings, cashHistoryWeeks]
+  );
+  const tiendaWeeklyCash = useMemo(
+    () => buildWeeklyCashHistory(tiendaCashClosings || [], cashHistoryWeeks),
+    [tiendaCashClosings, cashHistoryWeeks]
+  );
+  const recentWeeklyCash = useMemo(() => {
+    const hostelByWeek = new Map(hostelWeeklyCash.map((week) => [week.weekStart, week]));
+    return tiendaWeeklyCash.slice(-4).map((tiendaWeek) => ({
+      weekStart: tiendaWeek.weekStart,
+      label: tiendaWeek.label,
+      tooltipLabel: tiendaWeek.tooltipLabel,
+      hostel: hostelByWeek.get(tiendaWeek.weekStart)?.total || 0,
+      tienda: tiendaWeek.total,
+      isCurrent: tiendaWeek.isCurrent,
+    }));
+  }, [hostelWeeklyCash, tiendaWeeklyCash]);
 
   // Obtener stats de ambos negocios
   const { data: hostelStats, isLoading: hostelLoading } = trpc.dashboard.stats.useQuery(
@@ -374,6 +408,55 @@ export default function ResumenSemanal() {
     }
   };
 
+  const weeklyCashChartOptions = useMemo<ChartOptions<"bar">>(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: "index", intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          title: (context) => context[0]?.raw && typeof context[0].raw === "number"
+            ? context[0]?.label || ""
+            : context[0]?.label || "",
+          label: (context) => `Caja cerrada: €${Number(context.parsed.y || 0).toFixed(2)}`,
+        },
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: { callback: (value) => `€${value}` },
+        grid: { color: "rgba(148, 163, 184, 0.14)" },
+      },
+      x: {
+        grid: { display: false },
+        ticks: { autoSkip: true, maxTicksLimit: 12, maxRotation: 0 },
+      },
+    },
+  }), []);
+
+  const hostelCashChartData = useMemo(() => ({
+    labels: hostelWeeklyCash.map((week) => week.label),
+    datasets: [{
+      label: "Caja Hostel",
+      data: hostelWeeklyCash.map((week) => week.total),
+      backgroundColor: hostelWeeklyCash.map((week) => week.isCurrent ? "#0891b2" : "rgba(8, 145, 178, 0.58)"),
+      borderRadius: 7,
+      borderSkipped: false,
+    }],
+  }), [hostelWeeklyCash]);
+  const tiendaCashChartData = useMemo(() => ({
+    labels: tiendaWeeklyCash.map((week) => week.label),
+    datasets: [{
+      label: "Caja Tienda",
+      data: tiendaWeeklyCash.map((week) => week.total),
+      backgroundColor: tiendaWeeklyCash.map((week) => week.isCurrent ? "#7c3aed" : "rgba(124, 58, 237, 0.58)"),
+      borderRadius: 7,
+      borderSkipped: false,
+    }],
+  }), [tiendaWeeklyCash]);
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
@@ -420,6 +503,69 @@ export default function ResumenSemanal() {
 
           {/* TAB 1: RESUMEN GENERAL */}
           <TabsContent value="resumen" className="space-y-4">
+            <Card className="overflow-hidden border-slate-200 shadow-sm">
+              <CardHeader className="border-b bg-gradient-to-r from-slate-50 via-cyan-50/70 to-violet-50/70 pb-4">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2 text-xl">
+                      <Landmark className="h-5 w-5 text-primary" />
+                      Cajas semanales
+                    </CardTitle>
+                    <p className="mt-1 text-sm text-muted-foreground">Ventas Z cerradas, con Hostel y Tienda siempre separados.</p>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 rounded-lg bg-background/80 p-1 shadow-sm ring-1 ring-slate-200">
+                    {([4, 12, 52] as const).map((weeks) => (
+                      <Button
+                        key={weeks}
+                        size="sm"
+                        variant={cashHistoryWeeks === weeks ? "default" : "ghost"}
+                        onClick={() => setCashHistoryWeeks(weeks)}
+                        className="px-3"
+                      >
+                        {weeks === 52 ? "1 año" : `${weeks} sem.`}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6 pt-6">
+                <div className="grid gap-5 xl:grid-cols-2">
+                  <div className="rounded-xl border border-cyan-100 bg-cyan-50/30 p-4">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2"><Building2 className="h-4 w-4 text-cyan-700" /><h3 className="font-semibold text-cyan-950">The Spot Hostel</h3></div>
+                      <span className="rounded-full bg-cyan-100 px-2.5 py-1 text-xs font-medium text-cyan-800">Caja Hostel</span>
+                    </div>
+                    <div className="h-64"><Bar data={hostelCashChartData} options={weeklyCashChartOptions} /></div>
+                  </div>
+                  <div className="rounded-xl border border-violet-100 bg-violet-50/30 p-4">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2"><Store className="h-4 w-4 text-violet-700" /><h3 className="font-semibold text-violet-950">Sweet & Salty</h3></div>
+                      <span className="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-medium text-violet-800">Caja Tienda</span>
+                    </div>
+                    <div className="h-64"><Bar data={tiendaCashChartData} options={weeklyCashChartOptions} /></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mb-3 flex items-center gap-2"><CircleDollarSign className="h-5 w-5 text-primary" /><h3 className="font-semibold">Últimas 4 semanas, incluida la actual</h3></div>
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    {recentWeeklyCash.map((week) => (
+                      <div key={week.weekStart} className={`rounded-xl border p-4 ${week.isCurrent ? "border-primary/30 bg-primary/5 shadow-sm" : "bg-background"}`}>
+                        <div className="mb-3 flex items-start justify-between gap-2">
+                          <div><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Semana</p><p className="text-sm font-semibold">{week.label}</p></div>
+                          {week.isCurrent && <span className="rounded-full bg-primary px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-primary-foreground">Actual</span>}
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between gap-2 text-sm"><span className="flex items-center gap-1.5 text-muted-foreground"><Building2 className="h-3.5 w-3.5 text-cyan-700" />Hostel</span><span className="font-semibold text-cyan-800">€{week.hostel.toFixed(2)}</span></div>
+                          <div className="flex items-center justify-between gap-2 text-sm"><span className="flex items-center gap-1.5 text-muted-foreground"><Store className="h-3.5 w-3.5 text-violet-700" />Tienda</span><span className="font-semibold text-violet-800">€{week.tienda.toFixed(2)}</span></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Dinero retirado */}
             <div className="grid gap-4 md:grid-cols-2">
               <Card>

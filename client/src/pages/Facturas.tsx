@@ -9,11 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { trpc } from "@/lib/trpc";
 import { Receipt, Plus, Camera, Upload, Check, AlertCircle, Search, Building2, Store, Loader2, Sparkles, Edit2, FileText, CheckCircle2, Trash2, FileDown, UploadCloud } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useMemo, useState, useRef, type DragEvent } from "react";
+import { useEffect, useMemo, useState, useRef, type DragEvent } from "react";
 import { toast } from "sonner";
 import { findCommercialSupplier } from "@shared/supplierMatching";
 import { getSupportedInvoiceContentType } from "@shared/invoiceUpload";
 import { ISSUER_BUSINESSES, issuedInvoiceFileName, type IssuerBusiness } from "@shared/issuedInvoiceFileName";
+import { amountMatchesSearch } from "@shared/amountSearch";
+import { useLocation } from "wouter";
 
 // Helper para formatear fecha como YYYY-MM-DD sin conversión de timezone
 function formatDateLocal(date: Date): string {
@@ -39,6 +41,7 @@ type PaymentMethodValue = typeof PAYMENT_METHODS[number]["value"];
 
 export default function Facturas() {
   const { selectedBusiness } = useBusinessContext();
+  const [location] = useLocation();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
@@ -53,6 +56,7 @@ export default function Facturas() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [invoiceBusinessFilter, setInvoiceBusinessFilter] = useState<"context" | "all" | "hostel" | "tienda" | "organizus">("context");
   const [isProcessingOCR, setIsProcessingOCR] = useState(false);
   const [isDraggingInvoice, setIsDraggingInvoice] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -89,8 +93,25 @@ export default function Facturas() {
   const yearOptions = availableYears || [currentDate.getFullYear()];
 
   const { data: businesses } = trpc.businesses.list.useQuery();
+  const ensureOrganizus = trpc.businesses.ensureOrganizus.useMutation({
+    onSuccess: () => utils.businesses.list.invalidate(),
+  });
   const hostelBusiness = businesses?.find(b => b.code === "hostel");
   const tiendaBusiness = businesses?.find(b => b.code === "tienda");
+  const organizusBusiness = businesses?.find(b => b.code === "organizus");
+  const invoiceScope = invoiceBusinessFilter === "context" ? selectedBusiness : invoiceBusinessFilter;
+
+  useEffect(() => {
+    if (businesses && !organizusBusiness && !ensureOrganizus.isPending) {
+      ensureOrganizus.mutate();
+    }
+  }, [businesses, organizusBusiness, ensureOrganizus]);
+
+  useEffect(() => {
+    const quickAction = new URLSearchParams(location.split("?")[1] || "").get("new");
+    if (quickAction === "received") setIsDialogOpen(true);
+    if (quickAction === "issued") setIsIssuedDialogOpen(true);
+  }, [location]);
   
   const currentBusinessId = useMemo(() => {
     if (selectedBusiness === "all") return hostelBusiness?.id;
@@ -133,25 +154,31 @@ export default function Facturas() {
   // Queries - obtener datos según selección global
   const { data: invoicesHostel } = trpc.invoices.list.useQuery(
     { businessId: hostelBusiness?.id!, startDate: dateRange.startDate, endDate: dateRange.endDate },
-    { enabled: !!hostelBusiness && (selectedBusiness === "hostel" || selectedBusiness === "all") }
+    { enabled: !!hostelBusiness && (invoiceScope === "hostel" || invoiceScope === "all") }
   );
   
   const { data: invoicesTienda } = trpc.invoices.list.useQuery(
     { businessId: tiendaBusiness?.id!, startDate: dateRange.startDate, endDate: dateRange.endDate },
-    { enabled: !!tiendaBusiness && (selectedBusiness === "tienda" || selectedBusiness === "all") }
+    { enabled: !!tiendaBusiness && (invoiceScope === "tienda" || invoiceScope === "all") }
+  );
+  const { data: invoicesOrganizus } = trpc.invoices.list.useQuery(
+    { businessId: organizusBusiness?.id!, startDate: dateRange.startDate, endDate: dateRange.endDate },
+    { enabled: !!organizusBusiness && (invoiceScope === "organizus" || invoiceScope === "all") }
   );
   const { data: issuedInvoices } = trpc.issuedInvoices.list.useQuery({ startDate: dateRange.startDate, endDate: dateRange.endDate });
   
   // Combinar datos según selección
-  const invoices = selectedBusiness === "all" 
-    ? [...(invoicesHostel || []), ...(invoicesTienda || [])].sort((a, b) => {
+  const invoices = invoiceScope === "all"
+    ? [...(invoicesHostel || []), ...(invoicesTienda || []), ...(invoicesOrganizus || [])].sort((a, b) => {
         const dateA = a.invoiceDate ? new Date(a.invoiceDate).getTime() : 0;
         const dateB = b.invoiceDate ? new Date(b.invoiceDate).getTime() : 0;
         return dateB - dateA;
       })
-    : selectedBusiness === "hostel" 
+    : invoiceScope === "hostel"
     ? invoicesHostel || []
-    : invoicesTienda || [];
+    : invoiceScope === "tienda"
+    ? invoicesTienda || []
+    : invoicesOrganizus || [];
   
   const isLoading = !businesses;
 
@@ -303,11 +330,12 @@ export default function Facturas() {
   };
 
   const handleCreateInvoice = async () => {
-    // Si estamos en modo "Ambos", usar el negocio seleccionado en el formulario
-    const businessIdToUse = selectedBusiness === "all" ? formBusinessId : currentBusinessId;
+    // En vista global u Organizus, elegir explícitamente el negocio de la factura.
+    const requiresBusinessChoice = selectedBusiness === "all" || invoiceScope === "organizus";
+    const businessIdToUse = requiresBusinessChoice ? formBusinessId : currentBusinessId;
     
     if (!businessIdToUse) {
-      toast.error(selectedBusiness === "all" 
+      toast.error(requiresBusinessChoice
         ? "Selecciona para qué negocio es esta factura" 
         : "Selecciona un negocio");
       return;
@@ -441,7 +469,8 @@ export default function Facturas() {
     const term = searchTerm.toLowerCase();
     return invoices.filter(inv => 
       inv.supplier?.toLowerCase().includes(term) ||
-      inv.invoiceNumber?.toLowerCase().includes(term)
+      inv.invoiceNumber?.toLowerCase().includes(term) ||
+      amountMatchesSearch(inv.totalAmount, searchTerm)
     );
   }, [invoices, searchTerm]);
 
@@ -491,8 +520,8 @@ export default function Facturas() {
               <DialogDescription>Añade una nueva factura o ticket de gasto</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-              {/* Selector de negocio (solo cuando está en modo "Ambos") */}
-              {selectedBusiness === "all" && (
+              {/* Selector de negocio cuando se está viendo el conjunto de facturas o Organizus */}
+              {(selectedBusiness === "all" || invoiceScope === "organizus") && (
                 <div className="grid gap-2 p-4 border-2 border-primary/30 rounded-lg bg-primary/5">
                   <Label className="text-base font-semibold">Negocio *</Label>
                   <Select 
@@ -515,6 +544,14 @@ export default function Facturas() {
                           Tienda
                         </div>
                       </SelectItem>
+                      {organizusBusiness && (
+                        <SelectItem value={organizusBusiness.id.toString()}>
+                          <div className="flex items-center gap-2">
+                            <Building2 className="h-4 w-4" />
+                            Organizus
+                          </div>
+                        </SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
@@ -752,6 +789,18 @@ export default function Facturas() {
 
       {/* Filtros */}
       <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex-1">
+          <Select value={invoiceBusinessFilter} onValueChange={(value) => setInvoiceBusinessFilter(value as typeof invoiceBusinessFilter)}>
+            <SelectTrigger><SelectValue placeholder="Negocio" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="context">Según selector general</SelectItem>
+              <SelectItem value="all">Todos los negocios</SelectItem>
+              <SelectItem value="hostel">The Spot Hostel</SelectItem>
+              <SelectItem value="tienda">Sweet &amp; Salty</SelectItem>
+              {organizusBusiness && <SelectItem value="organizus">Organizus</SelectItem>}
+            </SelectContent>
+          </Select>
+        </div>
         {/* Selector de tipo de filtro */}
         <div className="flex-1">
           <Select value={filterType} onValueChange={setFilterType}>
@@ -815,7 +864,7 @@ export default function Facturas() {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input 
-          placeholder="Buscar por proveedor o número de factura..." 
+          placeholder="Buscar por proveedor, nº de factura o importe..."
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
           className="pl-10"

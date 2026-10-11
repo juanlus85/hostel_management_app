@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Loader2, Plus, Trash2, Edit, DollarSign, Calendar } from "lucide-react";
+import { Loader2, Plus, Trash2, Edit, DollarSign, Calendar, Search } from "lucide-react";
+import { amountMatchesSearch } from "@shared/amountSearch";
 
 // Helper para formatear fecha como YYYY-MM-DD sin conversión de timezone
 function formatDateLocal(date: Date): string {
@@ -30,6 +31,10 @@ export default function OtrosGastos() {
   const [filterType, setFilterType] = useState<string>("last30"); // "last30" | "last3months" | "all" | "by_month"
   const [selectedMonth, setSelectedMonth] = useState<string>("0"); // 0-11
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear().toString());
+  const [searchTerm, setSearchTerm] = useState("");
+  const [movementTypeFilter, setMovementTypeFilter] = useState<"all" | "gasto" | "ingreso">("all");
+  const [categoryFilter, setCategoryFilter] = useState<"all" | "sueldos" | "seguridad_social" | "impuestos" | "seguros" | "otros">("all");
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>("all");
   const { data: businesses } = trpc.businesses.list.useQuery();
   const [currentBusinessId, setCurrentBusinessId] = useState<number | null>(null);
 
@@ -122,6 +127,21 @@ export default function OtrosGastos() {
     : selectedBusiness === "hostel" 
     ? gastosHostel || []
     : gastosTienda || [];
+
+  const filteredGastos = useMemo(() => {
+    const normalizedTerm = searchTerm.trim().toLowerCase();
+    return gastos.filter((gasto) => {
+      const matchesText = !normalizedTerm ||
+        gasto.concepto.toLowerCase().includes(normalizedTerm) ||
+        gasto.notas?.toLowerCase().includes(normalizedTerm) ||
+        gasto.categoriaOtros?.toLowerCase().includes(normalizedTerm) ||
+        amountMatchesSearch(gasto.importe, searchTerm);
+      const matchesType = movementTypeFilter === "all" || gasto.type === movementTypeFilter;
+      const matchesCategory = categoryFilter === "all" || gasto.categoria === categoryFilter;
+      const matchesPayment = paymentMethodFilter === "all" || gasto.paymentMethod === paymentMethodFilter;
+      return matchesText && matchesType && matchesCategory && matchesPayment;
+    });
+  }, [gastos, searchTerm, movementTypeFilter, categoryFilter, paymentMethodFilter]);
   
   const isLoading = !businesses;
 
@@ -498,6 +518,33 @@ export default function OtrosGastos() {
               </>
             )}
           </div>
+          <div className="mt-4 grid gap-4 border-t pt-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="sm:col-span-2 xl:col-span-1">
+              <Label>Buscar</Label>
+              <div className="relative mt-2"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Concepto, notas o importe" className="pl-9" /></div>
+            </div>
+            <div>
+              <Label>Tipo</Label>
+              <Select value={movementTypeFilter} onValueChange={(value) => setMovementTypeFilter(value as typeof movementTypeFilter)}>
+                <SelectTrigger className="mt-2"><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="all">Gastos e ingresos</SelectItem><SelectItem value="gasto">Solo gastos</SelectItem><SelectItem value="ingreso">Solo ingresos</SelectItem></SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Categoría</Label>
+              <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as typeof categoryFilter)}>
+                <SelectTrigger className="mt-2"><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="all">Todas las categorías</SelectItem><SelectItem value="sueldos">Sueldos</SelectItem><SelectItem value="seguridad_social">Seguridad Social</SelectItem><SelectItem value="impuestos">Impuestos</SelectItem><SelectItem value="seguros">Seguros</SelectItem><SelectItem value="otros">Otros</SelectItem></SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Forma de pago</Label>
+              <Select value={paymentMethodFilter} onValueChange={setPaymentMethodFilter}>
+                <SelectTrigger className="mt-2"><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="all">Todas las formas</SelectItem><SelectItem value="cuenta_bancaria">Cuenta bancaria</SelectItem><SelectItem value="tarjeta">Tarjeta</SelectItem><SelectItem value="ana">Ana</SelectItem><SelectItem value="juanlu">Juanlu</SelectItem><SelectItem value="caja_hostel">Caja Hostel</SelectItem><SelectItem value="caja_tienda">Caja Tienda</SelectItem><SelectItem value="caja_fuerte">Caja fuerte</SelectItem><SelectItem value="caja_fuerte_cambio">Caja fuerte cambio</SelectItem><SelectItem value="otros">Otros</SelectItem></SelectContent>
+              </Select>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -506,7 +553,7 @@ export default function OtrosGastos() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <DollarSign className="h-5 w-5" />
-            Gastos Registrados
+            Gastos e ingresos registrados <span className="text-sm font-normal text-muted-foreground">({filteredGastos.length})</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -514,11 +561,11 @@ export default function OtrosGastos() {
             <div className="flex justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
-          ) : !gastos || gastos.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">No hay gastos registrados</p>
+          ) : !filteredGastos.length ? (
+            <p className="text-center text-muted-foreground py-8">No hay registros que coincidan con los filtros seleccionados</p>
           ) : (
             <div className="space-y-2">
-              {gastos.map((gasto) => (
+              {filteredGastos.map((gasto) => (
                 <div key={gasto.id} className="flex flex-col md:flex-row md:items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors">
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center gap-2">
