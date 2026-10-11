@@ -100,6 +100,21 @@ function statusTone(value: string | null | undefined) {
   return "border-sky-200 bg-sky-50 text-sky-800";
 }
 
+function agendaCardGridStyle(card: { startSlot: number; endSlot: number; lane: number }) {
+  const firstColumn = Math.floor(card.startSlot);
+  const endColumn = Math.ceil(card.endSlot);
+  const leftInset = card.startSlot - firstColumn;
+  const rightInset = endColumn - card.endSlot;
+  return {
+    gridColumn: `${firstColumn + 2} / span ${endColumn - firstColumn}`,
+    gridRow: card.lane + 1,
+    marginLeft: leftInset ? "calc(50% + 4px)" : "4px",
+    marginRight: rightInset ? "calc(50% + 4px)" : "4px",
+    marginTop: "4px",
+    marginBottom: "4px",
+  };
+}
+
 export function AvailabilityReservations() {
   const { user } = useAuth();
   const [window] = useState(getReservationWindow);
@@ -215,7 +230,7 @@ export function AvailabilityReservations() {
               {group.rooms.map(room => <div key={room.key} className="grid min-h-[64px] bg-background" style={{ ...gridStyle, gridAutoRows: "minmax(64px, auto)" }}>
                 <div className="sticky left-0 z-20 flex items-center border-r border-b bg-background px-4 shadow-[8px_0_12px_-12px_rgba(15,23,42,0.48)]" style={{ gridColumn: 1, gridRow: `1 / span ${room.laneCount}` }}><p className="text-sm font-medium text-slate-800">{room.label}</p></div>
                 {window.dates.map((date, index) => <div key={date} className="border-b border-r bg-slate-50/35" style={{ gridColumn: index + 2, gridRow: `1 / span ${room.laneCount}` }} />)}
-                {room.cards.map(card => <button key={card.reservation.id} type="button" title={`${card.reservation.guestName || "Huésped sin nombre"} · Entrada ${compactDate(card.reservation.checkInDate)} · Salida ${compactDate(card.reservation.checkOutDate)}`} onClick={() => setSelectedId(card.reservation.id)} className={`relative z-10 m-1 min-w-0 self-center overflow-visible rounded-l-md rounded-r-full border px-3 py-2 text-left shadow-sm transition duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-700 ${agendaToneClasses[card.tone]}`} style={{ gridColumn: `${card.startColumn + 2} / span ${card.span}`, gridRow: card.lane + 1 }}>
+                {room.cards.map(card => <button key={card.reservation.id} type="button" title={`${card.reservation.guestName || "Huésped sin nombre"} · Entrada ${compactDate(card.reservation.checkInDate)} · Salida ${compactDate(card.reservation.checkOutDate)}`} onClick={() => setSelectedId(card.reservation.id)} className={`relative z-10 min-w-0 self-center overflow-visible border px-3 py-2 text-left shadow-sm transition duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-700 ${card.startSlot % 1 ? "rounded-l-none" : "rounded-l-md"} ${card.endSlot % 1 ? "rounded-r-none" : "rounded-r-full"} ${agendaToneClasses[card.tone]}`} style={agendaCardGridStyle(card)}>
                   {card.hasPendingAmount && <span aria-label="Importe pendiente" title="Importe pendiente" className="absolute -top-1.5 left-2 h-3 w-3 rounded-full border-2 border-white bg-red-500 shadow-sm" />}
                   {card.hasNotes && <span aria-label="Tiene notas" title="Tiene notas" className="absolute -top-1.5 left-6 h-3 w-3 rounded-full border-2 border-white bg-amber-400 shadow-sm" />}
                   <span className="block truncate text-sm font-bold leading-tight">{card.reservation.guestName || "Huésped sin nombre"}</span>

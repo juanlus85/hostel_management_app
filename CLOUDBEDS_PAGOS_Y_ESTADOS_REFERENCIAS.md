@@ -24,3 +24,14 @@ La API de disponibilidad devuelve las tarifas publicadas para cada fecha; la int
 - https://developers.cloudbeds.com/reference/put_putreservation-2
 - https://developers.cloudbeds.com/reference/post_postroomcheckin-2
 - https://developers.cloudbeds.com/reference/post_postroomcheckout-2
+
+## Agenda y relevos de habitación
+
+La documentación del Calendario Clásico de Cloudbeds describe el calendario como la vista operativa para asignar habitaciones y gestionar reservas. Su leyenda distingue las barras por estado, con barra verde para huéspedes alojados, azul claro para confirmadas y gris oscuro tras el check-out. Los indicadores de nota y saldo pendiente se muestran sobre la reserva.
+
+La agenda local replica esos límites con medias celdas: una estancia comienza en la mitad final de su fecha de entrada y termina en la primera mitad de la fecha de salida. Por eso, dos reservas consecutivas con salida y entrada el mismo día usan un solo carril y se tocan únicamente en el relevo, sin superponerse.
+
+Fuente adicional:
+
+- https://myfrontdesk.cloudbeds.com/hc/en-us/articles/235146587-Classic-calendar-Everything-you-need-to-know
+- https://myfrontdesk.cloudbeds.com/hc/en-us/articles/18387139910939-Manage-reservations-on-the-Classic-calendar

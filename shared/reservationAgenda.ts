@@ -16,6 +16,8 @@ export type ReservationAgendaCard<T extends ReservationAgendaItem> = {
   reservation: T;
   startColumn: number;
   span: number;
+  startSlot: number;
+  endSlot: number;
   lane: number;
   tone: ReservationAgendaTone;
   hasPendingAmount: boolean;
@@ -85,7 +87,9 @@ export function reservationHasNotes(value: string | null | undefined) {
 }
 
 function roomLabel(reservation: ReservationAgendaItem) {
-  return reservation.roomNumber?.trim() ? `Habitación ${reservation.roomNumber.trim()}` : "Sin habitación asignada";
+  const number = reservation.roomNumber?.trim();
+  if (!number) return "Sin habitación asignada";
+  return `Habitación ${number.replace(/^habitaci[oó]n\s*/i, "")}`;
 }
 
 function visibleSpan(reservation: ReservationAgendaItem, dates: string[]) {
@@ -102,7 +106,16 @@ function visibleSpan(reservation: ReservationAgendaItem, dates: string[]) {
 
   const checkoutIndex = dates.indexOf(checkoutDate);
   const exclusiveEnd = checkoutIndex >= 0 ? checkoutIndex : checkoutDate > dates[dates.length - 1] ? dates.length : startColumn + 1;
-  return { startColumn, span: Math.max(1, exclusiveEnd - startColumn) };
+  const continuesFromEarlierDate = reservation.checkInDate < dates[0];
+  const checkedOut = ["checked_out", "completed"].includes(normalizedStatus(reservation.reservationStatus));
+  const startSlot = hasSeparateCheckout
+    ? (continuesFromEarlierDate ? 0 : startColumn + 0.5)
+    : (checkedOut ? startColumn : startColumn + 0.5);
+  const endSlot = hasSeparateCheckout
+    ? (checkoutIndex >= 0 ? checkoutIndex + 0.5 : dates.length)
+    : Math.min(dates.length, checkedOut ? startColumn + 0.5 : startColumn + 1);
+  if (endSlot <= startSlot) return null;
+  return { startColumn, span: Math.max(1, exclusiveEnd - startColumn), startSlot, endSlot };
 }
 
 export function buildReservationAgenda<T extends ReservationAgendaItem>(reservations: T[], dates: string[]): Array<ReservationAgendaGroup<T>> {
@@ -141,14 +154,14 @@ export function buildReservationAgenda<T extends ReservationAgendaItem>(reservat
         .map(room => {
           const laneEnds: number[] = [];
           const cards = [...room.cards]
-            .sort((left, right) => left.startColumn - right.startColumn || left.reservation.guestName?.localeCompare(right.reservation.guestName || "", "es") || 0)
+            .sort((left, right) => left.startSlot - right.startSlot || left.reservation.guestName?.localeCompare(right.reservation.guestName || "", "es") || 0)
             .map(card => {
-              let lane = laneEnds.findIndex(endColumn => endColumn <= card.startColumn);
+              let lane = laneEnds.findIndex(endSlot => endSlot <= card.startSlot);
               if (lane < 0) {
                 lane = laneEnds.length;
-                laneEnds.push(card.startColumn + card.span);
+                laneEnds.push(card.endSlot);
               } else {
-                laneEnds[lane] = card.startColumn + card.span;
+                laneEnds[lane] = card.endSlot;
               }
               return { ...card, lane };
             });

@@ -91,4 +91,18 @@ describe("buildReservationAgenda", () => {
       { id: 12, lane: 0 },
     ]);
   });
+
+  it("mantiene en el mismo carril el relevo de salida y entrada del mismo día", () => {
+    const agenda = buildReservationAgenda([
+      { id: 20, guestName: "Sale", checkInDate: "2026-10-10", checkOutDate: "2026-10-12", roomType: "Twin", roomNumber: "7", reservationStatus: "checked_out", amountPending: "0", reservationNotes: null },
+      { id: 21, guestName: "Entra", checkInDate: "2026-10-12", checkOutDate: "2026-10-14", roomType: "Twin", roomNumber: "7", reservationStatus: "confirmed", amountPending: "0", reservationNotes: null },
+    ], dates);
+
+    const room = agenda[0].rooms[0];
+    expect(room.laneCount).toBe(1);
+    expect(room.cards.map(card => ({ id: card.reservation.id, lane: card.lane, startSlot: card.startSlot, endSlot: card.endSlot }))).toEqual([
+      { id: 20, lane: 0, startSlot: 0.5, endSlot: 2.5 },
+      { id: 21, lane: 0, startSlot: 2.5, endSlot: 4.5 },
+    ]);
+  });
 });
