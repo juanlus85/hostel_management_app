@@ -195,4 +195,18 @@
   .external-arrivals > :nth-child(1) { order: 1; }
   .external-arrivals > :nth-child(3) { order: 2; }
   .external-arrivals > :nth-child(2) { order: 3; }
+
+  .reservation-agenda-grid {
+    --agenda-label-column: 112px;
+    --agenda-day-column: 72px;
+    --agenda-row-height: 48px;
+  }
+
+  @media (min-width: 640px) {
+    .reservation-agenda-grid {
+      --agenda-label-column: 225px;
+      --agenda-day-column: 142px;
+      --agenda-row-height: 64px;
+    }
+  }
 }

@@ -1785,3 +1785,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Aceptar métodos de pago Cloudbeds devueltos como mapa de claves además de listas y estructuras anidadas.
 - [x] Corregir la carga y agregación de cargos de Cloudbeds para reservas de varias noches en el detalle de Reservas.
 - [x] Conciliar cargos y pagos de reservas multinoches usando los identificadores contables de habitación/subreserva de Cloudbeds y consolidar IVA correctamente.
+- [x] Compactar la agenda de Reservas en móvil para reducir la columna de tipo/habitación y priorizar los días y estancias.

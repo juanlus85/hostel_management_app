@@ -167,7 +167,7 @@ export function AvailabilityReservations() {
   const selected = (reservations.data || []).find(reservation => reservation.id === selectedId) || null;
   const reservation = detail.data?.reservation || selected;
   const payments = detail.data?.payments;
-  const gridStyle = { gridTemplateColumns: `minmax(225px, 1.35fr) repeat(${window.dates.length}, minmax(142px, 1fr))` };
+  const gridStyle = { gridTemplateColumns: `var(--agenda-label-column) repeat(${window.dates.length}, var(--agenda-day-column))` };
   const canRecordPayments = user?.role === "admin";
   const todayIndex = 1;
   const officialPending = Number(String(reservation?.amountPending ?? "0").replace(",", "."));
@@ -216,29 +216,29 @@ export function AvailabilityReservations() {
     {reservations.isLoading ? <Card><CardContent className="flex items-center justify-center gap-3 py-16 text-sm text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin text-sky-700" />Cargando reservas importadas…</CardContent></Card> : agenda.length ? <Card className="overflow-hidden border-slate-200 shadow-sm">
       <CardContent className="p-0">
         <div className="isolate overflow-x-auto overscroll-x-contain">
-          <div className="min-w-[940px]">
-            <div className="grid border-b bg-slate-50/80" style={gridStyle}>
-              <div className="sticky left-0 z-30 border-r bg-slate-50 px-4 py-4 text-xs font-bold uppercase tracking-wide text-slate-600 shadow-[8px_0_12px_-12px_rgba(15,23,42,0.55)]">Tipo · habitación</div>
+          <div className="min-w-[472px] sm:min-w-[935px]">
+            <div className="reservation-agenda-grid grid border-b bg-slate-50/80" style={gridStyle}>
+              <div className="sticky left-0 z-30 border-r bg-slate-50 px-2 py-3 text-[10px] font-bold uppercase tracking-wide text-slate-600 shadow-[8px_0_12px_-12px_rgba(15,23,42,0.55)] sm:px-4 sm:py-4 sm:text-xs">Tipo · hab.</div>
               {window.dates.map((date, index) => {
                 const day = formatDay(date);
                 const isToday = index === todayIndex;
                 const arrivals = arrivalsByDate.get(date) || 0;
-                return <div key={date} className={`border-r px-3 py-3 text-center ${isToday ? "z-10 border-x-2 border-amber-400 bg-amber-100 text-amber-950 shadow-[inset_0_3px_0_rgb(251_191_36)]" : ""}`}><p className="text-[11px] font-semibold uppercase tracking-wide">{index === 0 ? "Ayer" : isToday ? "Hoy" : day.weekday}</p><p className="mt-0.5 text-2xl font-bold leading-none">{day.date}</p><p className="mt-1 text-[11px] capitalize text-muted-foreground">{day.month} · {arrivals} llegada{arrivals === 1 ? "" : "s"}</p></div>;
+                return <div key={date} className={`border-r px-1 py-2 text-center ${isToday ? "z-10 border-x-2 border-amber-400 bg-amber-100 text-amber-950 shadow-[inset_0_3px_0_rgb(251_191_36)]" : ""} sm:px-3 sm:py-3`}><p className="text-[9px] font-semibold uppercase tracking-wide sm:text-[11px]">{index === 0 ? "Ayer" : isToday ? "Hoy" : day.weekday}</p><p className="mt-0.5 text-lg font-bold leading-none sm:text-2xl">{day.date}</p><p className="mt-1 text-[9px] capitalize text-muted-foreground sm:text-[11px]"><span className="sm:hidden">{arrivals} lleg.</span><span className="hidden sm:inline">{day.month} · {arrivals} llegada{arrivals === 1 ? "" : "s"}</span></p></div>;
               })}
             </div>
             {agenda.map(group => <section key={group.key} className="border-b last:border-b-0">
-              <div className="grid bg-slate-100/85" style={gridStyle}>
-                <div className="sticky left-0 z-20 border-r bg-slate-100 px-4 py-3 shadow-[8px_0_12px_-12px_rgba(15,23,42,0.5)]"><p className="flex items-center gap-2 text-sm font-bold text-slate-800"><BedDouble className="h-4 w-4 text-sky-700" />{group.label}</p><p className="mt-1 text-xs text-muted-foreground">{group.reservationsCount} reserva{group.reservationsCount === 1 ? "" : "s"}</p></div>
-                {window.dates.map((date, index) => <div key={date} className={`border-r px-4 py-3 text-xs text-slate-500 ${index === todayIndex ? "border-x-2 border-amber-400 bg-amber-50" : ""}`}>{index === 0 ? "Agenda de estancias y asignaciones de este tipo" : null}</div>)}
+              <div className="reservation-agenda-grid grid bg-slate-100/85" style={gridStyle}>
+                <div className="sticky left-0 z-20 min-w-0 border-r bg-slate-100 px-2 py-2 shadow-[8px_0_12px_-12px_rgba(15,23,42,0.5)] sm:px-4 sm:py-3"><p title={group.label} className="flex min-w-0 items-center gap-1 text-xs font-bold text-slate-800 sm:gap-2 sm:text-sm"><BedDouble className="h-3 w-3 shrink-0 text-sky-700 sm:h-4 sm:w-4" /><span className="truncate">{group.label}</span></p><p className="mt-1 text-[10px] text-muted-foreground sm:text-xs">{group.reservationsCount} res.</p></div>
+                {window.dates.map((date, index) => <div key={date} className={`border-r px-1 py-2 text-[10px] text-slate-500 sm:px-4 sm:py-3 sm:text-xs ${index === todayIndex ? "border-x-2 border-amber-400 bg-amber-50" : ""}`}><span className="hidden sm:inline">{index === 0 ? "Agenda de estancias y asignaciones de este tipo" : null}</span></div>)}
               </div>
-              {group.rooms.map(room => <div key={room.key} className="grid min-h-[64px] bg-background" style={{ ...gridStyle, gridAutoRows: "minmax(64px, auto)" }}>
-                <div className="sticky left-0 z-20 flex items-center border-r border-b bg-background px-4 shadow-[8px_0_12px_-12px_rgba(15,23,42,0.48)]" style={{ gridColumn: 1, gridRow: `1 / span ${room.laneCount}` }}><p className="text-sm font-medium text-slate-800">{room.label}</p></div>
+              {group.rooms.map(room => <div key={room.key} className="reservation-agenda-grid grid min-h-[48px] bg-background sm:min-h-[64px]" style={{ ...gridStyle, gridAutoRows: "minmax(var(--agenda-row-height), auto)" }}>
+                <div className="sticky left-0 z-20 flex min-w-0 items-center border-r border-b bg-background px-2 shadow-[8px_0_12px_-12px_rgba(15,23,42,0.48)] sm:px-4" style={{ gridColumn: 1, gridRow: `1 / span ${room.laneCount}` }}><p title={room.label} className="truncate text-xs font-medium text-slate-800 sm:text-sm">{room.label}</p></div>
                 {window.dates.map((date, index) => <div key={date} className={`border-b border-r bg-slate-50/35 ${index === todayIndex ? "border-x-2 border-amber-400 bg-amber-50/70" : ""}`} style={{ gridColumn: index + 2, gridRow: `1 / span ${room.laneCount}` }} />)}
-                {room.cards.map(card => <button key={card.reservation.id} type="button" title={`${card.reservation.guestName || "Huésped sin nombre"} · Entrada ${compactDate(card.reservation.checkInDate)} · Salida ${compactDate(card.reservation.checkOutDate)}`} onClick={() => setSelectedId(card.reservation.id)} className={`relative z-10 min-w-0 self-center overflow-visible border px-3 py-2 text-left shadow-sm transition duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-700 ${card.startSlot % 1 ? "rounded-l-none" : "rounded-l-md"} ${card.endSlot % 1 ? "rounded-r-none" : "rounded-r-full"} ${agendaToneClasses[card.tone]}`} style={agendaCardGridStyle(card)}>
-                  {card.hasPendingAmount && <span aria-label="Importe pendiente" title="Importe pendiente" className="absolute -top-1.5 left-2 h-3 w-3 rounded-full border-2 border-white bg-red-500 shadow-sm" />}
-                  {card.hasNotes && <span aria-label="Tiene notas" title="Tiene notas" className="absolute -top-1.5 left-6 h-3 w-3 rounded-full border-2 border-white bg-amber-400 shadow-sm" />}
-                  <span className="block truncate text-sm font-bold leading-tight">{card.reservation.guestName || "Huésped sin nombre"}</span>
-                  <span className="mt-0.5 block truncate text-[11px] font-medium opacity-90">Entra {compactDate(card.reservation.checkInDate)} · Sale {compactDate(card.reservation.checkOutDate)}</span>
+                {room.cards.map(card => <button key={card.reservation.id} type="button" title={`${card.reservation.guestName || "Huésped sin nombre"} · Entrada ${compactDate(card.reservation.checkInDate)} · Salida ${compactDate(card.reservation.checkOutDate)}`} onClick={() => setSelectedId(card.reservation.id)} className={`relative z-10 min-w-0 self-center overflow-visible border px-1.5 py-1 text-left shadow-sm transition duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-700 sm:px-3 sm:py-2 ${card.startSlot % 1 ? "rounded-l-none" : "rounded-l-md"} ${card.endSlot % 1 ? "rounded-r-none" : "rounded-r-full"} ${agendaToneClasses[card.tone]}`} style={agendaCardGridStyle(card)}>
+                  {card.hasPendingAmount && <span aria-label="Importe pendiente" title="Importe pendiente" className="absolute -top-1 left-1 h-2.5 w-2.5 rounded-full border-2 border-white bg-red-500 shadow-sm sm:-top-1.5 sm:left-2 sm:h-3 sm:w-3" />}
+                  {card.hasNotes && <span aria-label="Tiene notas" title="Tiene notas" className="absolute -top-1 left-4 h-2.5 w-2.5 rounded-full border-2 border-white bg-amber-400 shadow-sm sm:-top-1.5 sm:left-6 sm:h-3 sm:w-3" />}
+                  <span className="block truncate text-[10px] font-bold leading-tight sm:text-sm">{card.reservation.guestName || "Huésped sin nombre"}</span>
+                  <span className="mt-0.5 block truncate text-[9px] font-medium opacity-90 sm:text-[11px]"><span className="sm:hidden">{compactDate(card.reservation.checkInDate)} → {compactDate(card.reservation.checkOutDate)}</span><span className="hidden sm:inline">Entra {compactDate(card.reservation.checkInDate)} · Sale {compactDate(card.reservation.checkOutDate)}</span></span>
                 </button>)}
               </div>)}
             </section>)}
