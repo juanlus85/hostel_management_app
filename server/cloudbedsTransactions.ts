@@ -50,10 +50,18 @@ export type CloudbedsReservationMovement = {
 
 export type CloudbedsReservationPayments = {
   movements: CloudbedsReservationMovement[];
+  pendingMovements: CloudbedsReservationMovement[];
   paidTotal: number;
   refundedTotal: number;
   chargeTotal: number;
+  pendingChargeTotal: number;
+  pendingWarning: string | null;
 };
+
+type CloudbedsPostedReservationPayments = Omit<
+  CloudbedsReservationPayments,
+  "pendingMovements" | "pendingChargeTotal" | "pendingWarning"
+>;
 
 type InternalReservationMovement = CloudbedsReservationMovement & {
   isTaxCharge: boolean;
@@ -121,7 +129,7 @@ function isAccommodationCharge(movement: CloudbedsReservationMovement) {
   return /HABITACI[ÓO]N|ALOJAMIENTO|ACCOMMODATION|ROOM|LODGING|STAY/i.test(movement.label);
 }
 
-export function summarizeCloudbedsReservationTransactions(transactions: CloudbedsTransaction[]): CloudbedsReservationPayments {
+export function summarizeCloudbedsReservationTransactions(transactions: CloudbedsTransaction[]): CloudbedsPostedReservationPayments {
   const movementsWithTaxFlag: InternalReservationMovement[] = transactions.map(transaction => {
     const kind = isReservationPayment(transaction) ? "payment" as const : "charge" as const;
     const label = textField(
@@ -169,7 +177,7 @@ export function summarizeCloudbedsReservationTransactions(transactions: Cloudbed
       movements.push({ ...tax, label: `${tax.label} (sin cargo de habitación asociado)` });
     }
   }
-  return movements.reduce<CloudbedsReservationPayments>((summary, movement) => {
+  return movements.reduce<CloudbedsPostedReservationPayments>((summary, movement) => {
     if (movement.kind === "payment") {
       if (movement.amount < 0) summary.paidTotal += -movement.amount;
       else if (movement.amount > 0) summary.refundedTotal += movement.amount;
@@ -266,11 +274,11 @@ export async function fetchCloudbedsTransactions(apiKey: string, propertyId: str
 }
 
 export async function fetchCloudbedsReservationPayments(apiKey: string, propertyId: string, reservationId: string) {
-  const fetchPages = async (filters: Array<Record<string, string>>) => {
+  const fetchPages = async (endpoint: "transactions" | "pending-transactions", filters: Array<Record<string, string>>) => {
     const records: CloudbedsTransaction[] = [];
     let pageToken: string | undefined;
     for (let page = 0; page < 50; page += 1) {
-    const response = await fetch("https://api.cloudbeds.com/accounting/v1.0/transactions", {
+    const response = await fetch(`https://api.cloudbeds.com/accounting/v1.0/${endpoint}`, {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "X-Property-ID": propertyId, "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({
@@ -299,10 +307,31 @@ export async function fetchCloudbedsReservationPayments(apiKey: string, property
   // devuelve el folio completo. `sourceId` identifica internamente la fuente,
   // pero no debe sustituir el resultado anterior: podía reducir el folio a un
   // subconjunto de movimientos y dejar fuera cargos o ajustes legítimos.
-  const initial = await fetchPages([
+  const posted = await fetchPages("transactions", [
     { field: "source_identifier", operator: "equals", value: reservationId },
     { field: "source_kind", operator: "equals", value: "RESERVATION" },
   ]);
-  const unique = Array.from(new Map(initial.map(transaction => [textField(transaction.id) ?? `${transaction.sourceId ?? transaction.source_id ?? ""}-${transaction.internalCode ?? transaction.internalTransactionCode ?? ""}-${transaction.amount ?? ""}-${transaction.serviceDate ?? transaction.service_date ?? ""}`, transaction])).values());
-  return summarizeCloudbedsReservationTransactions(unique);
+  const uniquePosted = Array.from(new Map(posted.map(transaction => [textField(transaction.id) ?? `${transaction.sourceId ?? transaction.source_id ?? ""}-${transaction.internalCode ?? transaction.internalTransactionCode ?? ""}-${transaction.amount ?? ""}-${transaction.serviceDate ?? transaction.service_date ?? ""}`, transaction])).values());
+  const postedSummary = summarizeCloudbedsReservationTransactions(uniquePosted);
+  try {
+    const pending = await fetchPages("pending-transactions", [
+      { field: "source_identifier", operator: "equals", value: reservationId },
+      { field: "source_kind", operator: "equals", value: "RESERVATION" },
+    ]);
+    const uniquePending = Array.from(new Map(pending.map(transaction => [textField(transaction.id) ?? `${transaction.sourceId ?? transaction.source_id ?? ""}-${transaction.internalCode ?? transaction.internalTransactionCode ?? ""}-${transaction.amount ?? ""}-${transaction.serviceDate ?? transaction.service_date ?? ""}`, transaction])).values());
+    const pendingSummary = summarizeCloudbedsReservationTransactions(uniquePending);
+    return {
+      ...postedSummary,
+      pendingMovements: pendingSummary.movements.filter(movement => movement.kind === "charge"),
+      pendingChargeTotal: pendingSummary.chargeTotal,
+      pendingWarning: null,
+    };
+  } catch (error) {
+    return {
+      ...postedSummary,
+      pendingMovements: [],
+      pendingChargeTotal: 0,
+      pendingWarning: error instanceof Error ? error.message : "No se han podido consultar los cargos futuros de Cloudbeds.",
+    };
+  }
 }

@@ -82,16 +82,21 @@ describe("aggregateCloudbedsPaymentsByOperationalDay", () => {
       .mockResolvedValueOnce(new Response(JSON.stringify({ transactions: [
         { id: "night-2", internalCode: "4100", amount: "60", description: "Alojamiento", serviceDate: "2026-10-12" },
         { id: "pay-1", internalCode: "9300", amount: "-50" },
+      ], nextPageToken: null }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ transactions: [
+        { id: "future-night", internalCode: "4100", amount: "70", description: "Alojamiento", serviceDate: "2026-10-13" },
       ], nextPageToken: null }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
     const result = await fetchCloudbedsReservationPayments("cbat_private", "204754", "R-234");
     expect(result.paidTotal).toBe(50);
     expect(result.chargeTotal).toBe(110);
+    expect(result.pendingChargeTotal).toBe(70);
+    expect(result.pendingMovements).toEqual([expect.objectContaining({ id: "future-night", amount: 70 })]);
     expect(result.movements).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: "night-1", amount: 50 }),
       expect.objectContaining({ id: "night-2", amount: 60 }),
     ]));
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({
       filters: { and: [
         { field: "source_identifier", operator: "equals", value: "R-234" },
@@ -101,6 +106,7 @@ describe("aggregateCloudbedsPaymentsByOperationalDay", () => {
       sort: [{ field: "service_date", direction: "asc" }],
     });
     expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toMatchObject({ pageToken: "page-2" });
+    expect(String(fetchMock.mock.calls[2][0])).toBe("https://api.cloudbeds.com/accounting/v1.0/pending-transactions");
   });
 
   it("conserva el folio completo devuelto por source_identifier", async () => {
@@ -108,11 +114,12 @@ describe("aggregateCloudbedsPaymentsByOperationalDay", () => {
       .mockResolvedValueOnce(new Response(JSON.stringify({ transactions: [
         { id: "first", sourceId: "folio-1", internalCode: "4100", amount: "100", description: "Alojamiento", serviceDate: "2026-10-10" },
         { id: "second", sourceId: "folio-1", internalCode: "4100", amount: "120", description: "Alojamiento", serviceDate: "2026-10-11" },
-      ], nextPageToken: null }), { status: 200 }));
+      ], nextPageToken: null }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ transactions: [], nextPageToken: null }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
     const result = await fetchCloudbedsReservationPayments("cbat_private", "204754", "R-234");
     expect(result.chargeTotal).toBe(220);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({
       filters: { and: [
         { field: "source_identifier", operator: "equals", value: "R-234" },

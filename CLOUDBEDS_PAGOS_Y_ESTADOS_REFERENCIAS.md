@@ -67,3 +67,9 @@ Fuentes:
 Cloudbeds documenta `source_identifier` junto con `source_kind=RESERVATION` como el filtro para recuperar los movimientos de una reserva. En esa respuesta `sourceIdentifier` identifica la reserva completa y `subSourceIdentifier` diferencia subreservas/habitaciones. Por ello no se sustituye el resultado por una segunda búsqueda sobre `sourceId`: dicho identificador pertenece a la fuente interna y puede devolver solo una parte de los movimientos.
 
 Fuente: https://developers.cloudbeds.com/docs/accounting
+
+## Noches futuras y movimientos pendientes
+
+`POST /accounting/v1.0/pending-transactions` devuelve movimientos creados pero todavía no contabilizados. Con `source_identifier` y `source_kind=RESERVATION` se consultan las noches futuras de la misma reserva. La interfaz suma estos cargos al total de la estancia, pero los muestra por separado de los movimientos ya contabilizados.
+
+Fuente: https://developers.cloudbeds.com/reference/listpendingtransactions

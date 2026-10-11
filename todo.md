@@ -1788,3 +1788,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Compactar la agenda de Reservas en móvil para reducir la columna de tipo/habitación y priorizar los días y estancias.
 - [x] Auditar y corregir la conciliación de cargos/pagos cuando el saldo oficial de Cloudbeds es cero pero los movimientos muestran diferencia.
 - [x] Ampliar la ventana de Reservas a 15 días, manteniendo ayer y hoy como primeros días visibles.
+- [x] Mostrar en el detalle de reserva el importe total previsto de Cloudbeds y separar los cargos ya contabilizados de las noches futuras.
