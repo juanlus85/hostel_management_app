@@ -38,6 +38,17 @@ describe("buildReservationAgenda", () => {
     ]));
   });
 
+  it("muestra una habitación física una sola vez aunque Cloudbeds cambie su tipo", () => {
+    const agenda = buildReservationAgenda([
+      { id: 30, guestName: "Ana", checkInDate: "2026-10-10", checkOutDate: "2026-10-12", roomType: "Twin Room with Shared Bathroom", roomNumber: "15", reservationStatus: "confirmed", amountPending: "0", reservationNotes: null },
+      { id: 31, guestName: "Luis", checkInDate: "2026-10-12", checkOutDate: "2026-10-14", roomType: "Double Room with Shared Bathroom", roomNumber: "Habitación 15", reservationStatus: "confirmed", amountPending: "0", reservationNotes: null },
+      { id: 32, guestName: "Marta", checkInDate: "2026-10-10", checkOutDate: "2026-10-11", roomType: "Twin Room with Shared Bathroom", roomNumber: "15", reservationStatus: "confirmed", amountPending: "0", reservationNotes: null },
+    ], dates);
+    const roomRows = agenda.flatMap(group => group.rooms).filter(room => room.label === "Habitación 15");
+    expect(roomRows).toHaveLength(1);
+    expect(roomRows[0]?.cards.map(card => card.reservation.id).sort()).toEqual([30, 31, 32]);
+  });
+
   it("muestra estancias iniciadas antes del período y no muestra salidas previas", () => {
     const agenda = buildReservationAgenda([
       {

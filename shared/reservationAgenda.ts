@@ -92,6 +92,12 @@ function roomLabel(reservation: ReservationAgendaItem) {
   return `Habitación ${number.replace(/^habitaci[oó]n\s*/i, "")}`;
 }
 
+function physicalRoomKey(reservation: ReservationAgendaItem) {
+  const number = reservation.roomNumber?.trim();
+  if (!number) return "unassigned";
+  return normalize(number.replace(/^habitaci[oó]n\s*/i, "")) || "unassigned";
+}
+
 function visibleSpan(reservation: ReservationAgendaItem, dates: string[]) {
   if (!dates.length || reservation.checkInDate > dates[dates.length - 1]) return null;
   const hasSeparateCheckout = Boolean(reservation.checkOutDate && reservation.checkOutDate > reservation.checkInDate);
@@ -120,13 +126,39 @@ function visibleSpan(reservation: ReservationAgendaItem, dates: string[]) {
 
 export function buildReservationAgenda<T extends ReservationAgendaItem>(reservations: T[], dates: string[]): Array<ReservationAgendaGroup<T>> {
   const groups = new Map<string, { label: string; rooms: Map<string, ReservationAgendaRoom<T>>; count: number }>();
-
-  for (const reservation of reservations) {
+  const visibleReservations = reservations.flatMap(reservation => {
     const span = visibleSpan(reservation, dates);
-    if (!span) continue;
-    const groupLabel = reservation.roomType?.trim() || "Tipo de habitación pendiente";
-    const groupKey = normalize(groupLabel) || "pending-room-type";
-    const roomKey = reservation.roomNumber?.trim() || "unassigned";
+    return span ? [{ reservation, span }] : [];
+  });
+  const typeCandidatesByRoom = new Map<string, Map<string, { label: string; count: number }>>();
+
+  for (const { reservation } of visibleReservations) {
+    const roomKey = physicalRoomKey(reservation);
+    if (roomKey === "unassigned") continue;
+    const label = reservation.roomType?.trim() || "Tipo de habitación pendiente";
+    const key = normalize(label) || "pending-room-type";
+    const candidates = typeCandidatesByRoom.get(roomKey) || new Map();
+    const candidate = candidates.get(key) || { label, count: 0 };
+    candidate.count += 1;
+    candidates.set(key, candidate);
+    typeCandidatesByRoom.set(roomKey, candidates);
+  }
+
+  const canonicalTypeByRoom = new Map<string, { key: string; label: string }>();
+  typeCandidatesByRoom.forEach((candidates, roomKey) => {
+    const sortedCandidates: Array<[string, { label: string; count: number }]> = Array.from(candidates.entries());
+    const [key, candidate] = sortedCandidates.sort(([, left], [, right]) =>
+      right.count - left.count || roomTypeRank(left.label) - roomTypeRank(right.label) || left.label.localeCompare(right.label, "es")
+    )[0]!;
+    canonicalTypeByRoom.set(roomKey, { key, label: candidate.label });
+  });
+
+  for (const { reservation, span } of visibleReservations) {
+    const roomKey = physicalRoomKey(reservation);
+    const ownGroupLabel = reservation.roomType?.trim() || "Tipo de habitación pendiente";
+    const canonicalType = canonicalTypeByRoom.get(roomKey);
+    const groupLabel = canonicalType?.label || ownGroupLabel;
+    const groupKey = canonicalType?.key || normalize(ownGroupLabel) || "pending-room-type";
     const group = groups.get(groupKey) || { label: groupLabel, rooms: new Map(), count: 0 };
     const room = group.rooms.get(roomKey) || { key: roomKey, label: roomLabel(reservation), cards: [], laneCount: 1 };
     const hasPendingAmount = reservationHasPendingAmount(reservation.amountPending);
