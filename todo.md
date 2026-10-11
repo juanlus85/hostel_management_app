@@ -1757,7 +1757,7 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Al abrir Disponibilidad desde Resumen Semanal, saltar a la última semana con datos registrados.
 - [x] Aplicar los filtros de Facturas también a las facturas emitidas.
 - [x] Crear Disponibilidad Hostel: importar manualmente desde Cloudbeds disponibilidad y precios por tipo de habitación para la semana próxima.
-- [ ] Adaptar el lector de Disponibilidad Hostel a la estructura real de respuesta de Cloudbeds cuando no detecta tipos de habitación.
+- [x] Adaptar el lector de Disponibilidad Hostel a la estructura real de respuesta de Cloudbeds cuando no detecta tipos de habitación.
 
 ## Ajustes de Disponibilidad Hostel
 - [x] Cargar automáticamente la disponibilidad de Cloudbeds una vez al entrar en el módulo.
@@ -1766,9 +1766,10 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Permitir editar una tarifa de habitación desde Disponibilidad Hostel y confirmar antes de actualizarla en Cloudbeds.
 - [x] Extraer el identificador real de tarifa de la respuesta de Cloudbeds para habilitar cambios de precio en las tarifas base.
 - [x] Codificar la colección rates de putRate en el formato de formulario que exige Cloudbeds.
-- [ ] Quitar el cero técnico junto al botón Precio y eliminar los bloques informativos innecesarios de Disponibilidad Hostel.
+- [x] Quitar el cero técnico junto al botón Precio y eliminar los bloques informativos innecesarios de Disponibilidad Hostel.
 - [x] Mover Disponibilidad Hostel debajo de Turnos y habilitar su acceso para todos los usuarios autenticados.
 
 ## Reservas en Disponibilidad Hostel
 - [x] Crear una subpestaña de reservas para ayer, hoy y los tres próximos días, con estado y detalle ampliado de huésped y pagos desde Cloudbeds.
 - [x] Rediseñar Reservas como agenda por tipo de habitación y días, con tarjetas coloreadas y avisos de saldo pendiente y notas.
+- [x] Ajustar los colores de reservas por estado de estancia y pago, y distribuir solapamientos en carriles con entrada y salida visibles.

@@ -69,8 +69,26 @@ describe("buildReservationAgenda", () => {
   });
 
   it("asigna tonos visibles por estado", () => {
-    expect(reservationAgendaTone("confirmed")).toBe("emerald");
-    expect(reservationAgendaTone("checked_in")).toBe("sky");
+    expect(reservationAgendaTone("confirmed")).toBe("sky");
+    expect(reservationAgendaTone("checked_in")).toBe("emerald");
+    expect(reservationAgendaTone("checked_in", true)).toBe("rose");
+    expect(reservationAgendaTone("checked_out", true)).toBe("slate");
     expect(reservationAgendaTone("cancelled")).toBe("slate");
+  });
+
+  it("coloca estancias que coinciden en carriles separados y reutiliza un carril libre", () => {
+    const agenda = buildReservationAgenda([
+      { id: 10, guestName: "Ana", checkInDate: "2026-10-10", checkOutDate: "2026-10-13", roomType: "Twin", roomNumber: "15", reservationStatus: "confirmed", amountPending: "0", reservationNotes: null },
+      { id: 11, guestName: "Luis", checkInDate: "2026-10-11", checkOutDate: "2026-10-12", roomType: "Twin", roomNumber: "15", reservationStatus: "confirmed", amountPending: "0", reservationNotes: null },
+      { id: 12, guestName: "Marta", checkInDate: "2026-10-13", checkOutDate: "2026-10-14", roomType: "Twin", roomNumber: "15", reservationStatus: "confirmed", amountPending: "0", reservationNotes: null },
+    ], dates);
+
+    const room = agenda[0].rooms[0];
+    expect(room.laneCount).toBe(2);
+    expect(room.cards.map(card => ({ id: card.reservation.id, lane: card.lane }))).toEqual([
+      { id: 10, lane: 0 },
+      { id: 11, lane: 1 },
+      { id: 12, lane: 0 },
+    ]);
   });
 });

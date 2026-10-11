@@ -16,6 +16,7 @@ export type ReservationAgendaCard<T extends ReservationAgendaItem> = {
   reservation: T;
   startColumn: number;
   span: number;
+  lane: number;
   tone: ReservationAgendaTone;
   hasPendingAmount: boolean;
   hasNotes: boolean;
@@ -25,6 +26,7 @@ export type ReservationAgendaRoom<T extends ReservationAgendaItem> = {
   key: string;
   label: string;
   cards: Array<ReservationAgendaCard<T>>;
+  laneCount: number;
 };
 
 export type ReservationAgendaGroup<T extends ReservationAgendaItem> = {
@@ -65,13 +67,12 @@ function normalizedStatus(value: string | null | undefined) {
   return value?.toLocaleLowerCase("es").replace(/[\s-]+/g, "_") || "";
 }
 
-export function reservationAgendaTone(status: string | null | undefined): ReservationAgendaTone {
+export function reservationAgendaTone(status: string | null | undefined, hasPendingAmount = false): ReservationAgendaTone {
   const value = normalizedStatus(status);
   if (["cancelled", "canceled", "no_show"].includes(value)) return "slate";
-  if (["checked_in", "in_progress"].includes(value)) return "sky";
-  if (value === "confirmed") return "emerald";
-  if (["checked_out", "completed"].includes(value)) return "rose";
-  return "amber";
+  if (["checked_out", "completed"].includes(value)) return "slate";
+  if (["checked_in", "in_progress"].includes(value)) return hasPendingAmount ? "rose" : "emerald";
+  return "sky";
 }
 
 export function reservationHasPendingAmount(value: string | number | null | undefined) {
@@ -114,12 +115,14 @@ export function buildReservationAgenda<T extends ReservationAgendaItem>(reservat
     const groupKey = normalize(groupLabel) || "pending-room-type";
     const roomKey = reservation.roomNumber?.trim() || "unassigned";
     const group = groups.get(groupKey) || { label: groupLabel, rooms: new Map(), count: 0 };
-    const room = group.rooms.get(roomKey) || { key: roomKey, label: roomLabel(reservation), cards: [] };
+    const room = group.rooms.get(roomKey) || { key: roomKey, label: roomLabel(reservation), cards: [], laneCount: 1 };
+    const hasPendingAmount = reservationHasPendingAmount(reservation.amountPending);
     room.cards.push({
       reservation,
       ...span,
-      tone: reservationAgendaTone(reservation.reservationStatus),
-      hasPendingAmount: reservationHasPendingAmount(reservation.amountPending),
+      lane: 0,
+      tone: reservationAgendaTone(reservation.reservationStatus, hasPendingAmount),
+      hasPendingAmount,
       hasNotes: reservationHasNotes(reservation.reservationNotes),
     });
     group.rooms.set(roomKey, room);
@@ -135,9 +138,21 @@ export function buildReservationAgenda<T extends ReservationAgendaItem>(reservat
       reservationsCount: group.count,
       rooms: Array.from(group.rooms.values())
         .sort((left, right) => left.label.localeCompare(right.label, "es", { numeric: true }))
-        .map(room => ({
-          ...room,
-          cards: [...room.cards].sort((left, right) => left.startColumn - right.startColumn || left.reservation.guestName?.localeCompare(right.reservation.guestName || "", "es") || 0),
-        })),
+        .map(room => {
+          const laneEnds: number[] = [];
+          const cards = [...room.cards]
+            .sort((left, right) => left.startColumn - right.startColumn || left.reservation.guestName?.localeCompare(right.reservation.guestName || "", "es") || 0)
+            .map(card => {
+              let lane = laneEnds.findIndex(endColumn => endColumn <= card.startColumn);
+              if (lane < 0) {
+                lane = laneEnds.length;
+                laneEnds.push(card.startColumn + card.span);
+              } else {
+                laneEnds[lane] = card.startColumn + card.span;
+              }
+              return { ...card, lane };
+            });
+          return { ...room, cards, laneCount: Math.max(1, laneEnds.length) };
+        }),
     }));
 }

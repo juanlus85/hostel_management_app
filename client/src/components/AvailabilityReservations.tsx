@@ -40,6 +40,13 @@ function formatDay(date: string) {
   };
 }
 
+function compactDate(date: string | null | undefined) {
+  if (!date) return "—";
+  return new Intl.DateTimeFormat("es-ES", { day: "2-digit", month: "short" })
+    .format(new Date(`${date}T12:00:00`))
+    .replace(".", "");
+}
+
 function money(value: string | number | null | undefined) {
   const amount = Number(String(value ?? "0").replace(",", "."));
   return new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(Number.isFinite(amount) ? amount : 0);
@@ -107,9 +114,10 @@ export function AvailabilityReservations() {
       <CardContent className="flex flex-wrap gap-x-5 gap-y-2 border-t bg-sky-50/30 py-3 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-red-500" />Importe pendiente</span>
         <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-amber-400" />Notas de la reserva</span>
-        <span className="inline-flex items-center gap-2"><span className="h-3 w-5 rounded bg-emerald-500" />Confirmada</span>
-        <span className="inline-flex items-center gap-2"><span className="h-3 w-5 rounded bg-cyan-500" />En curso</span>
-        <span className="inline-flex items-center gap-2"><span className="h-3 w-5 rounded bg-slate-400" />Cancelada</span>
+        <span className="inline-flex items-center gap-2"><span className="h-3 w-5 rounded bg-emerald-500" />Check-in pagado</span>
+        <span className="inline-flex items-center gap-2"><span className="h-3 w-5 rounded bg-rose-400" />Check-in con saldo</span>
+        <span className="inline-flex items-center gap-2"><span className="h-3 w-5 rounded bg-cyan-500" />Pendiente de Check-in</span>
+        <span className="inline-flex items-center gap-2"><span className="h-3 w-5 rounded bg-slate-400" />Check-out o cancelada</span>
       </CardContent>
     </Card>
 
@@ -132,14 +140,14 @@ export function AvailabilityReservations() {
                 <div className="sticky left-0 z-20 border-r bg-slate-100 px-4 py-3 shadow-[8px_0_12px_-12px_rgba(15,23,42,0.5)]"><p className="flex items-center gap-2 text-sm font-bold text-slate-800"><BedDouble className="h-4 w-4 text-sky-700" />{group.label}</p><p className="mt-1 text-xs text-muted-foreground">{group.reservationsCount} reserva{group.reservationsCount === 1 ? "" : "s"}</p></div>
                 <div className="col-span-5 px-4 py-3 text-xs text-slate-500">Agenda de estancias y asignaciones de este tipo</div>
               </div>
-              {group.rooms.map(room => <div key={room.key} className="grid min-h-[64px] bg-background" style={gridStyle}>
-                <div className="sticky left-0 z-20 flex items-center border-r border-b bg-background px-4 shadow-[8px_0_12px_-12px_rgba(15,23,42,0.48)]"><p className="text-sm font-medium text-slate-800">{room.label}</p></div>
-                {window.dates.map(date => <div key={date} className="border-b border-r bg-slate-50/35" />)}
-                {room.cards.map(card => <button key={card.reservation.id} type="button" title={`${card.reservation.guestName || "Huésped sin nombre"} · ${reservationStatus(card.reservation.reservationStatus)}`} onClick={() => setSelectedId(card.reservation.id)} className={`relative z-10 m-1 min-w-0 self-center overflow-visible rounded-l-md rounded-r-full border px-3 py-2 text-left shadow-sm transition duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-700 ${agendaToneClasses[card.tone]}`} style={{ gridColumn: `${card.startColumn + 2} / span ${card.span}`, gridRow: 1 }}>
+              {group.rooms.map(room => <div key={room.key} className="grid min-h-[64px] bg-background" style={{ ...gridStyle, gridAutoRows: "minmax(64px, auto)" }}>
+                <div className="sticky left-0 z-20 flex items-center border-r border-b bg-background px-4 shadow-[8px_0_12px_-12px_rgba(15,23,42,0.48)]" style={{ gridColumn: 1, gridRow: `1 / span ${room.laneCount}` }}><p className="text-sm font-medium text-slate-800">{room.label}</p></div>
+                {window.dates.map((date, index) => <div key={date} className="border-b border-r bg-slate-50/35" style={{ gridColumn: index + 2, gridRow: `1 / span ${room.laneCount}` }} />)}
+                {room.cards.map(card => <button key={card.reservation.id} type="button" title={`${card.reservation.guestName || "Huésped sin nombre"} · Entrada ${compactDate(card.reservation.checkInDate)} · Salida ${compactDate(card.reservation.checkOutDate)}`} onClick={() => setSelectedId(card.reservation.id)} className={`relative z-10 m-1 min-w-0 self-center overflow-visible rounded-l-md rounded-r-full border px-3 py-2 text-left shadow-sm transition duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-700 ${agendaToneClasses[card.tone]}`} style={{ gridColumn: `${card.startColumn + 2} / span ${card.span}`, gridRow: card.lane + 1 }}>
                   {card.hasPendingAmount && <span aria-label="Importe pendiente" title="Importe pendiente" className="absolute -top-1.5 left-2 h-3 w-3 rounded-full border-2 border-white bg-red-500 shadow-sm" />}
                   {card.hasNotes && <span aria-label="Tiene notas" title="Tiene notas" className="absolute -top-1.5 left-6 h-3 w-3 rounded-full border-2 border-white bg-amber-400 shadow-sm" />}
                   <span className="block truncate text-sm font-bold leading-tight">{card.reservation.guestName || "Huésped sin nombre"}</span>
-                  <span className="mt-0.5 block truncate text-[11px] font-medium opacity-90">{reservationStatus(card.reservation.reservationStatus)}</span>
+                  <span className="mt-0.5 block truncate text-[11px] font-medium opacity-90">Entra {compactDate(card.reservation.checkInDate)} · Sale {compactDate(card.reservation.checkOutDate)}</span>
                 </button>)}
               </div>)}
             </section>)}
