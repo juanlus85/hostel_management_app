@@ -1342,8 +1342,8 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 
 
 ## Errores 500 Backend
-- [ ] Error al crear guest: fallo en inserción con muchos campos
-- [ ] Error en dashboard: query COALESCE en tabla otros_gastos
+- [x] Error al crear guest: fallo en inserción con muchos campos
+- [x] Error en dashboard: query COALESCE en tabla otros_gastos
 
 
 ## Error 500 al Crear Guest - CORREGIDO
@@ -1782,3 +1782,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Mostrar en el detalle de reserva los cargos pendientes y la diferencia de movimientos sin confundirla con el saldo oficial de Cloudbeds.
 - [x] Resaltar con un marco amarillo toda la columna del día actual en la agenda de reservas.
 - [x] Corregir la consulta de métodos de pago activos de Cloudbeds en el formulario Añadir pago.
+- [x] Aceptar métodos de pago Cloudbeds devueltos como mapa de claves además de listas y estructuras anidadas.

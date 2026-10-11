@@ -39,6 +39,21 @@ function asList(value: unknown): ApiRecord[] {
       if (nestedList.length) return nestedList;
     }
   }
+  const objectEntries = Object.entries(record)
+    .filter(([, candidate]) => candidate && typeof candidate === "object" && !Array.isArray(candidate))
+    .map(([key, candidate]) => ({ key, method: asRecord(candidate) }))
+    .filter(({ method }) => Boolean(firstText(method.type, method.paymentType, method.payment_type, method.name, method.displayName, method.display_name, method.paymentMethodName, method.payment_method_name, method.paymentTypeName, method.payment_type_name, method.methodName, method.method_name, method.description)));
+  if (objectEntries.length) {
+    return objectEntries.map(({ key, method }) => ({
+      ...method,
+      type: firstText(method.type, method.paymentType, method.payment_type, method.paymentMethod, method.payment_method, key),
+    }));
+  }
+  const scalarEntries = Object.entries(record)
+    .filter(([key, candidate]) => !["success", "status", "message", "error"].includes(key) && typeof candidate === "string" && candidate.trim());
+  if (scalarEntries.length) {
+    return scalarEntries.map(([type, name]) => ({ type, name }));
+  }
   return [];
 }
 

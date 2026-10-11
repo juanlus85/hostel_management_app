@@ -29,6 +29,17 @@ describe("acciones de reserva Cloudbeds", () => {
     ]);
   });
 
+  it("acepta métodos devueltos como mapa de claves", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ paymentMethods: {
+      cash: { name: "Efectivo" },
+      card: { display_name: "Tarjeta" },
+    } }), { status: 200 })));
+    await expect(fetchCloudbedsPaymentMethods("cbat_test", "204754")).resolves.toEqual([
+      { value: "cash", label: "Efectivo" },
+      { value: "card", label: "Tarjeta" },
+    ]);
+  });
+
   it("registra el pago con el método y el importe confirmados", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ success: true }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
