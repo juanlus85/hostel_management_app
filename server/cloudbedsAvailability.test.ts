@@ -79,6 +79,27 @@ describe("normalizeCloudbedsAvailability", () => {
     })]);
   });
 
+  it("lee roomRateDetailed y rateID del formato oficial de getRatePlans", () => {
+    const result = normalizeCloudbedsAvailability({
+      success: true,
+      data: [{
+        rateID: "cb-rate-42",
+        isDerived: false,
+        roomTypeID: "42",
+        roomTypeName: "Habitación Doble",
+        ratePlanNamePublic: "Tarifa base",
+        roomRateDetailed: [{ date: "2026-10-12", rateBase: 76, totalRate: 76, roomsAvailable: 2, minLos: 1 }],
+      }],
+    }, "2026-10-12", "2026-10-18");
+
+    expect(result.roomTypes[0]).toMatchObject({
+      roomTypeId: "42",
+      roomTypeName: "Habitación Doble",
+      ratePlanName: "Tarifa base",
+      days: [expect.objectContaining({ date: "2026-10-12", roomRate: 76, rateId: "cb-rate-42", roomsAvailable: 2 })],
+    });
+  });
+
   it("descarta días fuera del período solicitado", () => {
     const result = normalizeCloudbedsAvailability({
       data: [{

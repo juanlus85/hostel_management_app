@@ -101,6 +101,8 @@ function readDailyRate(value: unknown, dateFallback?: string, inheritedRateId: s
   const roomRate = numericValue(
     record.roomRate,
     record.room_rate,
+    record.rateBase,
+    record.rate_base,
     record.rate,
     record.baseRate,
     record.base_rate,
@@ -120,14 +122,14 @@ function readDailyRate(value: unknown, dateFallback?: string, inheritedRateId: s
     restrictions: {
       closedToArrival: booleanValue(record.closedToArrival, record.closed_to_arrival, record.cta),
       closedToDeparture: booleanValue(record.closedToDeparture, record.closed_to_departure, record.ctd),
-      minimumStay: numericValue(record.minimumStay, record.minLOS, record.min_los, record.minimum_stay),
-      maximumStay: numericValue(record.maximumStay, record.maxLOS, record.max_los, record.maximum_stay),
+      minimumStay: numericValue(record.minimumStay, record.minLOS, record.minLos, record.min_los, record.minimum_stay),
+      maximumStay: numericValue(record.maximumStay, record.maxLOS, record.maxLos, record.max_los, record.maximum_stay),
     },
   };
 }
 
 function directDailyRates(record: JsonRecord, inheritedRateId: string | null = null) {
-  const dailyKeys = ["detailedRates", "detailed_rates", "dailyRates", "daily_rates", "rateDetails", "rate_details", "rates"];
+  const dailyKeys = ["detailedRates", "detailed_rates", "dailyRates", "daily_rates", "rateDetails", "rate_details", "roomRateDetailed", "room_rate_detailed", "rates"];
   const output: CloudbedsAvailabilityDay[] = [];
   const ownRate = readDailyRate(record, undefined, inheritedRateId);
   if (ownRate) output.push(ownRate);
@@ -174,7 +176,8 @@ function roomContext(record: JsonRecord, inherited: Pick<Candidate, "roomTypeId"
 }
 
 function ratePlanScore(record: JsonRecord) {
-  const name = stringValue(record.ratePlanName, record.rate_plan_name, record.name)?.toLowerCase() || "";
+  const name = stringValue(record.ratePlanName, record.rate_plan_name, record.ratePlanNamePublic, record.ratePlanNamePrivate, record.name)?.toLowerCase() || "";
+  if (booleanValue(record.isDerived, record.is_derived) === false) return 0;
   if (booleanValue(record.isBaseRate, record.is_base_rate, record.baseRatePlan) === true) return 0;
   if (/\b(base|bar|standard)\b/.test(name)) return 1;
   if (!stringValue(record.ratePlanID, record.ratePlanId, record.rate_plan_id)) return 2;
@@ -196,7 +199,7 @@ function collectCandidates(value: unknown, candidates: Candidate[], inherited: P
   if (context && days.length) {
     candidates.push({
       ...context,
-      ratePlanName: stringValue(record.ratePlanName, record.rate_plan_name, record.ratePlanNamePublic),
+      ratePlanName: stringValue(record.ratePlanName, record.rate_plan_name, record.ratePlanNamePublic, record.ratePlanNamePrivate),
       rateId,
       score: ratePlanScore(record),
       days,
