@@ -103,13 +103,13 @@ function statusTone(value: string | null | undefined) {
 function agendaCardGridStyle(card: { startSlot: number; endSlot: number; lane: number }) {
   const firstColumn = Math.floor(card.startSlot);
   const endColumn = Math.ceil(card.endSlot);
-  const leftInset = card.startSlot - firstColumn;
-  const rightInset = endColumn - card.endSlot;
+  const startOffset = card.startSlot - firstColumn;
+  const endOffset = endColumn - card.endSlot;
   return {
     gridColumn: `${firstColumn + 2} / span ${endColumn - firstColumn}`,
     gridRow: card.lane + 1,
-    marginLeft: leftInset ? "calc(50% + 4px)" : "4px",
-    marginRight: rightInset ? "calc(50% + 4px)" : "4px",
+    marginLeft: startOffset ? `calc(${(startOffset / (endColumn - firstColumn)) * 100}% + 4px)` : "4px",
+    marginRight: endOffset ? `calc(${(endOffset / (endColumn - firstColumn)) * 100}% + 4px)` : "4px",
     marginTop: "4px",
     marginBottom: "4px",
   };

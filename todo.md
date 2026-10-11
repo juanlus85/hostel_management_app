@@ -1778,3 +1778,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Permitir registrar un pago de reserva mediante un formulario confirmado y enviarlo a Cloudbeds.
 - [x] Permitir cambiar el estado de una reserva mediante confirmación y actualización en Cloudbeds.
 - [x] Ajustar la agenda para que un check-out y un check-in del mismo día compartan carril sin solaparse, replicando los límites de estancia de Cloudbeds.
+- [x] Corregir el ancho de las medias celdas de entrada y salida para que las barras consecutivas ocupen toda su estancia visible.
