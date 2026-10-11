@@ -31,6 +31,7 @@ import { Line } from "react-chartjs-2";
 import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
 import { buildDashboardExportRows } from "@shared/dashboardExport";
+import { QuickReceivedInvoiceDialog } from "@/components/QuickReceivedInvoiceDialog";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend);
 
@@ -51,6 +52,7 @@ export default function Home() {
   const [period, setPeriod] = useState<PeriodType>("month");
   const [customStartDate, setCustomStartDate] = useState("");
   const [customEndDate, setCustomEndDate] = useState("");
+  const [isQuickReceivedInvoiceOpen, setIsQuickReceivedInvoiceOpen] = useState(false);
   const isAdmin = user?.role === "admin";
   
   // Get date range based on selected period
@@ -383,7 +385,7 @@ export default function Home() {
               <div className="rounded-lg bg-violet-100 p-2.5"><Store className="h-4 w-4 text-violet-700" /></div>
               <div><p className="text-sm font-semibold">Hacer caja Tienda</p><p className="text-xs text-muted-foreground">Día actual</p></div>
             </button>
-            <button onClick={() => openQuickAction("/facturas?new=received", "all")} className="group flex items-center gap-3 rounded-xl border border-emerald-100 bg-emerald-50/30 p-3 text-left transition-all hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-sm">
+            <button onClick={() => setIsQuickReceivedInvoiceOpen(true)} className="group flex items-center gap-3 rounded-xl border border-emerald-100 bg-emerald-50/30 p-3 text-left transition-all hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-sm">
               <div className="rounded-lg bg-emerald-100 p-2.5"><ReceiptText className="h-4 w-4 text-emerald-700" /></div>
               <div><p className="text-sm font-semibold">Factura recibida</p><p className="text-xs text-muted-foreground">Registrar gasto</p></div>
             </button>
@@ -454,6 +456,12 @@ export default function Home() {
           </CardContent>
         </Card>
       </div>
+
+      <QuickReceivedInvoiceDialog
+        open={isQuickReceivedInvoiceOpen}
+        onOpenChange={setIsQuickReceivedInvoiceOpen}
+        selectedBusiness={selectedBusiness}
+      />
 
     </div>
   );

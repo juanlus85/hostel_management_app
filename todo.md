@@ -1751,3 +1751,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Incorporar Organizus como negocio visible para facturas recibidas y ampliar búsquedas y filtros de facturas y otros gastos/ingresos.
 - [x] Corregir la migración pendiente de `otros_gastos.type` para que el Resumen Semanal y los filtros de gastos no queden bloqueados en instalaciones existentes.
 - [x] Reubicar las acciones rápidas como tercera fila del Dashboard, antes de Gastos por proveedor.
+- [x] Abrir el formulario de nueva factura recibida directamente desde Acciones rápidas del Dashboard, sin navegar a Facturas.
