@@ -20,6 +20,7 @@ type RateEditor = {
 };
 type PendingRateChange = RateEditor & { rate: number };
 type RateDraft = RateEditor & { rateText: string };
+const availabilityPeriods = [7, 14, 30, 60] as const;
 
 function formatDateLocal(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -44,6 +45,7 @@ export default function DisponibilidadHostel() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [startDate, setStartDate] = useState(() => formatDateLocal(new Date()));
+  const [periodDays, setPeriodDays] = useState<(typeof availabilityPeriods)[number]>(7);
   const [availability, setAvailability] = useState<AvailabilityResult | null>(null);
   const [rateEditor, setRateEditor] = useState<RateEditor | null>(null);
   const [newRate, setNewRate] = useState("");
@@ -60,14 +62,15 @@ export default function DisponibilidadHostel() {
     onError: error => toast.error(error.message),
   });
   const loadAvailability = () => {
-    if (startDate) importWeekMutation.mutate({ startDate });
+    if (startDate) importWeekMutation.mutate({ startDate, days: periodDays });
   };
 
   useEffect(() => {
-    if (section !== "availability" || !startDate || autoLoadedAvailabilityDate.current === startDate) return;
-    autoLoadedAvailabilityDate.current = startDate;
-    importWeekMutation.mutate({ startDate });
-  }, [section, startDate]);
+    const loadKey = `${startDate}:${periodDays}`;
+    if (section !== "availability" || !startDate || autoLoadedAvailabilityDate.current === loadKey) return;
+    autoLoadedAvailabilityDate.current = loadKey;
+    importWeekMutation.mutate({ startDate, days: periodDays });
+  }, [section, startDate, periodDays]);
 
   const updateRate = trpc.cloudbedsAvailability.updateRate.useMutation({
     onSuccess: result => {
@@ -150,10 +153,11 @@ export default function DisponibilidadHostel() {
         <div>
           <div className="mb-2 flex items-center gap-2 text-sky-700"><Cloud className="h-5 w-5" /><span className="text-sm font-semibold">Cloudbeds · carga al abrir cada pestaña</span></div>
           <h1 className="text-2xl font-bold tracking-tight">Disponibilidad Hostel</h1>
-          <p className="mt-1 text-muted-foreground">Disponibilidad y precio final con IVA incluido por tipo de habitación para los próximos siete días.</p>
+          <p className="mt-1 text-muted-foreground">Disponibilidad y precio final con IVA incluido por tipo de habitación para los próximos {periodDays} días.</p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <div className="flex items-center gap-2 rounded-lg border bg-background px-3 py-2"><CalendarDays className="h-4 w-4 text-muted-foreground" /><label htmlFor="availability-start" className="sr-only">Inicio del período</label><Input id="availability-start" type="date" value={startDate} onChange={event => setStartDate(event.target.value)} className="h-7 w-[142px] border-0 bg-transparent p-0 shadow-none focus-visible:ring-0" /></div>
+          <label className="flex h-10 items-center gap-2 rounded-lg border bg-background px-3 text-sm font-medium text-muted-foreground" htmlFor="availability-period"><span>Mostrar</span><select id="availability-period" value={periodDays} onChange={event => setPeriodDays(Number(event.target.value) as (typeof availabilityPeriods)[number])} className="bg-transparent font-semibold text-foreground outline-none">{availabilityPeriods.map(days => <option key={days} value={days}>{days} días</option>)}</select></label>
           <Button onClick={loadAvailability} disabled={importWeekMutation.isPending || !startDate} className="bg-sky-700 hover:bg-sky-800">
             {importWeekMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
             Actualizar disponibilidad

@@ -118,7 +118,7 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
   const { user } = useAuth();
   const [window] = useState(getReservationWindow);
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [showPendingReservations, setShowPendingReservations] = useState(false);
+  const [showUnassignedReservations, setShowUnassignedReservations] = useState(false);
   const [detailTab, setDetailTab] = useState("information");
   const [paymentEditor, setPaymentEditor] = useState<PaymentDraft | null>(null);
   const [pendingPayment, setPendingPayment] = useState<PendingPayment | null>(null);
@@ -212,12 +212,17 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
     onError: error => toast.error(error.message),
   });
 
-  const displayedReservations = useMemo(() => (reservations.data || []).filter(reservation => {
-    if (showPendingReservations) return true;
-    const status = reservation.reservationStatus?.toLowerCase().replace(/[\s-]+/g, "_") || "";
-    return ["checked_in", "in_progress", "checked_out", "completed", "cancelled", "canceled", "no_show"].includes(status);
-  }), [reservations.data, showPendingReservations]);
-  const hiddenPendingReservations = Math.max(0, (reservations.data?.length || 0) - displayedReservations.length);
+  const displayedReservations = useMemo(
+    () =>
+      (reservations.data || []).filter(
+        reservation => showUnassignedReservations || Boolean(reservation.roomNumber?.trim())
+      ),
+    [reservations.data, showUnassignedReservations]
+  );
+  const hiddenUnassignedReservations = Math.max(
+    0,
+    (reservations.data || []).filter(reservation => !reservation.roomNumber?.trim()).length
+  );
   const agenda = useMemo(() => buildReservationAgenda(displayedReservations, window.dates), [displayedReservations, window.dates]);
   const arrivalsByDate = useMemo(() => new Map(window.dates.map(date => [date, (reservations.data || []).filter(reservation => reservation.checkInDate === date).length])), [reservations.data, window.dates]);
   const selected = (reservations.data || []).find(reservation => reservation.id === selectedId) || null;
@@ -299,7 +304,7 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
           <CardTitle className="flex items-center gap-2"><CalendarDays className="h-5 w-5 text-sky-700" />Agenda de reservas</CardTitle>
           <CardDescription className="mt-1">Vista por tipo de habitación y estancia. Pulsa una reserva para ver huésped, pagos y notas.</CardDescription>
         </div>
-        <div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" onClick={() => setShowPendingReservations(current => !current)}>{showPendingReservations ? "Ocultar llegadas pendientes" : `Mostrar llegadas pendientes${hiddenPendingReservations ? ` (${hiddenPendingReservations})` : ""}`}</Button><Button className="bg-sky-700 hover:bg-sky-800" onClick={() => importReservations.mutate()} disabled={importReservations.isPending}>
+        <div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" onClick={() => setShowUnassignedReservations(current => !current)}>{showUnassignedReservations ? "Ocultar sin habitación" : `Mostrar sin habitación${hiddenUnassignedReservations ? ` (${hiddenUnassignedReservations})` : ""}`}</Button><Button className="bg-sky-700 hover:bg-sky-800" onClick={() => importReservations.mutate()} disabled={importReservations.isPending}>
           {importReservations.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
           Actualizar reservas
         </Button></div>
@@ -346,7 +351,7 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
           </div>
         </div>
       </CardContent>
-    </Card> : <Card className="border-dashed"><CardContent className="flex flex-col items-center justify-center py-16 text-center"><CalendarDays className="mb-3 h-8 w-8 text-sky-700" /><h2 className="font-semibold">No hay reservas visibles para este período</h2><p className="mt-2 max-w-md text-sm text-muted-foreground">Activa “Mostrar llegadas pendientes” o actualiza las reservas para revisar la agenda completa.</p></CardContent></Card>}
+    </Card> : <Card className="border-dashed"><CardContent className="flex flex-col items-center justify-center py-16 text-center"><CalendarDays className="mb-3 h-8 w-8 text-sky-700" /><h2 className="font-semibold">No hay reservas visibles para este período</h2><p className="mt-2 max-w-md text-sm text-muted-foreground">Actualiza las reservas o despliega las reservas sin habitación asignada para revisar la agenda completa.</p></CardContent></Card>}
 
     <Dialog open={selectedId !== null} onOpenChange={open => { if (!open) setSelectedId(null); }}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">

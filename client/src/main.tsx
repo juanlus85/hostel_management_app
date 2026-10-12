@@ -42,11 +42,22 @@ const trpcClient = trpc.createClient({
     httpBatchLink({
       url: "/api/trpc",
       transformer: superjson,
-      fetch(input, init) {
-        return globalThis.fetch(input, {
+      async fetch(input, init) {
+        const headers = new Headers(init?.headers);
+        headers.set("Accept", "application/json");
+        const response = await globalThis.fetch(input, {
           ...(init ?? {}),
+          headers,
           credentials: "include",
         });
+        const contentType = response.headers.get("content-type") || "";
+        if (!contentType.includes("application/json")) {
+          await response.text();
+          throw new Error(
+            `El servidor respondió una página HTML en lugar de datos de la aplicación (HTTP ${response.status}). Recarga la página; si continúa, revisa el proceso PM2 y la ruta /api/trpc.`
+          );
+        }
+        return response;
       },
     }),
   ],

@@ -1145,7 +1145,12 @@ export const appRouter = router({
 
   cloudbedsAvailability: router({
     importWeek: protectedProcedure
-      .input(z.object({ startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) }))
+      .input(
+        z.object({
+          startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+          days: z.union([z.literal(7), z.literal(14), z.literal(30), z.literal(60)]).default(7),
+        })
+      )
       .mutation(async ({ input }) => {
         const apiKey = process.env.CLOUDBEDS_API_KEY;
         const propertyId = process.env.CLOUDBEDS_PROPERTY_ID;
@@ -1157,9 +1162,9 @@ export const appRouter = router({
         }
         const start = new Date(`${input.startDate}T00:00:00`);
         const displayEnd = new Date(start);
-        displayEnd.setDate(start.getDate() + 6);
+        displayEnd.setDate(start.getDate() + input.days - 1);
         const apiEnd = new Date(start);
-        apiEnd.setDate(start.getDate() + 7);
+        apiEnd.setDate(start.getDate() + input.days);
         const toDateString = (date: Date) => [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
         const displayEndDate = toDateString(displayEnd);
         try {
