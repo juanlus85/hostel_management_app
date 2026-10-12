@@ -68,6 +68,10 @@ import {
   recordCloudbedsReservationPayment,
   updateCloudbedsReservationStatus,
 } from "./cloudbedsReservationActions";
+import {
+  downloadCloudbedsFiscalDocument,
+  fetchCloudbedsFiscalDocuments,
+} from "./cloudbedsFiscalDocuments";
 import { fetchCloudbedsAvailability, updateCloudbedsRate } from "./cloudbedsAvailability";
 import type { ExternalUpcomingReservation } from "../drizzle/schema";
 import {
@@ -267,6 +271,53 @@ async function createOnlineCheckinFromExternalReservation(
     expiresAt: dayAfter(reservation.checkInDate),
   });
   return { id: linkId, token, url: `${origin}/checkin-online/${token}` };
+}
+
+async function getExternalReservationWelcomeContext(
+  reservation: ExternalUpcomingReservation
+) {
+  if (!reservation.roomNumber) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message:
+        "Asigna una habitación con códigos de acceso antes de preparar la bienvenida completa",
+    });
+  }
+  const accessCodeList = await db.getAllAccessCodes();
+  const room = findAccessCodeForRoom(accessCodeList, reservation.roomNumber);
+  if (!room || room.roomNumber === "ENTRADA" || !room.roomCode?.trim()) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: `La habitación ${reservation.roomNumber} no tiene códigos de acceso configurados`,
+    });
+  }
+  const entrance = accessCodeList.find(code => code.roomNumber === "ENTRADA");
+  const settings = await db.getHostelSettings();
+  const entranceCode =
+    room.entranceCode?.trim() ||
+    entrance?.roomCode?.trim() ||
+    settings?.defaultEntranceCode?.trim() ||
+    null;
+  if (!entranceCode) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message:
+        "Configura el código de entrada del hostel antes de preparar la bienvenida completa",
+    });
+  }
+  return {
+    settings,
+    context: {
+      guestName: reservation.guestName,
+      checkInDate: reservation.checkInDate,
+      checkOutDate: reservation.checkOutDate,
+      roomNumber: reservation.roomNumber,
+      roomType: reservation.roomType || room.roomType,
+      reservationCode: reservation.reservationCode,
+      roomCode: room.roomCode,
+      entranceCode,
+    },
+  };
 }
 
 export const appRouter = router({
@@ -4444,6 +4495,109 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             };
           }
         }),
+      listCloudbedsReservationFiscalDocuments: protectedProcedure
+        .input(z.object({ id: z.number() }))
+        .query(async ({ input }) => {
+          const reservation = await db.getExternalUpcomingReservationById(input.id);
+          if (!reservation) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: "No se encontró la reserva importada",
+            });
+          }
+          const token =
+            process.env.CLOUDBEDS_FISCAL_ACCESS_TOKEN ||
+            process.env.CLOUDBEDS_API_KEY;
+          const propertyId = process.env.CLOUDBEDS_PROPERTY_ID;
+          if (!token || !propertyId) {
+            throw new TRPCError({
+              code: "PRECONDITION_FAILED",
+              message:
+                "Configura CLOUDBEDS_FISCAL_ACCESS_TOKEN y CLOUDBEDS_PROPERTY_ID para consultar los documentos oficiales de Cloudbeds.",
+            });
+          }
+          try {
+            return await fetchCloudbedsFiscalDocuments({
+              token,
+              propertyId,
+              reservationId: reservation.sourceReservationId,
+            });
+          } catch (error) {
+            const message =
+              error instanceof Error
+                ? error.message
+                : "No se pudieron consultar los documentos oficiales de Cloudbeds.";
+            throw new TRPCError({ code: "BAD_GATEWAY", message });
+          }
+        }),
+      downloadCloudbedsReservationFiscalDocument: protectedProcedure
+        .input(
+          z.object({
+            id: z.number(),
+            documentId: z.string().trim().min(1).max(200),
+            fileId: z.string().trim().min(1).max(200).optional(),
+          })
+        )
+        .mutation(async ({ input }) => {
+          const reservation = await db.getExternalUpcomingReservationById(input.id);
+          if (!reservation) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: "No se encontró la reserva importada",
+            });
+          }
+          const token =
+            process.env.CLOUDBEDS_FISCAL_ACCESS_TOKEN ||
+            process.env.CLOUDBEDS_API_KEY;
+          const propertyId = process.env.CLOUDBEDS_PROPERTY_ID;
+          if (!token || !propertyId) {
+            throw new TRPCError({
+              code: "PRECONDITION_FAILED",
+              message:
+                "Configura CLOUDBEDS_FISCAL_ACCESS_TOKEN y CLOUDBEDS_PROPERTY_ID para descargar documentos oficiales de Cloudbeds.",
+            });
+          }
+          try {
+            const documents = await fetchCloudbedsFiscalDocuments({
+              token,
+              propertyId,
+              reservationId: reservation.sourceReservationId,
+            });
+            const document = documents.find(item => item.id === input.documentId);
+            if (!document) {
+              throw new TRPCError({
+                code: "NOT_FOUND",
+                message: "El documento no corresponde a esta reserva de Cloudbeds.",
+              });
+            }
+            if (
+              input.fileId &&
+              !document.files.some(file => file.id === input.fileId)
+            ) {
+              throw new TRPCError({
+                code: "NOT_FOUND",
+                message: "El archivo no corresponde al documento seleccionado.",
+              });
+            }
+            const downloaded = await downloadCloudbedsFiscalDocument({
+              token,
+              propertyId,
+              documentId: input.documentId,
+              fileId: input.fileId,
+            });
+            return {
+              ...downloaded,
+              fileName: downloaded.fileName || document.fileName || `Documento Cloudbeds ${document.id}.pdf`,
+            };
+          } catch (error) {
+            if (error instanceof TRPCError) throw error;
+            const message =
+              error instanceof Error
+                ? error.message
+                : "No se pudo descargar el documento oficial de Cloudbeds.";
+            throw new TRPCError({ code: "BAD_GATEWAY", message });
+          }
+        }),
       getCloudbedsPaymentMethods: protectedProcedure.query(async () => {
         const apiKey = process.env.CLOUDBEDS_API_KEY;
         const propertyId = process.env.CLOUDBEDS_PROPERTY_ID;
@@ -4655,7 +4809,8 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
               });
             return { success: true, checkinUrl: invitation?.url || null };
           }
-          const settings = await db.getHostelSettings();
+          const { settings, context: welcomeContext } =
+            await getExternalReservationWelcomeContext(reservation);
           const configuredTemplate =
             language === "en"
               ? settings?.reservationWelcomeEmailEn
@@ -4665,7 +4820,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
               ? buildEditedReservationEmail(input.subject, input.message)
               : buildConfiguredReservationWelcome(
                   configuredTemplate,
-                  context,
+                  welcomeContext,
                   language,
                   {
                     name: settings?.hostelName,
@@ -4748,19 +4903,21 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
               }
             );
           }
+          const { settings: welcomeSettings, context: welcomeContext } =
+            await getExternalReservationWelcomeContext(reservation);
           const template =
             input.language === "en"
-              ? settings?.reservationWelcomeEmailEn
-              : settings?.reservationWelcomeEmailEs;
+              ? welcomeSettings?.reservationWelcomeEmailEn
+              : welcomeSettings?.reservationWelcomeEmailEs;
           return buildConfiguredReservationWelcome(
             template,
-            context,
+            welcomeContext,
             input.language,
             {
-              name: settings?.hostelName,
-              address: settings?.hostelAddress,
-              phone: settings?.hostelPhone,
-              email: settings?.hostelEmail,
+              name: welcomeSettings?.hostelName,
+              address: welcomeSettings?.hostelAddress,
+              phone: welcomeSettings?.hostelPhone,
+              email: welcomeSettings?.hostelEmail,
             }
           );
         }),
@@ -4805,6 +4962,10 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
                 )
               : null;
           const settings = await db.getHostelSettings();
+          const welcomeContext =
+            input.messageType === "welcome"
+              ? (await getExternalReservationWelcomeContext(reservation)).context
+              : context;
           const configuredTemplate =
             input.messageType === "online_checkin"
               ? input.language === "en"
@@ -4815,7 +4976,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
                 : settings?.reservationWelcomeWhatsappEs;
           const templatedMessage = buildConfiguredReservationWhatsApp(
             configuredTemplate,
-            context,
+            welcomeContext,
             input.messageType,
             invitation?.url || null,
             input.language,

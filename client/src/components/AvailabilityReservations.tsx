@@ -12,7 +12,6 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getReservationWindowRange } from "@/lib/reservationWindow";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useLocation } from "wouter";
 
 const madridDate = (date: Date) => date.toLocaleDateString("en-CA", { timeZone: "Europe/Madrid" });
 const agendaToneClasses: Record<ReservationAgendaTone, string> = {
@@ -117,7 +116,6 @@ function agendaCardGridStyle(card: { startSlot: number; endSlot: number; lane: n
 
 export function AvailabilityReservations({ autoImport = false }: { autoImport?: boolean }) {
   const { user } = useAuth();
-  const [, navigate] = useLocation();
   const [window] = useState(getReservationWindow);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [showPendingReservations, setShowPendingReservations] = useState(false);
@@ -148,6 +146,26 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
     { id: selectedId ?? 0 },
     { enabled: selectedId !== null, retry: false },
   );
+  const fiscalDocuments = trpc.checkin.externalImports.listCloudbedsReservationFiscalDocuments.useQuery(
+    { id: selectedId ?? 0 },
+    { enabled: selectedId !== null && detailTab === "billing", retry: false },
+  );
+  const downloadFiscalDocument = trpc.checkin.externalImports.downloadCloudbedsReservationFiscalDocument.useMutation({
+    onSuccess: result => {
+      const raw = globalThis.atob(result.dataBase64);
+      const bytes = Uint8Array.from(raw, character => character.charCodeAt(0));
+      const url = URL.createObjectURL(new Blob([bytes], { type: result.contentType }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = result.fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      toast.success("Documento oficial de Cloudbeds descargado");
+    },
+    onError: error => toast.error(error.message),
+  });
   const paymentMethods = trpc.checkin.externalImports.getCloudbedsPaymentMethods.useQuery(undefined, {
     enabled: Boolean(paymentEditor && selectedId !== null && user?.role === "admin"),
     retry: false,
@@ -274,36 +292,6 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
       toast.error(error instanceof Error ? error.message : "No se pudo preparar WhatsApp");
     }
   };
-  const openIssuedInvoice = () => {
-    if (!reservation) return;
-    navigate(`/facturas?new=issued&recipient=${encodeURIComponent(reservation.guestName || "")}`);
-  };
-  const downloadReceipt = async () => {
-    if (!reservation) return;
-    const { jsPDF } = await import("jspdf");
-    const pdf = new jsPDF({ unit: "mm", format: "a4" });
-    const total = payments?.paidTotal ?? 0;
-    pdf.setFontSize(20);
-    pdf.text("RECIBO", 20, 24);
-    pdf.setFontSize(10);
-    pdf.setTextColor(90);
-    pdf.text("The Spot Central Hostel", 20, 32);
-    pdf.text(`Fecha: ${new Date().toLocaleDateString("es-ES")}`, 20, 38);
-    pdf.setDrawColor(190);
-    pdf.line(20, 43, 190, 43);
-    pdf.setTextColor(20);
-    pdf.setFontSize(12);
-    pdf.text(`Huésped: ${reservation.guestName || "Sin nombre"}`, 20, 54);
-    pdf.text(`Reserva: ${reservation.reservationCode || "—"}`, 20, 62);
-    pdf.text(`Estancia: ${compactDate(reservation.checkInDate)} — ${compactDate(reservation.checkOutDate)}`, 20, 70);
-    pdf.setFontSize(14);
-    pdf.text(`Importe cobrado: ${money(total)}`, 20, 86);
-    pdf.setFontSize(9);
-    pdf.setTextColor(90);
-    pdf.text("Documento informativo generado desde Gestión. No sustituye a una factura emitida.", 20, 105);
-    pdf.save(`Recibo - ${reservation.guestName || "reserva"} - ${reservation.checkInDate}.pdf`);
-  };
-
   return <div className="flex flex-col gap-5">
     <Card className="order-2 border-sky-100 shadow-sm">
       <CardHeader className="flex flex-col gap-4 py-5 sm:flex-row sm:items-center sm:justify-between">
@@ -388,7 +376,17 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
           </TabsContent>
 
           <TabsContent value="billing" className="mt-4 space-y-4">
-            <section className="rounded-xl border bg-violet-50/50 p-4"><div className="flex items-start gap-3"><div className="rounded-lg bg-violet-100 p-2 text-violet-700"><ReceiptText className="h-5 w-5" /></div><div><p className="font-semibold">Facturación y recibos</p><p className="mt-1 text-sm text-muted-foreground">Crea una factura emitida para esta reserva o descarga un recibo con los cobros registrados.</p></div></div><div className="mt-4 grid gap-2 sm:grid-cols-2"><Button onClick={openIssuedInvoice}><FileText className="mr-2 h-4 w-4" />Emitir factura</Button><Button variant="outline" onClick={downloadReceipt}><ReceiptText className="mr-2 h-4 w-4" />Descargar recibo PDF</Button></div></section>
+            <section className="rounded-xl border bg-violet-50/50 p-4">
+              <div className="flex items-start gap-3">
+                <div className="rounded-lg bg-violet-100 p-2 text-violet-700"><ReceiptText className="h-5 w-5" /></div>
+                <div>
+                  <p className="font-semibold">Documentos oficiales de Cloudbeds</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Aquí solo se muestran y descargan las facturas y recibos emitidos por Cloudbeds para esta reserva. No se generan PDFs locales.</p>
+                </div>
+              </div>
+              {fiscalDocuments.isLoading ? <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin text-violet-700" />Consultando documentos oficiales…</div> : fiscalDocuments.error ? <p className="mt-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{fiscalDocuments.error.message}</p> : fiscalDocuments.data?.length ? <div className="mt-4 divide-y rounded-lg border bg-background">{fiscalDocuments.data.map(document => <div key={document.id} className="flex flex-wrap items-center justify-between gap-3 p-3"><div className="min-w-0"><p className="flex items-center gap-2 font-medium"><FileText className="h-4 w-4 shrink-0 text-violet-700" />{document.kind === "RECEIPT" ? "Recibo" : document.kind === "INVOICE" ? "Factura" : document.kind || "Documento"}{document.number ? ` · ${document.number}` : ""}</p><p className="mt-1 text-xs text-muted-foreground">{document.status || "Sin estado"}{document.amount !== null ? ` · ${money(document.amount)}${document.currency ? ` ${document.currency}` : ""}` : ""}{document.createdAt ? ` · ${new Date(document.createdAt).toLocaleDateString("es-ES")}` : ""}</p></div><Button type="button" size="sm" variant="outline" disabled={downloadFiscalDocument.isPending} onClick={() => downloadFiscalDocument.mutate({ id: reservation.id, documentId: document.id })}>{downloadFiscalDocument.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ReceiptText className="mr-2 h-4 w-4" />}Descargar</Button></div>)}</div> : <p className="mt-4 rounded-lg border border-dashed bg-background/70 p-4 text-sm text-muted-foreground">Cloudbeds no tiene todavía ninguna factura ni recibo emitido para esta reserva.</p>}
+              <p className="mt-4 text-xs text-muted-foreground">La emisión oficial requiere la configuración fiscal de Cloudbeds y la selección confirmada de transacciones; por ello no se sustituye por un documento generado localmente.</p>
+            </section>
           </TabsContent>
 
           <TabsContent value="checkin" className="mt-4 space-y-4">

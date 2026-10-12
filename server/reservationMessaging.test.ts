@@ -15,14 +15,17 @@ const context = {
   roomNumber: "15",
   roomType: "Twin",
   reservationCode: "CB-15",
+  entranceCode: "1469",
+  roomCode: "2226",
 };
 
 describe("mensajería manual de reservas", () => {
-  it("genera una bienvenida sin códigos de acceso", () => {
+  it("genera una bienvenida completa con códigos de acceso", () => {
     const message = buildReservationWelcomeEmail(context, "es");
     expect(message.subject).toContain("Bienvenido");
     expect(message.html).toContain("Ana &lt;García&gt;");
-    expect(message.text).not.toMatch(/código de acceso/i);
+    expect(message.text).toContain("Código de entrada al hostel: 1469");
+    expect(message.text).toContain("Código de acceso a la habitación: 2226");
   });
 
   it("incluye el enlace seguro y las instrucciones en la invitación de check-in", () => {
@@ -51,7 +54,7 @@ describe("mensajería manual de reservas", () => {
     expect(message).toContain("Check-in Online");
   });
 
-  it("aplica las etiquetas de una plantilla de bienvenida configurable sin exponer códigos", () => {
+  it("aplica las etiquetas de códigos en una plantilla de bienvenida configurable", () => {
     const message = buildConfiguredReservationWelcome(
       "Hola {{NOMBRE_HUESPED}}, te esperamos el {{FECHA_LLEGADA}} en {{NOMBRE_HOSTEL}}. Código: {{CODIGO_ENTRADA}}",
       context,
@@ -62,7 +65,7 @@ describe("mensajería manual de reservas", () => {
       "Hola Ana <García>, te esperamos el 2026-08-30 en The Spot."
     );
     expect(message.text).not.toContain("{{CODIGO_ENTRADA}}");
-    expect(message.text).not.toMatch(/\*\d{4}\*/);
+    expect(message.text).toContain("Código: 1469");
   });
 
   it("sustituye el enlace en una invitación de Check-in configurable", () => {
@@ -88,6 +91,14 @@ describe("mensajería manual de reservas", () => {
       "es",
       { name: "The Spot" }
     );
-    expect(message).toBe("Hola Ana <García>, llegada: 2026-08-30.");
+    expect(message).toContain("Hola Ana <García>, llegada: 2026-08-30.");
+    expect(message).toContain("Código de entrada al hostel: 1469");
+  });
+
+  it("incluye códigos en el WhatsApp de bienvenida sin crear Check-in Online", () => {
+    const message = buildReservationWhatsAppMessage(context, "welcome", null, "es");
+    expect(message).toContain("Código de entrada al hostel: 1469");
+    expect(message).toContain("Código de acceso a la habitación: 2226");
+    expect(message).not.toContain("Check-in Online");
   });
 });

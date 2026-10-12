@@ -1800,10 +1800,14 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Retirar la pestaña de Próximas reservas de Importaciones externas, manteniendo allí solo las importaciones de caja.
 - [x] Añadir pestañas de información, cobros/cargos, facturación y check-in/mensajería al detalle de reserva del calendario.
 - [x] Integrar en el detalle de reserva las acciones de revisión, correo y WhatsApp de bienvenida, y envío de Check-in Online.
-- [x] Permitir emitir un recibo PDF y abrir la creación de factura emitida desde el detalle de reserva.
+- [x] Reemplazar el recibo local y la factura interna por documentos fiscales oficiales de Cloudbeds.
 
 ## Mejoras operativas de agenda y tarifas
 - [x] Mostrar un aviso destacado Hotel Collect en el detalle de reserva cuando corresponda.
 - [x] Ocultar por defecto las reservas pendientes/sin confirmar en la agenda y permitir desplegarlas manualmente.
 - [x] Ajustar los relevos visuales: salida ocupa el 20% del día y entrada el 80% restante.
 - [x] Añadir edición de precios con navegación por teclado y envío confirmado de todos los cambios pendientes a Cloudbeds.
+
+## Documentos y bienvenida desde el detalle de reserva
+- [x] Sustituir la factura y recibo locales por la descarga de documentos oficiales disponibles desde Cloudbeds para la reserva.
+- [x] Añadir mensajes de bienvenida completos por correo y WhatsApp sin enlace de Check-in Online, conservando códigos e instrucciones.
