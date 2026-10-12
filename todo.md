@@ -1794,3 +1794,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Reordenar Disponibilidad Hostel: primera pestaña Reservas con actualización al abrir y leyenda bajo el calendario; segunda pestaña Disponibilidad y precios.
 - [x] Evitar filas duplicadas de una misma habitación física en la agenda cuando Cloudbeds la asocia a tipos distintos.
 - [x] Corregir la carga de la pestaña Disponibilidad y precios tras la reorganización de pestañas.
+- [x] Reducir las filas separadoras por tipo de habitación en la agenda y diferenciarlas visualmente de las filas de habitación.
