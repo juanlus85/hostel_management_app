@@ -171,7 +171,7 @@ export default function DisponibilidadHostel() {
       </div>
 
       {section === "reservations" ? <AvailabilityReservations autoImport /> : <>
-      {!availability && !importWeekMutation.isPending && <Card className="border-dashed"><CardContent className="flex flex-col items-center justify-center py-16 text-center"><div className="mb-4 rounded-full bg-sky-100 p-4 text-sky-700"><BedDouble className="h-8 w-8" /></div><h2 className="font-semibold">No se ha podido cargar el calendario</h2><p className="mt-2 max-w-lg text-sm text-muted-foreground">Pulsa “Actualizar disponibilidad” para repetir la consulta manual a Cloudbeds.</p></CardContent></Card>}
+      {!availability && !importWeekMutation.isPending && <Card className="border-dashed"><CardContent className="flex flex-col items-center justify-center py-16 text-center"><div className="mb-4 rounded-full bg-sky-100 p-4 text-sky-700"><BedDouble className="h-8 w-8" /></div><h2 className="font-semibold">No se ha podido cargar el calendario</h2><p className="mt-2 max-w-lg text-sm text-muted-foreground">{importWeekMutation.error?.message || "Pulsa “Actualizar disponibilidad” para repetir la consulta manual a Cloudbeds."}</p></CardContent></Card>}
 
       {importWeekMutation.isPending && !availability && <Card><CardContent className="flex items-center justify-center gap-3 py-16 text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin text-sky-700" />Consultando disponibilidad y precios en Cloudbeds…</CardContent></Card>}
 

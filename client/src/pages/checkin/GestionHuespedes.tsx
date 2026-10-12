@@ -33,7 +33,7 @@ export default function GestionHuespedes() {
   const [editingGuest, setEditingGuest] = useState<any>(null);
   const [, setLocation] = useLocation();
 
-  const { data: guests, isLoading, refetch } = trpc.checkin.guests.search.useQuery({
+  const { data: guests, isLoading, isError, error, refetch } = trpc.checkin.guests.search.useQuery({
     search: searchTerm || undefined,
     startDate: startDate || undefined,
     endDate: endDate || undefined,
@@ -350,6 +350,12 @@ export default function GestionHuespedes() {
       {isLoading ? (
         <div className="flex justify-center items-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : isError ? (
+        <div className="rounded-lg border border-rose-200 bg-rose-50 p-5 text-center text-sm text-rose-900">
+          <p className="font-semibold">No se ha podido cargar la lista de huéspedes</p>
+          <p className="mt-1">{error.message}</p>
+          <Button className="mt-3" size="sm" variant="outline" onClick={() => refetch()}>Reintentar</Button>
         </div>
       ) : !guests || guests.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
