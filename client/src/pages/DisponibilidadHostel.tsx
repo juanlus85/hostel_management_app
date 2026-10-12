@@ -155,14 +155,14 @@ export default function DisponibilidadHostel() {
           <h1 className="text-2xl font-bold tracking-tight">Disponibilidad Hostel</h1>
           <p className="mt-1 text-muted-foreground">Disponibilidad y precios por tipo de habitación para los próximos {periodDays} días.</p>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        {section === "availability" && <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <div className="flex items-center gap-2 rounded-lg border bg-background px-3 py-2"><CalendarDays className="h-4 w-4 text-muted-foreground" /><label htmlFor="availability-start" className="sr-only">Inicio del período</label><Input id="availability-start" type="date" value={startDate} onChange={event => setStartDate(event.target.value)} className="h-7 w-[142px] border-0 bg-transparent p-0 shadow-none focus-visible:ring-0" /></div>
           <label className="flex h-10 items-center gap-2 rounded-lg border bg-background px-3 text-sm font-medium text-muted-foreground" htmlFor="availability-period"><span>Mostrar</span><select id="availability-period" value={periodDays} onChange={event => setPeriodDays(Number(event.target.value) as (typeof availabilityPeriods)[number])} className="bg-transparent font-semibold text-foreground outline-none">{availabilityPeriods.map(days => <option key={days} value={days}>{days} días</option>)}</select></label>
           <Button onClick={loadAvailability} disabled={importWeekMutation.isPending || !startDate} className="bg-sky-700 hover:bg-sky-800">
             {importWeekMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
             Actualizar disponibilidad
           </Button>
-        </div>
+        </div>}
       </div>
 
       <div className="flex w-full gap-2 rounded-xl border bg-muted/40 p-1 sm:w-fit" role="tablist" aria-label="Secciones de disponibilidad">

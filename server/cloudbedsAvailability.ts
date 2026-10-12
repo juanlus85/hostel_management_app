@@ -311,13 +311,23 @@ async function fetchCloudbedsAvailabilityChunk(apiKey: string, propertyId: strin
 export async function fetchCloudbedsAvailability(apiKey: string, propertyId: string, startDate: string, endDate: string) {
   const start = dateFromIso(startDate);
   const end = dateFromIso(endDate);
-  const weeks: CloudbedsAvailabilityWeek[] = [];
+  const chunks: Array<{ startDate: string; endDate: string }> = [];
   for (let cursor = new Date(start); cursor <= end; ) {
     const chunkStart = new Date(cursor);
     const chunkEnd = new Date(cursor);
     chunkEnd.setUTCDate(chunkEnd.getUTCDate() + CLOUDBEDS_MAX_DAYS_PER_QUERY);
-    weeks.push(await fetchCloudbedsAvailabilityChunk(apiKey, propertyId, dateToIso(chunkStart), dateToIso(chunkEnd)));
+    chunks.push({ startDate: dateToIso(chunkStart), endDate: dateToIso(chunkEnd) });
     cursor.setUTCDate(cursor.getUTCDate() + CLOUDBEDS_MAX_DAYS_PER_QUERY);
+  }
+
+  // Cloudbeds limita la respuesta detallada a una semana. Tres solicitudes en
+  // paralelo mantienen la espera por debajo del límite del proxy sin saturar
+  // la API cuando se consultan 30 o 60 días.
+  const weeks: CloudbedsAvailabilityWeek[] = [];
+  const concurrency = 3;
+  for (let index = 0; index < chunks.length; index += concurrency) {
+    const batch = chunks.slice(index, index + concurrency);
+    weeks.push(...await Promise.all(batch.map(chunk => fetchCloudbedsAvailabilityChunk(apiKey, propertyId, chunk.startDate, chunk.endDate))));
   }
 
   const normalized = mergeCloudbedsAvailabilityWeeks(weeks, startDate, endDate);

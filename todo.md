@@ -1823,3 +1823,6 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Corregir la visibilidad de las acciones de bienvenida y Check-in Online en la pestaña Check-in y mensajes de la reserva.
 - [x] Corregir la carga real del rango de 14, 30 y 60 días en Disponibilidad y retirar la indicación de IVA incluido.
 - [x] Evitar el error de desmontaje al cancelar el editor de Check-in Online desde móvil.
+- [x] Mostrar fecha, rango y actualización únicamente en la pestaña Disponibilidad y precios.
+- [x] Mostrar acciones explícitas de envío de códigos e instrucciones por correo y WhatsApp dentro de Check-in y mensajería.
+- [x] Evitar los errores HTTP 504 al consultar disponibilidad de más de siete días mediante carga concurrente limitada de tramos Cloudbeds.
