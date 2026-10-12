@@ -62,6 +62,7 @@ describe("acciones de reserva Cloudbeds", () => {
 
   it("lee estado, saldo y huésped fiscal de Cloudbeds", () => {
     expect(extractCloudbedsReservationSnapshot({ reservation: { reservation_status: "checked_in", balanceDue: "14.50", guestID: 42 } })).toEqual({ reservationStatus: "checked_in", amountPending: "14.50", hotelCollect: null, guestId: 42 });
+    expect(extractCloudbedsReservationSnapshot({ data: { guests: [{ guestId: "61" }] } }).guestId).toBe(61);
   });
 
   it("identifica las reservas Hotel Collect en los términos de cobro", () => {

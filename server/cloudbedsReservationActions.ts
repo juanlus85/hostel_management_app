@@ -137,11 +137,17 @@ export function normalizeCloudbedsPaymentMethods(payload: unknown): CloudbedsPay
 
 export function extractCloudbedsReservationSnapshot(payload: unknown): CloudbedsReservationSnapshot {
   const reservation = unwrapReservation(payload);
+  const guestList = reservation.guestList ?? reservation.guests ?? reservation.guest_list;
+  const firstGuest = Array.isArray(guestList) ? asRecord(guestList[0]) : asRecord(reservation.guest ?? reservation.primaryGuest);
+  const guestId = Number(
+    reservation.guestID ?? reservation.guestId ?? reservation.guest_id ??
+    firstGuest.guestID ?? firstGuest.guestId ?? firstGuest.guest_id ?? firstGuest.id
+  );
   return {
     reservationStatus: firstText(reservation.status, reservation.reservationStatus, reservation.reservation_status),
     amountPending: money(reservation.balance ?? reservation.amountPending ?? reservation.amount_pending ?? reservation.balanceDue ?? reservation.balance_due),
     hotelCollect: hotelCollectValue(reservation),
-    guestId: Number.isInteger(Number(reservation.guestID ?? reservation.guestId ?? reservation.guest_id)) ? Number(reservation.guestID ?? reservation.guestId ?? reservation.guest_id) : null,
+    guestId: Number.isInteger(guestId) && guestId > 0 ? guestId : null,
   };
 }
 
