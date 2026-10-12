@@ -60,8 +60,8 @@ describe("acciones de reserva Cloudbeds", () => {
     expect(Object.fromEntries(body.entries())).toMatchObject({ reservationID: "R-10", status: "checked_out", sendStatusChangeEmail: "false" });
   });
 
-  it("lee estado y saldo tras actualizar Cloudbeds", () => {
-    expect(extractCloudbedsReservationSnapshot({ reservation: { reservation_status: "checked_in", balanceDue: "14.50" } })).toEqual({ reservationStatus: "checked_in", amountPending: "14.50", hotelCollect: null });
+  it("lee estado, saldo y huésped fiscal de Cloudbeds", () => {
+    expect(extractCloudbedsReservationSnapshot({ reservation: { reservation_status: "checked_in", balanceDue: "14.50", guestID: 42 } })).toEqual({ reservationStatus: "checked_in", amountPending: "14.50", hotelCollect: null, guestId: 42 });
   });
 
   it("identifica las reservas Hotel Collect en los términos de cobro", () => {

@@ -7,6 +7,7 @@ export type CloudbedsReservationSnapshot = {
   reservationStatus: string | null;
   amountPending: string | null;
   hotelCollect: boolean | null;
+  guestId: number | null;
 };
 
 type ApiRecord = Record<string, unknown>;
@@ -140,6 +141,7 @@ export function extractCloudbedsReservationSnapshot(payload: unknown): Cloudbeds
     reservationStatus: firstText(reservation.status, reservation.reservationStatus, reservation.reservation_status),
     amountPending: money(reservation.balance ?? reservation.amountPending ?? reservation.amount_pending ?? reservation.balanceDue ?? reservation.balance_due),
     hotelCollect: hotelCollectValue(reservation),
+    guestId: Number.isInteger(Number(reservation.guestID ?? reservation.guestId ?? reservation.guest_id)) ? Number(reservation.guestID ?? reservation.guestId ?? reservation.guest_id) : null,
   };
 }
 

@@ -25,6 +25,8 @@ export type CloudbedsAvailabilityWeek = {
   roomTypes: CloudbedsRoomTypeAvailability[];
 };
 
+const CLOUDBEDS_MAX_DAYS_PER_QUERY = 7;
+
 type JsonRecord = Record<string, unknown>;
 type Candidate = {
   roomTypeId: string;
@@ -247,7 +249,39 @@ export function normalizeCloudbedsAvailability(payload: unknown, startDate: stri
   };
 }
 
-export async function fetchCloudbedsAvailability(apiKey: string, propertyId: string, startDate: string, endDate: string) {
+function dateFromIso(value: string) {
+  return new Date(`${value}T00:00:00Z`);
+}
+
+function dateToIso(value: Date) {
+  return value.toISOString().slice(0, 10);
+}
+
+export function mergeCloudbedsAvailabilityWeeks(weeks: CloudbedsAvailabilityWeek[], startDate: string, endDate: string): CloudbedsAvailabilityWeek {
+  const byRoomType = new Map<string, CloudbedsRoomTypeAvailability>();
+  for (const week of weeks) {
+    for (const roomType of week.roomTypes) {
+      const existing = byRoomType.get(roomType.roomTypeId) ?? {
+        roomTypeId: roomType.roomTypeId,
+        roomTypeName: roomType.roomTypeName,
+        ratePlanName: roomType.ratePlanName,
+        days: [],
+      };
+      const daysByDate = new Map(existing.days.map(day => [day.date, day]));
+      for (const day of roomType.days) daysByDate.set(day.date, day);
+      existing.days = Array.from(daysByDate.values()).sort((left, right) => left.date.localeCompare(right.date));
+      if (!existing.ratePlanName && roomType.ratePlanName) existing.ratePlanName = roomType.ratePlanName;
+      byRoomType.set(roomType.roomTypeId, existing);
+    }
+  }
+  return {
+    startDate,
+    endDate,
+    roomTypes: Array.from(byRoomType.values()).sort((left, right) => left.roomTypeName.localeCompare(right.roomTypeName, "es")),
+  };
+}
+
+async function fetchCloudbedsAvailabilityChunk(apiKey: string, propertyId: string, startDate: string, endDate: string) {
   const url = new URL("https://api.cloudbeds.com/api/v1.3/getRatePlans");
   url.searchParams.set("propertyIDs", propertyId);
   url.searchParams.set("startDate", startDate);
@@ -271,8 +305,22 @@ export async function fetchCloudbedsAvailability(apiKey: string, propertyId: str
     const message = stringValue(asRecord(payload).message, asRecord(payload).error, asRecord(payload).errors);
     throw new Error(message || `Cloudbeds respondió HTTP ${response.status}. Revisa la API key, el Property ID y el permiso de tarifas y disponibilidad.`);
   }
+  return normalizeCloudbedsAvailability(payload, startDate, endDate);
+}
 
-  const normalized = normalizeCloudbedsAvailability(payload, startDate, endDate);
+export async function fetchCloudbedsAvailability(apiKey: string, propertyId: string, startDate: string, endDate: string) {
+  const start = dateFromIso(startDate);
+  const end = dateFromIso(endDate);
+  const weeks: CloudbedsAvailabilityWeek[] = [];
+  for (let cursor = new Date(start); cursor <= end; ) {
+    const chunkStart = new Date(cursor);
+    const chunkEnd = new Date(cursor);
+    chunkEnd.setUTCDate(chunkEnd.getUTCDate() + CLOUDBEDS_MAX_DAYS_PER_QUERY);
+    weeks.push(await fetchCloudbedsAvailabilityChunk(apiKey, propertyId, dateToIso(chunkStart), dateToIso(chunkEnd)));
+    cursor.setUTCDate(cursor.getUTCDate() + CLOUDBEDS_MAX_DAYS_PER_QUERY);
+  }
+
+  const normalized = mergeCloudbedsAvailabilityWeeks(weeks, startDate, endDate);
   if (!normalized.roomTypes.length) {
     throw new Error("Cloudbeds respondió sin tipos de habitación para este período. Revisa que haya tarifas públicas y que la API key tenga permiso de tarifas y disponibilidad.");
   }

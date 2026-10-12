@@ -1811,9 +1811,15 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 ## Documentos y bienvenida desde el detalle de reserva
 - [x] Sustituir la factura y recibo locales por la descarga de documentos oficiales disponibles desde Cloudbeds para la reserva.
 - [x] Añadir mensajes de bienvenida completos por correo y WhatsApp sin enlace de Check-in Online, conservando códigos e instrucciones.
-- [ ] Configurar en el VPS `CLOUDBEDS_FISCAL_ACCESS_TOKEN` con scope `read:reservation` y verificar la descarga real de documentos oficiales de Cloudbeds.
+- [ ] Configurar en el VPS `CLOUDBEDS_FISCAL_ACCESS_TOKEN` con scopes `read:reservation` y `write:reservation`, además de `CLOUDBEDS_FISCAL_USER_ID` para recibos, y verificar emisión/descarga real de documentos oficiales de Cloudbeds.
 
 ## Correcciones de Reservas y Disponibilidad
 - [x] Mostrar de nuevo todas las reservas con habitación asignada y ocultar únicamente las no asignadas en un bloque plegado.
 - [x] Investigar y corregir las respuestas HTML que provocan `Unexpected token '<'` en Huéspedes y Disponibilidad.
 - [x] Permitir seleccionar 7, 14, 30 o 60 días en Disponibilidad y precios, con 7 días como valor inicial.
+
+## Emisión fiscal y acciones de mensajería
+- [x] Permitir preparar y confirmar la creación de un recibo o factura oficial de Cloudbeds desde el detalle de reserva, antes de descargarlo.
+- [x] Corregir la visibilidad de las acciones de bienvenida y Check-in Online en la pestaña Check-in y mensajes de la reserva.
+- [x] Corregir la carga real del rango de 14, 30 y 60 días en Disponibilidad y retirar la indicación de IVA incluido.
+- [x] Evitar el error de desmontaje al cancelar el editor de Check-in Online desde móvil.

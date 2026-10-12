@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cloudbedsRateUpdateForm, normalizeCloudbedsAvailability } from "./cloudbedsAvailability";
+import { cloudbedsRateUpdateForm, mergeCloudbedsAvailabilityWeeks, normalizeCloudbedsAvailability } from "./cloudbedsAvailability";
 
 describe("normalizeCloudbedsAvailability", () => {
   it("normaliza precios y habitaciones disponibles por tipo y día", () => {
@@ -114,6 +114,15 @@ describe("normalizeCloudbedsAvailability", () => {
 
     expect(result.roomTypes[0]?.days).toHaveLength(1);
     expect(result.roomTypes[0]?.days[0]?.date).toBe("2026-10-12");
+  });
+
+  it("une los tramos de Cloudbeds para mostrar más de siete días", () => {
+    const result = mergeCloudbedsAvailabilityWeeks([
+      { startDate: "2026-10-12", endDate: "2026-10-19", roomTypes: [{ roomTypeId: "double", roomTypeName: "Doble", ratePlanName: "BAR", days: [{ date: "2026-10-12", roomsAvailable: 2, roomRate: 90, totalRate: 90, rateId: "r1", restrictions: { closedToArrival: null, closedToDeparture: null, minimumStay: null, maximumStay: null } }] }] },
+      { startDate: "2026-10-19", endDate: "2026-10-26", roomTypes: [{ roomTypeId: "double", roomTypeName: "Doble", ratePlanName: "BAR", days: [{ date: "2026-10-19", roomsAvailable: 1, roomRate: 100, totalRate: 100, rateId: "r1", restrictions: { closedToArrival: null, closedToDeparture: null, minimumStay: null, maximumStay: null } }] }] },
+    ], "2026-10-12", "2026-10-25");
+
+    expect(result.roomTypes[0]?.days.map(day => day.date)).toEqual(["2026-10-12", "2026-10-19"]);
   });
 
   it("prepara un cambio de precio para una única fecha", () => {

@@ -69,8 +69,10 @@ import {
   updateCloudbedsReservationStatus,
 } from "./cloudbedsReservationActions";
 import {
+  createCloudbedsFiscalDocument,
   downloadCloudbedsFiscalDocument,
   fetchCloudbedsFiscalDocuments,
+  fetchCloudbedsFiscalTransactions,
 } from "./cloudbedsFiscalDocuments";
 import { fetchCloudbedsAvailability, updateCloudbedsRate } from "./cloudbedsAvailability";
 import type { ExternalUpcomingReservation } from "../drizzle/schema";
@@ -4603,6 +4605,39 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             throw new TRPCError({ code: "BAD_GATEWAY", message });
           }
         }),
+      getCloudbedsReservationFiscalTransactions: protectedProcedure
+        .input(z.object({ id: z.number(), kind: z.enum(["invoice", "receipt"]) }))
+        .query(async ({ input }) => {
+          const reservation = await db.getExternalUpcomingReservationById(input.id);
+          if (!reservation) throw new TRPCError({ code: "NOT_FOUND", message: "No se encontró la reserva importada" });
+          const token = process.env.CLOUDBEDS_FISCAL_ACCESS_TOKEN || process.env.CLOUDBEDS_API_KEY;
+          const propertyId = process.env.CLOUDBEDS_PROPERTY_ID;
+          if (!token || !propertyId) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Configura las credenciales fiscales de Cloudbeds para preparar el documento." });
+          try {
+            return await fetchCloudbedsFiscalTransactions({ token, propertyId, reservationId: reservation.sourceReservationId, documentKind: input.kind === "invoice" ? "INVOICE" : "RECEIPT" });
+          } catch (error) {
+            throw new TRPCError({ code: "BAD_GATEWAY", message: error instanceof Error ? error.message : "No se pudieron consultar los movimientos fiscales de Cloudbeds." });
+          }
+        }),
+      createCloudbedsReservationFiscalDocument: adminProcedure
+        .input(z.object({ id: z.number(), kind: z.enum(["invoice", "receipt"]), transactionIds: z.array(z.number().int().positive()).min(1).max(100) }))
+        .mutation(async ({ input }) => {
+          const reservation = await db.getExternalUpcomingReservationById(input.id);
+          if (!reservation) throw new TRPCError({ code: "NOT_FOUND", message: "No se encontró la reserva importada" });
+          const token = process.env.CLOUDBEDS_FISCAL_ACCESS_TOKEN || process.env.CLOUDBEDS_API_KEY;
+          const propertyId = process.env.CLOUDBEDS_PROPERTY_ID;
+          const apiKey = process.env.CLOUDBEDS_API_KEY;
+          if (!token || !propertyId || !apiKey) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Configura las credenciales fiscales y de reservas de Cloudbeds para emitir documentos." });
+          try {
+            const snapshot = await fetchCloudbedsReservationSnapshot(apiKey, propertyId, reservation.sourceReservationId);
+            if (!snapshot.guestId) throw new Error("Cloudbeds no ha devuelto el huésped fiscal de esta reserva.");
+            const receiptUserId = Number(process.env.CLOUDBEDS_FISCAL_USER_ID);
+            await createCloudbedsFiscalDocument({ token, propertyId, reservationId: reservation.sourceReservationId, guestId: snapshot.guestId, userId: Number.isInteger(receiptUserId) && receiptUserId >= 0 ? receiptUserId : undefined, kind: input.kind, transactionIds: input.transactionIds });
+            return { success: true };
+          } catch (error) {
+            throw new TRPCError({ code: "BAD_GATEWAY", message: error instanceof Error ? error.message : "Cloudbeds no pudo emitir el documento oficial." });
+          }
+        }),
       getCloudbedsPaymentMethods: protectedProcedure.query(async () => {
         const apiKey = process.env.CLOUDBEDS_API_KEY;
         const propertyId = process.env.CLOUDBEDS_PROPERTY_ID;
@@ -4689,7 +4724,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             throw new TRPCError({ code: "BAD_GATEWAY", message });
           }
         }),
-      setCloudbedsUpcomingReservationReviewed: adminProcedure
+      setCloudbedsUpcomingReservationReviewed: protectedProcedure
         .input(z.object({ id: z.number(), isReviewed: z.boolean() }))
         .mutation(async ({ input }) => {
           await db.setExternalUpcomingReservationReviewed(
@@ -4726,7 +4761,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           });
           return { success: true, id };
         }),
-      sendCloudbedsReservationEmail: adminProcedure
+      sendCloudbedsReservationEmail: protectedProcedure
         .input(
           z.object({
             externalReservationId: z.number(),
@@ -4859,7 +4894,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             });
           return { success: true, checkinUrl: null };
         }),
-      prepareCloudbedsReservationWelcome: adminProcedure
+      prepareCloudbedsReservationWelcome: protectedProcedure
         .input(
           z.object({
             externalReservationId: z.number(),
@@ -4926,7 +4961,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             }
           );
         }),
-      prepareCloudbedsReservationWhatsApp: adminProcedure
+      prepareCloudbedsReservationWhatsApp: protectedProcedure
         .input(
           z.object({
             externalReservationId: z.number(),
