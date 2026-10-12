@@ -109,9 +109,14 @@ export default function Facturas() {
   }, [businesses, organizusBusiness, ensureOrganizus]);
 
   useEffect(() => {
-    const quickAction = new URLSearchParams(location.split("?")[1] || "").get("new");
+    const query = new URLSearchParams(location.split("?")[1] || "");
+    const quickAction = query.get("new");
     if (quickAction === "received") setIsDialogOpen(true);
-    if (quickAction === "issued") setIsIssuedDialogOpen(true);
+    if (quickAction === "issued") {
+      setIsIssuedDialogOpen(true);
+      const recipient = query.get("recipient");
+      if (recipient) setIssuedRecipient(recipient);
+    }
   }, [location]);
   
   const currentBusinessId = useMemo(() => {

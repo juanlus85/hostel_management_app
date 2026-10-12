@@ -210,7 +210,7 @@ function ComparisonCard({
 export default function ImportacionesExternas() {
   const [dateFrom, setDateFrom] = useState(thirtyDaysStart);
   const [dateTo, setDateTo] = useState(today);
-  const [section, setSection] = useState<"cash" | "arrivals">("cash");
+  const section = "cash";
   const [messageLanguage, setMessageLanguage] = useState<"es" | "en">("es");
   const [welcomeEditor, setWelcomeEditor] = useState<{
     reservationId: number;
@@ -482,29 +482,6 @@ export default function ImportacionesExternas() {
           <strong>Modo aislado.</strong> Datos guardados solo para revisión.
         </div>
       </header>
-
-      <div
-        className="flex w-full gap-2 rounded-xl border bg-muted/40 p-1 sm:w-fit"
-        role="tablist"
-        aria-label="Secciones de importaciones"
-      >
-        <Button
-          variant={section === "cash" ? "default" : "ghost"}
-          size="sm"
-          onClick={() => setSection("cash")}
-        >
-          <WalletCards className="mr-2 h-4 w-4" />
-          Cajas y conciliación
-        </Button>
-        <Button
-          variant={section === "arrivals" ? "default" : "ghost"}
-          size="sm"
-          onClick={() => setSection("arrivals")}
-        >
-          <CalendarDays className="mr-2 h-4 w-4" />
-          Próximas reservas
-        </Button>
-      </div>
 
       {section === "cash" ? (
         <div className="space-y-6">

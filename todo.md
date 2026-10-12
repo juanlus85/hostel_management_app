@@ -1795,3 +1795,9 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Evitar filas duplicadas de una misma habitación física en la agenda cuando Cloudbeds la asocia a tipos distintos.
 - [x] Corregir la carga de la pestaña Disponibilidad y precios tras la reorganización de pestañas.
 - [x] Reducir las filas separadoras por tipo de habitación en la agenda y diferenciarlas visualmente de las filas de habitación.
+
+## Centralización operativa de Reservas
+- [x] Retirar la pestaña de Próximas reservas de Importaciones externas, manteniendo allí solo las importaciones de caja.
+- [x] Añadir pestañas de información, cobros/cargos, facturación y check-in/mensajería al detalle de reserva del calendario.
+- [x] Integrar en el detalle de reserva las acciones de revisión, correo y WhatsApp de bienvenida, y envío de Check-in Online.
+- [x] Permitir emitir un recibo PDF y abrir la creación de factura emitida desde el detalle de reserva.
