@@ -54,29 +54,62 @@ export function buildReservationWelcomeEmail(
   context: ReservationMessageContext,
   language: ReservationMessageLanguage
 ) {
-  const name = escapeHtml(displayName(context.guestName));
   const room = context.roomNumber
     ? `${language === "en" ? "Room" : "Habitación"} ${escapeHtml(context.roomNumber)}`
     : language === "en"
       ? "your room"
       : "tu habitación";
-  const arrival = formatDate(context.checkInDate, language);
-  const departure = formatDate(context.checkOutDate, language);
   const accessInstructions =
     context.entranceCode && context.roomCode
       ? language === "en"
-        ? `\n\nHostel entrance code: ${context.entranceCode}\nRoom access code: ${context.roomCode}`
-        : `\n\nCódigo de entrada al hostel: ${context.entranceCode}\nCódigo de acceso a la habitación: ${context.roomCode}`
-      : "";
+        ? `At the main entrance you will find an electronic keypad. Your hostel access code is: *${context.entranceCode}*.
+
+Your booking is for ${context.roomType || "your room"}${context.roomNumber ? `, Room ${context.roomNumber}` : ""}. Next to the room door there is a key box. Your key-box code is: *${context.roomCode}*.`
+        : `En la puerta principal encontrarás un panel electrónico con teclado numérico. Tu código de acceso al hostel es: *${context.entranceCode}*.
+
+Has reservado ${context.roomType || "tu habitación"}${context.roomNumber ? `, habitación ${context.roomNumber}` : ""}. Junto a la puerta de la habitación encontrarás una caja de llaves. El código para abrirla es: *${context.roomCode}*.`
+      : language === "en"
+        ? `Your accommodation is ${room}${context.roomType ? ` (${context.roomType})` : ""}.`
+        : `Tu alojamiento asignado es ${room}${context.roomType ? ` (${context.roomType})` : ""}.`;
   const subject =
     language === "en"
       ? "Welcome to The Spot Central Hostel"
       : "Bienvenido/a a The Spot Central Hostel";
   const text =
     language === "en"
-      ? `Hello ${displayName(context.guestName)},\n\nThank you for your reservation at The Spot Central Hostel. We look forward to welcoming you on ${arrival}. Your departure is scheduled for ${departure}. ${context.roomNumber ? `Your assigned accommodation is ${room}${context.roomType ? ` (${context.roomType})` : ""}.` : "Your room information will be confirmed before arrival."}${accessInstructions}\n\nBest regards,\nThe Spot Central Hostel`
-      : `Hola ${displayName(context.guestName)},\n\nGracias por tu reserva en The Spot Central Hostel. Te esperamos el ${arrival}. La salida está prevista para el ${departure}. ${context.roomNumber ? `Tu alojamiento asignado es ${room}${context.roomType ? ` (${context.roomType})` : ""}.` : "La información de tu habitación se confirmará antes de la llegada."}${accessInstructions}\n\nUn saludo,\nThe Spot Central Hostel`;
-  const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#1f2937;line-height:1.6"><div style="background:#0f766e;color:#fff;padding:22px;border-radius:10px 10px 0 0"><h1 style="margin:0;font-size:22px">${escapeHtml(subject)}</h1></div><div style="background:#f8fafc;padding:26px;border-radius:0 0 10px 10px"><p>${language === "en" ? "Hello" : "Hola"} <strong>${name}</strong>,</p><p>${language === "en" ? "Thank you for your reservation at The Spot Central Hostel. We look forward to welcoming you." : "Gracias por tu reserva en The Spot Central Hostel. Estamos deseando recibirte."}</p><div style="background:#fff;border-left:4px solid #0f766e;padding:16px;border-radius:6px"><p style="margin:0 0 8px"><strong>${language === "en" ? "Arrival" : "Llegada"}:</strong> ${escapeHtml(arrival)}</p><p style="margin:0 0 8px"><strong>${language === "en" ? "Departure" : "Salida"}:</strong> ${escapeHtml(departure)}</p><p style="margin:0"><strong>${language === "en" ? "Accommodation" : "Alojamiento"}:</strong> ${escapeHtml(room)}${context.roomType ? ` · ${escapeHtml(context.roomType)}` : ""}</p></div><p>${language === "en" ? "You will receive the online check-in invitation separately when it is ready." : "Recibirás la invitación de Check-in Online por separado cuando esté preparada."}</p><p><strong>The Spot Central Hostel</strong></p></div></div>`;
+      ? `Hello ${displayName(context.guestName)},
+
+This is The Spot Central Hostel. Our reception will not be staffed in person at your arrival time, but do not worry: here are the access codes and instructions so you can enter straight away.
+
+${accessInstructions}
+
+The Wi-Fi password is *holasevilla*.
+
+On the third floor you will find our shared kitchen, lounge and rooftop terrace. It is open from 8:00 to 23:30.
+
+Smoking is not permitted anywhere in the hostel except on the third-floor terrace. This is very important: failure to comply may result in removal from the property and notification to the authorities.
+
+If you need anything, contact us on +34 955 209 548.
+
+Have a safe trip,
+The Spot Central Hostel`
+      : `Hola ${displayName(context.guestName)},
+
+Te escribo desde The Spot Central Hostel. A la hora de tu llegada nuestra recepción no estará disponible de forma presencial, pero no te preocupes: aquí tienes los códigos e instrucciones para acceder inmediatamente.
+
+${accessInstructions}
+
+La clave del Wi-Fi es *holasevilla*.
+
+En la tercera planta encontrarás nuestra zona común con cocina, salón y terraza. Está abierta de 8:00 a 23:30.
+
+No está permitido fumar en el hostel, salvo en la terraza de la tercera planta. Es muy importante: el incumplimiento puede implicar la expulsión del establecimiento y la comunicación a las autoridades.
+
+Si necesitas cualquier cosa, puedes contactar con nosotros en el +34 955 209 548.
+
+Un saludo y buen viaje,
+The Spot Central Hostel`;
+  const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#1f2937;line-height:1.6;white-space:pre-line">${escapeHtml(text)}</div>`;
   return { subject, text, html };
 }
 
@@ -249,13 +282,5 @@ export function buildReservationWhatsAppMessage(
       ? `Hello ${name}, you can complete your online check-in for The Spot Central Hostel here:\n\n${checkinUrl}\n\nYour booking details have been prefilled where available. Please complete the documents and signature for all guests. You will receive the access instructions once it is completed.`
       : `Hola ${name}, puedes completar tu Check-in Online de The Spot Central Hostel aquí:\n\n${checkinUrl}\n\nHemos precargado los datos disponibles de tu reserva. Completa los documentos y la firma de todos los huéspedes. Recibirás las instrucciones de acceso cuando esté terminado.`;
   }
-  const codes =
-    context.entranceCode && context.roomCode
-      ? language === "en"
-        ? `\n\nHostel entrance code: ${context.entranceCode}\nRoom access code: ${context.roomCode}`
-        : `\n\nCódigo de entrada al hostel: ${context.entranceCode}\nCódigo de acceso a la habitación: ${context.roomCode}`
-      : "";
-  return language === "en"
-    ? `Hello ${name}, thank you for your reservation at The Spot Central Hostel. We look forward to welcoming you on ${formatDate(context.checkInDate, language)}.${codes}`
-    : `Hola ${name}, gracias por tu reserva en The Spot Central Hostel. Te esperamos el ${formatDate(context.checkInDate, language)}.${codes}`;
+  return buildReservationWelcomeEmail(context, language).text;
 }

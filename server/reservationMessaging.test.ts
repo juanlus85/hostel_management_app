@@ -24,8 +24,9 @@ describe("mensajería manual de reservas", () => {
     const message = buildReservationWelcomeEmail(context, "es");
     expect(message.subject).toContain("Bienvenido");
     expect(message.html).toContain("Ana &lt;García&gt;");
-    expect(message.text).toContain("Código de entrada al hostel: 1469");
-    expect(message.text).toContain("Código de acceso a la habitación: 2226");
+    expect(message.text).toContain("código de acceso al hostel es: *1469*");
+    expect(message.text).toContain("código para abrirla es: *2226*");
+    expect(message.text).toContain("La clave del Wi-Fi es *holasevilla*");
   });
 
   it("incluye el enlace seguro y las instrucciones en la invitación de check-in", () => {
@@ -97,8 +98,8 @@ describe("mensajería manual de reservas", () => {
 
   it("incluye códigos en el WhatsApp de bienvenida sin crear Check-in Online", () => {
     const message = buildReservationWhatsAppMessage(context, "welcome", null, "es");
-    expect(message).toContain("Código de entrada al hostel: 1469");
-    expect(message).toContain("Código de acceso a la habitación: 2226");
+    expect(message).toContain("código de acceso al hostel es: *1469*");
+    expect(message).toContain("código para abrirla es: *2226*");
     expect(message).not.toContain("Check-in Online");
   });
 });
