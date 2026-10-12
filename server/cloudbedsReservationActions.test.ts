@@ -61,6 +61,11 @@ describe("acciones de reserva Cloudbeds", () => {
   });
 
   it("lee estado y saldo tras actualizar Cloudbeds", () => {
-    expect(extractCloudbedsReservationSnapshot({ reservation: { reservation_status: "checked_in", balanceDue: "14.50" } })).toEqual({ reservationStatus: "checked_in", amountPending: "14.50" });
+    expect(extractCloudbedsReservationSnapshot({ reservation: { reservation_status: "checked_in", balanceDue: "14.50" } })).toEqual({ reservationStatus: "checked_in", amountPending: "14.50", hotelCollect: null });
+  });
+
+  it("identifica las reservas Hotel Collect en los términos de cobro", () => {
+    expect(extractCloudbedsReservationSnapshot({ reservation: { payment_collection: "Hotel Collect" } }).hotelCollect).toBe(true);
+    expect(extractCloudbedsReservationSnapshot({ reservation: { isHotelCollect: false } }).hotelCollect).toBe(false);
   });
 });

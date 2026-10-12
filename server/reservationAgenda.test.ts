@@ -112,8 +112,8 @@ describe("buildReservationAgenda", () => {
     const room = agenda[0].rooms[0];
     expect(room.laneCount).toBe(1);
     expect(room.cards.map(card => ({ id: card.reservation.id, lane: card.lane, startSlot: card.startSlot, endSlot: card.endSlot }))).toEqual([
-      { id: 20, lane: 0, startSlot: 0.5, endSlot: 2.5 },
-      { id: 21, lane: 0, startSlot: 2.5, endSlot: 4.5 },
+      { id: 20, lane: 0, startSlot: 0.2, endSlot: 2.2 },
+      { id: 21, lane: 0, startSlot: 2.2, endSlot: 4.2 },
     ]);
   });
 });

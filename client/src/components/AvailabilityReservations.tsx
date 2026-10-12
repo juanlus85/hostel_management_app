@@ -120,6 +120,7 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
   const [, navigate] = useLocation();
   const [window] = useState(getReservationWindow);
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [showPendingReservations, setShowPendingReservations] = useState(false);
   const [detailTab, setDetailTab] = useState("information");
   const [paymentEditor, setPaymentEditor] = useState<PaymentDraft | null>(null);
   const [pendingPayment, setPendingPayment] = useState<PendingPayment | null>(null);
@@ -193,7 +194,13 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
     onError: error => toast.error(error.message),
   });
 
-  const agenda = useMemo(() => buildReservationAgenda(reservations.data || [], window.dates), [reservations.data, window.dates]);
+  const displayedReservations = useMemo(() => (reservations.data || []).filter(reservation => {
+    if (showPendingReservations) return true;
+    const status = reservation.reservationStatus?.toLowerCase().replace(/[\s-]+/g, "_") || "";
+    return ["checked_in", "in_progress", "checked_out", "completed", "cancelled", "canceled", "no_show"].includes(status);
+  }), [reservations.data, showPendingReservations]);
+  const hiddenPendingReservations = Math.max(0, (reservations.data?.length || 0) - displayedReservations.length);
+  const agenda = useMemo(() => buildReservationAgenda(displayedReservations, window.dates), [displayedReservations, window.dates]);
   const arrivalsByDate = useMemo(() => new Map(window.dates.map(date => [date, (reservations.data || []).filter(reservation => reservation.checkInDate === date).length])), [reservations.data, window.dates]);
   const selected = (reservations.data || []).find(reservation => reservation.id === selectedId) || null;
   const reservation = detail.data?.reservation || selected;
@@ -206,6 +213,7 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
   const plannedTotal = payments ? payments.chargeTotal + payments.pendingChargeTotal : 0;
   const plannedBalance = payments ? plannedTotal + payments.refundedTotal - payments.paidTotal : null;
   const plannedCredit = plannedBalance !== null && plannedBalance < -0.004 ? Math.abs(plannedBalance) : 0;
+  const hotelCollect = Boolean(detail.data?.reservation && "hotelCollect" in detail.data.reservation && detail.data.reservation.hotelCollect === true);
 
   const openPaymentEditor = () => {
     const amountPending = Number(String(reservation?.amountPending ?? "0").replace(",", "."));
@@ -303,10 +311,10 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
           <CardTitle className="flex items-center gap-2"><CalendarDays className="h-5 w-5 text-sky-700" />Agenda de reservas</CardTitle>
           <CardDescription className="mt-1">Vista por tipo de habitación y estancia. Pulsa una reserva para ver huésped, pagos y notas.</CardDescription>
         </div>
-        <Button className="bg-sky-700 hover:bg-sky-800" onClick={() => importReservations.mutate()} disabled={importReservations.isPending}>
+        <div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" onClick={() => setShowPendingReservations(current => !current)}>{showPendingReservations ? "Ocultar llegadas pendientes" : `Mostrar llegadas pendientes${hiddenPendingReservations ? ` (${hiddenPendingReservations})` : ""}`}</Button><Button className="bg-sky-700 hover:bg-sky-800" onClick={() => importReservations.mutate()} disabled={importReservations.isPending}>
           {importReservations.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
           Actualizar reservas
-        </Button>
+        </Button></div>
       </CardHeader>
       <CardContent className="flex flex-wrap gap-x-5 gap-y-2 border-t bg-sky-50/30 py-3 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-red-500" />Importe pendiente</span>
@@ -350,7 +358,7 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
           </div>
         </div>
       </CardContent>
-    </Card> : <Card className="border-dashed"><CardContent className="flex flex-col items-center justify-center py-16 text-center"><CalendarDays className="mb-3 h-8 w-8 text-sky-700" /><h2 className="font-semibold">No hay reservas para este período</h2><p className="mt-2 max-w-md text-sm text-muted-foreground">Pulsa “Actualizar reservas” para importar la agenda de ayer, hoy y los trece días siguientes desde Cloudbeds.</p></CardContent></Card>}
+    </Card> : <Card className="border-dashed"><CardContent className="flex flex-col items-center justify-center py-16 text-center"><CalendarDays className="mb-3 h-8 w-8 text-sky-700" /><h2 className="font-semibold">No hay reservas visibles para este período</h2><p className="mt-2 max-w-md text-sm text-muted-foreground">Activa “Mostrar llegadas pendientes” o actualiza las reservas para revisar la agenda completa.</p></CardContent></Card>}
 
     <Dialog open={selectedId !== null} onOpenChange={open => { if (!open) setSelectedId(null); }}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
@@ -364,6 +372,7 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
           </TabsList>
 
           <TabsContent value="information" className="mt-4 space-y-4">
+            {hotelCollect && <section className="rounded-xl border-2 border-amber-400 bg-amber-50 p-4 text-amber-950"><p className="flex items-center gap-2 font-bold"><CreditCard className="h-5 w-5" />Hotel Collect · cobrar en el hotel</p><p className="mt-1 text-sm">Esta reserva debe cobrarse directamente al huésped en el establecimiento. Comprueba el saldo oficial en la pestaña Cobros y cargos.</p></section>}
             <section className="grid gap-3 rounded-xl border bg-muted/30 p-4 sm:grid-cols-2">
               <div><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Huésped</p><p className="mt-1 font-semibold">{reservation.guestName || "Sin nombre"}</p><p className="mt-1 text-sm text-muted-foreground">{reservation.guestEmail || "Sin correo"}</p><p className="text-sm text-muted-foreground">{reservation.guestPhone || "Sin teléfono"}</p></div>
               <div><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Estado</p><Badge variant="outline" className={`mt-1 ${statusTone(reservation.reservationStatus)}`}>{reservationStatus(reservation.reservationStatus)}</Badge>{canManageReservations && <Button type="button" variant="outline" size="sm" className="mt-3 w-full sm:w-auto" onClick={() => setStatusEditor(editableStatus(reservation.reservationStatus))}><PencilLine className="mr-2 h-3.5 w-3.5" />Cambiar estado</Button>}<p className="mt-3 text-sm"><strong>Origen:</strong> {reservation.bookingSource || "No indicado"}</p><p className="mt-1 text-sm"><strong>Huéspedes:</strong> {reservation.guestCount ?? "—"}</p></div>

@@ -6,6 +6,7 @@ export type CloudbedsPaymentMethod = {
 export type CloudbedsReservationSnapshot = {
   reservationStatus: string | null;
   amountPending: string | null;
+  hotelCollect: boolean | null;
 };
 
 type ApiRecord = Record<string, unknown>;
@@ -73,6 +74,31 @@ function money(value: unknown) {
   return Number.isFinite(parsed) ? parsed.toFixed(2) : null;
 }
 
+function booleanValue(value: unknown) {
+  if (typeof value === "boolean") return value;
+  if (value === 1 || value === "1" || value === "true") return true;
+  if (value === 0 || value === "0" || value === "false") return false;
+  return null;
+}
+
+function includesHotelCollect(value: unknown, depth = 0): boolean {
+  if (depth > 5 || value === null || value === undefined) return false;
+  if (typeof value === "string") return /hotel\s*collect/i.test(value);
+  if (Array.isArray(value)) return value.some(item => includesHotelCollect(item, depth + 1));
+  const record = asRecord(value);
+  return Object.entries(record).some(([key, nested]) =>
+    (/hotel.?collect/i.test(key) && booleanValue(nested) !== false) || includesHotelCollect(nested, depth + 1)
+  );
+}
+
+function hotelCollectValue(reservation: ApiRecord) {
+  for (const key of ["hotelCollect", "hotel_collect", "isHotelCollect", "is_hotel_collect"]) {
+    const explicit = booleanValue(reservation[key]);
+    if (explicit !== null) return explicit;
+  }
+  return includesHotelCollect(reservation) ? true : null;
+}
+
 async function cloudbedsJson(url: URL, apiKey: string, init?: RequestInit) {
   const response = await fetch(url, {
     ...init,
@@ -113,6 +139,7 @@ export function extractCloudbedsReservationSnapshot(payload: unknown): Cloudbeds
   return {
     reservationStatus: firstText(reservation.status, reservation.reservationStatus, reservation.reservation_status),
     amountPending: money(reservation.balance ?? reservation.amountPending ?? reservation.amount_pending ?? reservation.balanceDue ?? reservation.balance_due),
+    hotelCollect: hotelCollectValue(reservation),
   };
 }
 

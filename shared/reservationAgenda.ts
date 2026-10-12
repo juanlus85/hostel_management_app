@@ -115,11 +115,11 @@ function visibleSpan(reservation: ReservationAgendaItem, dates: string[]) {
   const continuesFromEarlierDate = reservation.checkInDate < dates[0];
   const checkedOut = ["checked_out", "completed"].includes(normalizedStatus(reservation.reservationStatus));
   const startSlot = hasSeparateCheckout
-    ? (continuesFromEarlierDate ? 0 : startColumn + 0.5)
-    : (checkedOut ? startColumn : startColumn + 0.5);
+    ? (continuesFromEarlierDate ? 0 : startColumn + 0.2)
+    : (checkedOut ? startColumn : startColumn + 0.2);
   const endSlot = hasSeparateCheckout
-    ? (checkoutIndex >= 0 ? checkoutIndex + 0.5 : dates.length)
-    : Math.min(dates.length, checkedOut ? startColumn + 0.5 : startColumn + 1);
+    ? (checkoutIndex >= 0 ? checkoutIndex + 0.2 : dates.length)
+    : Math.min(dates.length, checkedOut ? startColumn + 0.2 : startColumn + 1);
   if (endSlot <= startSlot) return null;
   return { startColumn, span: Math.max(1, exclusiveEnd - startColumn), startSlot, endSlot };
 }

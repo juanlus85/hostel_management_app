@@ -1148,6 +1148,34 @@ export const appRouter = router({
           throw new TRPCError({ code: "BAD_GATEWAY", message });
         }
       }),
+    updateRates: adminProcedure
+      .input(z.object({
+        changes: z.array(z.object({
+          rateId: z.string().min(1),
+          date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+          rate: z.number().min(0).max(10000),
+        })).min(1).max(100),
+      }))
+      .mutation(async ({ input }) => {
+        const apiKey = process.env.CLOUDBEDS_API_KEY;
+        if (!apiKey) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: "Configura CLOUDBEDS_API_KEY para actualizar precios.",
+          });
+        }
+        const updated: Array<{ rateId: string; date: string; jobReferenceId: string | null }> = [];
+        const failed: Array<{ rateId: string; date: string; message: string }> = [];
+        for (const change of input.changes) {
+          try {
+            const result = await updateCloudbedsRate(apiKey, change.rateId, change.date, change.rate);
+            updated.push({ rateId: change.rateId, date: change.date, jobReferenceId: result.jobReferenceId });
+          } catch (error) {
+            failed.push({ rateId: change.rateId, date: change.date, message: error instanceof Error ? error.message : "Cloudbeds no aceptó este precio." });
+          }
+        }
+        return { updated, failed };
+      }),
   }),
 
   // ==================== INVENTORY ====================
@@ -4401,6 +4429,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
               ...reservation,
               reservationStatus: snapshot.reservationStatus ?? reservation.reservationStatus,
               amountPending: snapshot.amountPending ?? reservation.amountPending,
+              hotelCollect: snapshot.hotelCollect,
             };
             await db.updateExternalUpcomingReservationCloudbeds(reservation.id, {
               reservationStatus: updatedReservation.reservationStatus,
