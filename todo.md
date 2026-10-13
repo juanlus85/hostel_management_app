@@ -1848,3 +1848,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Restaurar la carga de Huéspedes cuando falta la columna `relationship` en producción mediante una lectura compatible.
 - [ ] Ejecutar `SQL_PARENTESCO_MENORES.sql` en el VPS para habilitar la persistencia y visualización completa de parentesco.
 - [x] Corregir la guía final de Check-in Online: traducir tipos de habitación al español y evitar ubicaciones incompletas o repetidas cuando falte planta/número.
+- [x] Resolver siempre número y planta desde los códigos de acceso configurados en la guía final, y retirar el bloque de mapa/enlace de ubicación.

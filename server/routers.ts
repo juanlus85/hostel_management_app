@@ -4011,9 +4011,13 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
 
           const settings = await db.getHostelSettings();
           const accessCodeList = await db.getAllAccessCodes();
-          const roomDetails = accessCodeList.find(
-            code => code.roomNumber === link.roomNumber
-          );
+          const hasRoomNumber = /\d/.test(link.roomNumber || "");
+          const roomDetails =
+            accessCodeList.find(code => code.roomNumber === link.roomNumber) ||
+            accessCodeList.find(code => code.roomCode === link.roomCode);
+          const resolvedRoomNumber =
+            hasRoomNumber ? link.roomNumber : roomDetails?.roomNumber || link.roomNumber;
+          const resolvedRoomType = roomDetails?.roomType || link.roomType;
           try {
             const { sendOnlineCheckinConfirmation } = await import("./email");
             await sendOnlineCheckinConfirmation({
@@ -4021,14 +4025,14 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
               email: input.email,
               language: input.language,
               checkInDate: link.checkInDate,
-              roomNumber: link.roomNumber,
+              roomNumber: resolvedRoomNumber,
               roomCode: link.roomCode,
               entranceCode,
               welcomeMessage:
                 input.language === "en"
                   ? settings?.welcomeMessageEn
                   : settings?.welcomeMessageEs,
-              roomType: link.roomType,
+              roomType: resolvedRoomType,
               floor:
                 input.language === "en"
                   ? roomDetails?.floorLevel
@@ -4063,11 +4067,11 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
 
           return {
             success: true,
-            roomNumber: link.roomNumber,
+            roomNumber: resolvedRoomNumber,
             roomCode: link.roomCode,
             entranceCode,
             checkInDate: link.checkInDate,
-            roomType: link.roomType,
+            roomType: resolvedRoomType,
             floor: roomDetails?.floor || "",
             floorLevel: roomDetails?.floorLevel || "",
             hostelName: settings?.hostelName || "The Spot Central Hostel",

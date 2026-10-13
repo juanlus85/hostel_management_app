@@ -7,7 +7,6 @@ import {
   KeyRound,
   Loader2,
   Mail,
-  MapPin,
   MessageCircle,
   Phone,
   ShieldCheck,
@@ -37,7 +36,6 @@ import { toast } from "sonner";
 import { renderArrivalTemplate } from "@shared/arrivalTemplate";
 import {
   formatHostelAddress,
-  googleMapsLink,
   translateFloor,
   translateRoomType,
 } from "@shared/arrivalDisplay";
@@ -889,7 +887,6 @@ function ArrivalConfirmation({
     .join(", ");
   const roomSummary = `${roomType}${roomLocation ? ` · ${roomLocation}` : ""}`;
   const address = formatHostelAddress(data.hostelAddress);
-  const mapsUrl = googleMapsLink(address);
   const context = {
     guestName,
     roomNumber,
@@ -933,7 +930,6 @@ function ArrivalConfirmation({
     `${t("Código de habitación", "Room code")}: ${data.roomCode || "—"}`,
     roomSummary,
     address,
-    mapsUrl,
     data.wifiPassword ? `Wi‑Fi: ${data.wifiPassword}` : "",
     commonAreas || "",
     houseRules || "",
@@ -991,27 +987,6 @@ function ArrivalConfirmation({
               copyLabel={t("Copiar", "Copy")}
             />
           </section>
-          <GuideBlock
-            icon={<MapPin className="h-5 w-5" />}
-            title={t("Ubicación", "Location")}
-          >
-            <a
-              className="font-semibold text-teal-700 underline"
-              href={mapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {address}
-            </a>
-            <a
-              className="mt-2 inline-flex font-semibold text-teal-700 underline"
-              href={mapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {t("Abrir en Google Maps", "Open in Google Maps")}
-            </a>
-          </GuideBlock>
           <GuideBlock
             icon={<KeyRound className="h-5 w-5" />}
             title={t("Tu habitación", "Your room")}
