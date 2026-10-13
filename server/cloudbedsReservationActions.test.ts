@@ -87,4 +87,18 @@ describe("acciones de reserva Cloudbeds", () => {
     expect(extractCloudbedsReservationSnapshot({ reservation: { payment_collection: "Hotel Collect" } }).hotelCollect).toBe(true);
     expect(extractCloudbedsReservationSnapshot({ reservation: { isHotelCollect: false } }).hotelCollect).toBe(false);
   });
+
+  it("extrae pago de canal, membresía e instrucciones especiales", () => {
+    expect(extractCloudbedsReservationSnapshot({ reservation: {
+      reservationPaidByChannel: true,
+      membership: "Booking.com Genius",
+      specialInstructions: "*** Genius booker *** This reservation has already been paid ***",
+    } })).toMatchObject({
+      hotelCollect: null,
+      paymentCollection: "Pagada al canal",
+      channelPaymentStatus: "Reserva pagada al canal",
+      channelMembership: "Booking.com Genius",
+      specialInstructions: "*** Genius booker *** This reservation has already been paid ***",
+    });
+  });
 });

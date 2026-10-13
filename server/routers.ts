@@ -1313,6 +1313,7 @@ export const appRouter = router({
         paymentMethod: z.enum(["cash", "credit", "ebanking", "pay_pal"]).default("cash"),
         initialPaymentType: z.string().trim().min(1).max(100).optional(),
         initialPaymentAmount: z.number().positive().max(100000).optional(),
+        initialPaymentDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
         sendEmailConfirmation: z.boolean().default(false),
       }))
       .mutation(async ({ input }) => {
@@ -1338,6 +1339,12 @@ export const appRouter = router({
               message: "Cloudbeds ya no reconoce este tipo de habitación para toda la estancia. Vuelve a comprobar las fechas.",
             });
           }
+          if (selectedRoomType.roomsAvailable < input.rooms) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `Cloudbeds indica solo ${selectedRoomType.roomsAvailable} habitación${selectedRoomType.roomsAvailable === 1 ? "" : "es"} disponible${selectedRoomType.roomsAvailable === 1 ? "" : "s"} para este tipo. No se puede crear la reserva.`,
+            });
+          }
           if (input.roomId) {
             if (input.rooms !== 1) {
               throw new TRPCError({ code: "BAD_REQUEST", message: "Una reserva con habitación física asignada debe crear una única habitación." });
@@ -1348,11 +1355,6 @@ export const appRouter = router({
                 message: "La habitación seleccionada ya no está libre para toda la estancia. Vuelve a pulsar el hueco y comprueba la disponibilidad.",
               });
             }
-          } else if (selectedRoomType.roomsAvailable < input.rooms) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: "Ese tipo de habitación ya no tiene disponibilidad para toda la estancia seleccionada. Vuelve a comprobar las fechas.",
-            });
           }
           if (selectedRoomType.maxGuests !== null && input.adults + input.children > selectedRoomType.maxGuests * input.rooms) {
             throw new TRPCError({
@@ -1374,6 +1376,7 @@ export const appRouter = router({
                   type: input.initialPaymentType,
                   amount: input.initialPaymentAmount,
                   isDeposit: true,
+                  description: input.initialPaymentDate ? `Fecha de liquidación prevista: ${input.initialPaymentDate}` : undefined,
                 });
               } catch (error) {
                 initialPaymentWarning = `La reserva se creó, pero no se pudo registrar el cobro inicial: ${error instanceof Error ? error.message : "revisa el detalle de la reserva"}`;
@@ -4910,6 +4913,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           type: z.string().trim().min(1).max(100),
           amount: z.number().positive().max(100000),
           description: z.string().trim().max(500).optional(),
+          paymentDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
           isDeposit: z.boolean().default(false),
         }))
         .mutation(async ({ input }) => {
@@ -4930,7 +4934,10 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
               reservationId: reservation.sourceReservationId,
               type: input.type,
               amount: input.amount,
-              description: input.description,
+              description: [
+                input.description,
+                input.paymentDate ? `Fecha de liquidación prevista: ${input.paymentDate}` : undefined,
+              ].filter(Boolean).join(" · ") || undefined,
               isDeposit: input.isDeposit,
             });
             let syncWarning: string | null = null;

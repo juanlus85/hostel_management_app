@@ -127,6 +127,17 @@ describe("reservas manuales de Cloudbeds", () => {
     });
   });
 
+  it("crea varias habitaciones bajo una única reserva sin forzar una habitación física", () => {
+    const form = cloudbedsManualReservationForm({ ...baseInput, rooms: 3 });
+    const values = Object.fromEntries(form.entries());
+    expect(values).toMatchObject({
+      "rooms[0][roomTypeID]": "double-1",
+      "rooms[0][quantity]": "3",
+      "adults[0][quantity]": "2",
+    });
+    expect(values["rooms[0][roomID]"]).toBeUndefined();
+  });
+
   it("crea la reserva solo mediante la petición confirmada", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
       success: true,

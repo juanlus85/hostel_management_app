@@ -7,6 +7,10 @@ export type CloudbedsReservationSnapshot = {
   reservationStatus: string | null;
   amountPending: string | null;
   hotelCollect: boolean | null;
+  paymentCollection: string | null;
+  channelPaymentStatus: string | null;
+  channelMembership: string | null;
+  specialInstructions: string | null;
   guestId: number | null;
   roomNumber: string | null;
   roomType: string | null;
@@ -134,6 +138,64 @@ function hotelCollectValue(reservation: ApiRecord) {
   return includesHotelCollect(reservation) ? true : null;
 }
 
+function nestedTextByKey(value: unknown, keyPattern: RegExp, depth = 0): string | null {
+  if (depth > 5 || value === null || value === undefined) return null;
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = nestedTextByKey(item, keyPattern, depth + 1);
+      if (found) return found;
+    }
+    return null;
+  }
+  const record = asRecord(value);
+  for (const [key, nested] of Object.entries(record)) {
+    if (keyPattern.test(key)) {
+      const found = text(nested);
+      if (found) return found;
+    }
+    const found = nestedTextByKey(nested, keyPattern, depth + 1);
+    if (found) return found;
+  }
+  return null;
+}
+
+function nestedTrueByKey(value: unknown, keyPattern: RegExp, depth = 0): boolean {
+  if (depth > 5 || value === null || value === undefined) return false;
+  if (Array.isArray(value)) return value.some(item => nestedTrueByKey(item, keyPattern, depth + 1));
+  const record = asRecord(value);
+  return Object.entries(record).some(([key, nested]) =>
+    (keyPattern.test(key) && booleanValue(nested) === true) || nestedTrueByKey(nested, keyPattern, depth + 1)
+  );
+}
+
+function paymentCollectionValue(reservation: ApiRecord, hotelCollect: boolean | null) {
+  const explicit = firstText(
+    reservation.paymentCollection,
+    reservation.payment_collection,
+    reservation.collectionType,
+    reservation.collection_type,
+    reservation.paymentModel,
+    reservation.payment_model
+  ) || nestedTextByKey(reservation, /^(payment.?collection|collection.?type|payment.?model)$/i);
+  if (explicit) return explicit;
+  if (hotelCollect === true) return "Hotel Collect · cobrar en el hotel";
+  if (nestedTrueByKey(reservation, /(paid.?by.?channel|channel.?paid|channel.?collect)/i)) return "Pagada al canal";
+  return null;
+}
+
+function channelPaymentStatusValue(reservation: ApiRecord) {
+  const explicit = firstText(
+    reservation.channelPaymentStatus,
+    reservation.channel_payment_status,
+    reservation.paidByChannelStatus,
+    reservation.paid_by_channel_status
+  ) || nestedTextByKey(reservation, /(paid.?by.?channel.*status|channel.?payment.*status)/i);
+  if (explicit) return explicit;
+  return nestedTrueByKey(reservation, /(paid.?by.?channel|channel.?paid|channel.?collect)/i)
+    ? "Reserva pagada al canal"
+    : null;
+}
+
 async function cloudbedsJson(url: URL, apiKey: string, init?: RequestInit) {
   const response = await fetch(url, {
     ...init,
@@ -189,10 +251,26 @@ export function extractCloudbedsReservationSnapshot(payload: unknown): Cloudbeds
     reservation.guestID ?? reservation.guestId ?? reservation.guest_id ??
     firstGuest.guestID ?? firstGuest.guestId ?? firstGuest.guest_id ?? firstGuest.id
   );
+  const hotelCollect = hotelCollectValue(reservation);
   return {
     reservationStatus: firstText(reservation.status, reservation.reservationStatus, reservation.reservation_status),
     amountPending: money(reservation.balance ?? reservation.amountPending ?? reservation.amount_pending ?? reservation.balanceDue ?? reservation.balance_due),
-    hotelCollect: hotelCollectValue(reservation),
+    hotelCollect,
+    paymentCollection: paymentCollectionValue(reservation, hotelCollect),
+    channelPaymentStatus: channelPaymentStatusValue(reservation),
+    channelMembership: firstText(
+      reservation.channelMembership,
+      reservation.channel_membership,
+      reservation.membership,
+      reservation.loyaltyProgram,
+      reservation.loyalty_program
+    ) || nestedTextByKey(reservation, /(membership|loyalty|genius)/i),
+    specialInstructions: firstText(
+      reservation.specialInstructions,
+      reservation.special_instructions,
+      reservation.bookingInstructions,
+      reservation.booking_instructions
+    ) || nestedTextByKey(reservation, /(special.?instruction|booking.?instruction|channel.?instruction)/i),
     guestId: Number.isInteger(guestId) && guestId > 0 ? guestId : null,
     roomNumber: firstText(firstRoom.roomName, firstRoom.room_name, firstRoom.roomNumber, firstRoom.room_number, firstRoom.room_number_display, firstRoom.name, firstRoom.number, reservation.roomNumber, reservation.room_number, reservation.roomName, reservation.room_name, reservation.assignedRoomNumber, reservation.assigned_room_number),
     roomType: firstText(firstRoom.roomTypeName, firstRoom.room_type_name, firstRoom.roomTypeNameDisplay, firstRoom.room_type_name_display, firstRoom.roomType, firstRoom.room_type, roomType.name, roomType.roomTypeName, roomType.room_type_name, reservation.roomTypeName, reservation.room_type_name, reservation.roomType, reservation.room_type),

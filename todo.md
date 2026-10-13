@@ -1873,3 +1873,7 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Corregir la importación de reservas con varias habitaciones para que la agenda muestre cada asignación física y no deje huecos falsos; mantener el bloqueo cuando el tipo esté completo.
 - [x] Mostrar todas las fuentes activas, incluidos canales de terceros, y permitir registrar un cobro inicial con los métodos reales configurados en Cloudbeds (Prepago Booking, Bizum, SumUp u otros).
 - [x] Reconstruir la agenda desde los tramos diarios de asignación de Cloudbeds, limpiar filas obsoletas tras cada importación y sincronizar los 15 días en bloques seguros.
+- [x] Mostrar en el detalle de reserva los datos financieros del canal Cloudbeds (Hotel Collect, pagada al canal, membresía, instrucciones especiales y métodos de pago registrados).
+- [x] Permitir indicar la fecha de cobro o liquidación prevista al registrar un pago inicial o posterior, guardándola en la nota del movimiento Cloudbeds.
+- [x] Relacionar en el detalle las habitaciones físicas que comparten una misma reserva Cloudbeds y crear varias unidades bajo una única reserva cuando haya disponibilidad.
+- [x] Bloquear la creación desde la agenda y el servidor cuando Cloudbeds indica disponibilidad cero o insuficiente del tipo de habitación.
