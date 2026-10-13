@@ -1877,3 +1877,8 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Permitir indicar la fecha de cobro o liquidación prevista al registrar un pago inicial o posterior, guardándola en la nota del movimiento Cloudbeds.
 - [x] Relacionar en el detalle las habitaciones físicas que comparten una misma reserva Cloudbeds y crear varias unidades bajo una única reserva cuando haya disponibilidad.
 - [x] Bloquear la creación desde la agenda y el servidor cuando Cloudbeds indica disponibilidad cero o insuficiente del tipo de habitación.
+
+## Correcciones de Check-in y cobros
+- [x] Generar el PDF principal de una ficha con todos los huéspedes del mismo grupo, manteniendo una página por viajero y sus registros individuales.
+- [x] Reconocer respuestas anidadas e instrucciones de Cloudbeds que indiquen Booking prepago/pagada al canal en el detalle de reserva.
+- [x] Restringir la fecha de nacimiento a cuatro cifras y bloquear fechas de menos de un año, tanto en formularios como en el servidor.
