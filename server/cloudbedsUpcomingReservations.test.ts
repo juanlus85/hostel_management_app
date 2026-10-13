@@ -112,6 +112,7 @@ describe("normalizeUpcomingReservation", () => {
         return new Response(JSON.stringify([
           { reservationID: "R-77", date: "2026-08-28", roomID: "room-7", roomName: "7", roomTypeName: "Doble" },
           { reservationID: "R-77", date: "2026-08-28", roomID: "room-8", roomName: "8", roomTypeName: "Doble" },
+          { reservationID: "R-77", date: "2026-08-28", roomID: "room-23", roomName: "23", roomTypeName: "Doble" },
         ]), { status: 200 });
       }
       if (url.pathname.endsWith("/getReservation")) {
@@ -126,8 +127,8 @@ describe("normalizeUpcomingReservation", () => {
 
     const result = await fetchCloudbedsUpcomingReservations("cbat_test", "204754", ["2026-08-28"]);
 
-    expect(result).toHaveLength(2);
-    expect(result.map(reservation => reservation.roomNumber).sort()).toEqual(["7", "8"]);
+    expect(result).toHaveLength(3);
+    expect(result.map(reservation => reservation.roomNumber).sort()).toEqual(["23", "7", "8"]);
     expect(result.every(reservation => reservation.roomType === "Doble")).toBe(true);
     vi.unstubAllGlobals();
   });

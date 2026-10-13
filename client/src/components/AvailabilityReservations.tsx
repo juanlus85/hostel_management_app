@@ -206,7 +206,7 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
             setIsLoadingAgendaSecondWeek(false);
             if (importReservationsAfter && !hasImportedOnEntry.current) {
               hasImportedOnEntry.current = true;
-              importReservations.mutate({ days: 5 });
+              importReservations.mutate({ days: 15 });
             }
           },
           onError: error => {
@@ -214,7 +214,7 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
             toast.warning(`Los próximos 7 días no se cargaron: ${error.message}`);
             if (importReservationsAfter && !hasImportedOnEntry.current) {
               hasImportedOnEntry.current = true;
-              importReservations.mutate({ days: 5 });
+              importReservations.mutate({ days: 15 });
             }
           },
         });
