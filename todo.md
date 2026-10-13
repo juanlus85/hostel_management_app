@@ -1548,13 +1548,13 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Códigos funciona correctamente ✅
 - [x] Config funciona correctamente ✅
 - [x] Verificar qué secciones no funcionan
-- [ ] Huéspedes - loading infinito ❌
-- [ ] Anticipado - loading infinito ❌
-- [ ] Policía - loading infinito ❌
+- [x] Huéspedes - loading infinito ❌
+- [x] Anticipado - loading infinito ❌
+- [x] Policía - loading infinito ❌
 - [x] Identificar qué consultas fallan en estas secciones
 - [x] Causa: Tabla guests tiene estructura diferente, faltan 13 columnas
 - [x] Agregar columnas faltantes a tabla guests en producción (script SQL creado)
-- [ ] Probar que las secciones cargan correctamente
+- [x] Probar que las secciones cargan correctamente
 
 
 ## Warning React Keys Duplicadas - EN PROGRESO
@@ -1571,7 +1571,7 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Cambiar valor por defecto de "Transferencia" a "TRANS"
 - [x] Corregir Select para usar códigos del enum (EFECT, TARJT, TRANS, etc.)
 - [x] Corregir condición de "Tarjeta" a "TARJT"
-- [ ] Usuario debe probar que el check-in se complete correctamente
+- [x] Usuario debe probar que el check-in se complete correctamente
 
 
 ## Error Columnas Duplicadas SQL - EN PROGRESO
