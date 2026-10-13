@@ -462,38 +462,65 @@ async function getReservationNotes(
   }
 }
 
+async function mapWithConcurrency<T, Result>(
+  values: T[],
+  limit: number,
+  mapper: (value: T, index: number) => Promise<Result>
+) {
+  const results = new Array<Result>(values.length);
+  let nextIndex = 0;
+  const workerCount = Math.min(Math.max(1, limit), values.length);
+
+  await Promise.all(
+    Array.from({ length: workerCount }, async () => {
+      while (nextIndex < values.length) {
+        const index = nextIndex;
+        nextIndex += 1;
+        results[index] = await mapper(values[index], index);
+      }
+    })
+  );
+
+  return results;
+}
+
 export async function fetchCloudbedsUpcomingReservations(
   apiKey: string,
   propertyId: string,
   dates: string[],
   onDiagnostics?: (diagnostics: CloudbedsReservationFieldDiagnostics) => void
 ) {
-  const imported: ImportedUpcomingReservation[] = [];
   const seen = new Set<string>();
   let diagnosticsReported = false;
-  for (const date of dates) {
+  const assignmentsByDate = await mapWithConcurrency(dates, 3, async date => {
     const assignmentsUrl = new URL(
       "https://api.cloudbeds.com/api/v1.3/getReservationAssignments"
     );
     assignmentsUrl.searchParams.set("propertyID", propertyId);
     assignmentsUrl.searchParams.set("date", date);
-    const assignments = asList(await getJson(assignmentsUrl, apiKey));
-    for (const assignment of assignments) {
+    return { date, assignments: asList(await getJson(assignmentsUrl, apiKey)) };
+  });
+
+  const uniqueAssignments = assignmentsByDate.flatMap(({ date, assignments }) =>
+    assignments.flatMap(assignment => {
       const id = reservationId(assignment);
-      if (!id || seen.has(id)) continue;
+      if (!id || seen.has(id)) return [];
       seen.add(id);
+      return [{ assignment, id, date }];
+    })
+  );
+
+  const imported = await mapWithConcurrency(uniqueAssignments, 3, async ({ assignment, id, date }) => {
       const detailUrl = new URL(
         "https://api.cloudbeds.com/api/v1.3/getReservation"
       );
       detailUrl.searchParams.set("propertyID", propertyId);
       detailUrl.searchParams.set("reservationID", id);
-      const detailPayload = await getJson(detailUrl, apiKey);
+      const [detailPayload, importedReservationNotes] = await Promise.all([
+        getJson(detailUrl, apiKey),
+        getReservationNotes(apiKey, propertyId, id),
+      ]);
       const detail = unwrapReservationDetail(detailPayload);
-      const importedReservationNotes = await getReservationNotes(
-        apiKey,
-        propertyId,
-        id
-      );
       if (!diagnosticsReported) {
         const guest = firstGuest(detail);
         const room = firstRoom(detail);
@@ -512,13 +539,14 @@ export async function fetchCloudbedsUpcomingReservations(
         });
         diagnosticsReported = true;
       }
-      const reservation = normalizeUpcomingReservation(
+      return normalizeUpcomingReservation(
         assignment,
         { ...detail, importedReservationNotes },
         date
       );
-      if (reservation) imported.push(reservation);
-    }
-  }
-  return imported;
+    });
+
+  return imported.filter(
+    (reservation): reservation is ImportedUpcomingReservation => reservation !== null
+  );
 }

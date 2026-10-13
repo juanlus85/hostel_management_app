@@ -1839,3 +1839,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Mostrar de forma discreta la versión y fecha/hora de compilación en el pie de la aplicación.
 - [x] Diferenciar sutilmente las columnas de viernes y sábado en el calendario de reservas y disponibilidad.
 - [x] Auditar y corregir el error al completar Check-in Online reportado en producción.
+- [x] Eliminar los 504 y la espera al cargar Reservas desacoplando la visualización local de la sincronización pesada de Cloudbeds.
