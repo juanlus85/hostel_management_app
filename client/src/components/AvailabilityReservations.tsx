@@ -59,6 +59,11 @@ function formatDay(date: string) {
   };
 }
 
+function isFridayOrSaturday(date: string) {
+  const weekday = new Date(`${date}T12:00:00`).getDay();
+  return weekday === 5 || weekday === 6;
+}
+
 function compactDate(date: string | null | undefined) {
   if (!date) return "—";
   return new Intl.DateTimeFormat("es-ES", { day: "2-digit", month: "short" })
@@ -440,8 +445,9 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
               {window.dates.map((date, index) => {
                 const day = formatDay(date);
                 const isToday = index === todayIndex;
+                const isWeekend = isFridayOrSaturday(date);
                 const arrivals = arrivalsByDate.get(date) || 0;
-                return <div key={date} className={`border-r px-1 py-2 text-center ${isToday ? "z-10 border-x-2 border-amber-400 bg-amber-100 text-amber-950 shadow-[inset_0_3px_0_rgb(251_191_36)]" : ""} sm:px-3 sm:py-3`}><p className="text-[9px] font-semibold uppercase tracking-wide sm:text-[11px]">{index === 0 ? "Ayer" : isToday ? "Hoy" : day.weekday}</p><p className="mt-0.5 text-lg font-bold leading-none sm:text-2xl">{day.date}</p><p className="mt-1 text-[9px] capitalize text-muted-foreground sm:text-[11px]"><span className="sm:hidden">{arrivals} lleg.</span><span className="hidden sm:inline">{day.month} · {arrivals} llegada{arrivals === 1 ? "" : "s"}</span></p></div>;
+                return <div key={date} className={`border-r px-1 py-2 text-center ${isToday ? "z-10 border-x-2 border-amber-400 bg-amber-100 text-amber-950 shadow-[inset_0_3px_0_rgb(251_191_36)]" : isWeekend ? "bg-slate-200/70" : ""} sm:px-3 sm:py-3`}><p className="text-[9px] font-semibold uppercase tracking-wide sm:text-[11px]">{index === 0 ? "Ayer" : isToday ? "Hoy" : day.weekday}</p><p className="mt-0.5 text-lg font-bold leading-none sm:text-2xl">{day.date}</p><p className="mt-1 text-[9px] capitalize text-muted-foreground sm:text-[11px]"><span className="sm:hidden">{arrivals} lleg.</span><span className="hidden sm:inline">{day.month} · {arrivals} llegada{arrivals === 1 ? "" : "s"}</span></p></div>;
               })}
             </div>
             {agenda.map((group, groupIndex) => {
@@ -455,8 +461,9 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
                   const editor = day?.rateId && currentRate !== null ? { roomTypeName: group.label, date, rateId: day.rateId, previousRate: currentRate } : null;
                   const draft = editor ? agendaRateDrafts[agendaRateKey(editor.rateId, editor.date)] : null;
                   const todayStyle = index === todayIndex ? "border-x-2 border-amber-400 bg-amber-50" : "";
+                  const weekendStyle = index !== todayIndex && isFridayOrSaturday(date) ? "bg-slate-200/60" : "";
                   const isEdited = Boolean(draft && hasAgendaRateChanged(draft));
-                  return <div key={date} className={`flex min-w-0 items-center justify-center border-r px-0.5 ${todayStyle} sm:px-1`}>
+                  return <div key={date} className={`flex min-w-0 items-center justify-center border-r px-0.5 ${todayStyle} ${weekendStyle} sm:px-1`}>
                     {day ? <>
                       <span className={`mr-0.5 shrink-0 text-[8px] font-semibold ${day.roomsAvailable === null ? "text-slate-500" : day.roomsAvailable <= 0 ? "text-rose-700" : day.roomsAvailable <= 2 ? "text-amber-700" : "text-emerald-700"}`}>{day.roomsAvailable === null ? "—" : day.roomsAvailable}</span>
                       {canEditAgendaRates && editor ? <div className={`flex min-w-0 flex-1 items-center rounded border px-0.5 shadow-sm focus-within:ring-2 focus-within:ring-sky-600 ${isEdited ? "border-amber-400 bg-amber-200" : "bg-background"}`}><Euro className={`h-2.5 w-2.5 shrink-0 ${isEdited ? "text-amber-800" : "text-sky-700"}`} /><Input aria-label={`Precio de ${group.label} el ${date}`} data-agenda-rate-row={groupIndex} data-agenda-rate-day={index} type="number" min="0" step="0.01" inputMode="decimal" value={draft?.rateText ?? editor.previousRate.toFixed(2)} onFocus={event => event.currentTarget.select()} onKeyDown={event => focusAgendaRateInput(event, groupIndex, index)} onChange={event => setAgendaRateDraft(editor, event.target.value)} className={`h-5 min-w-0 border-0 bg-transparent p-0 text-center text-[9px] font-bold shadow-none focus-visible:ring-0 ${isEdited ? "text-amber-950" : "text-slate-800"}`} /></div> : <span className="min-w-0 truncate text-[9px] font-bold text-slate-800">{currentRate === null ? "—" : money(currentRate)}</span>}
@@ -466,7 +473,7 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
               </div>
               {group.rooms.map(room => <div key={room.key} className="reservation-agenda-grid grid min-h-[48px] bg-background sm:min-h-[64px]" style={{ ...gridStyle, gridAutoRows: "minmax(var(--agenda-row-height), auto)" }}>
                 <div className="sticky left-0 z-20 flex min-w-0 items-center border-r border-b bg-background px-2 shadow-[8px_0_12px_-12px_rgba(15,23,42,0.48)] sm:px-4" style={{ gridColumn: 1, gridRow: `1 / span ${room.laneCount}` }}><p title={room.label} className="truncate text-xs font-medium text-slate-800 sm:text-sm">{room.label}</p></div>
-                {window.dates.map((date, index) => <div key={date} className={`border-b border-r bg-slate-50/35 ${index === todayIndex ? "border-x-2 border-amber-400 bg-amber-50/70" : ""}`} style={{ gridColumn: index + 2, gridRow: `1 / span ${room.laneCount}` }} />)}
+                {window.dates.map((date, index) => <div key={date} className={`border-b border-r ${index === todayIndex ? "border-x-2 border-amber-400 bg-amber-50/70" : isFridayOrSaturday(date) ? "bg-slate-100/80" : "bg-slate-50/35"}`} style={{ gridColumn: index + 2, gridRow: `1 / span ${room.laneCount}` }} />)}
                 {room.cards.map(card => <button key={card.reservation.id} type="button" title={`${card.reservation.guestName || "Huésped sin nombre"} · Entrada ${compactDate(card.reservation.checkInDate)} · Salida ${compactDate(card.reservation.checkOutDate)}`} onClick={() => { setSelectedId(card.reservation.id); setDetailTab("information"); }} className={`relative z-10 min-w-0 self-center overflow-visible border px-1.5 py-1 text-left shadow-sm transition duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-700 sm:px-3 sm:py-2 ${card.startSlot % 1 ? "rounded-l-none" : "rounded-l-md"} ${card.endSlot % 1 ? "rounded-r-none" : "rounded-r-full"} ${agendaToneClasses[card.tone]}`} style={agendaCardGridStyle(card)}>
                   {card.hasPendingAmount && <span aria-label="Importe pendiente" title="Importe pendiente" className="absolute -top-1 left-1 h-2.5 w-2.5 rounded-full border-2 border-white bg-red-500 shadow-sm sm:-top-1.5 sm:left-2 sm:h-3 sm:w-3" />}
                   {card.hasNotes && <span aria-label="Tiene notas" title="Tiene notas" className="absolute -top-1 left-4 h-2.5 w-2.5 rounded-full border-2 border-white bg-amber-400 shadow-sm sm:-top-1.5 sm:left-6 sm:h-3 sm:w-3" />}

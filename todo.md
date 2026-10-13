@@ -1836,3 +1836,5 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Resaltar en amarillo las tarifas modificadas, mostrar el envío de cambios en la cabecera y advertir cambios de precio inusualmente grandes antes de enviarlos.
 - [x] Eliminar el día vacío entre tramos de tarifas y aplicar reintentos controlados ante errores 504 transitorios de Cloudbeds.
 - [x] Duplicar el botón de envío de precios justo encima de la cuadrícula del calendario cuando existan cambios pendientes.
+- [x] Mostrar de forma discreta la versión y fecha/hora de compilación en el pie de la aplicación.
+- [x] Diferenciar sutilmente las columnas de viernes y sábado en el calendario de reservas y disponibilidad.

@@ -435,6 +435,7 @@ function DashboardLayoutContent({
                 </div>
               </DropdownMenuContent>
             </DropdownMenu>
+            {!isCollapsed && <p className="mt-2 truncate px-1 text-[10px] text-sidebar-foreground/45">{APP_RELEASE_LABEL}</p>}
           </SidebarFooter>
         </Sidebar>
         <div
