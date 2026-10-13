@@ -1864,3 +1864,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Añadir «Realizar Check-in» directamente en la pestaña Información del detalle de reserva, con datos Cloudbeds precargados.
 - [x] Precargar desde Cloudbeds en Realizar Check-in la reserva, habitación, dirección y cobros; ampliar el diálogo en escritorio y ofrecer al finalizar descarga/impresión del PDF archivado.
 - [x] Extraer el número de habitación asignada desde el detalle remoto de Cloudbeds al abrir Realizar Check-in, incluso si la importación de agenda no lo incluyó.
+- [x] Conservar la habitación de la agenda y admitir su valor importado en el selector de recepción, incluso si Cloudbeds no lo devuelve en el detalle remoto.

@@ -101,6 +101,15 @@ function checkinCountryCode(value: string | null | undefined) {
   return /^[A-Z]{3}$/.test(country) ? country : aliases[country.replace(/[\s.]/g, "")] || "ESP";
 }
 
+function checkinRoomNumber(value: string | null | undefined) {
+  const normalized = String(value || "").trim();
+  if (!normalized) return "";
+  // Cloudbeds puede devolver "Hab. Habitación 51", "Room 8" o "P1 · room 8",
+  // mientras que el selector de recepción usa la clave configurada: "51", "8" o "42-1".
+  const match = normalized.match(/(\d+(?:-\d+)?)\s*$/);
+  return match?.[1] || normalized;
+}
+
 function reservationStatus(value: string | null | undefined) {
   const status = value?.toLowerCase().replace(/[\s-]+/g, "_") || "";
   const labels: Record<string, string> = {
@@ -356,11 +365,11 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
       city: snapshot?.guest.city || "",
       province: snapshot?.guest.province || "",
       country: checkinCountryCode(snapshot?.guest.country),
-      reservationNumber: reservation.reservationCode || reservation.sourceReservationId || "",
+      reservationNumber: reservation.reservationCode || reservation.sourceReservationId || selected?.reservationCode || selected?.sourceReservationId || "",
       checkInDate: reservation.checkInDate || "",
       checkOutDate: reservation.checkOutDate || "",
-      roomNumber: snapshot?.roomNumber || reservation.roomNumber || "",
-      roomType: snapshot?.roomType || reservation.roomType || "",
+      roomNumber: checkinRoomNumber(snapshot?.roomNumber || reservation.roomNumber || selected?.roomNumber),
+      roomType: snapshot?.roomType || reservation.roomType || selected?.roomType || "",
       numberOfGuests: reservation.guestCount || 1,
       numberOfRooms: 1,
       reservationOrigin,

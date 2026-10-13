@@ -555,6 +555,11 @@ export default function CheckinPresencial({ initialGuest, onCompleted, showArchi
                 <SelectValue placeholder="Seleccionar habitación" />
               </SelectTrigger>
               <SelectContent>
+                {reservationData.roomNumber && !rooms?.some(room => room.roomNumber === reservationData.roomNumber) && (
+                  <SelectItem value={reservationData.roomNumber}>
+                    Habitación {reservationData.roomNumber} · Importada de Cloudbeds
+                  </SelectItem>
+                )}
                 {rooms?.map((room) => (
                   <SelectItem key={room.id} value={room.roomNumber}>
                     Habitación {room.roomNumber} - {room.roomType}
