@@ -1310,6 +1310,7 @@ export const appRouter = router({
         guestZip: z.string().trim().min(1).max(32),
         sourceId: z.string().trim().max(120).optional(),
         estimatedArrivalTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),
+        paymentMethod: z.enum(["cash", "credit", "ebanking", "pay_pal"]).default("cash"),
         sendEmailConfirmation: z.boolean().default(false),
       }))
       .mutation(async ({ input }) => {
@@ -1349,7 +1350,7 @@ export const appRouter = router({
               message: `La ocupación indicada supera el máximo de ${selectedRoomType.maxGuests} huésped(es) por habitación para este tipo.`,
             });
           }
-          const result = await createCloudbedsManualReservation({ apiKey, propertyId, ...input });
+          const result = await createCloudbedsManualReservation({ apiKey, propertyId, ...input, paymentMethod: input.paymentMethod || "cash" });
           return { ...result, roomTypeName: selectedRoomType.roomTypeName };
         } catch (error) {
           if (error instanceof TRPCError) throw error;

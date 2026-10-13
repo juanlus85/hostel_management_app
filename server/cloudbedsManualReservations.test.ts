@@ -24,6 +24,7 @@ const baseInput = {
   guestCountry: "es",
   guestZip: "41001",
   sourceId: "s-1",
+  paymentMethod: "cash" as const,
   sendEmailConfirmation: false,
 };
 
@@ -85,6 +86,7 @@ describe("reservas manuales de Cloudbeds", () => {
       guestFirstName: "Ana",
       guestLastName: "Pérez",
       guestCountry: "ES",
+      paymentMethod: "cash",
       "rooms[0][roomTypeID]": "double-1",
       "rooms[0][quantity]": "1",
       "rooms[0][roomID]": "room-15",

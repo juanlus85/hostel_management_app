@@ -34,6 +34,7 @@ export type CloudbedsManualReservationInput = {
   guestCountry: string;
   guestZip: string;
   estimatedArrivalTime?: string;
+  paymentMethod: "cash" | "credit" | "ebanking" | "pay_pal";
   sendEmailConfirmation?: boolean;
 };
 
@@ -246,6 +247,7 @@ export function cloudbedsManualReservationForm(input: CloudbedsManualReservation
   form.set("guestZip", input.guestZip.trim());
   if (input.guestPhone?.trim()) form.set("guestPhone", input.guestPhone.trim());
   if (input.estimatedArrivalTime?.trim()) form.set("estimatedArrivalTime", input.estimatedArrivalTime.trim());
+  form.set("paymentMethod", input.paymentMethod);
   form.set("rooms[0][roomTypeID]", input.roomTypeId);
   form.set("rooms[0][quantity]", String(input.rooms));
   if (input.roomId?.trim()) form.set("rooms[0][roomID]", input.roomId.trim());
