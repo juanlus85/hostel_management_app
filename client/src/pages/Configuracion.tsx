@@ -249,6 +249,10 @@ export default function Configuracion() {
 
       {/* OpenAI API Configuration */}
       <OpenAIConfig />
+
+      <p className="text-right text-xs text-muted-foreground">
+        Versión v{__APP_VERSION__}. {__APP_BUILD_TIME__}
+      </p>
     </div>
   );
 }

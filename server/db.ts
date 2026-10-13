@@ -14,6 +14,7 @@ import {
 } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { aggregateDailyCashSales } from "../shared/dailyCashSales";
+import { reservationReleasesAssignedRoom } from "../shared/reservationStatus";
 import { aggregateDashboardTrend } from "../shared/dashboardTrend";
 import { aggregateClosedCashSummary } from "../shared/dashboardCashSummary";
 import {
@@ -3372,12 +3373,50 @@ export async function getExternalUpcomingReservationById(
   return reservation || null;
 }
 
+export async function updateExternalUpcomingReservationsBySourceReservationId(
+  sourceReservationId: string,
+  changes: { reservationStatus?: string | null; amountPending?: string }
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Base de datos no disponible");
+  const releasesAssignedRoom = reservationReleasesAssignedRoom(
+    changes.reservationStatus
+  );
+  await db
+    .update(externalUpcomingReservations)
+    .set({
+      ...changes,
+      ...(releasesAssignedRoom ? { roomNumber: null } : {}),
+      importedAt: new Date(),
+    })
+    .where(
+      eq(
+        externalUpcomingReservations.sourceReservationId,
+        sourceReservationId
+      )
+    );
+}
+
 export async function updateExternalUpcomingReservationCloudbeds(
   id: number,
   changes: { reservationStatus?: string | null; amountPending?: string }
 ) {
   const db = await getDb();
   if (!db) throw new Error("Base de datos no disponible");
+  if (reservationReleasesAssignedRoom(changes.reservationStatus)) {
+    const [reservation] = await db
+      .select({ sourceReservationId: externalUpcomingReservations.sourceReservationId })
+      .from(externalUpcomingReservations)
+      .where(eq(externalUpcomingReservations.id, id))
+      .limit(1);
+    if (reservation) {
+      await updateExternalUpcomingReservationsBySourceReservationId(
+        reservation.sourceReservationId,
+        changes
+      );
+      return;
+    }
+  }
   await db
     .update(externalUpcomingReservations)
     .set({
@@ -3393,6 +3432,35 @@ export async function upsertExternalUpcomingReservations(
   const db = await getDb();
   if (!db) return;
   for (const record of records) {
+    if (reservationReleasesAssignedRoom(record.reservationStatus)) {
+      // Cloudbeds puede conservar la asignación histórica en una cancelación.
+      // Se consolida sin habitación para que no bloquee la agenda local.
+      const existingRecords = await db
+        .select({ id: externalUpcomingReservations.id })
+        .from(externalUpcomingReservations)
+        .where(
+          eq(
+            externalUpcomingReservations.sourceReservationId,
+            record.sourceReservationId
+          )
+        );
+      const [existing, ...duplicates] = existingRecords;
+      const cancelledRecord = { ...record, roomNumber: null };
+      if (existing) {
+        await db
+          .update(externalUpcomingReservations)
+          .set({ ...cancelledRecord, importedAt: new Date() })
+          .where(eq(externalUpcomingReservations.id, existing.id));
+        for (const duplicate of duplicates) {
+          await db
+            .delete(externalUpcomingReservations)
+            .where(eq(externalUpcomingReservations.id, duplicate.id));
+        }
+      } else {
+        await db.insert(externalUpcomingReservations).values(cancelledRecord);
+      }
+      continue;
+    }
     const assignmentCondition = record.roomNumber?.trim()
       ? eq(externalUpcomingReservations.roomNumber, record.roomNumber.trim())
       : isNull(externalUpcomingReservations.roomNumber);
