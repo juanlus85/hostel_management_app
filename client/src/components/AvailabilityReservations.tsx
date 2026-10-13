@@ -13,6 +13,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { getReservationWindowRange } from "@/lib/reservationWindow";
 import { availabilityRoomTypeKey, buildAgendaAvailabilityByType, findAgendaAvailabilityDay } from "@/lib/availabilityAgenda";
 import { addCalendarDays, mergeAgendaAvailability, type AgendaAvailabilityResult } from "@/lib/agendaAvailabilityMerge";
+import { hasAgendaRateChanged, isLargeAgendaRateChange, parseAgendaRate } from "@/lib/agendaRateSafety";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const madridDate = (date: Date) => date.toLocaleDateString("en-CA", { timeZone: "Europe/Madrid" });
@@ -136,6 +137,7 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
   const [isLoadingAgendaSecondWeek, setIsLoadingAgendaSecondWeek] = useState(false);
   const [agendaRateDrafts, setAgendaRateDrafts] = useState<Record<string, AgendaRateEditor>>({});
   const [pendingAgendaRates, setPendingAgendaRates] = useState<AgendaRateEditor[] | null>(null);
+  const [hasConfirmedLargeAgendaChanges, setHasConfirmedLargeAgendaChanges] = useState(false);
   const utils = trpc.useUtils();
   const reservations = trpc.checkin.externalImports.listCloudbedsUpcomingReservations.useQuery({ dateFrom: window.dateFrom, dateTo: window.dateTo });
   const importReservations = trpc.checkin.externalImports.importCloudbedsUpcomingReservations.useMutation({
@@ -321,12 +323,17 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
     }));
   };
   const editedAgendaRates = useMemo(
-    () => Object.values(agendaRateDrafts).filter(draft => {
-      const value = Number(draft.rateText.replace(",", "."));
-      return Number.isFinite(value) && value >= 0 && Math.abs(value - draft.previousRate) > 0.004;
-    }),
+    () => Object.values(agendaRateDrafts).filter(hasAgendaRateChanged),
     [agendaRateDrafts]
   );
+  const largeAgendaRateChanges = useMemo(
+    () => (pendingAgendaRates || []).filter(isLargeAgendaRateChange),
+    [pendingAgendaRates]
+  );
+  const requestAgendaRateUpdate = () => {
+    setHasConfirmedLargeAgendaChanges(false);
+    setPendingAgendaRates(editedAgendaRates);
+  };
   const focusAgendaRateInput = (event: KeyboardEvent<HTMLInputElement>, rowIndex: number, dayIndex: number) => {
     const movement = event.key === "ArrowRight" ? [0, 1] : event.key === "ArrowLeft" ? [0, -1] : event.key === "ArrowDown" ? [1, 0] : event.key === "ArrowUp" ? [-1, 0] : null;
     if (!movement) return;
@@ -404,10 +411,10 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
           <CardTitle className="flex items-center gap-2"><CalendarDays className="h-5 w-5 text-sky-700" />Agenda de reservas</CardTitle>
           <CardDescription className="mt-1">Vista por tipo de habitación y estancia. Pulsa una reserva para ver huésped, pagos y notas.</CardDescription>
         </div>
-        <div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" onClick={() => setShowUnassignedReservations(current => !current)}>{showUnassignedReservations ? "Ocultar sin habitación" : `Mostrar sin habitación${hiddenUnassignedReservations ? ` (${hiddenUnassignedReservations})` : ""}`}</Button><Button className="bg-sky-700 hover:bg-sky-800" onClick={() => importReservations.mutate()} disabled={importReservations.isPending}>
+        <div className="flex flex-wrap gap-2">{canEditAgendaRates && editedAgendaRates.length > 0 && <Button className="bg-amber-500 text-amber-950 hover:bg-amber-400" onClick={requestAgendaRateUpdate} disabled={updateAgendaRates.isPending}><Send className="mr-2 h-4 w-4" />Enviar {editedAgendaRates.length} precio{editedAgendaRates.length === 1 ? "" : "s"}</Button>}<Button variant="outline" size="sm" onClick={() => setShowUnassignedReservations(current => !current)}>{showUnassignedReservations ? "Ocultar sin habitación" : `Mostrar sin habitación${hiddenUnassignedReservations ? ` (${hiddenUnassignedReservations})` : ""}`}</Button><Button className="bg-sky-700 hover:bg-sky-800" onClick={() => importReservations.mutate()} disabled={importReservations.isPending}>
           {importReservations.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
           Actualizar reservas
-        </Button><Button variant="outline" size="sm" onClick={() => loadAgendaAvailability()} disabled={importAgendaAvailability.isPending}>{importAgendaAvailability.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}Actualizar precios</Button>{canEditAgendaRates && <Button variant="outline" onClick={() => setPendingAgendaRates(editedAgendaRates)} disabled={!editedAgendaRates.length || updateAgendaRates.isPending}>{updateAgendaRates.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}Enviar {editedAgendaRates.length || ""} precios</Button>}</div>
+        </Button><Button variant="outline" size="sm" onClick={() => loadAgendaAvailability()} disabled={importAgendaAvailability.isPending}>{importAgendaAvailability.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}Actualizar precios</Button></div>
       </CardHeader>
       <CardContent className="flex flex-wrap gap-x-5 gap-y-2 border-t bg-sky-50/30 py-3 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-red-500" />Importe pendiente</span>
@@ -447,10 +454,11 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
                   const editor = day?.rateId && currentRate !== null ? { roomTypeName: group.label, date, rateId: day.rateId, previousRate: currentRate } : null;
                   const draft = editor ? agendaRateDrafts[agendaRateKey(editor.rateId, editor.date)] : null;
                   const todayStyle = index === todayIndex ? "border-x-2 border-amber-400 bg-amber-50" : "";
+                  const isEdited = Boolean(draft && hasAgendaRateChanged(draft));
                   return <div key={date} className={`flex min-w-0 items-center justify-center border-r px-0.5 ${todayStyle} sm:px-1`}>
                     {day ? <>
                       <span className={`mr-0.5 shrink-0 text-[8px] font-semibold ${day.roomsAvailable === null ? "text-slate-500" : day.roomsAvailable <= 0 ? "text-rose-700" : day.roomsAvailable <= 2 ? "text-amber-700" : "text-emerald-700"}`}>{day.roomsAvailable === null ? "—" : day.roomsAvailable}</span>
-                      {canEditAgendaRates && editor ? <div className="flex min-w-0 flex-1 items-center rounded border bg-background px-0.5 shadow-sm focus-within:ring-2 focus-within:ring-sky-600"><Euro className="h-2.5 w-2.5 shrink-0 text-sky-700" /><Input aria-label={`Precio de ${group.label} el ${date}`} data-agenda-rate-row={groupIndex} data-agenda-rate-day={index} type="number" min="0" step="0.01" inputMode="decimal" value={draft?.rateText ?? editor.previousRate.toFixed(2)} onFocus={event => event.currentTarget.select()} onKeyDown={event => focusAgendaRateInput(event, groupIndex, index)} onChange={event => setAgendaRateDraft(editor, event.target.value)} className={`h-5 min-w-0 border-0 p-0 text-center text-[9px] font-bold shadow-none focus-visible:ring-0 ${draft ? "text-sky-800" : "text-slate-800"}`} /></div> : <span className="min-w-0 truncate text-[9px] font-bold text-slate-800">{currentRate === null ? "—" : money(currentRate)}</span>}
+                      {canEditAgendaRates && editor ? <div className={`flex min-w-0 flex-1 items-center rounded border px-0.5 shadow-sm focus-within:ring-2 focus-within:ring-sky-600 ${isEdited ? "border-amber-400 bg-amber-200" : "bg-background"}`}><Euro className={`h-2.5 w-2.5 shrink-0 ${isEdited ? "text-amber-800" : "text-sky-700"}`} /><Input aria-label={`Precio de ${group.label} el ${date}`} data-agenda-rate-row={groupIndex} data-agenda-rate-day={index} type="number" min="0" step="0.01" inputMode="decimal" value={draft?.rateText ?? editor.previousRate.toFixed(2)} onFocus={event => event.currentTarget.select()} onKeyDown={event => focusAgendaRateInput(event, groupIndex, index)} onChange={event => setAgendaRateDraft(editor, event.target.value)} className={`h-5 min-w-0 border-0 bg-transparent p-0 text-center text-[9px] font-bold shadow-none focus-visible:ring-0 ${isEdited ? "text-amber-950" : "text-slate-800"}`} /></div> : <span className="min-w-0 truncate text-[9px] font-bold text-slate-800">{currentRate === null ? "—" : money(currentRate)}</span>}
                     </> : <span className="text-[10px] text-slate-400">—</span>}
                   </div>;
                 })}
@@ -546,7 +554,14 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
     </AlertDialog>
 
     <AlertDialog open={Boolean(pendingAgendaRates)} onOpenChange={open => { if (!open) setPendingAgendaRates(null); }}>
-      <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Confirmar envío de precios</AlertDialogTitle><AlertDialogDescription>Se actualizarán {pendingAgendaRates?.length || 0} tarifas base en Cloudbeds. Revisa los cambios antes de enviarlos.</AlertDialogDescription></AlertDialogHeader>{pendingAgendaRates && <div className="max-h-64 overflow-y-auto rounded-lg border bg-muted/40 p-3 text-sm"><div className="space-y-2">{pendingAgendaRates.map(change => <div key={agendaRateKey(change.rateId, change.date)} className="flex justify-between gap-3"><span>{change.roomTypeName} · {compactDate(change.date)}</span><strong>{money(Number(change.rateText.replace(",", ".")))}</strong></div>)}</div></div>}<AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction disabled={updateAgendaRates.isPending} onClick={() => pendingAgendaRates && updateAgendaRates.mutate({ changes: pendingAgendaRates.map(change => ({ rateId: change.rateId, date: change.date, rate: Number(change.rateText.replace(",", ".")) })) })}>{updateAgendaRates.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}Enviar precios</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+      <AlertDialogContent>
+        <AlertDialogHeader><AlertDialogTitle>Confirmar envío de precios</AlertDialogTitle><AlertDialogDescription>Se actualizarán {pendingAgendaRates?.length || 0} tarifas base en Cloudbeds. Revisa los cambios antes de enviarlos.</AlertDialogDescription></AlertDialogHeader>
+        {pendingAgendaRates && <>
+          <div className="max-h-56 overflow-y-auto rounded-lg border bg-muted/40 p-3 text-sm"><div className="space-y-2">{pendingAgendaRates.map(change => <div key={agendaRateKey(change.rateId, change.date)} className="flex justify-between gap-3"><span>{change.roomTypeName} · {compactDate(change.date)}</span><strong>{money(change.previousRate)} → {money(parseAgendaRate(change.rateText) ?? 0)}</strong></div>)}</div></div>
+          {largeAgendaRateChanges.length > 0 && <label className="block rounded-lg border-2 border-amber-400 bg-amber-50 p-3 text-sm text-amber-950"><span className="block font-semibold">Revisa cambios inusualmente grandes</span><span className="mt-1 block">Hay {largeAgendaRateChanges.length} cambio{largeAgendaRateChanges.length === 1 ? "" : "s"} de 50 € o más, o superiores al 50 %. Confirma que no se trata de un error de escritura.</span><span className="mt-3 flex items-center gap-2"><input type="checkbox" checked={hasConfirmedLargeAgendaChanges} onChange={event => setHasConfirmedLargeAgendaChanges(event.target.checked)} className="h-4 w-4 accent-amber-600" />Confirmo estos cambios de precio</span></label>}
+        </>}
+        <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction disabled={updateAgendaRates.isPending || (largeAgendaRateChanges.length > 0 && !hasConfirmedLargeAgendaChanges)} onClick={() => pendingAgendaRates && updateAgendaRates.mutate({ changes: pendingAgendaRates.map(change => ({ rateId: change.rateId, date: change.date, rate: parseAgendaRate(change.rateText) ?? 0 })) })}>{updateAgendaRates.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}Enviar precios</AlertDialogAction></AlertDialogFooter>
+      </AlertDialogContent>
     </AlertDialog>
   </div>;
 }
