@@ -216,33 +216,100 @@ function reservationRoomRecords(record: Record<string, unknown>) {
 }
 
 function roomIdentity(room: Record<string, unknown>) {
+  return roomIdentityTokens(room)[0] ?? null;
+}
+
+function roomIdentityTokens(room: Record<string, unknown>) {
   const nestedRoom = asRecord(room.room ?? room.assignedRoom ?? room.assigned_room);
-  return firstText(
+  return Array.from(new Set([
     room.roomID,
     room.roomId,
+    room.room_id,
     room.assignedRoomID,
+    room.assignedRoomId,
     room.assigned_room_id,
     room.roomName,
     room.room_name,
     room.roomNumber,
     room.room_number,
+    room.room_number_display,
+    room.assignedRoomName,
+    room.assigned_room_name,
+    room.assignedRoomNumber,
+    room.assigned_room_number,
+    room.room,
+    room.assignedRoom,
+    room.assigned_room,
     nestedRoom.roomID,
     nestedRoom.roomId,
+    nestedRoom.room_id,
     nestedRoom.roomName,
     nestedRoom.room_name,
     nestedRoom.roomNumber,
-    nestedRoom.room_number
-  );
+    nestedRoom.room_number,
+    nestedRoom.room_number_display,
+    nestedRoom.assignedRoomNumber,
+    nestedRoom.assigned_room_number,
+  ].map(text).filter((value): value is string => Boolean(value)).map(value => value.toLocaleLowerCase("es-ES"))));
 }
 
 function uniquePhysicalRooms(rooms: Record<string, unknown>[]) {
-  const seen = new Set<string>();
+  const seenTokens = new Set<string>();
   return rooms.filter(room => {
-    const identity = roomIdentity(room);
-    if (!identity || seen.has(identity)) return false;
-    seen.add(identity);
+    const tokens = roomIdentityTokens(room);
+    if (!tokens.length || tokens.some(token => seenTokens.has(token))) return false;
+    tokens.forEach(token => seenTokens.add(token));
     return true;
   });
+}
+
+function collectNestedPhysicalRooms(source: unknown) {
+  const rooms: Record<string, unknown>[] = [];
+  const pending: unknown[] = [source];
+  const visited = new Set<object>();
+
+  while (pending.length) {
+    const value = pending.pop();
+    if (!value || typeof value !== "object") continue;
+    if (visited.has(value)) continue;
+    visited.add(value);
+    if (Array.isArray(value)) {
+      pending.push(...value);
+      continue;
+    }
+    const record = asRecord(value);
+    if (roomIdentityTokens(record).length) rooms.push(record);
+    pending.push(...Object.values(record));
+  }
+
+  return uniquePhysicalRooms(rooms);
+}
+
+function collectSubReservationIds(source: unknown) {
+  const identifiers = new Set<string>();
+  const pending: unknown[] = [source];
+  const visited = new Set<object>();
+
+  while (pending.length) {
+    const value = pending.pop();
+    if (!value || typeof value !== "object") continue;
+    if (visited.has(value)) continue;
+    visited.add(value);
+    if (Array.isArray(value)) {
+      pending.push(...value);
+      continue;
+    }
+    const record = asRecord(value);
+    for (const [key, fieldValue] of Object.entries(record)) {
+      if (["subreservationid", "sub_reservation_id", "subreservation_id"].includes(key.toLocaleLowerCase("en-US"))) {
+        const identifier = text(fieldValue);
+        if (identifier) identifiers.add(identifier);
+      }
+      pending.push(fieldValue);
+    }
+  }
+
+  return Array.from(identifiers);
 }
 
 function unwrapReservationDetail(payload: unknown) {
@@ -529,6 +596,25 @@ async function getReservationNotes(
   }
 }
 
+async function getReservationRoomDetails(
+  apiKey: string,
+  propertyId: string,
+  subReservationId: string
+) {
+  try {
+    const roomDetailsUrl = new URL(
+      "https://api.cloudbeds.com/api/v1.3/getReservationRoomDetails"
+    );
+    roomDetailsUrl.searchParams.set("propertyID", propertyId);
+    roomDetailsUrl.searchParams.set("subReservationID", subReservationId);
+    return await getJson(roomDetailsUrl, apiKey);
+  } catch {
+    // Algunas credenciales antiguas no conceden este permiso. Conservamos la
+    // importación de la asignación disponible en vez de bloquear la agenda.
+    return null;
+  }
+}
+
 async function mapWithConcurrency<T, Result>(
   values: T[],
   limit: number,
@@ -557,7 +643,19 @@ export async function fetchCloudbedsUpcomingReservations(
   dates: string[],
   onDiagnostics?: (diagnostics: CloudbedsReservationFieldDiagnostics) => void
 ) {
-  const seenAssignments = new Set<string>();
+  const unresolvedAssignmentsByReservation = new Map<string, {
+    assignment: Record<string, unknown>;
+    id: string;
+    date: string;
+    subReservationIds: Set<string>;
+  }>();
+  const directAssignments: Array<{
+    assignment: Record<string, unknown>;
+    id: string;
+    date: string;
+    subReservationIds: Set<string>;
+  }> = [];
+  const seenDirectAssignments = new Set<string>();
   let diagnosticsReported = false;
   const assignmentsByDate = await mapWithConcurrency(dates, 3, async date => {
     const assignmentsUrl = new URL(
@@ -568,30 +666,47 @@ export async function fetchCloudbedsUpcomingReservations(
     return { date, assignments: asList(await getJson(assignmentsUrl, apiKey)) };
   });
 
-  const uniqueAssignments = assignmentsByDate.flatMap(({ date, assignments }) =>
-    assignments.flatMap(assignment => {
+  assignmentsByDate.forEach(({ date, assignments }) => {
+    assignments.forEach(assignment => {
       const id = reservationId(assignment);
       // Una misma reserva puede ocupar más de una habitación. Conservamos una
-      // entrada por habitación física, pero evitamos repetirla al consultar cada
-      // día del calendario.
-      const roomKey = firstText(
-        assignment.roomID,
-        assignment.roomId,
-        assignment.assignedRoomID,
-        assignment.assigned_room_id,
-        assignment.roomName,
-        assignment.room_name,
-        assignment.roomNumber,
-        assignment.room_number
-      ) || "unassigned";
-      const assignmentKey = `${id}:${roomKey}`;
-      if (!id || seenAssignments.has(assignmentKey)) return [];
-      seenAssignments.add(assignmentKey);
-      return [{ assignment, id, date }];
-    })
-  );
+      // entrada por habitación física o subreserva, pero evitamos repetirla al
+      // consultar cada día del calendario. Cloudbeds usa subReservationID para
+      // las habitaciones adicionales de una misma reserva.
+      if (!id) return;
+      const roomKey = roomIdentity(assignment);
+      const subReservationIds = collectSubReservationIds(assignment);
+      if (roomKey || !subReservationIds.length) {
+        const directKey = `${id}:${roomKey || "unassigned"}`;
+        if (seenDirectAssignments.has(directKey)) return;
+        seenDirectAssignments.add(directKey);
+        directAssignments.push({
+          assignment,
+          id,
+          date,
+          subReservationIds: new Set(),
+        });
+        return;
+      }
+      const existing = unresolvedAssignmentsByReservation.get(id);
+      if (existing) {
+        subReservationIds.forEach(identifier => existing.subReservationIds.add(identifier));
+        return;
+      }
+      unresolvedAssignmentsByReservation.set(id, {
+        assignment,
+        id,
+        date,
+        subReservationIds: new Set(subReservationIds),
+      });
+    });
+  });
+  const uniqueAssignments = [
+    ...directAssignments,
+    ...Array.from(unresolvedAssignmentsByReservation.values()),
+  ];
 
-  const importedBatches = await mapWithConcurrency(uniqueAssignments, 3, async ({ assignment, id, date }) => {
+  const importedBatches = await mapWithConcurrency(uniqueAssignments, 3, async ({ assignment, id, date, subReservationIds }) => {
       const detailUrl = new URL(
         "https://api.cloudbeds.com/api/v1.3/getReservation"
       );
@@ -602,6 +717,15 @@ export async function fetchCloudbedsUpcomingReservations(
         getReservationNotes(apiKey, propertyId, id),
       ]);
       const detail = unwrapReservationDetail(detailPayload);
+      const detailSubReservationIds = Array.from(new Set([
+        ...Array.from(subReservationIds),
+        ...collectSubReservationIds(detail),
+      ]));
+      const roomDetailsPayloads = await Promise.all(
+        detailSubReservationIds.map(identifier =>
+          getReservationRoomDetails(apiKey, propertyId, identifier)
+        )
+      );
       if (!diagnosticsReported) {
         const guest = firstGuest(detail);
         const room = firstRoom(detail);
@@ -624,12 +748,7 @@ export async function fetchCloudbedsUpcomingReservations(
       // habitación en getReservationAssignments o una única fila cuyo detalle
       // contiene todas las habitaciones asignadas. Expandimos esta segunda
       // forma sin alterar las fechas oficiales de la reserva.
-      const rooms = roomIdentity(assignment)
-        ? [assignment]
-        : uniquePhysicalRooms([
-            ...reservationRoomRecords(assignment),
-            ...reservationRoomRecords(detail),
-          ]);
+      const rooms = collectNestedPhysicalRooms({ assignment, detail, roomDetailsPayloads });
       const assignments = rooms.length ? rooms.map(room => ({
         ...assignment,
         ...room,
