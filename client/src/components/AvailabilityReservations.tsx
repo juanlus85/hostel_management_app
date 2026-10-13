@@ -78,6 +78,29 @@ function money(value: string | number | null | undefined) {
   return new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(Number.isFinite(amount) ? amount : 0);
 }
 
+function decimalText(value: string | number | null | undefined) {
+  const amount = Number(String(value ?? "").replace(",", "."));
+  return Number.isFinite(amount) ? amount.toFixed(2) : "0.00";
+}
+
+function checkinPaymentType(...values: Array<string | null | undefined>) {
+  const value = values.filter(Boolean).join(" ").toLowerCase();
+  if (/cash|efectivo/.test(value)) return "EFECT";
+  if (/card|tarjeta|visa|mastercard/.test(value)) return "TARJT";
+  if (/transfer|bank|banco/.test(value)) return "TRANS";
+  if (/booking|airbnb|expedia|platform|plataforma|hotel collect/.test(value)) return "PLATF";
+  if (/bizum|paypal|movil|móvil/.test(value)) return "MOVIL";
+  return "OTRO";
+}
+
+function checkinCountryCode(value: string | null | undefined) {
+  const country = String(value || "").trim().toUpperCase();
+  const aliases: Record<string, string> = {
+    ES: "ESP", ESPAÑA: "ESP", SPAIN: "ESP", FR: "FRA", FRANCE: "FRA", DE: "DEU", GERMANY: "DEU", IT: "ITA", ITALY: "ITA", PT: "PRT", PORTUGAL: "PRT", GB: "GBR", UK: "GBR", UNITEDKINGDOM: "GBR", US: "USA", UNITEDSTATES: "USA",
+  };
+  return /^[A-Z]{3}$/.test(country) ? country : aliases[country.replace(/[\s.]/g, "")] || "ESP";
+}
+
 function reservationStatus(value: string | null | undefined) {
   const status = value?.toLowerCase().replace(/[\s-]+/g, "_") || "";
   const labels: Record<string, string> = {
@@ -315,15 +338,25 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
   const reservation = detail.data?.reservation || selected;
   const reservationCheckinGuest = useMemo(() => {
     if (!reservation) return null;
+    const snapshot = detail.data?.snapshot;
+    const payments = detail.data?.payments;
     const nameParts = (reservation.guestName || "").trim().split(/\s+/).filter(Boolean);
     const source = String(reservation.bookingSource || "").toLowerCase();
     const reservationOrigin = source.includes("booking") ? "Booking.com" : source.includes("airbnb") ? "Airbnb" : source.includes("expedia") ? "Expedia" : source.includes("website") ? "Website" : source.includes("phone") ? "Phone" : source.includes("email") ? "Email" : "Other";
+    const paymentMovement = payments?.movements.find(movement => movement.kind === "payment");
+    const paidAmount = payments ? Math.max(0, payments.paidTotal - payments.refundedTotal) : 0;
     return {
-      firstName: nameParts[0] || "",
-      lastName: nameParts.slice(1).join(" "),
-      email: reservation.guestEmail || "",
-      phone: reservation.guestPhone || "",
-      reservationNumber: reservation.reservationCode || "",
+      firstName: snapshot?.guest.firstName || nameParts[0] || "",
+      lastName: snapshot?.guest.lastName || nameParts.slice(1).join(" "),
+      email: snapshot?.guest.email || reservation.guestEmail || "",
+      phone: snapshot?.guest.phone || reservation.guestPhone || "",
+      street: snapshot?.guest.street || "",
+      addressExtra: snapshot?.guest.addressExtra || "",
+      postalCode: snapshot?.guest.postalCode || "",
+      city: snapshot?.guest.city || "",
+      province: snapshot?.guest.province || "",
+      country: checkinCountryCode(snapshot?.guest.country),
+      reservationNumber: reservation.reservationCode || reservation.sourceReservationId || "",
       checkInDate: reservation.checkInDate || "",
       checkOutDate: reservation.checkOutDate || "",
       roomNumber: reservation.roomNumber || "",
@@ -332,8 +365,14 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
       numberOfRooms: 1,
       reservationOrigin,
       accommodationType: "S.A. (Solo Aloj.)",
+      paymentType: checkinPaymentType(snapshot?.paymentType, snapshot?.paymentMethod, paymentMovement?.label, reservation.bookingSource),
+      paymentDate: reservation.checkInDate || "",
+      amountPaid: decimalText(paidAmount),
+      amountPending: decimalText(snapshot?.amountPending ?? reservation.amountPending),
+      paymentHolder: snapshot?.guest.firstName || snapshot?.guest.lastName ? `${snapshot?.guest.firstName || ""} ${snapshot?.guest.lastName || ""}`.trim() : reservation.guestName || "",
+      paymentMethod: snapshot?.paymentMethod || paymentMovement?.label || reservation.bookingSource || "",
     };
-  }, [reservation]);
+  }, [detail.data?.payments, detail.data?.snapshot, reservation]);
   const payments = detail.data?.payments;
   const onlineCheckinSent = detail.data?.communications?.find(
     communication => communication.messageType === "online_checkin" && communication.channel === "email" && communication.status === "sent"
@@ -615,7 +654,7 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
     </Dialog>
 
     <Dialog open={reservationCheckinOpen} onOpenChange={setReservationCheckinOpen}>
-      <DialogContent className="max-h-[92vh] max-w-6xl overflow-y-auto">
+      <DialogContent className="h-[100dvh] max-h-[100dvh] w-screen max-w-none overflow-y-auto rounded-none p-3 sm:h-[94vh] sm:max-h-[94vh] sm:w-[min(96vw,1180px)] sm:max-w-[1180px] sm:rounded-xl sm:p-6">
         <DialogHeader>
           <DialogTitle>Realizar Check-in de la reserva</DialogTitle>
           <DialogDescription>
@@ -625,6 +664,8 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
         {reservationCheckinGuest && <CheckinPresencial
           key={selectedId ?? "reservation"}
           initialGuest={reservationCheckinGuest}
+          showArchiveConfirmation
+          preloadSource="reserva"
           onCompleted={() => {
             setReservationCheckinOpen(false);
             setSelectedId(null);

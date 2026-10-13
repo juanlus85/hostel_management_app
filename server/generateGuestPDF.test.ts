@@ -1,6 +1,6 @@
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { createGuestPdfBuffer, getGuestRecordArchiveLocation } from "./generateGuestPDF";
+import { createGuestPdfBuffer, getGuestRecordArchiveLocation, getGuestRecordPublicUrl } from "./generateGuestPDF";
 
 describe("getGuestRecordArchiveLocation", () => {
   it("archiva cada ficha en el mes de su entrada con un nombre legible", () => {
@@ -35,5 +35,11 @@ describe("getGuestRecordArchiveLocation", () => {
 
     expect(pdf.subarray(0, 4).toString()).toBe("%PDF");
     expect(pdf.length).toBeGreaterThan(1_000);
+  });
+
+  it("crea una URL pública codificada dentro de uploads", () => {
+    expect(getGuestRecordPublicUrl("/srv/hostel/uploads/registros/10-2026/031026 - Ana Pérez.pdf", "/srv/hostel/uploads"))
+      .toBe("/uploads/registros/10-2026/031026%20-%20Ana%20P%C3%A9rez.pdf");
+    expect(getGuestRecordPublicUrl("/srv/hostel/private/registro.pdf", "/srv/hostel/uploads")).toBeNull();
   });
 });

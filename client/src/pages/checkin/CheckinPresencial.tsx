@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { trpc } from "@/lib/trpc";
-import { Loader2, Plus, Save } from "lucide-react";
+import { Download, FileCheck2, Loader2, Plus, Printer, Save } from "lucide-react";
 import { toast } from "sonner";
 import { COUNTRIES, PAYMENT_TYPES } from "@/../../shared/countries";
 import { requiresDocumentSupport } from "@shared/documentSupport";
@@ -24,9 +24,11 @@ type InitialGuest = Record<string, any>;
 type CheckinPresencialProps = {
   initialGuest?: InitialGuest | null;
   onCompleted?: () => void;
+  showArchiveConfirmation?: boolean;
+  preloadSource?: "anticipado" | "reserva";
 };
 
-export default function CheckinPresencial({ initialGuest, onCompleted }: CheckinPresencialProps) {
+export default function CheckinPresencial({ initialGuest, onCompleted, showArchiveConfirmation = false, preloadSource = "anticipado" }: CheckinPresencialProps) {
   const [guests, setGuests] = useState<GuestFormData[]>([
     {
       firstName: initialGuest?.firstName || "",
@@ -115,6 +117,8 @@ export default function CheckinPresencial({ initialGuest, onCompleted }: Checkin
 
   // Firma digital
   const [signature, setSignature] = useState(initialGuest?.signature || "");
+  const [completedPdfUrl, setCompletedPdfUrl] = useState<string | null>(null);
+  const [isCheckinSaved, setIsCheckinSaved] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(Boolean(initialGuest?.acceptedTerms));
@@ -349,6 +353,7 @@ export default function CheckinPresencial({ initialGuest, onCompleted }: Checkin
     const groupId = initialGuest?.groupId || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
     try {
+      let archivedPdfUrl: string | null = null;
       // Guardar cada huésped
       for (let i = 0; i < guests.length; i++) {
         const guest = guests[i];
@@ -411,18 +416,25 @@ export default function CheckinPresencial({ initialGuest, onCompleted }: Checkin
         // conservan los datos previamente aportados, incluida su habitación.
         if (initialGuest?.id && isMainGuest) {
           const { checkinType: _checkinType, groupId: _groupId, isMainGuest: _isMainGuest, ...updateData } = guestData;
-          await updateGuestRecord.mutateAsync({
+          const result = await updateGuestRecord.mutateAsync({
             id: initialGuest.id,
             ...updateData,
           });
+          archivedPdfUrl = result.recordPdfUrl || archivedPdfUrl;
         } else {
-          await createGuest.mutateAsync(guestData);
+          const result = await createGuest.mutateAsync(guestData);
+          if (isMainGuest) archivedPdfUrl = result.recordPdfUrl || archivedPdfUrl;
         }
       }
 
       toast.success(`Check-in completado: ${guests.length} huésped(es) registrado(s)`);
 
       if (initialGuest) {
+        if (showArchiveConfirmation) {
+          setCompletedPdfUrl(archivedPdfUrl);
+          setIsCheckinSaved(true);
+          return;
+        }
         onCompleted?.();
         return;
       }
@@ -486,6 +498,21 @@ export default function CheckinPresencial({ initialGuest, onCompleted }: Checkin
     );
   }
 
+  if (isCheckinSaved) {
+    const printRecord = () => {
+      if (!completedPdfUrl) return;
+      const popup = window.open(completedPdfUrl, "_blank", "noopener,noreferrer");
+      if (!popup) toast.error("El navegador bloqueó la ventana de impresión. Permite las ventanas emergentes e inténtalo de nuevo.");
+    };
+    return <Card className="border-emerald-200 bg-emerald-50 p-5 text-center sm:p-8">
+      <FileCheck2 className="mx-auto h-11 w-11 text-emerald-700" />
+      <h2 className="mt-3 text-xl font-bold text-emerald-950">Check-in guardado correctamente</h2>
+      <p className="mx-auto mt-2 max-w-xl text-sm text-emerald-900">Los datos se han registrado y la ficha PDF se ha guardado automáticamente en el servidor, dentro de <strong>uploads/registros</strong> y su carpeta mensual.</p>
+      {completedPdfUrl ? <div className="mt-5 flex flex-col justify-center gap-2 sm:flex-row"><a href={completedPdfUrl} download className="inline-flex h-10 items-center justify-center rounded-md bg-emerald-700 px-4 text-sm font-medium text-white transition-colors hover:bg-emerald-800"><Download className="mr-2 h-4 w-4" />Guardar PDF</a><Button type="button" variant="outline" onClick={printRecord}><Printer className="mr-2 h-4 w-4" />Abrir / imprimir PDF</Button></div> : <p className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">El Check-in se guardó, pero no se pudo confirmar el enlace al PDF. Revisa la carpeta local <strong>uploads/registros</strong>.</p>}
+      <Button type="button" variant="ghost" className="mt-4" onClick={onCompleted}>Cerrar</Button>
+    </Card>;
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -500,7 +527,7 @@ export default function CheckinPresencial({ initialGuest, onCompleted }: Checkin
 
       {initialGuest && (
         <Card className="border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950">
-          <p className="font-semibold">Datos recuperados del Check-in anticipado</p>
+          <p className="font-semibold">{preloadSource === "reserva" ? "Datos recuperados de la reserva de Cloudbeds" : "Datos recuperados del Check-in anticipado"}</p>
           <p className="mt-1">Revisa la información, completa lo necesario y confirma el registro. La habitación asignada se conserva solo para recepción.</p>
         </Card>
       )}

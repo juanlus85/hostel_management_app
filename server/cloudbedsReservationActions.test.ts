@@ -61,8 +61,23 @@ describe("acciones de reserva Cloudbeds", () => {
   });
 
   it("lee estado, saldo y huésped fiscal de Cloudbeds", () => {
-    expect(extractCloudbedsReservationSnapshot({ reservation: { reservation_status: "checked_in", balanceDue: "14.50", guestID: 42 } })).toEqual({ reservationStatus: "checked_in", amountPending: "14.50", hotelCollect: null, guestId: 42 });
+    expect(extractCloudbedsReservationSnapshot({ reservation: { reservation_status: "checked_in", balanceDue: "14.50", guestID: 42 } })).toMatchObject({ reservationStatus: "checked_in", amountPending: "14.50", hotelCollect: null, guestId: 42 });
     expect(extractCloudbedsReservationSnapshot({ data: { guests: [{ guestId: "61" }] } }).guestId).toBe(61);
+  });
+
+  it("extrae dirección y método de pago para completar el registro de recepción", () => {
+    const snapshot = extractCloudbedsReservationSnapshot({ reservation: {
+      payment_method_name: "Tarjeta Booking",
+      guests: [{
+        first_name: "Ana",
+        last_name: "Pérez",
+        email_address: "ana@example.com",
+        phone_number: "+34600000000",
+        address: { address1: "Calle Adriano 6", address2: "2º A", postal_code: "41001", city: "Sevilla", province: "Sevilla", country_code: "ESP" },
+      }],
+    } });
+    expect(snapshot.guest).toEqual({ firstName: "Ana", lastName: "Pérez", email: "ana@example.com", phone: "+34600000000", street: "Calle Adriano 6", addressExtra: "2º A", postalCode: "41001", city: "Sevilla", province: "Sevilla", country: "ESP" });
+    expect(snapshot.paymentMethod).toBe("Tarjeta Booking");
   });
 
   it("identifica las reservas Hotel Collect en los términos de cobro", () => {

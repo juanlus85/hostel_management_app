@@ -8,6 +8,20 @@ export type CloudbedsReservationSnapshot = {
   amountPending: string | null;
   hotelCollect: boolean | null;
   guestId: number | null;
+  guest: {
+    firstName: string | null;
+    lastName: string | null;
+    email: string | null;
+    phone: string | null;
+    street: string | null;
+    addressExtra: string | null;
+    postalCode: string | null;
+    city: string | null;
+    province: string | null;
+    country: string | null;
+  };
+  paymentType: string | null;
+  paymentMethod: string | null;
 };
 
 type ApiRecord = Record<string, unknown>;
@@ -68,6 +82,24 @@ function unwrapReservation(value: unknown): ApiRecord {
     if (Object.keys(nested).length) return nested;
   }
   return record;
+}
+
+function firstRecord(...values: unknown[]) {
+  for (const value of values) {
+    const record = asRecord(value);
+    if (Object.keys(record).length) return record;
+  }
+  return {} as ApiRecord;
+}
+
+function firstGuestRecord(value: unknown) {
+  if (Array.isArray(value)) return asRecord(value[0]);
+  const container = asRecord(value);
+  if (Array.isArray(container.data)) return asRecord(container.data[0]);
+  const indexed = Object.values(container)
+    .map(asRecord)
+    .find(candidate => Object.keys(candidate).length > 0);
+  return indexed || container;
 }
 
 function money(value: unknown) {
@@ -138,7 +170,15 @@ export function normalizeCloudbedsPaymentMethods(payload: unknown): CloudbedsPay
 export function extractCloudbedsReservationSnapshot(payload: unknown): CloudbedsReservationSnapshot {
   const reservation = unwrapReservation(payload);
   const guestList = reservation.guestList ?? reservation.guests ?? reservation.guest_list;
-  const firstGuest = Array.isArray(guestList) ? asRecord(guestList[0]) : asRecord(reservation.guest ?? reservation.primaryGuest);
+  const firstGuest = firstGuestRecord(guestList ?? reservation.guest ?? reservation.primaryGuest);
+  const address = firstRecord(
+    firstGuest.address,
+    firstGuest.guestAddress,
+    firstGuest.guest_address,
+    reservation.guestAddress,
+    reservation.guest_address,
+    reservation.address
+  );
   const guestId = Number(
     reservation.guestID ?? reservation.guestId ?? reservation.guest_id ??
     firstGuest.guestID ?? firstGuest.guestId ?? firstGuest.guest_id ?? firstGuest.id
@@ -148,6 +188,20 @@ export function extractCloudbedsReservationSnapshot(payload: unknown): Cloudbeds
     amountPending: money(reservation.balance ?? reservation.amountPending ?? reservation.amount_pending ?? reservation.balanceDue ?? reservation.balance_due),
     hotelCollect: hotelCollectValue(reservation),
     guestId: Number.isInteger(guestId) && guestId > 0 ? guestId : null,
+    guest: {
+      firstName: firstText(firstGuest.firstName, firstGuest.first_name, firstGuest.guestFirstName, reservation.guestFirstName, reservation.guest_first_name),
+      lastName: firstText(firstGuest.lastName, firstGuest.last_name, firstGuest.guestLastName, reservation.guestLastName, reservation.guest_last_name),
+      email: firstText(firstGuest.email, firstGuest.emailAddress, firstGuest.email_address, reservation.guestEmail, reservation.guest_email),
+      phone: firstText(firstGuest.phone, firstGuest.phoneNumber, firstGuest.phone_number, firstGuest.mobile, reservation.guestPhone, reservation.guest_phone),
+      street: firstText(address.street, address.address1, address.address_1, address.line1, firstGuest.street, firstGuest.address1, reservation.guestAddress),
+      addressExtra: firstText(address.address2, address.address_2, address.line2, address.extra, firstGuest.address2),
+      postalCode: firstText(address.postalCode, address.postal_code, address.zipCode, address.zip_code, address.zip, firstGuest.postalCode, firstGuest.zipCode),
+      city: firstText(address.city, address.town, firstGuest.city, reservation.guestCity, reservation.guest_city),
+      province: firstText(address.province, address.state, address.region, firstGuest.province, firstGuest.state, reservation.guestProvince, reservation.guest_province),
+      country: firstText(address.countryCode, address.country_code, address.country, firstGuest.countryCode, firstGuest.country, reservation.guestCountry, reservation.guest_country),
+    },
+    paymentType: firstText(reservation.paymentType, reservation.payment_type, reservation.paymentMethodType, reservation.payment_method_type),
+    paymentMethod: firstText(reservation.paymentMethod, reservation.payment_method, reservation.paymentMethodName, reservation.payment_method_name),
   };
 }
 

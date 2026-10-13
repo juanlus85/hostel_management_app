@@ -48,6 +48,12 @@ export function getGuestRecordArchiveLocation(
   return { directory, fileName, filePath: path.join(directory, fileName) };
 }
 
+export function getGuestRecordPublicUrl(filePath: string, uploadsDirectory = path.join(process.cwd(), "uploads")) {
+  const relativePath = path.relative(uploadsDirectory, filePath);
+  if (!relativePath || relativePath.startsWith("..") || path.isAbsolute(relativePath)) return null;
+  return `/uploads/${relativePath.split(path.sep).map(encodeURIComponent).join("/")}`;
+}
+
 /**
  * Genera el registro PDF y lo conserva localmente junto al resto de adjuntos:
  * `uploads/registros/MM-AAAA/DDMMAA - Nombre Apellidos.pdf`.

@@ -3491,10 +3491,12 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             createdBy: ctx.user?.id || null,
           });
 
+          let recordPdfUrl: string | null = null;
           // Generar PDF automáticamente si el check-in está completado
           if (input.status === "completed") {
-            const { generateGuestPDF } = await import("./generateGuestPDF");
-            await generateGuestPDF(id);
+            const { generateGuestPDF, getGuestRecordPublicUrl } = await import("./generateGuestPDF");
+            const recordPdfPath = await generateGuestPDF(id);
+            recordPdfUrl = recordPdfPath ? getGuestRecordPublicUrl(recordPdfPath) : null;
           }
 
           // Si es check-in anticipado y tiene email, enviar confirmación
@@ -3542,7 +3544,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             });
           }
 
-          return { success: true, id };
+          return { success: true, id, recordPdfUrl };
         }),
       update: protectedProcedure
         .input(
@@ -3626,13 +3628,15 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           const { id, ...data } = input;
           await db.updateGuest(id, data);
 
+          let recordPdfUrl: string | null = null;
           // Generar PDF automáticamente si se cambia el status a completed
           if (data.status === "completed") {
-            const { generateGuestPDF } = await import("./generateGuestPDF");
-            await generateGuestPDF(id);
+            const { generateGuestPDF, getGuestRecordPublicUrl } = await import("./generateGuestPDF");
+            const recordPdfPath = await generateGuestPDF(id);
+            recordPdfUrl = recordPdfPath ? getGuestRecordPublicUrl(recordPdfPath) : null;
           }
 
-          return { success: true };
+          return { success: true, recordPdfUrl };
         }),
       delete: adminProcedure
         .input(z.object({ id: z.number() }))
@@ -4578,7 +4582,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           const apiKey = process.env.CLOUDBEDS_API_KEY;
           const propertyId = process.env.CLOUDBEDS_PROPERTY_ID;
           if (!apiKey || !propertyId) {
-            return { reservation, payments: null, paymentWarning: "No hay credenciales de Cloudbeds configuradas para consultar los movimientos.", communications };
+            return { reservation, snapshot: null, payments: null, paymentWarning: "No hay credenciales de Cloudbeds configuradas para consultar los movimientos.", communications };
           }
           try {
             const [payments, snapshot] = await Promise.all([
@@ -4595,10 +4599,11 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
               reservationStatus: updatedReservation.reservationStatus,
               ...(snapshot.amountPending !== null ? { amountPending: snapshot.amountPending } : {}),
             });
-            return { reservation: updatedReservation, payments, paymentWarning: null, communications };
+            return { reservation: updatedReservation, snapshot, payments, paymentWarning: null, communications };
           } catch (error) {
             return {
               reservation,
+              snapshot: null,
               payments: null,
               paymentWarning: error instanceof Error ? error.message : "No se han podido consultar los movimientos de esta reserva.",
               communications,
