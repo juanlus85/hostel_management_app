@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { BedDouble, CalendarDays, CheckCircle2, ClipboardCopy, CreditCard, Euro, FileText, Loader2, Mail, MessageCircle, PencilLine, PlusCircle, ReceiptText, RefreshCw, Send, StickyNote } from "lucide-react";
+import { BedDouble, CalendarDays, CheckCircle2, ClipboardCheck, ClipboardCopy, CreditCard, Euro, FileText, Loader2, Mail, MessageCircle, PencilLine, PlusCircle, ReceiptText, RefreshCw, Send, StickyNote } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { buildReservationAgenda, type ReservationAgendaTone } from "@shared/reservationAgenda";
@@ -15,6 +15,7 @@ import { availabilityRoomTypeKey, buildAgendaAvailabilityByType, findAgendaAvail
 import { addCalendarDays, mergeAgendaAvailability, type AgendaAvailabilityResult } from "@/lib/agendaAvailabilityMerge";
 import { hasAgendaRateChanged, isLargeAgendaRateChange, parseAgendaRate } from "@/lib/agendaRateSafety";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import CheckinPresencial from "@/pages/checkin/CheckinPresencial";
 
 const madridDate = (date: Date) => date.toLocaleDateString("en-CA", { timeZone: "Europe/Madrid" });
 const agendaToneClasses: Record<ReservationAgendaTone, string> = {
@@ -128,6 +129,7 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
   const { user } = useAuth();
   const [window] = useState(getReservationWindow);
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [reservationCheckinOpen, setReservationCheckinOpen] = useState(false);
   const [showUnassignedReservations, setShowUnassignedReservations] = useState(false);
   const [detailTab, setDetailTab] = useState("information");
   const [fiscalKind, setFiscalKind] = useState<"invoice" | "receipt" | null>(null);
@@ -311,6 +313,27 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
   const arrivalsByDate = useMemo(() => new Map(window.dates.map(date => [date, (reservations.data || []).filter(reservation => reservation.checkInDate === date).length])), [reservations.data, window.dates]);
   const selected = (reservations.data || []).find(reservation => reservation.id === selectedId) || null;
   const reservation = detail.data?.reservation || selected;
+  const reservationCheckinGuest = useMemo(() => {
+    if (!reservation) return null;
+    const nameParts = (reservation.guestName || "").trim().split(/\s+/).filter(Boolean);
+    const source = String(reservation.bookingSource || "").toLowerCase();
+    const reservationOrigin = source.includes("booking") ? "Booking.com" : source.includes("airbnb") ? "Airbnb" : source.includes("expedia") ? "Expedia" : source.includes("website") ? "Website" : source.includes("phone") ? "Phone" : source.includes("email") ? "Email" : "Other";
+    return {
+      firstName: nameParts[0] || "",
+      lastName: nameParts.slice(1).join(" "),
+      email: reservation.guestEmail || "",
+      phone: reservation.guestPhone || "",
+      reservationNumber: reservation.reservationCode || "",
+      checkInDate: reservation.checkInDate || "",
+      checkOutDate: reservation.checkOutDate || "",
+      roomNumber: reservation.roomNumber || "",
+      roomType: reservation.roomType || "",
+      numberOfGuests: reservation.guestCount || 1,
+      numberOfRooms: 1,
+      reservationOrigin,
+      accommodationType: "S.A. (Solo Aloj.)",
+    };
+  }, [reservation]);
   const payments = detail.data?.payments;
   const onlineCheckinSent = detail.data?.communications?.find(
     communication => communication.messageType === "online_checkin" && communication.channel === "email" && communication.status === "sent"
@@ -543,6 +566,10 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
               <div><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Huésped</p><p className="mt-1 font-semibold">{reservation.guestName || "Sin nombre"}</p><p className="mt-1 text-sm text-muted-foreground">{reservation.guestEmail || "Sin correo"}</p><p className="text-sm text-muted-foreground">{reservation.guestPhone || "Sin teléfono"}</p></div>
               <div><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Estado</p><Badge variant="outline" className={`mt-1 ${statusTone(reservation.reservationStatus)}`}>{reservationStatus(reservation.reservationStatus)}</Badge>{canManageReservations && <Button type="button" variant="outline" size="sm" className="mt-3 w-full sm:w-auto" onClick={() => setStatusEditor(editableStatus(reservation.reservationStatus))}><PencilLine className="mr-2 h-3.5 w-3.5" />Cambiar estado</Button>}<p className="mt-3 text-sm"><strong>Origen:</strong> {reservation.bookingSource || "No indicado"}</p><p className="mt-1 text-sm"><strong>Huéspedes:</strong> {reservation.guestCount ?? "—"}</p></div>
             </section>
+            {canManageReservations && <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+              <div><p className="font-semibold text-emerald-950">Registro de llegada</p><p className="mt-1 text-sm text-emerald-800">Abre el Check-in con la reserva y la habitación ya precargadas para completar los datos y la firma.</p></div>
+              <Button type="button" className="bg-emerald-700 hover:bg-emerald-800" onClick={() => setReservationCheckinOpen(true)}><ClipboardCheck className="mr-2 h-4 w-4" />Realizar Check-in</Button>
+            </section>}
             <section className="grid gap-3 rounded-xl border p-4 sm:grid-cols-2"><div><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Entrada</p><p className="mt-1 font-semibold">{formatDate(reservation.checkInDate)}</p></div><div><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Salida</p><p className="mt-1 font-semibold">{reservation.checkOutDate ? formatDate(reservation.checkOutDate) : "No indicada"}</p></div><div className="sm:col-span-2"><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Habitación</p><p className="mt-1 font-semibold">{reservation.roomNumber ? `Hab. ${reservation.roomNumber}` : "Sin asignar"}</p><p className="mt-1 text-sm text-muted-foreground">{reservation.roomType || "Tipo pendiente"}</p></div></section>
             <section className="rounded-xl border p-4"><p className="flex items-center gap-2 font-semibold"><StickyNote className="h-4 w-4 text-amber-600" />Notas de la reserva</p><p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{reservation.reservationNotes || "Sin notas importadas."}</p></section>
           </TabsContent>
@@ -584,6 +611,26 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
             </section> : <p className="rounded-lg bg-muted p-4 text-sm text-muted-foreground">Las acciones de comunicación requieren un usuario de recepción o administración.</p>}
           </TabsContent>
         </Tabs>}
+      </DialogContent>
+    </Dialog>
+
+    <Dialog open={reservationCheckinOpen} onOpenChange={setReservationCheckinOpen}>
+      <DialogContent className="max-h-[92vh] max-w-6xl overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Realizar Check-in de la reserva</DialogTitle>
+          <DialogDescription>
+            Los datos de Cloudbeds y la habitación asignada ya están cargados. Completa la información documental, revisa la firma y guarda el registro.
+          </DialogDescription>
+        </DialogHeader>
+        {reservationCheckinGuest && <CheckinPresencial
+          key={selectedId ?? "reservation"}
+          initialGuest={reservationCheckinGuest}
+          onCompleted={() => {
+            setReservationCheckinOpen(false);
+            setSelectedId(null);
+            utils.checkin.externalImports.listCloudbedsUpcomingReservations.invalidate({ dateFrom: window.dateFrom, dateTo: window.dateTo });
+          }}
+        />}
       </DialogContent>
     </Dialog>
 

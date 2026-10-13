@@ -1861,3 +1861,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Añadir desde la ficha del huésped la acción «Realizar Check-in» con datos precargados y edición de datos faltantes.
 - [x] Generar y guardar automáticamente un PDF local del Check-in completado en `uploads/registros/MM-AAAA`.
 - [x] Ajustar el correo de Check-in con códigos para no revelar habitación ni códigos antes de completar el formulario, y reservar el mensaje de agilidad de recepción para el Check-in anticipado.
+- [x] Añadir «Realizar Check-in» directamente en la pestaña Información del detalle de reserva, con datos Cloudbeds precargados.
