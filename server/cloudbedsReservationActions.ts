@@ -8,6 +8,8 @@ export type CloudbedsReservationSnapshot = {
   amountPending: string | null;
   hotelCollect: boolean | null;
   guestId: number | null;
+  roomNumber: string | null;
+  roomType: string | null;
   guest: {
     firstName: string | null;
     lastName: string | null;
@@ -171,6 +173,10 @@ export function extractCloudbedsReservationSnapshot(payload: unknown): Cloudbeds
   const reservation = unwrapReservation(payload);
   const guestList = reservation.guestList ?? reservation.guests ?? reservation.guest_list;
   const firstGuest = firstGuestRecord(guestList ?? reservation.guest ?? reservation.primaryGuest);
+  const firstRoom = firstGuestRecord(
+    reservation.rooms ?? reservation.accommodations ?? reservation.reservationRooms ?? reservation.reservation_rooms ?? reservation.roomAssignments ?? reservation.room_assignments ?? reservation.assignedRooms ?? reservation.assigned_rooms ?? reservation.room
+  );
+  const roomType = firstRecord(firstRoom.roomType, firstRoom.room_type, reservation.roomType, reservation.room_type);
   const address = firstRecord(
     firstGuest.address,
     firstGuest.guestAddress,
@@ -188,6 +194,8 @@ export function extractCloudbedsReservationSnapshot(payload: unknown): Cloudbeds
     amountPending: money(reservation.balance ?? reservation.amountPending ?? reservation.amount_pending ?? reservation.balanceDue ?? reservation.balance_due),
     hotelCollect: hotelCollectValue(reservation),
     guestId: Number.isInteger(guestId) && guestId > 0 ? guestId : null,
+    roomNumber: firstText(firstRoom.roomName, firstRoom.room_name, firstRoom.roomNumber, firstRoom.room_number, firstRoom.room_number_display, firstRoom.name, firstRoom.number, reservation.roomNumber, reservation.room_number, reservation.roomName, reservation.room_name, reservation.assignedRoomNumber, reservation.assigned_room_number),
+    roomType: firstText(firstRoom.roomTypeName, firstRoom.room_type_name, firstRoom.roomTypeNameDisplay, firstRoom.room_type_name_display, firstRoom.roomType, firstRoom.room_type, roomType.name, roomType.roomTypeName, roomType.room_type_name, reservation.roomTypeName, reservation.room_type_name, reservation.roomType, reservation.room_type),
     guest: {
       firstName: firstText(firstGuest.firstName, firstGuest.first_name, firstGuest.guestFirstName, reservation.guestFirstName, reservation.guest_first_name),
       lastName: firstText(firstGuest.lastName, firstGuest.last_name, firstGuest.guestLastName, reservation.guestLastName, reservation.guest_last_name),

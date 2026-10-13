@@ -75,9 +75,12 @@ describe("acciones de reserva Cloudbeds", () => {
         phone_number: "+34600000000",
         address: { address1: "Calle Adriano 6", address2: "2º A", postal_code: "41001", city: "Sevilla", province: "Sevilla", country_code: "ESP" },
       }],
+      rooms: [{ room_name: "Habitación 51", room_type_name: "Double Room with Private Bathroom" }],
     } });
     expect(snapshot.guest).toEqual({ firstName: "Ana", lastName: "Pérez", email: "ana@example.com", phone: "+34600000000", street: "Calle Adriano 6", addressExtra: "2º A", postalCode: "41001", city: "Sevilla", province: "Sevilla", country: "ESP" });
     expect(snapshot.paymentMethod).toBe("Tarjeta Booking");
+    expect(snapshot.roomNumber).toBe("Habitación 51");
+    expect(snapshot.roomType).toBe("Double Room with Private Bathroom");
   });
 
   it("identifica las reservas Hotel Collect en los términos de cobro", () => {
