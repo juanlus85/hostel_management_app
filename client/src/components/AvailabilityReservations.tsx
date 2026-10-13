@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { BedDouble, CalendarDays, CheckCircle2, ClipboardCheck, ClipboardCopy, CreditCard, Euro, FileText, Loader2, Mail, MessageCircle, PencilLine, Plus, PlusCircle, ReceiptText, RefreshCw, Send, StickyNote } from "lucide-react";
+import { BedDouble, CalendarDays, CheckCircle2, ClipboardCheck, ClipboardCopy, CreditCard, Euro, FileText, Loader2, Mail, MessageCircle, PencilLine, PlusCircle, ReceiptText, RefreshCw, Send, StickyNote } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { buildReservationAgenda, type ReservationAgendaTone } from "@shared/reservationAgenda";
@@ -173,7 +173,7 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
   const [messageLanguage, setMessageLanguage] = useState<MessageLanguage>("es");
   const [welcomeEditor, setWelcomeEditor] = useState<WelcomeEditor | null>(null);
   const [whatsAppEditor, setWhatsAppEditor] = useState<WhatsAppEditor | null>(null);
-  const [newReservationSlot, setNewReservationSlot] = useState<{ date: string; roomTypeId?: string | null; roomTypeName?: string | null } | null>(null);
+  const [newReservationSlot, setNewReservationSlot] = useState<{ date: string; roomTypeId?: string | null; roomTypeName?: string | null; roomName?: string | null } | null>(null);
   const [agendaAvailability, setAgendaAvailability] = useState<AgendaAvailabilityResult | null>(null);
   const [agendaAvailabilityError, setAgendaAvailabilityError] = useState<string | null>(null);
   const [isLoadingAgendaSecondWeek, setIsLoadingAgendaSecondWeek] = useState(false);
@@ -344,34 +344,6 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
     () => buildAgendaAvailabilityByType(agendaAvailability?.roomTypes || []),
     [agendaAvailability]
   );
-  const agendaWithAvailability = useMemo(() => {
-    const withFreeRows = agenda.map(group => {
-      const roomType = availabilityByType.get(availabilityRoomTypeKey(group.label));
-      const canBook = roomType?.days.some(day => (day.roomsAvailable ?? 0) > 0);
-      if (!canBook) return group;
-      return {
-        ...group,
-        rooms: [...group.rooms, {
-          key: `available:${group.key}`,
-          label: "Disponible",
-          cards: [],
-          laneCount: 1,
-        }],
-      };
-    });
-    const knownTypes = new Set(withFreeRows.map(group => availabilityRoomTypeKey(group.label)));
-    const emptyTypes = (agendaAvailability?.roomTypes || []).flatMap(roomType => {
-      const key = availabilityRoomTypeKey(roomType.roomTypeName);
-      if (!key || knownTypes.has(key) || !roomType.days.some(day => (day.roomsAvailable ?? 0) > 0)) return [];
-      return [{
-        key: `type:${roomType.roomTypeId}`,
-        label: roomType.roomTypeName,
-        reservationsCount: 0,
-        rooms: [{ key: `available:${roomType.roomTypeId}`, label: "Disponible", cards: [], laneCount: 1 }],
-      }];
-    });
-    return [...withFreeRows, ...emptyTypes].sort((left, right) => left.label.localeCompare(right.label, "es"));
-  }, [agenda, agendaAvailability, availabilityByType]);
   const arrivalsByDate = useMemo(() => new Map(window.dates.map(date => [date, (reservations.data || []).filter(reservation => reservation.checkInDate === date).length])), [reservations.data, window.dates]);
   const selected = (reservations.data || []).find(reservation => reservation.id === selectedId) || null;
   const reservation = detail.data?.reservation || selected;
@@ -573,7 +545,7 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
       </CardContent>}
     </Card>
 
-      {reservations.isLoading ? <Card><CardContent className="flex items-center justify-center gap-3 py-16 text-sm text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin text-sky-700" />Cargando reservas importadas…</CardContent></Card> : agendaWithAvailability.length ? <Card className="overflow-hidden border-slate-200 shadow-sm">
+      {reservations.isLoading ? <Card><CardContent className="flex items-center justify-center gap-3 py-16 text-sm text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin text-sky-700" />Cargando reservas importadas…</CardContent></Card> : agenda.length ? <Card className="overflow-hidden border-slate-200 shadow-sm">
       {canEditAgendaRates && editedAgendaRates.length > 0 && <div className="sticky top-0 z-30 flex flex-wrap items-center justify-between gap-3 border-b border-amber-300 bg-amber-50 px-3 py-2 shadow-sm sm:px-4"><p className="text-sm font-medium text-amber-950"><span className="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-amber-500" />{editedAgendaRates.length} precio{editedAgendaRates.length === 1 ? " modificado" : "s modificados"} pendiente{editedAgendaRates.length === 1 ? "" : "s"}</p><Button size="sm" className="bg-amber-500 text-amber-950 hover:bg-amber-400" onClick={requestAgendaRateUpdate} disabled={updateAgendaRates.isPending}><Send className="mr-2 h-4 w-4" />Enviar precios</Button></div>}
       <CardContent className="p-0">
         <div className="isolate overflow-x-auto overscroll-x-contain">
@@ -588,7 +560,7 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
                 return <div key={date} className={`border-r px-1 py-2 text-center ${isToday ? "z-10 border-x-2 border-amber-400 bg-amber-100 text-amber-950 shadow-[inset_0_3px_0_rgb(251_191_36)]" : isWeekend ? "bg-slate-200/70" : ""} sm:px-3 sm:py-3`}><p className="text-[9px] font-semibold uppercase tracking-wide sm:text-[11px]">{index === 0 ? "Ayer" : isToday ? "Hoy" : day.weekday}</p><p className="mt-0.5 text-lg font-bold leading-none sm:text-2xl">{day.date}</p><p className="mt-1 text-[9px] capitalize text-muted-foreground sm:text-[11px]"><span className="sm:hidden">{arrivals} lleg.</span><span className="hidden sm:inline">{day.month} · {arrivals} llegada{arrivals === 1 ? "" : "s"}</span></p></div>;
               })}
             </div>
-            {agendaWithAvailability.map((group, groupIndex) => {
+            {agenda.map((group, groupIndex) => {
               const availabilityType = availabilityByType.get(availabilityRoomTypeKey(group.label));
               return <section key={group.key} className="border-b last:border-b-0">
               <div className="reservation-agenda-grid grid h-8 border-y border-slate-200 bg-slate-100/95" style={gridStyle}>
@@ -613,9 +585,9 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
                 <div className="sticky left-0 z-20 flex min-w-0 items-center border-r border-b bg-background px-2 shadow-[8px_0_12px_-12px_rgba(15,23,42,0.48)] sm:px-4" style={{ gridColumn: 1, gridRow: `1 / span ${room.laneCount}` }}><p title={room.label} className="truncate text-xs font-medium text-slate-800 sm:text-sm">{room.label}</p></div>
                 {window.dates.map((date, index) => {
                   const availabilityDay = findAgendaAvailabilityDay(availabilityType, date);
-                  const canCreateFromSlot = canCreateReservations && room.label === "Disponible" && (availabilityDay?.roomsAvailable ?? 0) > 0;
+                  const canCreateFromSlot = canCreateReservations && room.key !== "unassigned" && (availabilityDay?.roomsAvailable ?? 0) > 0;
                   const cellClass = `border-b border-r ${index === todayIndex ? "border-x-2 border-amber-400 bg-amber-50/70" : isFridayOrSaturday(date) ? "bg-slate-100/80" : "bg-slate-50/35"}`;
-                  return canCreateFromSlot ? <button key={date} type="button" title={`Crear reserva: ${group.label} · ${date}`} aria-label={`Crear reserva de ${group.label} el ${date}`} onClick={() => setNewReservationSlot({ date, roomTypeId: availabilityType?.roomTypeId, roomTypeName: group.label })} className={`${cellClass} group relative z-0 text-sky-700 transition hover:bg-sky-100 focus-visible:z-20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-700`} style={{ gridColumn: index + 2, gridRow: `1 / span ${room.laneCount}` }}><span className="absolute inset-0 flex items-center justify-center opacity-0 transition group-hover:opacity-100 group-focus-visible:opacity-100"><span className="rounded-full bg-sky-700 p-1 text-white shadow"><Plus className="h-3 w-3" /></span></span></button> : <div key={date} className={cellClass} style={{ gridColumn: index + 2, gridRow: `1 / span ${room.laneCount}` }} />;
+                  return canCreateFromSlot ? <button key={date} type="button" title={`Crear reserva en ${room.label}: ${group.label} · ${date}`} aria-label={`Crear reserva en ${room.label} de ${group.label} el ${date}`} onClick={() => setNewReservationSlot({ date, roomTypeId: availabilityType?.roomTypeId, roomTypeName: group.label, roomName: room.label })} className={`${cellClass} relative z-0 cursor-pointer text-transparent transition hover:bg-sky-100 focus-visible:z-20 focus-visible:bg-sky-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-700`} style={{ gridColumn: index + 2, gridRow: `1 / span ${room.laneCount}` }}>Libre</button> : <div key={date} className={cellClass} style={{ gridColumn: index + 2, gridRow: `1 / span ${room.laneCount}` }} />;
                 })}
                 {room.cards.map(card => <button key={card.reservation.id} type="button" title={`${card.reservation.guestName || "Huésped sin nombre"} · Entrada ${compactDate(card.reservation.checkInDate)} · Salida ${compactDate(card.reservation.checkOutDate)}`} onClick={() => { setSelectedId(card.reservation.id); setDetailTab("information"); }} className={`relative z-10 min-w-0 self-center overflow-visible border px-1.5 py-1 text-left shadow-sm transition duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-700 sm:px-3 sm:py-2 ${card.startSlot % 1 ? "rounded-l-none" : "rounded-l-md"} ${card.endSlot % 1 ? "rounded-r-none" : "rounded-r-full"} ${agendaToneClasses[card.tone]}`} style={agendaCardGridStyle(card)}>
                   {card.hasPendingAmount && <span aria-label="Importe pendiente" title="Importe pendiente" className="absolute -top-1 left-1 h-2.5 w-2.5 rounded-full border-2 border-white bg-red-500 shadow-sm sm:-top-1.5 sm:left-2 sm:h-3 sm:w-3" />}
@@ -639,6 +611,7 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
       initialDate={newReservationSlot.date}
       initialRoomTypeId={newReservationSlot.roomTypeId}
       initialRoomTypeName={newReservationSlot.roomTypeName}
+      initialRoomName={newReservationSlot.roomName}
       onCreated={() => {
         setNewReservationSlot(null);
         // Tras crear una reserva se actualiza la misma ventana visible para incorporar

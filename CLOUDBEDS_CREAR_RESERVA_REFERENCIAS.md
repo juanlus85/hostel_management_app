@@ -27,3 +27,8 @@ La respuesta incluye `reservationID`, estado, total y una lista de habitaciones 
 ## Fuente de reserva
 
 Cloudbeds permite `sourceID` opcional. Si no se especifica, el FAQ indica que se utiliza Website / Booking Engine. Para la creación manual de recepción se debe consultar `getSources` y seleccionar una fuente explícita (por ejemplo, Walk In) cuando esté disponible.
+
+## Asignación de habitación física
+
+- `postReservation` admite `rooms[0][roomID]`: al enviarlo, Cloudbeds usa la habitación física concreta, sustituye la cantidad por una unidad y rechaza/asigna sin habitación si ya no está disponible.
+- `getRooms` con `propertyIDs`, `startDate` y `endDate` devuelve solo las habitaciones sin asignar para el período. La agenda usa esta respuesta para confirmar la habitación elegida antes de habilitar la reserva.

@@ -1298,6 +1298,7 @@ export const appRouter = router({
         startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
         endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
         roomTypeId: z.string().trim().min(1).max(160),
+        roomId: z.string().trim().min(1).max(160).optional(),
         rooms: z.number().int().min(1).max(5).default(1),
         adults: z.number().int().min(1).max(20),
         children: z.number().int().min(0).max(20).default(0),
@@ -1330,6 +1331,17 @@ export const appRouter = router({
               code: "BAD_REQUEST",
               message: "Ese tipo de habitación ya no tiene disponibilidad para toda la estancia seleccionada. Vuelve a comprobar las fechas.",
             });
+          }
+          if (input.roomId) {
+            if (input.rooms !== 1) {
+              throw new TRPCError({ code: "BAD_REQUEST", message: "Una reserva con habitación física asignada debe crear una única habitación." });
+            }
+            if (!selectedRoomType.individualRooms.some(room => room.roomId === input.roomId)) {
+              throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: "La habitación seleccionada ya no está libre para toda la estancia. Vuelve a pulsar el hueco y comprueba la disponibilidad.",
+              });
+            }
           }
           if (selectedRoomType.maxGuests !== null && input.adults + input.children > selectedRoomType.maxGuests * input.rooms) {
             throw new TRPCError({

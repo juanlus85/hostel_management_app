@@ -14,6 +14,7 @@ type ReservationDraft = {
   adults: string;
   children: string;
   roomTypeId: string;
+  roomId: string;
   guestFirstName: string;
   guestLastName: string;
   guestEmail: string;
@@ -42,6 +43,7 @@ type BookableRoomType = {
   maxGuests: number | null;
   rate: number | null;
   rateId: string | null;
+  individualRooms: Array<{ roomId: string; roomName: string; dormRoomName: string | null }>;
 };
 
 function positiveInt(value: string, fallback = 0) {
@@ -61,7 +63,13 @@ function money(value: number | null | undefined) {
   return new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(value);
 }
 
-function emptyDraft(startDate: string, roomTypeId = ""): ReservationDraft {
+function roomKey(value: string | null | undefined) {
+  const text = String(value || "").trim().toLowerCase();
+  const trailingNumber = text.match(/(\d+(?:-\d+)?)\s*$/)?.[1];
+  return trailingNumber || text.replace(/[^a-z0-9]/g, "");
+}
+
+function emptyDraft(startDate: string, roomTypeId = "", roomId = ""): ReservationDraft {
   return {
     startDate,
     nights: "1",
@@ -69,6 +77,7 @@ function emptyDraft(startDate: string, roomTypeId = ""): ReservationDraft {
     adults: "1",
     children: "0",
     roomTypeId,
+    roomId,
     guestFirstName: "",
     guestLastName: "",
     guestEmail: "",
@@ -87,6 +96,8 @@ export function CreateCloudbedsReservationDialog({
   initialDate,
   initialRoomTypeId,
   initialRoomTypeName,
+  initialRoomId,
+  initialRoomName,
   onCreated,
 }: {
   open: boolean;
@@ -94,11 +105,13 @@ export function CreateCloudbedsReservationDialog({
   initialDate: string;
   initialRoomTypeId?: string | null;
   initialRoomTypeName?: string | null;
+  initialRoomId?: string | null;
+  initialRoomName?: string | null;
   onCreated: (result: { reservationId: string | null; roomTypeName: string }) => void;
 }) {
-  const [draft, setDraft] = useState(() => emptyDraft(initialDate, initialRoomTypeId || ""));
+  const [draft, setDraft] = useState(() => emptyDraft(initialDate, initialRoomTypeId || "", initialRoomId || ""));
   const [availabilityChecked, setAvailabilityChecked] = useState(false);
-  const [availableRoomTypes, setAvailableRoomTypes] = useState<Array<{ roomTypeId: string; roomTypeName: string; roomsAvailable: number; maxGuests: number | null; rate: number | null; rateId: string | null }>>([]);
+  const [availableRoomTypes, setAvailableRoomTypes] = useState<BookableRoomType[]>([]);
   const [pendingConfirmation, setPendingConfirmation] = useState<ConfirmedReservation | null>(null);
   const sources = trpc.cloudbedsAvailability.getReservationSources.useQuery(undefined, { enabled: open, retry: false });
   const checkAvailability = trpc.cloudbedsAvailability.getBookableRoomTypes.useMutation({
@@ -108,7 +121,11 @@ export function CreateCloudbedsReservationDialog({
       setDraft(current => {
         const keepSelection = roomTypes.some(roomType => roomType.roomTypeId === current.roomTypeId);
         const initialSelection = roomTypes.find(roomType => roomType.roomTypeId === initialRoomTypeId)?.roomTypeId;
-        return { ...current, roomTypeId: keepSelection ? current.roomTypeId : initialSelection || roomTypes[0]?.roomTypeId || "" };
+        const roomTypeId = keepSelection ? current.roomTypeId : initialSelection || roomTypes[0]?.roomTypeId || "";
+        const roomType = roomTypes.find(candidate => candidate.roomTypeId === roomTypeId);
+        const matchingRoom = roomType?.individualRooms.find(room => room.roomId === current.roomId || (initialRoomName && roomKey(room.roomName) === roomKey(initialRoomName)));
+        const roomId = matchingRoom?.roomId || "";
+        return { ...current, roomTypeId, roomId };
       });
       if (!roomTypes.length) toast.warning("Cloudbeds no tiene habitaciones disponibles para esa estancia.");
     },
@@ -130,11 +147,11 @@ export function CreateCloudbedsReservationDialog({
 
   useEffect(() => {
     if (!open) return;
-    setDraft(emptyDraft(initialDate, initialRoomTypeId || ""));
+    setDraft(emptyDraft(initialDate, initialRoomTypeId || "", initialRoomId || ""));
     setAvailableRoomTypes([]);
     setAvailabilityChecked(false);
     setPendingConfirmation(null);
-  }, [open, initialDate, initialRoomTypeId]);
+  }, [open, initialDate, initialRoomTypeId, initialRoomId]);
 
   useEffect(() => {
     const preferredSource = sources.data?.find(source => source.isDefault) || sources.data?.[0];
@@ -149,6 +166,7 @@ export function CreateCloudbedsReservationDialog({
   const childrenNumber = Math.max(0, positiveInt(draft.children));
   const endDate = addNights(draft.startDate, nightsNumber);
   const selectedRoomType = availableRoomTypes.find(roomType => roomType.roomTypeId === draft.roomTypeId) || null;
+  const selectedIndividualRoom = selectedRoomType?.individualRooms.find(room => room.roomId === draft.roomId) || null;
   const canCheckAvailability = Boolean(draft.startDate && endDate && nightsNumber > 0 && roomsNumber > 0 && adultsNumber > 0);
 
   const set = <Key extends keyof ReservationDraft>(key: Key, value: ReservationDraft[Key]) => {
@@ -184,6 +202,7 @@ export function CreateCloudbedsReservationDialog({
       startDate: pendingConfirmation.startDate,
       endDate: pendingConfirmation.endDate,
       roomTypeId: pendingConfirmation.roomTypeId,
+      roomId: pendingConfirmation.roomId || undefined,
       rooms: pendingConfirmation.roomsNumber,
       adults: pendingConfirmation.adultsNumber,
       children: pendingConfirmation.childrenNumber,
@@ -205,7 +224,7 @@ export function CreateCloudbedsReservationDialog({
         <DialogHeader>
           <DialogTitle>Nueva reserva</DialogTitle>
           <DialogDescription>
-            {initialRoomTypeName ? `Inicio seleccionado: ${initialRoomTypeName}. ` : ""}
+            {initialRoomName ? `Habitación seleccionada: ${initialRoomName}${initialRoomTypeName ? ` · ${initialRoomTypeName}` : ""}. ` : initialRoomTypeName ? `Inicio seleccionado: ${initialRoomTypeName}. ` : ""}
             Comprueba la disponibilidad antes de confirmar. La reserva solo se enviará a Cloudbeds tras revisar el resumen final.
           </DialogDescription>
         </DialogHeader>
@@ -217,7 +236,7 @@ export function CreateCloudbedsReservationDialog({
               <label className="space-y-1 text-sm font-medium sm:col-span-2">Entrada<Input type="date" value={draft.startDate} onChange={event => set("startDate", event.target.value)} /></label>
               <label className="space-y-1 text-sm font-medium">Noches<Input min="1" max="60" type="number" value={draft.nights} onChange={event => set("nights", event.target.value)} /></label>
               <div className="space-y-1 text-sm font-medium"><span>Salida</span><div className="flex h-10 items-center rounded-md border bg-background px-3 text-sm font-normal">{endDate || "—"}</div></div>
-              <label className="space-y-1 text-sm font-medium">Habitaciones<Input min="1" max="5" type="number" value={draft.rooms} onChange={event => set("rooms", event.target.value)} /></label>
+              <label className="space-y-1 text-sm font-medium">Habitaciones<Input min="1" max="5" type="number" value={draft.rooms} disabled={Boolean(draft.roomId)} onChange={event => set("rooms", event.target.value)} /></label>
               <label className="space-y-1 text-sm font-medium">Adultos<Input min="1" max="20" type="number" value={draft.adults} onChange={event => set("adults", event.target.value)} /></label>
               <label className="space-y-1 text-sm font-medium">Menores<Input min="0" max="20" type="number" value={draft.children} onChange={event => set("children", event.target.value)} /></label>
               <label className="space-y-1 text-sm font-medium sm:col-span-2">Llegada prevista <span className="font-normal text-muted-foreground">(opcional)</span><Input type="time" value={draft.estimatedArrivalTime} onChange={event => set("estimatedArrivalTime", event.target.value)} /></label>
@@ -229,7 +248,9 @@ export function CreateCloudbedsReservationDialog({
 
           <section className="rounded-xl border p-4">
             <p className="flex items-center gap-2 font-semibold"><CheckCircle2 className="h-4 w-4 text-emerald-700" />Tipo de habitación disponible</p>
-            {!availabilityChecked ? <p className="mt-2 text-sm text-muted-foreground">Indica las noches y la ocupación, y pulsa «Comprobar disponibilidad».</p> : availableRoomTypes.length ? <div className="mt-3 grid gap-2 sm:grid-cols-2">{availableRoomTypes.map(roomType => <button type="button" key={roomType.roomTypeId} onClick={() => set("roomTypeId", roomType.roomTypeId)} className={`rounded-lg border p-3 text-left transition ${draft.roomTypeId === roomType.roomTypeId ? "border-sky-600 bg-sky-50 ring-1 ring-sky-600" : "hover:border-slate-400"}`}><p className="font-semibold text-slate-900">{roomType.roomTypeName}</p><p className="mt-1 text-sm text-emerald-700">{roomType.roomsAvailable} disponible{roomType.roomsAvailable === 1 ? "" : "s"}</p><p className="mt-1 text-sm text-muted-foreground">{money(roomType.rate)} · estancia consultada</p>{roomType.maxGuests !== null && <p className="mt-1 text-xs text-muted-foreground">Máx. {roomType.maxGuests} huésped{roomType.maxGuests === 1 ? "" : "es"} por habitación</p>}</button>)}</div> : <p className="mt-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">No hay disponibilidad para la estancia y ocupación solicitadas.</p>}
+            {!availabilityChecked ? <p className="mt-2 text-sm text-muted-foreground">Indica las noches y la ocupación, y pulsa «Comprobar disponibilidad».</p> : availableRoomTypes.length ? <div className="mt-3 grid gap-2 sm:grid-cols-2">{availableRoomTypes.map(roomType => <button type="button" key={roomType.roomTypeId} disabled={Boolean(initialRoomId || initialRoomName) && roomType.roomTypeId !== initialRoomTypeId} onClick={() => setDraft(current => ({ ...current, roomTypeId: roomType.roomTypeId, roomId: "" }))} className={`rounded-lg border p-3 text-left transition disabled:cursor-not-allowed disabled:opacity-50 ${draft.roomTypeId === roomType.roomTypeId ? "border-sky-600 bg-sky-50 ring-1 ring-sky-600" : "hover:border-slate-400"}`}><p className="font-semibold text-slate-900">{roomType.roomTypeName}</p><p className="mt-1 text-sm text-emerald-700">{roomType.roomsAvailable} disponible{roomType.roomsAvailable === 1 ? "" : "s"}</p><p className="mt-1 text-sm text-muted-foreground">{money(roomType.rate)} · estancia consultada</p>{roomType.maxGuests !== null && <p className="mt-1 text-xs text-muted-foreground">Máx. {roomType.maxGuests} huésped{roomType.maxGuests === 1 ? "" : "es"} por habitación</p>}</button>)}</div> : <p className="mt-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">No hay disponibilidad para la estancia y ocupación solicitadas.</p>}
+            {availabilityChecked && (initialRoomId || initialRoomName) && !selectedIndividualRoom && <p className="mt-3 rounded-lg bg-rose-50 p-3 text-sm text-rose-900">La habitación elegida ya no aparece libre para toda esta estancia. Selecciona otro hueco en la agenda.</p>}
+            {selectedIndividualRoom && <p className="mt-3 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-900"><strong>Habitación asignada:</strong> {selectedIndividualRoom.roomName}. Cloudbeds ha confirmado que está libre para la estancia seleccionada.</p>}
           </section>
 
           <section className="rounded-xl border p-4">
@@ -249,7 +270,7 @@ export function CreateCloudbedsReservationDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button disabled={!selectedRoomType || !availabilityChecked || createReservation.isPending} onClick={requestConfirmation} className="bg-emerald-700 hover:bg-emerald-800"><Send className="mr-2 h-4 w-4" />Revisar y crear reserva</Button>
+          <Button disabled={!selectedRoomType || !availabilityChecked || Boolean((initialRoomId || initialRoomName) && !selectedIndividualRoom) || createReservation.isPending} onClick={requestConfirmation} className="bg-emerald-700 hover:bg-emerald-800"><Send className="mr-2 h-4 w-4" />Revisar y crear reserva</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -257,7 +278,7 @@ export function CreateCloudbedsReservationDialog({
     <AlertDialog open={Boolean(pendingConfirmation)} onOpenChange={open => { if (!open) setPendingConfirmation(null); }}>
       <AlertDialogContent>
         <AlertDialogHeader><AlertDialogTitle>Confirmar nueva reserva en Cloudbeds</AlertDialogTitle><AlertDialogDescription>Esta acción creará una reserva real en Cloudbeds. Comprueba el resumen antes de confirmar.</AlertDialogDescription></AlertDialogHeader>
-        {pendingConfirmation && <div className="space-y-2 rounded-lg border bg-muted/40 p-4 text-sm"><p><strong>Huésped:</strong> {pendingConfirmation.guestFirstName} {pendingConfirmation.guestLastName}</p><p><strong>Estancia:</strong> {pendingConfirmation.startDate} → {pendingConfirmation.endDate} · {pendingConfirmation.nightsNumber} noche{pendingConfirmation.nightsNumber === 1 ? "" : "s"}</p><p><strong>Habitación:</strong> {pendingConfirmation.roomTypeName} · {pendingConfirmation.roomsNumber} unidad{pendingConfirmation.roomsNumber === 1 ? "" : "es"}</p><p><strong>Ocupación:</strong> {pendingConfirmation.adultsNumber} adulto{pendingConfirmation.adultsNumber === 1 ? "" : "s"}{pendingConfirmation.childrenNumber ? ` · ${pendingConfirmation.childrenNumber} menor${pendingConfirmation.childrenNumber === 1 ? "" : "es"}` : ""}</p><p><strong>Precio consultado:</strong> {money(pendingConfirmation.rate)}</p><p><strong>Contacto:</strong> {pendingConfirmation.guestEmail} · {pendingConfirmation.guestPhone}</p>{pendingConfirmation.sendEmailConfirmation && <p><strong>Correo:</strong> Cloudbeds enviará su confirmación estándar.</p>}</div>}
+        {pendingConfirmation && <div className="space-y-2 rounded-lg border bg-muted/40 p-4 text-sm"><p><strong>Huésped:</strong> {pendingConfirmation.guestFirstName} {pendingConfirmation.guestLastName}</p><p><strong>Estancia:</strong> {pendingConfirmation.startDate} → {pendingConfirmation.endDate} · {pendingConfirmation.nightsNumber} noche{pendingConfirmation.nightsNumber === 1 ? "" : "s"}</p><p><strong>Habitación:</strong> {selectedIndividualRoom?.roomName || pendingConfirmation.roomTypeName} · {pendingConfirmation.roomsNumber} unidad{pendingConfirmation.roomsNumber === 1 ? "" : "es"}</p><p><strong>Ocupación:</strong> {pendingConfirmation.adultsNumber} adulto{pendingConfirmation.adultsNumber === 1 ? "" : "s"}{pendingConfirmation.childrenNumber ? ` · ${pendingConfirmation.childrenNumber} menor${pendingConfirmation.childrenNumber === 1 ? "" : "es"}` : ""}</p><p><strong>Precio consultado:</strong> {money(pendingConfirmation.rate)}</p><p><strong>Contacto:</strong> {pendingConfirmation.guestEmail} · {pendingConfirmation.guestPhone}</p>{pendingConfirmation.sendEmailConfirmation && <p><strong>Correo:</strong> Cloudbeds enviará su confirmación estándar.</p>}</div>}
         <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction disabled={createReservation.isPending} onClick={submitReservation}>{createReservation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}Crear reserva en Cloudbeds</AlertDialogAction></AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

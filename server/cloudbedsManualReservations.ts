@@ -7,6 +7,7 @@ export type CloudbedsBookableRoomType = {
   maxGuests: number | null;
   rate: number | null;
   rateId: string | null;
+  individualRooms: Array<{ roomId: string; roomName: string; dormRoomName: string | null }>;
 };
 
 export type CloudbedsReservationSource = {
@@ -22,6 +23,7 @@ export type CloudbedsManualReservationInput = {
   startDate: string;
   endDate: string;
   roomTypeId: string;
+  roomId?: string;
   rooms: number;
   adults: number;
   children: number;
@@ -116,6 +118,28 @@ function propertyRoomTypes(payload: unknown): JsonRecord[] {
   return output;
 }
 
+function availableIndividualRoomsByType(payload: unknown) {
+  const root = asRecord(payload);
+  const containers = [...asList(root.data), root.data, root];
+  const roomsByType = new Map<string, Array<{ roomId: string; roomName: string; dormRoomName: string | null }>>();
+  for (const container of containers) {
+    const record = asRecord(container);
+    for (const room of asList(record.rooms ?? record.propertyRooms)) {
+      const roomRecord = asRecord(room);
+      const roomTypeId = text(roomRecord.roomTypeID, roomRecord.roomTypeId);
+      const roomId = text(roomRecord.roomID, roomRecord.roomId, roomRecord.id);
+      const roomName = text(roomRecord.roomName, roomRecord.room_name, roomRecord.name);
+      if (!roomTypeId || !roomId || !roomName) continue;
+      const list = roomsByType.get(roomTypeId) || [];
+      if (!list.some(candidate => candidate.roomId === roomId)) {
+        list.push({ roomId, roomName, dormRoomName: text(roomRecord.dormRoomName, roomRecord.dorm_room_name) });
+      }
+      roomsByType.set(roomTypeId, list);
+    }
+  }
+  return roomsByType;
+}
+
 function totalDetailedRate(room: JsonRecord) {
   const detailed = asList(room.roomRateDetailed ?? room.detailedRates ?? room.dailyRates);
   if (!detailed.length) return numberValue(room.roomRate, room.totalRate, room.rate);
@@ -128,7 +152,10 @@ function totalDetailedRate(room: JsonRecord) {
   return values.length ? values.reduce((sum, value) => sum + value, 0) : numberValue(room.roomRate, room.totalRate);
 }
 
-export function normalizeCloudbedsBookableRoomTypes(payload: unknown): CloudbedsBookableRoomType[] {
+export function normalizeCloudbedsBookableRoomTypes(
+  payload: unknown,
+  individualRoomsByType: Map<string, Array<{ roomId: string; roomName: string; dormRoomName: string | null }>> = new Map(),
+): CloudbedsBookableRoomType[] {
   const roomTypes = new Map<string, CloudbedsBookableRoomType>();
   for (const room of propertyRoomTypes(payload)) {
     const roomTypeId = text(room.roomTypeID, room.roomTypeId, room.id);
@@ -142,6 +169,13 @@ export function normalizeCloudbedsBookableRoomTypes(payload: unknown): Cloudbeds
       maxGuests: numberValue(room.maxGuests, room.max_guests),
       rate: totalDetailedRate(room),
       rateId: text(room.roomRateID, room.roomRateId, room.rateID, room.rateId),
+      individualRooms: individualRoomsByType.get(roomTypeId) || asList(room.individualRooms ?? room.individual_rooms).flatMap(individualRoom => {
+        const record = asRecord(individualRoom);
+        const roomId = text(record.roomID, record.roomId, record.id);
+        const roomName = text(record.roomName, record.room_name, record.name);
+        if (!roomId || !roomName) return [];
+        return [{ roomId, roomName, dormRoomName: text(record.dormRoomName, record.dorm_room_name) }];
+      }),
     };
     const previous = roomTypes.get(roomTypeId);
     if (!previous || candidate.roomsAvailable > previous.roomsAvailable || (candidate.rate !== null && previous.rate === null)) {
@@ -170,12 +204,33 @@ export async function fetchCloudbedsBookableRoomTypes({
   url.searchParams.set("detailedRates", "true");
   url.searchParams.set("includeSharedRooms", "true");
 
-  const response = await fetch(url, {
-    headers: { "x-api-key": apiKey, Accept: "application/json" },
-    signal: AbortSignal.timeout(12_000),
-  });
-  const payload = await parseResponse(response);
-  return normalizeCloudbedsBookableRoomTypes(payload);
+  const roomsUrl = new URL("https://api.cloudbeds.com/api/v1.3/getRooms");
+  roomsUrl.searchParams.set("propertyIDs", propertyId);
+  roomsUrl.searchParams.set("startDate", startDate);
+  roomsUrl.searchParams.set("endDate", endDate);
+  roomsUrl.searchParams.set("pageSize", "1000");
+
+  const [availabilityResponse, roomsResponse] = await Promise.all([
+    fetch(url, {
+      headers: { "x-api-key": apiKey, Accept: "application/json" },
+      signal: AbortSignal.timeout(12_000),
+    }),
+    fetch(roomsUrl, {
+      headers: { "x-api-key": apiKey, Accept: "application/json" },
+      signal: AbortSignal.timeout(12_000),
+    }),
+  ]);
+  const payload = await parseResponse(availabilityResponse);
+  // Si la cuenta no tiene acceso a la lectura de habitaciones individuales,
+  // se mantiene la comprobación por tipo; la creación con habitación concreta
+  // quedará bloqueada hasta que Cloudbeds devuelva esa asignación.
+  let individualRooms = new Map<string, Array<{ roomId: string; roomName: string; dormRoomName: string | null }>>();
+  try {
+    individualRooms = availableIndividualRoomsByType(await parseResponse(roomsResponse));
+  } catch {
+    // La disponibilidad por tipo sigue siendo válida y se mostrará sin filas nuevas.
+  }
+  return normalizeCloudbedsBookableRoomTypes(payload, individualRooms);
 }
 
 export function cloudbedsManualReservationForm(input: CloudbedsManualReservationInput) {
@@ -193,10 +248,13 @@ export function cloudbedsManualReservationForm(input: CloudbedsManualReservation
   if (input.estimatedArrivalTime?.trim()) form.set("estimatedArrivalTime", input.estimatedArrivalTime.trim());
   form.set("rooms[0][roomTypeID]", input.roomTypeId);
   form.set("rooms[0][quantity]", String(input.rooms));
+  if (input.roomId?.trim()) form.set("rooms[0][roomID]", input.roomId.trim());
   form.set("adults[0][roomTypeID]", input.roomTypeId);
   form.set("adults[0][quantity]", String(input.adults));
+  if (input.roomId?.trim()) form.set("adults[0][roomID]", input.roomId.trim());
   form.set("children[0][roomTypeID]", input.roomTypeId);
   form.set("children[0][quantity]", String(input.children));
+  if (input.roomId?.trim()) form.set("children[0][roomID]", input.roomId.trim());
   form.set("sendEmailConfirmation", input.sendEmailConfirmation ? "true" : "false");
   return form;
 }

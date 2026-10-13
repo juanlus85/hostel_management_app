@@ -48,26 +48,35 @@ describe("reservas manuales de Cloudbeds", () => {
       maxGuests: 2,
       rate: 188,
       rateId: "rate-1",
+      individualRooms: [],
     }]);
   });
 
   it("consulta disponibilidad con estancia y ocupación exactas", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ data: [{
-      propertyRooms: [{ roomTypeID: "double-1", roomTypeName: "Doble", roomsAvailable: 1, roomRate: 120 }],
-    }] }), { status: 200 }));
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [{
+        propertyRooms: [{ roomTypeID: "double-1", roomTypeName: "Doble", roomsAvailable: 1, roomRate: 120 }],
+      }] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [{
+        rooms: [{ roomID: "room-15", roomName: "Habitación 15", roomTypeID: "double-1" }],
+      }] }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
 
-    await fetchCloudbedsBookableRoomTypes(baseInput);
+    const result = await fetchCloudbedsBookableRoomTypes(baseInput);
     const url = fetchMock.mock.calls[0][0] as URL;
     expect(url.pathname).toBe("/api/v1.3/getAvailableRoomTypes");
     expect(url.searchParams.get("startDate")).toBe("2026-10-20");
     expect(url.searchParams.get("endDate")).toBe("2026-10-23");
     expect(url.searchParams.get("adults")).toBe("2");
     expect(url.searchParams.get("rooms")).toBe("1");
+    const roomsUrl = fetchMock.mock.calls[1][0] as URL;
+    expect(roomsUrl.pathname).toBe("/api/v1.3/getRooms");
+    expect(roomsUrl.searchParams.get("startDate")).toBe("2026-10-20");
+    expect(result[0]?.individualRooms).toEqual([{ roomId: "room-15", roomName: "Habitación 15", dormRoomName: null }]);
   });
 
   it("prepara los campos de huésped, estancia y ocupación en el formato Cloudbeds", () => {
-    const form = cloudbedsManualReservationForm(baseInput);
+    const form = cloudbedsManualReservationForm({ ...baseInput, roomId: "room-15" });
     expect(Object.fromEntries(form.entries())).toMatchObject({
       propertyID: "204754",
       sourceID: "s-1",
@@ -78,6 +87,7 @@ describe("reservas manuales de Cloudbeds", () => {
       guestCountry: "ES",
       "rooms[0][roomTypeID]": "double-1",
       "rooms[0][quantity]": "1",
+      "rooms[0][roomID]": "room-15",
       "adults[0][quantity]": "2",
       "children[0][quantity]": "0",
       sendEmailConfirmation: "false",
