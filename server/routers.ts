@@ -76,6 +76,11 @@ import {
   fetchCloudbedsFiscalTransactions,
 } from "./cloudbedsFiscalDocuments";
 import { fetchCloudbedsAvailability, updateCloudbedsRate } from "./cloudbedsAvailability";
+import {
+  createCloudbedsManualReservation,
+  fetchCloudbedsBookableRoomTypes,
+  fetchCloudbedsReservationSources,
+} from "./cloudbedsManualReservations";
 import type { ExternalUpcomingReservation } from "../drizzle/schema";
 import {
   buildConfiguredReservationWelcome,
@@ -1246,6 +1251,101 @@ export const appRouter = router({
           }
         }
         return { updated, failed };
+      }),
+    getBookableRoomTypes: adminProcedure
+      .input(z.object({
+        startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        rooms: z.number().int().min(1).max(5).default(1),
+        adults: z.number().int().min(1).max(20).default(1),
+        children: z.number().int().min(0).max(20).default(0),
+      }))
+      .mutation(async ({ input }) => {
+        if (input.endDate <= input.startDate) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "La salida debe ser posterior a la entrada." });
+        }
+        const apiKey = process.env.CLOUDBEDS_API_KEY;
+        const propertyId = process.env.CLOUDBEDS_PROPERTY_ID;
+        if (!apiKey || !propertyId) {
+          throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Configura CLOUDBEDS_API_KEY y CLOUDBEDS_PROPERTY_ID para consultar disponibilidad." });
+        }
+        try {
+          return await fetchCloudbedsBookableRoomTypes({ apiKey, propertyId, ...input });
+        } catch (error) {
+          throw new TRPCError({
+            code: "BAD_GATEWAY",
+            message: error instanceof Error ? error.message : "No se pudo comprobar la disponibilidad de Cloudbeds.",
+          });
+        }
+      }),
+    getReservationSources: adminProcedure.query(async () => {
+      const apiKey = process.env.CLOUDBEDS_API_KEY;
+      const propertyId = process.env.CLOUDBEDS_PROPERTY_ID;
+      if (!apiKey || !propertyId) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Configura Cloudbeds para consultar las fuentes de reserva." });
+      }
+      try {
+        return await fetchCloudbedsReservationSources(apiKey, propertyId);
+      } catch (error) {
+        throw new TRPCError({
+          code: "BAD_GATEWAY",
+          message: error instanceof Error ? error.message : "No se pudieron consultar las fuentes de Cloudbeds.",
+        });
+      }
+    }),
+    createManualReservation: adminProcedure
+      .input(z.object({
+        startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        roomTypeId: z.string().trim().min(1).max(160),
+        rooms: z.number().int().min(1).max(5).default(1),
+        adults: z.number().int().min(1).max(20),
+        children: z.number().int().min(0).max(20).default(0),
+        guestFirstName: z.string().trim().min(1).max(100),
+        guestLastName: z.string().trim().min(1).max(160),
+        guestEmail: z.string().trim().email().max(320),
+        guestPhone: z.string().trim().max(100).optional(),
+        guestCountry: z.string().trim().regex(/^[A-Za-z]{2}$/),
+        guestZip: z.string().trim().min(1).max(32),
+        sourceId: z.string().trim().max(120).optional(),
+        estimatedArrivalTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),
+        sendEmailConfirmation: z.boolean().default(false),
+      }))
+      .mutation(async ({ input }) => {
+        if (input.endDate <= input.startDate) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "La salida debe ser posterior a la entrada." });
+        }
+        const apiKey = process.env.CLOUDBEDS_API_KEY;
+        const propertyId = process.env.CLOUDBEDS_PROPERTY_ID;
+        if (!apiKey || !propertyId) {
+          throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Configura CLOUDBEDS_API_KEY y CLOUDBEDS_PROPERTY_ID para crear reservas." });
+        }
+        try {
+          // La comprobación se repite en el servidor en el instante de confirmar,
+          // evitando crear una reserva con datos de disponibilidad desactualizados.
+          const bookable = await fetchCloudbedsBookableRoomTypes({ apiKey, propertyId, ...input });
+          const selectedRoomType = bookable.find(roomType => roomType.roomTypeId === input.roomTypeId);
+          if (!selectedRoomType || selectedRoomType.roomsAvailable < input.rooms) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Ese tipo de habitación ya no tiene disponibilidad para toda la estancia seleccionada. Vuelve a comprobar las fechas.",
+            });
+          }
+          if (selectedRoomType.maxGuests !== null && input.adults + input.children > selectedRoomType.maxGuests * input.rooms) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `La ocupación indicada supera el máximo de ${selectedRoomType.maxGuests} huésped(es) por habitación para este tipo.`,
+            });
+          }
+          const result = await createCloudbedsManualReservation({ apiKey, propertyId, ...input });
+          return { ...result, roomTypeName: selectedRoomType.roomTypeName };
+        } catch (error) {
+          if (error instanceof TRPCError) throw error;
+          throw new TRPCError({
+            code: "BAD_GATEWAY",
+            message: error instanceof Error ? error.message : "Cloudbeds no pudo crear la reserva.",
+          });
+        }
       }),
   }),
 
