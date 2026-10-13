@@ -22,7 +22,7 @@ export default function CheckinUnificado() {
   const [activeTab, setActiveTab] = useState("checkin");
 
   return (
-    <div className="container mx-auto py-6">
+    <div className="container mx-auto min-w-0 py-4 sm:py-6">
       <div className="mb-6">
         <h1 className="text-3xl font-bold">Sistema de Check-in</h1>
         <p className="text-muted-foreground">
@@ -31,36 +31,38 @@ export default function CheckinUnificado() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-7 mb-6">
-          <TabsTrigger value="checkin" className="flex items-center gap-2">
+        <div className="-mx-4 mb-5 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden">
+        <TabsList className="flex h-auto min-w-max gap-1 p-1">
+          <TabsTrigger value="checkin" className="min-h-10 shrink-0 gap-2 px-3">
             <ClipboardCheck className="h-4 w-4" />
-            <span className="hidden sm:inline">Check-in</span>
+            <span>Check-in</span>
           </TabsTrigger>
-          <TabsTrigger value="huespedes" className="flex items-center gap-2">
+          <TabsTrigger value="huespedes" className="min-h-10 shrink-0 gap-2 px-3">
             <Users className="h-4 w-4" />
-            <span className="hidden sm:inline">Huéspedes</span>
+            <span>Huéspedes</span>
           </TabsTrigger>
-          <TabsTrigger value="anticipado" className="flex items-center gap-2">
+          <TabsTrigger value="anticipado" className="min-h-10 shrink-0 gap-2 px-3">
             <Send className="h-4 w-4" />
-            <span className="hidden sm:inline">Anticipado</span>
+            <span>Anticipado</span>
           </TabsTrigger>
-          <TabsTrigger value="online" className="flex items-center gap-2">
+          <TabsTrigger value="online" className="min-h-10 shrink-0 gap-2 px-3">
             <Globe className="h-4 w-4" />
-            <span className="hidden sm:inline">Online</span>
+            <span>Online</span>
           </TabsTrigger>
-          <TabsTrigger value="codigos" className="flex items-center gap-2">
+          <TabsTrigger value="codigos" className="min-h-10 shrink-0 gap-2 px-3">
             <Key className="h-4 w-4" />
-            <span className="hidden sm:inline">Códigos</span>
+            <span>Códigos</span>
           </TabsTrigger>
-          <TabsTrigger value="policia" className="flex items-center gap-2">
+          <TabsTrigger value="policia" className="min-h-10 shrink-0 gap-2 px-3">
             <FileText className="h-4 w-4" />
-            <span className="hidden sm:inline">Policía</span>
+            <span>Policía</span>
           </TabsTrigger>
-          <TabsTrigger value="config" className="flex items-center gap-2">
+          <TabsTrigger value="config" className="min-h-10 shrink-0 gap-2 px-3">
             <Settings className="h-4 w-4" />
-            <span className="hidden sm:inline">Config</span>
+            <span>Config.</span>
           </TabsTrigger>
         </TabsList>
+        </div>
 
         <TabsContent value="checkin">
           <CheckinPresencial />

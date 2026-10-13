@@ -1886,3 +1886,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Añadir detalle interactivo a las tarjetas provisionales del Dashboard: hasta quince tickets disponibles y quince artículos por unidades desde Loyverse; cobros del día desde Cloudbeds con apertura directa de la ficha de su reserva.
 - [x] Adaptar a móvil los diálogos de X provisional y recibos: panel casi completo, cabecera visible, cierre accesible y lista interior desplazable.
 - [x] Adaptar el Check-in de recepción a móvil y tablet: diálogo anclado al viewport, sin desbordamiento lateral, secciones de una columna y accesos rápidos; permitir cambiar todos los campos operativos entre español e inglés.
+- [x] Convertir las pestañas de Check-in en navegación horizontal desplazable y con etiquetas visibles para móvil y tablet.
