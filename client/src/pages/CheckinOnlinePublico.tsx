@@ -46,6 +46,7 @@ import {
   getAllowedDocumentTypes,
   isAllowedDocumentType,
 } from "@shared/countries";
+import { normalizeDateOnly } from "@shared/checkinDateInput";
 
 const SelectContent = BaseSelectContent;
 const SelectItem = BaseSelectItem;
@@ -243,14 +244,21 @@ export default function CheckinOnlinePublico() {
       return;
     }
     try {
-      const primary = guests[0];
+      const normalizedGuests = guests.map(guest => ({
+        ...guest,
+        birthDate: normalizeDateOnly(guest.birthDate) || guest.birthDate,
+        documentExpiry: guest.documentExpiry
+          ? normalizeDateOnly(guest.documentExpiry) || guest.documentExpiry
+          : "",
+      }));
+      const primary = normalizedGuests[0];
       const result = await complete.mutateAsync({
         ...primary,
         token,
         language: lang,
         acceptedTerms: true as const,
         acceptedPrivacy: true as const,
-        guests: guests.map(guest => ({
+        guests: normalizedGuests.map(guest => ({
           ...guest,
           email: guest.email || undefined,
           acceptedTerms: true as const,

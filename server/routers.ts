@@ -18,6 +18,7 @@ import {
   dayAfter,
   effectiveGuideExpiry,
 } from "@shared/onlineGuideAccess";
+import { normalizeDateOnly } from "@shared/checkinDateInput";
 import {
   hasInvitationEmail,
   onlineGuestToken,
@@ -112,6 +113,14 @@ const housekeepingProcedure = protectedProcedure.use(({ ctx, next }) => {
   }
   return next({ ctx });
 });
+
+const publicCheckinDate = z
+  .string()
+  .trim()
+  .transform(value => normalizeDateOnly(value) || value)
+  .refine(value => /^\d{4}-\d{2}-\d{2}$/.test(value), {
+    message: "Indica una fecha válida",
+  });
 
 function getMadridStayDates() {
   const parts = new Intl.DateTimeFormat("en-GB", {
@@ -3831,8 +3840,8 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             documentType: z.enum(["NIF", "NIE", "CAR", "ID", "PAS", "OTRO"]),
             gender: z.enum(["Hombre", "Mujer", "Otro"]),
             nationality: z.string().min(1),
-            birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-            documentExpiry: z.string().optional(),
+            birthDate: publicCheckinDate,
+            documentExpiry: publicCheckinDate.or(z.literal("")).optional(),
             street: z.string().min(1),
             addressExtra: z.string().optional(),
             postalCode: z.string().min(1),
@@ -3861,8 +3870,8 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
                   ]),
                   gender: z.enum(["Hombre", "Mujer", "Otro"]),
                   nationality: z.string().min(1),
-                  birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-                  documentExpiry: z.string().optional(),
+                  birthDate: publicCheckinDate,
+                  documentExpiry: publicCheckinDate.or(z.literal("")).optional(),
                   street: z.string().min(1),
                   addressExtra: z.string().optional(),
                   postalCode: z.string().min(1),

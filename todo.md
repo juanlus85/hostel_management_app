@@ -1841,3 +1841,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Auditar y corregir el error al completar Check-in Online reportado en producción.
 - [x] Eliminar los 504 y la espera al cargar Reservas desacoplando la visualización local de la sincronización pesada de Cloudbeds.
 - [x] Actualizar automáticamente solo ayer y los próximos cuatro días, dejando una recarga completa de quince días como acción manual para evitar esperas y 504.
+- [x] Normalizar fechas de nacimiento y caducidad del Check-in Online para aceptar formatos de navegador `DD/MM/AAAA` y enviarlos como `AAAA-MM-DD`.
