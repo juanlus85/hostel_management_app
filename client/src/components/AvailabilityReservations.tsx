@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getReservationWindowRange } from "@/lib/reservationWindow";
 import { availabilityRoomTypeKey, buildAgendaAvailabilityByType, findAgendaAvailabilityDay } from "@/lib/availabilityAgenda";
+import { addCalendarDays, mergeAgendaAvailability, type AgendaAvailabilityResult } from "@/lib/agendaAvailabilityMerge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const madridDate = (date: Date) => date.toLocaleDateString("en-CA", { timeZone: "Europe/Madrid" });
@@ -38,7 +39,6 @@ type PendingStatus = { status: CloudbedsStatus; label: string };
 type MessageLanguage = "es" | "en";
 type WelcomeEditor = { reservationId: number; guestName: string; guestEmail: string; messageType: "welcome" | "online_checkin"; subject: string; message: string };
 type WhatsAppEditor = { reservationId: number; guestName: string; messageType: "welcome" | "online_checkin"; message: string };
-type AgendaAvailabilityResult = Awaited<ReturnType<typeof import("../../../server/cloudbedsAvailability").fetchCloudbedsAvailability>>;
 type AgendaRateEditor = { roomTypeName: string; date: string; rateId: string; previousRate: number; rateText: string };
 
 function getReservationWindow() {
@@ -133,6 +133,7 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
   const [whatsAppEditor, setWhatsAppEditor] = useState<WhatsAppEditor | null>(null);
   const [agendaAvailability, setAgendaAvailability] = useState<AgendaAvailabilityResult | null>(null);
   const [agendaAvailabilityError, setAgendaAvailabilityError] = useState<string | null>(null);
+  const [isLoadingAgendaSecondWeek, setIsLoadingAgendaSecondWeek] = useState(false);
   const [agendaRateDrafts, setAgendaRateDrafts] = useState<Record<string, AgendaRateEditor>>({});
   const [pendingAgendaRates, setPendingAgendaRates] = useState<AgendaRateEditor[] | null>(null);
   const utils = trpc.useUtils();
@@ -152,21 +153,36 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
     hasImportedOnEntry.current = true;
     importReservations.mutate();
   }, [autoImport, importReservations.mutate]);
-  const importAgendaAvailability = trpc.cloudbedsAvailability.importWeek.useMutation({
-    onSuccess: result => {
-      setAgendaAvailability(result);
-      setAgendaAvailabilityError(null);
-    },
-    onError: error => {
-      setAgendaAvailabilityError(error.message);
-      toast.error(`No se pudo cargar disponibilidad y precios: ${error.message}`);
-    },
-  });
+  const importAgendaAvailability = trpc.cloudbedsAvailability.importWeek.useMutation();
+  const loadAgendaAvailability = () => {
+    setAgendaAvailabilityError(null);
+    setIsLoadingAgendaSecondWeek(false);
+    importAgendaAvailability.mutate({ startDate: agendaAvailabilityStartDate, days: 7 }, {
+      onSuccess: firstWeek => {
+        setAgendaAvailability(firstWeek);
+        setIsLoadingAgendaSecondWeek(true);
+        importAgendaAvailability.mutate({ startDate: addCalendarDays(agendaAvailabilityStartDate, 7), days: 7 }, {
+          onSuccess: secondWeek => {
+            setAgendaAvailability(current => current ? mergeAgendaAvailability(current, secondWeek) : secondWeek);
+            setIsLoadingAgendaSecondWeek(false);
+          },
+          onError: error => {
+            setIsLoadingAgendaSecondWeek(false);
+            toast.warning(`Los próximos 7 días no se cargaron: ${error.message}`);
+          },
+        });
+      },
+      onError: error => {
+        setAgendaAvailabilityError(error.message);
+        toast.error(`No se pudo cargar disponibilidad y precios: ${error.message}`);
+      },
+    });
+  };
   useEffect(() => {
     if (!autoImport || hasLoadedAgendaAvailability.current) return;
     hasLoadedAgendaAvailability.current = true;
-    importAgendaAvailability.mutate({ startDate: agendaAvailabilityStartDate, days: 14 });
-  }, [agendaAvailabilityStartDate, autoImport, importAgendaAvailability.mutate]);
+    loadAgendaAvailability();
+  }, [agendaAvailabilityStartDate, autoImport]);
   const detail = trpc.checkin.externalImports.getCloudbedsUpcomingReservationDetail.useQuery(
     { id: selectedId ?? 0 },
     { enabled: selectedId !== null, retry: false },
@@ -258,7 +274,7 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
       } else {
         toast.success(`${result.updated.length} precios enviados a Cloudbeds.`);
       }
-      importAgendaAvailability.mutate({ startDate: agendaAvailabilityStartDate, days: 14 });
+      loadAgendaAvailability();
     },
     onError: error => toast.error(error.message),
   });
@@ -388,7 +404,7 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
         <div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" onClick={() => setShowUnassignedReservations(current => !current)}>{showUnassignedReservations ? "Ocultar sin habitación" : `Mostrar sin habitación${hiddenUnassignedReservations ? ` (${hiddenUnassignedReservations})` : ""}`}</Button><Button className="bg-sky-700 hover:bg-sky-800" onClick={() => importReservations.mutate()} disabled={importReservations.isPending}>
           {importReservations.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
           Actualizar reservas
-        </Button><Button variant="outline" size="sm" onClick={() => importAgendaAvailability.mutate({ startDate: agendaAvailabilityStartDate, days: 14 })} disabled={importAgendaAvailability.isPending}>{importAgendaAvailability.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}Actualizar precios</Button>{canEditAgendaRates && <Button variant="outline" onClick={() => setPendingAgendaRates(editedAgendaRates)} disabled={!editedAgendaRates.length || updateAgendaRates.isPending}>{updateAgendaRates.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}Enviar {editedAgendaRates.length || ""} precios</Button>}</div>
+        </Button><Button variant="outline" size="sm" onClick={loadAgendaAvailability} disabled={importAgendaAvailability.isPending}>{importAgendaAvailability.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}Actualizar precios</Button>{canEditAgendaRates && <Button variant="outline" onClick={() => setPendingAgendaRates(editedAgendaRates)} disabled={!editedAgendaRates.length || updateAgendaRates.isPending}>{updateAgendaRates.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}Enviar {editedAgendaRates.length || ""} precios</Button>}</div>
       </CardHeader>
       <CardContent className="flex flex-wrap gap-x-5 gap-y-2 border-t bg-sky-50/30 py-3 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-red-500" />Importe pendiente</span>
@@ -398,6 +414,7 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
         <span className="inline-flex items-center gap-2"><span className="h-3 w-5 rounded bg-cyan-500" />Pendiente de Check-in</span>
         <span className="inline-flex items-center gap-2"><span className="h-3 w-5 rounded bg-slate-400" />Check-out o cancelada</span>
       </CardContent>
+      {isLoadingAgendaSecondWeek && <CardContent className="border-t bg-sky-50 py-2 text-xs text-sky-900">Los primeros 7 días ya están disponibles. Completando los 7 días siguientes…</CardContent>}
       {agendaAvailabilityError && <CardContent className="border-t border-amber-200 bg-amber-50 py-3 text-sm text-amber-950">
         <strong>No se cargaron precios ni disponibilidad.</strong> {agendaAvailabilityError}
       </CardContent>}

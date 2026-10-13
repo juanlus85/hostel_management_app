@@ -1831,3 +1831,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Corregir la correspondencia de tarifas por tipo en los separadores, restaurar su altura compacta y eliminar el solape erróneo de la habitación 4.
 - [x] Identificar que la credencial es válida cuando carga el calendario de siete días.
 - [x] Corregir la división de consultas de catorce días de la agenda para que use tramos exactos de siete días, igual que la pestaña de precios.
+- [x] Acelerar la carga de precios de la agenda reutilizando consultas semanales y evitando esperas indefinidas de Cloudbeds.
