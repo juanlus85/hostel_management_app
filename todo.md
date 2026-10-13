@@ -1832,3 +1832,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Identificar que la credencial es válida cuando carga el calendario de siete días.
 - [x] Corregir la división de consultas de catorce días de la agenda para que use tramos exactos de siete días, igual que la pestaña de precios.
 - [x] Acelerar la carga de precios de la agenda reutilizando consultas semanales y evitando esperas indefinidas de Cloudbeds.
+- [x] Evitar el 504 de la agenda secuenciando la carga de tarifas y la importación de reservas de Cloudbeds.

@@ -148,13 +148,8 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
   const hasImportedOnEntry = useRef(false);
   const hasLoadedAgendaAvailability = useRef(false);
   const agendaAvailabilityStartDate = window.dates[1] || window.dateFrom;
-  useEffect(() => {
-    if (!autoImport || hasImportedOnEntry.current) return;
-    hasImportedOnEntry.current = true;
-    importReservations.mutate();
-  }, [autoImport, importReservations.mutate]);
   const importAgendaAvailability = trpc.cloudbedsAvailability.importWeek.useMutation();
-  const loadAgendaAvailability = () => {
+  const loadAgendaAvailability = (importReservationsAfter = false) => {
     setAgendaAvailabilityError(null);
     setIsLoadingAgendaSecondWeek(false);
     importAgendaAvailability.mutate({ startDate: agendaAvailabilityStartDate, days: 7 }, {
@@ -165,10 +160,18 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
           onSuccess: secondWeek => {
             setAgendaAvailability(current => current ? mergeAgendaAvailability(current, secondWeek) : secondWeek);
             setIsLoadingAgendaSecondWeek(false);
+            if (importReservationsAfter && !hasImportedOnEntry.current) {
+              hasImportedOnEntry.current = true;
+              importReservations.mutate();
+            }
           },
           onError: error => {
             setIsLoadingAgendaSecondWeek(false);
             toast.warning(`Los próximos 7 días no se cargaron: ${error.message}`);
+            if (importReservationsAfter && !hasImportedOnEntry.current) {
+              hasImportedOnEntry.current = true;
+              importReservations.mutate();
+            }
           },
         });
       },
@@ -181,7 +184,7 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
   useEffect(() => {
     if (!autoImport || hasLoadedAgendaAvailability.current) return;
     hasLoadedAgendaAvailability.current = true;
-    loadAgendaAvailability();
+    loadAgendaAvailability(true);
   }, [agendaAvailabilityStartDate, autoImport]);
   const detail = trpc.checkin.externalImports.getCloudbedsUpcomingReservationDetail.useQuery(
     { id: selectedId ?? 0 },
@@ -404,7 +407,7 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
         <div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" onClick={() => setShowUnassignedReservations(current => !current)}>{showUnassignedReservations ? "Ocultar sin habitación" : `Mostrar sin habitación${hiddenUnassignedReservations ? ` (${hiddenUnassignedReservations})` : ""}`}</Button><Button className="bg-sky-700 hover:bg-sky-800" onClick={() => importReservations.mutate()} disabled={importReservations.isPending}>
           {importReservations.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
           Actualizar reservas
-        </Button><Button variant="outline" size="sm" onClick={loadAgendaAvailability} disabled={importAgendaAvailability.isPending}>{importAgendaAvailability.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}Actualizar precios</Button>{canEditAgendaRates && <Button variant="outline" onClick={() => setPendingAgendaRates(editedAgendaRates)} disabled={!editedAgendaRates.length || updateAgendaRates.isPending}>{updateAgendaRates.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}Enviar {editedAgendaRates.length || ""} precios</Button>}</div>
+        </Button><Button variant="outline" size="sm" onClick={() => loadAgendaAvailability()} disabled={importAgendaAvailability.isPending}>{importAgendaAvailability.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}Actualizar precios</Button>{canEditAgendaRates && <Button variant="outline" onClick={() => setPendingAgendaRates(editedAgendaRates)} disabled={!editedAgendaRates.length || updateAgendaRates.isPending}>{updateAgendaRates.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}Enviar {editedAgendaRates.length || ""} precios</Button>}</div>
       </CardHeader>
       <CardContent className="flex flex-wrap gap-x-5 gap-y-2 border-t bg-sky-50/30 py-3 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-red-500" />Importe pendiente</span>
