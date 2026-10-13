@@ -87,6 +87,18 @@ describe("buildReservationAgenda", () => {
     expect(reservationAgendaTone("cancelled")).toBe("slate");
   });
 
+  it("libera la habitación cuando una reserva se cancela o no se presenta", () => {
+    const agenda = buildReservationAgenda([
+      { id: 60, guestName: "Cancelada", checkInDate: "2026-10-10", checkOutDate: "2026-10-13", roomType: "Twin", roomNumber: "15", reservationStatus: "canceled", amountPending: "0", reservationNotes: null },
+      { id: 61, guestName: "No presentado", checkInDate: "2026-10-10", checkOutDate: "2026-10-13", roomType: "Twin", roomNumber: "15", reservationStatus: "no_show", amountPending: "0", reservationNotes: null },
+      { id: 62, guestName: "Activa", checkInDate: "2026-10-10", checkOutDate: "2026-10-13", roomType: "Twin", roomNumber: "15", reservationStatus: "confirmed", amountPending: "0", reservationNotes: null },
+    ], dates);
+
+    expect(agenda).toHaveLength(1);
+    expect(agenda[0]).toMatchObject({ reservationsCount: 1 });
+    expect(agenda[0]?.rooms[0]?.cards.map(card => card.reservation.id)).toEqual([62]);
+  });
+
   it("distingue invitaciones enviadas de Check-ins completados", () => {
     const agenda = buildReservationAgenda([
       { id: 51, guestName: "Invitada", checkInDate: "2026-10-10", checkOutDate: "2026-10-11", roomType: "Twin", roomNumber: "4", reservationStatus: "confirmed", amountPending: "0", reservationNotes: null, checkinInvitationSent: true, checkinCompleted: false },

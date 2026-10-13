@@ -294,7 +294,11 @@ export function AvailabilityReservations({
   });
   const updateStatus = trpc.checkin.externalImports.updateCloudbedsUpcomingReservationStatus.useMutation({
     onSuccess: result => {
-      toast.success(`Estado actualizado en Cloudbeds: ${reservationStatus(result.status)}`);
+      toast.success(
+        result.releasedRoom
+          ? `Estado actualizado en Cloudbeds: ${reservationStatus(result.status)}. Habitación liberada.`
+          : `Estado actualizado en Cloudbeds: ${reservationStatus(result.status)}`
+      );
       setPendingStatus(null);
       setStatusEditor(null);
       utils.checkin.externalImports.listCloudbedsUpcomingReservations.invalidate({ dateFrom: window.dateFrom, dateTo: window.dateTo });

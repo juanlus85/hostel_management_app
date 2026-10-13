@@ -1,3 +1,5 @@
+import { reservationReleasesAssignedRoom } from "./reservationStatus";
+
 export type ReservationAgendaItem = {
   id: number;
   guestName: string | null;
@@ -139,6 +141,7 @@ function visibleSpan(reservation: ReservationAgendaItem, dates: string[]) {
 export function buildReservationAgenda<T extends ReservationAgendaItem>(reservations: T[], dates: string[]): Array<ReservationAgendaGroup<T>> {
   const groups = new Map<string, { label: string; rooms: Map<string, ReservationAgendaRoom<T>>; count: number }>();
   const visibleReservations = reservations.flatMap(reservation => {
+    if (reservationReleasesAssignedRoom(reservation.reservationStatus)) return [];
     const span = visibleSpan(reservation, dates);
     return span ? [{ reservation, span }] : [];
   });

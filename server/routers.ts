@@ -45,6 +45,7 @@ import {
 import { isAllowedDocumentType } from "../shared/countries";
 import { isBirthDateAtLeastOneYearAgo } from "../shared/guestAge";
 import { findAccessCodeForRoom } from "../shared/accessCodes";
+import { reservationReleasesAssignedRoom } from "../shared/reservationStatus";
 import { compareCashByDate } from "../shared/externalCashComparison";
 import {
   fetchLoyverseReceipts,
@@ -5033,8 +5034,15 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           }
           try {
             await updateCloudbedsReservationStatus({ apiKey, propertyId, reservationId: reservation.sourceReservationId, status: input.status });
-            await db.updateExternalUpcomingReservationCloudbeds(reservation.id, { reservationStatus: input.status });
-            return { success: true, status: input.status };
+            await db.updateExternalUpcomingReservationsBySourceReservationId(
+              reservation.sourceReservationId,
+              { reservationStatus: input.status }
+            );
+            return {
+              success: true,
+              status: input.status,
+              releasedRoom: reservationReleasesAssignedRoom(input.status),
+            };
           } catch (error) {
             const message = error instanceof Error ? error.message : "No se pudo cambiar el estado en Cloudbeds.";
             throw new TRPCError({ code: "BAD_GATEWAY", message });
