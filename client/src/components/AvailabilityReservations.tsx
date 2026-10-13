@@ -145,6 +145,7 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
   });
   const hasImportedOnEntry = useRef(false);
   const hasLoadedAgendaAvailability = useRef(false);
+  const agendaAvailabilityStartDate = window.dates[1] || window.dateFrom;
   useEffect(() => {
     if (!autoImport || hasImportedOnEntry.current) return;
     hasImportedOnEntry.current = true;
@@ -157,8 +158,8 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
   useEffect(() => {
     if (!autoImport || hasLoadedAgendaAvailability.current) return;
     hasLoadedAgendaAvailability.current = true;
-    importAgendaAvailability.mutate({ startDate: window.dateFrom, days: 15 });
-  }, [autoImport, importAgendaAvailability.mutate, window.dateFrom]);
+    importAgendaAvailability.mutate({ startDate: agendaAvailabilityStartDate, days: 14 });
+  }, [agendaAvailabilityStartDate, autoImport, importAgendaAvailability.mutate]);
   const detail = trpc.checkin.externalImports.getCloudbedsUpcomingReservationDetail.useQuery(
     { id: selectedId ?? 0 },
     { enabled: selectedId !== null, retry: false },
@@ -250,7 +251,7 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
       } else {
         toast.success(`${result.updated.length} precios enviados a Cloudbeds.`);
       }
-      importAgendaAvailability.mutate({ startDate: window.dateFrom, days: 15 });
+      importAgendaAvailability.mutate({ startDate: agendaAvailabilityStartDate, days: 14 });
     },
     onError: error => toast.error(error.message),
   });
@@ -380,7 +381,7 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
         <div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" onClick={() => setShowUnassignedReservations(current => !current)}>{showUnassignedReservations ? "Ocultar sin habitación" : `Mostrar sin habitación${hiddenUnassignedReservations ? ` (${hiddenUnassignedReservations})` : ""}`}</Button><Button className="bg-sky-700 hover:bg-sky-800" onClick={() => importReservations.mutate()} disabled={importReservations.isPending}>
           {importReservations.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
           Actualizar reservas
-        </Button>{canEditAgendaRates && <Button variant="outline" onClick={() => setPendingAgendaRates(editedAgendaRates)} disabled={!editedAgendaRates.length || updateAgendaRates.isPending}>{updateAgendaRates.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}Enviar {editedAgendaRates.length || ""} precios</Button>}</div>
+        </Button><Button variant="outline" size="sm" onClick={() => importAgendaAvailability.mutate({ startDate: agendaAvailabilityStartDate, days: 14 })} disabled={importAgendaAvailability.isPending}>{importAgendaAvailability.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}Actualizar precios</Button>{canEditAgendaRates && <Button variant="outline" onClick={() => setPendingAgendaRates(editedAgendaRates)} disabled={!editedAgendaRates.length || updateAgendaRates.isPending}>{updateAgendaRates.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}Enviar {editedAgendaRates.length || ""} precios</Button>}</div>
       </CardHeader>
       <CardContent className="flex flex-wrap gap-x-5 gap-y-2 border-t bg-sky-50/30 py-3 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-red-500" />Importe pendiente</span>
@@ -408,18 +409,18 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
             {agenda.map((group, groupIndex) => {
               const availabilityType = availabilityByType.get(availabilityRoomTypeKey(group.label));
               return <section key={group.key} className="border-b last:border-b-0">
-              <div className="reservation-agenda-grid grid border-y border-slate-200 bg-slate-100/95" style={gridStyle}>
-                <div className="sticky left-0 z-20 flex min-w-0 items-center border-r bg-slate-100 px-2 py-2 shadow-[8px_0_12px_-12px_rgba(15,23,42,0.5)] sm:px-4"><p title={group.label} className="flex min-w-0 items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-slate-700 sm:gap-2 sm:text-xs"><BedDouble className="h-3 w-3 shrink-0 text-sky-700" /><span className="truncate">{group.label}</span><span className="shrink-0 text-[9px] font-medium normal-case tracking-normal text-slate-500">· {group.reservationsCount} res.</span></p></div>
+              <div className="reservation-agenda-grid grid h-8 border-y border-slate-200 bg-slate-100/95" style={gridStyle}>
+                <div className="sticky left-0 z-20 flex min-w-0 items-center border-r bg-slate-100 px-2 shadow-[8px_0_12px_-12px_rgba(15,23,42,0.5)] sm:px-4"><p title={group.label} className="flex min-w-0 items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-slate-700 sm:gap-2 sm:text-xs"><BedDouble className="h-3 w-3 shrink-0 text-sky-700" /><span className="truncate">{group.label}</span><span className="shrink-0 text-[9px] font-medium normal-case tracking-normal text-slate-500">· {group.reservationsCount} res.</span></p></div>
                 {window.dates.map((date, index) => {
                   const day = findAgendaAvailabilityDay(availabilityType, date);
                   const currentRate = day?.totalRate ?? day?.roomRate ?? null;
                   const editor = day?.rateId && currentRate !== null ? { roomTypeName: group.label, date, rateId: day.rateId, previousRate: currentRate } : null;
                   const draft = editor ? agendaRateDrafts[agendaRateKey(editor.rateId, editor.date)] : null;
                   const todayStyle = index === todayIndex ? "border-x-2 border-amber-400 bg-amber-50" : "";
-                  return <div key={date} className={`flex min-h-[52px] flex-col items-center justify-center border-r px-1 py-1 ${todayStyle} sm:min-h-[58px] sm:px-2`}>
+                  return <div key={date} className={`flex min-w-0 items-center justify-center border-r px-0.5 ${todayStyle} sm:px-1`}>
                     {day ? <>
-                      <span className={`text-[9px] font-semibold ${day.roomsAvailable === null ? "text-slate-500" : day.roomsAvailable <= 0 ? "text-rose-700" : day.roomsAvailable <= 2 ? "text-amber-700" : "text-emerald-700"}`}>{day.roomsAvailable === null ? "—" : `${day.roomsAvailable} disp.`}</span>
-                      {canEditAgendaRates && editor ? <div className="mt-0.5 flex w-full items-center rounded border bg-background px-0.5 shadow-sm focus-within:ring-2 focus-within:ring-sky-600"><Euro className="h-2.5 w-2.5 shrink-0 text-sky-700 sm:h-3 sm:w-3" /><Input aria-label={`Precio de ${group.label} el ${date}`} data-agenda-rate-row={groupIndex} data-agenda-rate-day={index} type="number" min="0" step="0.01" inputMode="decimal" value={draft?.rateText ?? editor.previousRate.toFixed(2)} onFocus={event => event.currentTarget.select()} onKeyDown={event => focusAgendaRateInput(event, groupIndex, index)} onChange={event => setAgendaRateDraft(editor, event.target.value)} className={`h-5 min-w-0 border-0 p-0 text-center text-[10px] font-bold shadow-none focus-visible:ring-0 sm:h-6 sm:text-xs ${draft ? "text-sky-800" : "text-slate-800"}`} /></div> : <span className="mt-0.5 text-[10px] font-bold text-slate-800 sm:text-xs">{currentRate === null ? "—" : money(currentRate)}</span>}
+                      <span className={`mr-0.5 shrink-0 text-[8px] font-semibold ${day.roomsAvailable === null ? "text-slate-500" : day.roomsAvailable <= 0 ? "text-rose-700" : day.roomsAvailable <= 2 ? "text-amber-700" : "text-emerald-700"}`}>{day.roomsAvailable === null ? "—" : day.roomsAvailable}</span>
+                      {canEditAgendaRates && editor ? <div className="flex min-w-0 flex-1 items-center rounded border bg-background px-0.5 shadow-sm focus-within:ring-2 focus-within:ring-sky-600"><Euro className="h-2.5 w-2.5 shrink-0 text-sky-700" /><Input aria-label={`Precio de ${group.label} el ${date}`} data-agenda-rate-row={groupIndex} data-agenda-rate-day={index} type="number" min="0" step="0.01" inputMode="decimal" value={draft?.rateText ?? editor.previousRate.toFixed(2)} onFocus={event => event.currentTarget.select()} onKeyDown={event => focusAgendaRateInput(event, groupIndex, index)} onChange={event => setAgendaRateDraft(editor, event.target.value)} className={`h-5 min-w-0 border-0 p-0 text-center text-[9px] font-bold shadow-none focus-visible:ring-0 ${draft ? "text-sky-800" : "text-slate-800"}`} /></div> : <span className="min-w-0 truncate text-[9px] font-bold text-slate-800">{currentRate === null ? "—" : money(currentRate)}</span>}
                     </> : <span className="text-[10px] text-slate-400">—</span>}
                   </div>;
                 })}

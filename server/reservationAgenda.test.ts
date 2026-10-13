@@ -103,6 +103,17 @@ describe("buildReservationAgenda", () => {
     ]);
   });
 
+  it("prioriza la estancia ya en check-in ante una asignación confirmada solapada", () => {
+    const agenda = buildReservationAgenda([
+      { id: 40, guestName: "Ya alojada", checkInDate: "2026-10-10", checkOutDate: "2026-10-14", roomType: "Twin", roomNumber: "4", reservationStatus: "checked_in", amountPending: "0", reservationNotes: null },
+      { id: 41, guestName: "Asignación pendiente", checkInDate: "2026-10-10", checkOutDate: "2026-10-12", roomType: "Twin", roomNumber: "4", reservationStatus: "confirmed", amountPending: "0", reservationNotes: null },
+    ], dates);
+
+    const room = agenda[0].rooms[0];
+    expect(room.laneCount).toBe(1);
+    expect(room.cards.map(card => card.reservation.id)).toEqual([40]);
+  });
+
   it("mantiene en el mismo carril el relevo de salida y entrada del mismo día", () => {
     const agenda = buildReservationAgenda([
       { id: 20, guestName: "Sale", checkInDate: "2026-10-10", checkOutDate: "2026-10-12", roomType: "Twin", roomNumber: "7", reservationStatus: "checked_out", amountPending: "0", reservationNotes: null },

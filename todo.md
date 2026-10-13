@@ -1828,3 +1828,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Evitar los errores HTTP 504 al consultar disponibilidad de más de siete días mediante carga concurrente limitada de tramos Cloudbeds.
 - [x] Mejorar la plantilla de bienvenida con códigos e instrucciones de acceso, en español e inglés, usando datos dinámicos de la reserva.
 - [x] Mostrar disponibilidad y precio por tipo en cada separador de la agenda, con edición por Tab y flechas igual que Disponibilidad y precios.
+- [x] Corregir la correspondencia de tarifas por tipo en los separadores, restaurar su altura compacta y eliminar el solape erróneo de la habitación 4.

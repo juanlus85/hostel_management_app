@@ -69,6 +69,14 @@ function normalizedStatus(value: string | null | undefined) {
   return value?.toLocaleLowerCase("es").replace(/[\s-]+/g, "_") || "";
 }
 
+function isActiveStay(status: string | null | undefined) {
+  return ["checked_in", "in_progress"].includes(normalizedStatus(status));
+}
+
+function overlaps(left: Pick<ReservationAgendaCard<ReservationAgendaItem>, "startSlot" | "endSlot">, right: Pick<ReservationAgendaCard<ReservationAgendaItem>, "startSlot" | "endSlot">) {
+  return left.startSlot < right.endSlot && right.startSlot < left.endSlot;
+}
+
 export function reservationAgendaTone(status: string | null | undefined, hasPendingAmount = false): ReservationAgendaTone {
   const value = normalizedStatus(status);
   if (["cancelled", "canceled", "no_show"].includes(value)) return "slate";
@@ -185,8 +193,19 @@ export function buildReservationAgenda<T extends ReservationAgendaItem>(reservat
         .sort((left, right) => left.label.localeCompare(right.label, "es", { numeric: true }))
         .map(room => {
           const laneEnds: number[] = [];
-          const cards = [...room.cards]
+          const sortedCards = [...room.cards]
             .sort((left, right) => left.startSlot - right.startSlot || left.reservation.guestName?.localeCompare(right.reservation.guestName || "", "es") || 0)
+          // Una habitación que ya está en check-in no puede tener otra reserva
+          // confirmada ocupando simultáneamente el mismo espacio. Cloudbeds puede
+          // devolver ambas asignaciones durante una reasignación pendiente; se
+          // conserva la estancia activa y se evita una segunda barra engañosa.
+          const visibleCards = sortedCards.filter(card => !sortedCards.some(other =>
+            other !== card &&
+            isActiveStay(other.reservation.reservationStatus) &&
+            !isActiveStay(card.reservation.reservationStatus) &&
+            overlaps(card, other)
+          ));
+          const cards = visibleCards
             .map(card => {
               let lane = laneEnds.findIndex(endSlot => endSlot <= card.startSlot);
               if (lane < 0) {

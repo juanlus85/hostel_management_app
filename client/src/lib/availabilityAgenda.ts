@@ -12,12 +12,23 @@ export type AgendaAvailabilityRoomType = {
 };
 
 export function availabilityRoomTypeKey(value: string) {
-  return value
+  const normalized = value
     .toLocaleLowerCase("es")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\b(twin)(?:\s+beds?)?\b|\b(?:2|dos)\s+camas?\b/g, " twin ")
+    .replace(/\bdouble\b|\bdoble\b|\bcama\s+doble\b/g, " double ")
+    .replace(/\btriple\b|\b(?:3|tres)\s+camas?\b/g, " triple ")
+    .replace(/\bprivate\b|\bprivado\b/g, " privado ")
+    .replace(/\bshared\b|\bcompartido\b/g, " compartido ")
+    .replace(/\bbathroom\b|\bbano\b/g, " bano ")
+    .replace(/\bhabitacion\b|\broom\b|\bwith\b|\bcon\b|\bbed(?:s)?\b|\bcama(?:s)?\b/g, " ");
+  return normalized
     .replace(/[^a-z0-9]+/g, " ")
-    .trim();
+    .split(" ")
+    .filter(Boolean)
+    .sort()
+    .join(" ");
 }
 
 export function buildAgendaAvailabilityByType<T extends AgendaAvailabilityRoomType>(roomTypes: T[]) {

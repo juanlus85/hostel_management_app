@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildAgendaAvailabilityByType, findAgendaAvailabilityDay } from "../client/src/lib/availabilityAgenda";
+import { availabilityRoomTypeKey, buildAgendaAvailabilityByType, findAgendaAvailabilityDay } from "../client/src/lib/availabilityAgenda";
 
 describe("tarifas en separadores de agenda", () => {
   it("vincula tipos con diferencias de mayúsculas y acentos", () => {
@@ -10,7 +10,7 @@ describe("tarifas en separadores de agenda", () => {
       },
     ]);
 
-    const roomType = byType.get("habitacion doble con bano compartido");
+    const roomType = byType.get(availabilityRoomTypeKey("Double Room with Shared Bathroom"));
     expect(roomType?.roomTypeName).toBe("Habitación Doble con baño compartido");
     expect(findAgendaAvailabilityDay(roomType, "2026-10-13")).toMatchObject({ roomsAvailable: 2, rateId: "rate-1" });
   });
@@ -24,6 +24,6 @@ describe("tarifas en separadores de agenda", () => {
       ] },
     ]);
 
-    expect(findAgendaAvailabilityDay(byType.get("twin"), "2026-10-14")?.rateId).toBe("two");
+    expect(findAgendaAvailabilityDay(byType.get(availabilityRoomTypeKey("twin")), "2026-10-14")?.rateId).toBe("two");
   });
 });
