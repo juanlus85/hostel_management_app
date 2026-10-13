@@ -84,7 +84,7 @@ export default function CheckinAnticipado() {
   }
 
   return (
-    <Card className="p-6">
+    <Card className="min-w-0 p-4 sm:p-6">
       <div className="mb-6">
         <h2 className="text-2xl font-bold">Check-in Anticipado</h2>
         <p className="text-muted-foreground">
@@ -95,8 +95,8 @@ export default function CheckinAnticipado() {
       {/* URL Pública */}
       <div className="mb-6 p-4 bg-muted rounded-lg">
         <Label className="text-sm font-medium mb-2 block">URL Pública para Huéspedes</Label>
-        <div className="flex gap-2">
-          <Input value={publicUrl} readOnly className="flex-1" />
+        <div className="flex min-w-0 gap-2">
+          <Input value={publicUrl} readOnly className="min-w-0 flex-1" />
           <Button
             variant="outline"
             size="icon"
@@ -130,7 +130,15 @@ export default function CheckinAnticipado() {
           <p className="text-sm mt-2">Los check-ins completados aparecen en la pestaña Huéspedes</p>
         </div>
       ) : (
-        <div className="overflow-x-auto">
+        <>
+        <div className="space-y-3 md:hidden">
+          {filteredGuests.map(guest => <article key={guest.id} className="rounded-lg border bg-card p-4 shadow-sm">
+            <div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="truncate font-semibold">{guest.firstName} {guest.lastName}</h3><p className="mt-1 text-sm text-muted-foreground">{guest.documentNumber || "Sin documento"} · {guest.nationality || "—"}</p></div><Badge variant="secondary" className="shrink-0">Pendiente</Badge></div>
+            <p className="mt-2 text-xs text-muted-foreground">Registrado: {guest.createdAt ? new Date(guest.createdAt).toLocaleDateString() : "—"}</p>
+            <div className="mt-3 grid grid-cols-3 gap-2"><Button variant="outline" size="sm" onClick={() => handleViewDetails(guest)}><Eye className="mr-1 h-4 w-4" />Ver</Button><Button variant="outline" size="sm" onClick={() => handleEdit(guest)}><Edit2 className="mr-1 h-4 w-4" />Editar</Button><Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleDelete(guest.id!)}><Trash2 className="mr-1 h-4 w-4" />Borrar</Button></div>
+          </article>)}
+        </div>
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full">
             <thead>
               <tr className="border-b">
@@ -187,18 +195,19 @@ export default function CheckinAnticipado() {
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       {/* Modal de Detalles */}
       <Dialog open={showDetails} onOpenChange={setShowDetails}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] overflow-y-auto p-4 sm:max-h-[80vh] sm:max-w-2xl sm:p-6">
           <DialogHeader>
             <DialogTitle>Detalles del Check-in Anticipado</DialogTitle>
           </DialogHeader>
 
           {selectedGuest && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Nombre</Label>
                   <p>{selectedGuest.firstName}</p>
@@ -227,7 +236,7 @@ export default function CheckinAnticipado() {
 
               <div className="border-t pt-4">
                 <h4 className="font-medium mb-2">Dirección</h4>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
                     <Label className="text-sm font-medium text-muted-foreground">Calle</Label>
                     <p>{selectedGuest.address || '-'}</p>
@@ -254,7 +263,7 @@ export default function CheckinAnticipado() {
                 </div>
               )}
 
-              <div className="flex justify-end gap-2 pt-4">
+              <div className="flex flex-col-reverse gap-2 pt-4 sm:flex-row sm:justify-end">
                 <Button variant="outline" onClick={() => setShowDetails(false)}>
                   Cerrar
                 </Button>

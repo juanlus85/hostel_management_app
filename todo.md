@@ -1887,3 +1887,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Adaptar a móvil los diálogos de X provisional y recibos: panel casi completo, cabecera visible, cierre accesible y lista interior desplazable.
 - [x] Adaptar el Check-in de recepción a móvil y tablet: diálogo anclado al viewport, sin desbordamiento lateral, secciones de una columna y accesos rápidos; permitir cambiar todos los campos operativos entre español e inglés.
 - [x] Convertir las pestañas de Check-in en navegación horizontal desplazable y con etiquetas visibles para móvil y tablet.
+- [x] Mostrar Check-ins anticipados en tarjetas táctiles en móvil, conservando la tabla completa en escritorio y adaptando sus detalles a una columna.
