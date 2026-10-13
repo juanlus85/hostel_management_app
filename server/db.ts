@@ -3023,6 +3023,30 @@ export async function createChefOrder(data: any) {
 }
 
 // ==================== GUESTS (Check-in) ====================
+function isMissingGuestRelationshipColumn(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return /relationship/i.test(message) && /unknown column|doesn't exist|no such column/i.test(message);
+}
+
+async function legacyGuestColumns() {
+  const { getTableColumns } = await import("drizzle-orm");
+  const { relationship: _relationship, ...columns } = getTableColumns(guests);
+  return columns;
+}
+
+async function withGuestRelationshipFallback(
+  query: (columns?: Record<string, unknown>) => Promise<any[]>
+): Promise<any[]> {
+  try {
+    return await query();
+  } catch (error) {
+    if (!isMissingGuestRelationshipColumn(error)) throw error;
+    const columns = await legacyGuestColumns();
+    const rows = await query(columns);
+    return rows.map(row => ({ ...row, relationship: null }));
+  }
+}
+
 export async function getAllGuests() {
   const db = await getDb();
   if (!db) return [];
@@ -3030,30 +3054,31 @@ export async function getAllGuests() {
 
   // Excluir check-ins anticipados no completados (status pending)
   // Solo mostrar: completed, online, cancelled, o anticipados que ya están completed
-  return db
-    .select()
-    .from(guests)
-    .where(
-      or(
-        ne(guests.checkinType, "anticipado"),
-        and(
-          eq(guests.checkinType, "anticipado"),
-          eq(guests.status, "completed")
+  return withGuestRelationshipFallback(columns => {
+    const selection = columns ? (db.select(columns as any) as any) : (db.select() as any);
+    return selection
+      .from(guests)
+      .where(
+        or(
+          ne(guests.checkinType, "anticipado"),
+          and(
+            eq(guests.checkinType, "anticipado"),
+            eq(guests.status, "completed")
+          )
         )
       )
-    )
-    .orderBy(guests.createdAt);
+      .orderBy(guests.createdAt);
+  });
 }
 
 export async function getGuestById(id: number) {
   const db = await getDb();
   if (!db) return null;
   const { eq } = await import("drizzle-orm");
-  const result = await db
-    .select()
-    .from(guests)
-    .where(eq(guests.id, id))
-    .limit(1);
+  const result = await withGuestRelationshipFallback(columns => {
+    const selection = columns ? (db.select(columns as any) as any) : (db.select() as any);
+    return selection.from(guests).where(eq(guests.id, id)).limit(1);
+  });
   return result.length > 0 ? result[0] : null;
 }
 
@@ -3061,11 +3086,10 @@ export async function getGuestByToken(token: string) {
   const db = await getDb();
   if (!db) return null;
   const { eq } = await import("drizzle-orm");
-  const result = await db
-    .select()
-    .from(guests)
-    .where(eq(guests.token, token))
-    .limit(1);
+  const result = await withGuestRelationshipFallback(columns => {
+    const selection = columns ? (db.select(columns as any) as any) : (db.select() as any);
+    return selection.from(guests).where(eq(guests.token, token)).limit(1);
+  });
   return result.length > 0 ? result[0] : null;
 }
 
@@ -3079,7 +3103,7 @@ export async function searchGuests(filters: {
   if (!db) return [];
   const { and, or, like, gte, lte, eq } = await import("drizzle-orm");
 
-  const conditions = [];
+  const conditions: any[] = [];
 
   if (filters.search) {
     conditions.push(
@@ -3106,14 +3130,19 @@ export async function searchGuests(filters: {
   }
 
   if (conditions.length === 0) {
-    return db.select().from(guests).orderBy(guests.createdAt);
+    return withGuestRelationshipFallback(columns => {
+      const selection = columns ? (db.select(columns as any) as any) : (db.select() as any);
+      return selection.from(guests).orderBy(guests.createdAt);
+    });
   }
 
-  return db
-    .select()
-    .from(guests)
-    .where(and(...conditions))
-    .orderBy(guests.createdAt);
+  return withGuestRelationshipFallback(columns => {
+    const selection = columns ? (db.select(columns as any) as any) : (db.select() as any);
+    return selection
+      .from(guests)
+      .where(and(...conditions))
+      .orderBy(guests.createdAt);
+  });
 }
 
 export async function createGuest(data: InsertGuest) {

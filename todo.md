@@ -1844,3 +1844,6 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Normalizar fechas de nacimiento y caducidad del Check-in Online para aceptar formatos de navegador `DD/MM/AAAA` y enviarlos como `AAAA-MM-DD`.
 - [x] Traducir el tipo de habitación en la bienvenida española y evitar repetir el prefijo «habitación» en los mensajes de códigos.
 - [x] Añadir la acción «Copiar mensaje de códigos» al detalle de reserva para reutilizar la bienvenida dinámica en cualquier canal.
+- [x] Corregir el flujo de Check-in Online que muestra la respuesta JSON y la firma en pantalla tras completar el registro.
+- [x] Restaurar la carga de Huéspedes cuando falta la columna `relationship` en producción mediante una lectura compatible.
+- [ ] Ejecutar `SQL_PARENTESCO_MENORES.sql` en el VPS para habilitar la persistencia y visualización completa de parentesco.

@@ -150,6 +150,7 @@ export default function CheckinOnlinePublico() {
   const [lang, setLang] = useState<Language>("es");
   const [submitted, setSubmitted] = useState<OnlineCompletion | null>(null);
   const [guests, setGuests] = useState<GuestForm[]>([emptyGuest()]);
+  const formRef = useRef<HTMLFormElement>(null);
   const {
     data: invitation,
     isLoading,
@@ -210,8 +211,7 @@ export default function CheckinOnlinePublico() {
     );
   };
 
-  const submit = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const submit = async () => {
     if (
       guests.some(
         guest =>
@@ -275,6 +275,10 @@ export default function CheckinOnlinePublico() {
           )
       );
     }
+  };
+  const handleComplete = () => {
+    if (!formRef.current?.reportValidity()) return;
+    void submit();
   };
 
   if (isLoading)
@@ -413,7 +417,15 @@ export default function CheckinOnlinePublico() {
             </div>
           </CardHeader>
           <CardContent className="px-4 pb-6 sm:px-6">
-            <form onSubmit={submit} className="space-y-6">
+            <form
+              ref={formRef}
+              onSubmit={event => {
+                event.preventDefault();
+                event.stopPropagation();
+                handleComplete();
+              }}
+              className="space-y-6"
+            >
               {guests.map((guest, index) => (
                 <GuestCard
                   key={index}
@@ -431,9 +443,10 @@ export default function CheckinOnlinePublico() {
                 />
               ))}
               <Button
-                type="submit"
+                type="button"
                 className="min-h-12 w-full text-base"
                 disabled={complete.isPending}
+                onClick={handleComplete}
               >
                 {complete.isPending ? (
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />
