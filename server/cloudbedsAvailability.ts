@@ -257,6 +257,16 @@ function dateToIso(value: Date) {
   return value.toISOString().slice(0, 10);
 }
 
+function nextCalendarDate(value: string) {
+  const date = dateFromIso(value);
+  date.setUTCDate(date.getUTCDate() + 1);
+  return dateToIso(date);
+}
+
+class TransientCloudbedsAvailabilityError extends Error {}
+
+const wait = (milliseconds: number) => new Promise(resolve => setTimeout(resolve, milliseconds));
+
 export function buildCloudbedsAvailabilityChunks(startDate: string, endDate: string) {
   const start = dateFromIso(startDate);
   const end = dateFromIso(endDate);
@@ -297,35 +307,55 @@ export function mergeCloudbedsAvailabilityWeeks(weeks: CloudbedsAvailabilityWeek
 }
 
 async function fetchCloudbedsAvailabilityChunk(apiKey: string, propertyId: string, startDate: string, endDate: string) {
-  const url = new URL("https://api.cloudbeds.com/api/v1.3/getRatePlans");
-  url.searchParams.set("propertyIDs", propertyId);
-  url.searchParams.set("startDate", startDate);
-  url.searchParams.set("endDate", endDate);
-  url.searchParams.set("adults", "1");
-  url.searchParams.set("children", "0");
-  url.searchParams.set("detailedRates", "true");
-  url.searchParams.set("includeSharedRooms", "true");
+  // getRatePlans trata endDate como límite exclusivo en determinadas cuentas.
+  // Se consulta un día adicional y después se filtra al intervalo visible, así
+  // dos semanas consecutivas no dejan una columna sin precio entre ambas.
+  const requestEndDate = nextCalendarDate(endDate);
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const url = new URL("https://api.cloudbeds.com/api/v1.3/getRatePlans");
+      url.searchParams.set("propertyIDs", propertyId);
+      url.searchParams.set("startDate", startDate);
+      url.searchParams.set("endDate", requestEndDate);
+      url.searchParams.set("adults", "1");
+      url.searchParams.set("children", "0");
+      url.searchParams.set("detailedRates", "true");
+      url.searchParams.set("includeSharedRooms", "true");
 
-  const response = await fetch(url, {
-    headers: { "x-api-key": apiKey, Accept: "application/json" },
-  });
-  const body = await response.text();
-  let payload: unknown;
-  try {
-    payload = JSON.parse(body);
-  } catch {
-    throw new Error(`Cloudbeds devolvió una respuesta no JSON (HTTP ${response.status}). Revisa la API key y el permiso de tarifas y disponibilidad.`);
-  }
-  if (!response.ok) {
-    const message = stringValue(asRecord(payload).message, asRecord(payload).error, asRecord(payload).errors);
-    if (response.status === 401 || response.status === 403) {
-      throw new Error(
-        `Cloudbeds rechazó la credencial de tarifas (HTTP ${response.status}). Renueva CLOUDBEDS_API_KEY en el VPS y concede acceso de lectura a Tarifas y Disponibilidad.`
-      );
+      let response: Response;
+      try {
+        response = await fetch(url, {
+          headers: { "x-api-key": apiKey, Accept: "application/json" },
+          signal: AbortSignal.timeout(8_000),
+        });
+      } catch {
+        throw new TransientCloudbedsAvailabilityError("Cloudbeds tardó demasiado en responder.");
+      }
+      const body = await response.text();
+      let payload: unknown;
+      try {
+        payload = JSON.parse(body);
+      } catch {
+        if (response.status >= 500) throw new TransientCloudbedsAvailabilityError(`Cloudbeds devolvió HTTP ${response.status}.`);
+        throw new Error(`Cloudbeds devolvió una respuesta no JSON (HTTP ${response.status}). Revisa la API key y el permiso de tarifas y disponibilidad.`);
+      }
+      if (!response.ok) {
+        if (response.status >= 500) throw new TransientCloudbedsAvailabilityError(`Cloudbeds respondió HTTP ${response.status}.`);
+        const message = stringValue(asRecord(payload).message, asRecord(payload).error, asRecord(payload).errors);
+        if (response.status === 401 || response.status === 403) {
+          throw new Error(
+            `Cloudbeds rechazó la credencial de tarifas (HTTP ${response.status}). Renueva CLOUDBEDS_API_KEY en el VPS y concede acceso de lectura a Tarifas y Disponibilidad.`
+          );
+        }
+        throw new Error(message || `Cloudbeds respondió HTTP ${response.status}. Revisa la API key, el Property ID y el permiso de tarifas y disponibilidad.`);
+      }
+      return normalizeCloudbedsAvailability(payload, startDate, endDate);
+    } catch (error) {
+      if (!(error instanceof TransientCloudbedsAvailabilityError) || attempt === 2) throw error;
+      await wait(350 * (attempt + 1));
     }
-    throw new Error(message || `Cloudbeds respondió HTTP ${response.status}. Revisa la API key, el Property ID y el permiso de tarifas y disponibilidad.`);
   }
-  return normalizeCloudbedsAvailability(payload, startDate, endDate);
+  throw new Error("Cloudbeds no respondió a la consulta de tarifas.");
 }
 
 export async function fetchCloudbedsAvailability(apiKey: string, propertyId: string, startDate: string, endDate: string) {

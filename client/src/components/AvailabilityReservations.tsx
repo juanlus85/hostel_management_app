@@ -431,6 +431,7 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
     </Card>
 
     {reservations.isLoading ? <Card><CardContent className="flex items-center justify-center gap-3 py-16 text-sm text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin text-sky-700" />Cargando reservas importadas…</CardContent></Card> : agenda.length ? <Card className="overflow-hidden border-slate-200 shadow-sm">
+      {canEditAgendaRates && editedAgendaRates.length > 0 && <div className="sticky top-0 z-30 flex flex-wrap items-center justify-between gap-3 border-b border-amber-300 bg-amber-50 px-3 py-2 shadow-sm sm:px-4"><p className="text-sm font-medium text-amber-950"><span className="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-amber-500" />{editedAgendaRates.length} precio{editedAgendaRates.length === 1 ? " modificado" : "s modificados"} pendiente{editedAgendaRates.length === 1 ? "" : "s"}</p><Button size="sm" className="bg-amber-500 text-amber-950 hover:bg-amber-400" onClick={requestAgendaRateUpdate} disabled={updateAgendaRates.isPending}><Send className="mr-2 h-4 w-4" />Enviar precios</Button></div>}
       <CardContent className="p-0">
         <div className="isolate overflow-x-auto overscroll-x-contain">
           <div className="min-w-[472px] sm:min-w-[935px]">

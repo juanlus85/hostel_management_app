@@ -136,6 +136,41 @@ describe("normalizeCloudbedsAvailability", () => {
     ]);
   });
 
+  it("consulta un día final adicional para evitar huecos entre semanas", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      data: [{
+        roomTypeID: "double",
+        roomTypeName: "Doble",
+        rateID: "rate-double",
+        detailedRates: [{ date: "2026-10-19", roomsAvailable: 2, roomRate: 99 }],
+      }],
+    }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await fetchCloudbedsAvailability("api-key", "property", "2026-10-13", "2026-10-19");
+
+    const request = fetchMock.mock.calls[0]?.[0] as URL;
+    expect(request.searchParams.get("startDate")).toBe("2026-10-13");
+    expect(request.searchParams.get("endDate")).toBe("2026-10-20");
+  });
+
+  it("reintenta una respuesta transitoria de Cloudbeds", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response("<html>Temporal error</html>", { status: 504 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{
+          roomTypeID: "double",
+          roomTypeName: "Doble",
+          rateID: "rate-double",
+          detailedRates: [{ date: "2026-10-13", roomsAvailable: 2, roomRate: 99 }],
+        }],
+      }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(fetchCloudbedsAvailability("api-key", "property", "2026-10-13", "2026-10-19")).resolves.toMatchObject({ roomTypes: [expect.anything()] });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it("prepara un cambio de precio para una única fecha", () => {
     const form = cloudbedsRateUpdateForm("rate-123", "2026-10-12", 85.5);
     expect(Object.fromEntries(form.entries())).toEqual({
