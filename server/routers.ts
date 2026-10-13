@@ -3991,54 +3991,66 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             language: input.language,
           });
 
-          const { generateGuestPDF } = await import("./generateGuestPDF");
-          await Promise.all(guestIds.map(id => generateGuestPDF(id)));
+          try {
+            const { generateGuestPDF } = await import("./generateGuestPDF");
+            await Promise.all(guestIds.map(id => generateGuestPDF(id)));
+          } catch (error) {
+            // El registro ya está confirmado: un fallo secundario al generar PDFs
+            // nunca debe impedir que el huésped llegue a la pantalla final.
+            console.error("[Check-in Online] No se pudieron generar los PDF de huéspedes:", error);
+          }
 
           const settings = await db.getHostelSettings();
           const accessCodeList = await db.getAllAccessCodes();
           const roomDetails = accessCodeList.find(
             code => code.roomNumber === link.roomNumber
           );
-          const { sendOnlineCheckinConfirmation } = await import("./email");
-          await sendOnlineCheckinConfirmation({
-            firstName: input.firstName,
-            email: input.email,
-            language: input.language,
-            checkInDate: link.checkInDate,
-            roomNumber: link.roomNumber,
-            roomCode: link.roomCode,
-            entranceCode,
-            welcomeMessage:
-              input.language === "en"
-                ? settings?.welcomeMessageEn
-                : settings?.welcomeMessageEs,
-            roomType: link.roomType,
-            floor:
-              input.language === "en"
-                ? roomDetails?.floorLevel
-                : roomDetails?.floor,
-            hostelAddress: settings?.hostelAddress,
-            hostelPhone: settings?.hostelPhone,
-            hostelEmail: settings?.hostelEmail,
-            wifiPassword: settings?.wifiPassword,
-            arrivalMapUrl: settings?.arrivalMapUrl,
-            arrivalIntro:
-              input.language === "en"
-                ? settings?.arrivalIntroEn
-                : settings?.arrivalIntroEs,
-            keyInstructions:
-              input.language === "en"
-                ? settings?.keyInstructionsEn
-                : settings?.keyInstructionsEs,
-            commonAreas:
-              input.language === "en"
-                ? settings?.commonAreasEn
-                : settings?.commonAreasEs,
-            houseRules:
-              input.language === "en"
-                ? settings?.houseRulesEn
-                : settings?.houseRulesEs,
-          });
+          try {
+            const { sendOnlineCheckinConfirmation } = await import("./email");
+            await sendOnlineCheckinConfirmation({
+              firstName: input.firstName,
+              email: input.email,
+              language: input.language,
+              checkInDate: link.checkInDate,
+              roomNumber: link.roomNumber,
+              roomCode: link.roomCode,
+              entranceCode,
+              welcomeMessage:
+                input.language === "en"
+                  ? settings?.welcomeMessageEn
+                  : settings?.welcomeMessageEs,
+              roomType: link.roomType,
+              floor:
+                input.language === "en"
+                  ? roomDetails?.floorLevel
+                  : roomDetails?.floor,
+              hostelAddress: settings?.hostelAddress,
+              hostelPhone: settings?.hostelPhone,
+              hostelEmail: settings?.hostelEmail,
+              wifiPassword: settings?.wifiPassword,
+              arrivalMapUrl: settings?.arrivalMapUrl,
+              arrivalIntro:
+                input.language === "en"
+                  ? settings?.arrivalIntroEn
+                  : settings?.arrivalIntroEs,
+              keyInstructions:
+                input.language === "en"
+                  ? settings?.keyInstructionsEn
+                  : settings?.keyInstructionsEs,
+              commonAreas:
+                input.language === "en"
+                  ? settings?.commonAreasEn
+                  : settings?.commonAreasEs,
+              houseRules:
+                input.language === "en"
+                  ? settings?.houseRulesEn
+                  : settings?.houseRulesEs,
+            });
+          } catch (error) {
+            // El huésped puede ver/copy los códigos en la confirmación aunque SMTP
+            // esté temporalmente no disponible.
+            console.error("[Check-in Online] No se pudo enviar el correo de confirmación:", error);
+          }
 
           return {
             success: true,
