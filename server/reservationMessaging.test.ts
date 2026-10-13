@@ -102,4 +102,19 @@ describe("mensajería manual de reservas", () => {
     expect(message).toContain("código para abrirla es: *2226*");
     expect(message).not.toContain("Check-in Online");
   });
+
+  it("traduce el tipo de habitación y no duplica el prefijo de habitación", () => {
+    const message = buildReservationWelcomeEmail(
+      {
+        ...context,
+        roomType: "Double Room with Shared Bathroom",
+        roomNumber: "Habitación 8",
+      },
+      "es"
+    );
+    expect(message.text).toContain(
+      "Habitación doble con cama de matrimonio y baño compartido, Habitación 8"
+    );
+    expect(message.text).not.toContain("habitación Habitación 8");
+  });
 });

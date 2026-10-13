@@ -23,6 +23,36 @@ const escapeHtml = (value: string | null | undefined) =>
       ] || character
   );
 const displayName = (value: string | null) => value?.trim() || "huésped";
+const roomTypeInMessage = (
+  roomType: string | null,
+  language: ReservationMessageLanguage
+) => {
+  if (!roomType) return language === "en" ? "your room" : "tu habitación";
+  if (language === "en") return roomType;
+  const normalized = roomType.toLocaleLowerCase("es-ES").trim();
+  const translations: Record<string, string> = {
+    "twin room with shared bathroom": "Habitación doble con 2 camas y baño compartido",
+    "twin room with private bathroom": "Habitación doble con 2 camas y baño privado",
+    "double room with shared bathroom": "Habitación doble con cama de matrimonio y baño compartido",
+    "double room with private bathroom": "Habitación doble con cama de matrimonio y baño privado",
+    "single room with shared bathroom": "Habitación individual con baño compartido",
+    "single room with private bathroom": "Habitación individual con baño privado",
+    "triple room with shared bathroom": "Habitación triple con baño compartido",
+    "triple room with private bathroom": "Habitación triple con baño privado",
+    "bed in 3-bed mixed dormitory": "Cama en habitación compartida mixta de 3 camas",
+    "single bed in a 3-bed mixed dormitory": "Cama en habitación compartida mixta de 3 camas",
+  };
+  return translations[normalized] || roomType;
+};
+const roomLabel = (
+  roomNumber: string | null,
+  language: ReservationMessageLanguage
+) => {
+  const number = roomNumber?.trim();
+  if (!number) return language === "en" ? "your room" : "tu habitación";
+  if (/^(habitaci[oó]n|room)\b/i.test(number)) return number;
+  return language === "en" ? `Room ${number}` : `Habitación ${number}`;
+};
 const formatDate = (
   date: string | null,
   language: ReservationMessageLanguage
@@ -54,23 +84,20 @@ export function buildReservationWelcomeEmail(
   context: ReservationMessageContext,
   language: ReservationMessageLanguage
 ) {
-  const room = context.roomNumber
-    ? `${language === "en" ? "Room" : "Habitación"} ${escapeHtml(context.roomNumber)}`
-    : language === "en"
-      ? "your room"
-      : "tu habitación";
+  const room = escapeHtml(roomLabel(context.roomNumber, language));
+  const roomType = roomTypeInMessage(context.roomType, language);
   const accessInstructions =
     context.entranceCode && context.roomCode
       ? language === "en"
         ? `At the main entrance you will find an electronic keypad. Your hostel access code is: *${context.entranceCode}*.
 
-Your booking is for ${context.roomType || "your room"}${context.roomNumber ? `, Room ${context.roomNumber}` : ""}. Next to the room door there is a key box. Your key-box code is: *${context.roomCode}*.`
+Your booking is for ${roomType}${context.roomNumber ? `, ${roomLabel(context.roomNumber, language)}` : ""}. Next to the room door there is a key box. Your key-box code is: *${context.roomCode}*.`
         : `En la puerta principal encontrarás un panel electrónico con teclado numérico. Tu código de acceso al hostel es: *${context.entranceCode}*.
 
-Has reservado ${context.roomType || "tu habitación"}${context.roomNumber ? `, habitación ${context.roomNumber}` : ""}. Junto a la puerta de la habitación encontrarás una caja de llaves. El código para abrirla es: *${context.roomCode}*.`
+Has reservado ${roomType}${context.roomNumber ? `, ${roomLabel(context.roomNumber, language)}` : ""}. Junto a la puerta de la habitación encontrarás una caja de llaves. El código para abrirla es: *${context.roomCode}*.`
       : language === "en"
-        ? `Your accommodation is ${room}${context.roomType ? ` (${context.roomType})` : ""}.`
-        : `Tu alojamiento asignado es ${room}${context.roomType ? ` (${context.roomType})` : ""}.`;
+        ? `Your accommodation is ${room}${context.roomType ? ` (${roomType})` : ""}.`
+        : `Tu alojamiento asignado es ${room}${context.roomType ? ` (${roomType})` : ""}.`;
   const subject =
     language === "en"
       ? "Welcome to The Spot Central Hostel"
