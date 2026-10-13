@@ -6,28 +6,11 @@ import path from "path";
 import { defineConfig } from "vite";
 import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
 
-const packageInfo = JSON.parse(
-  fs.readFileSync(path.resolve(import.meta.dirname, "package.json"), "utf8")
-) as { version: string };
-const buildTimestamp = process.env.APP_BUILD_TIME || new Intl.DateTimeFormat("es-ES", {
-  timeZone: "Europe/Madrid",
-  day: "2-digit",
-  month: "2-digit",
-  year: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-  hourCycle: "h23",
-}).format(new Date()).replace(",", "");
-
 
 const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime()];
 
 export default defineConfig({
   plugins,
-  define: {
-    __APP_VERSION__: JSON.stringify(packageInfo.version),
-    __APP_BUILD_TIME__: JSON.stringify(buildTimestamp),
-  },
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),

@@ -3418,7 +3418,6 @@ export async function getExternalUpcomingReservationBySourceId(
     .limit(1);
   return reservation || null;
 }
-}
 
 export async function updateExternalUpcomingReservationCloudbeds(
   id: number,
