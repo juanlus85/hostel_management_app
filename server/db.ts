@@ -129,6 +129,7 @@ import {
 import { ENV } from "./_core/env";
 import { aggregateSupplierExpenses } from "../shared/supplierExpenses";
 import { displayOrderUpdates } from "../shared/workerDisplayOrder";
+import { externalReservationAssignmentKey } from "./externalReservationIdentity";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -3379,11 +3380,13 @@ export async function upsertExternalUpcomingReservations(
   const db = await getDb();
   if (!db) return;
   for (const record of records) {
-    const assignmentCondition = record.roomNumber?.trim()
-      ? eq(externalUpcomingReservations.roomNumber, record.roomNumber.trim())
-      : isNull(externalUpcomingReservations.roomNumber);
-    const [existing] = await db
-      .select({ id: externalUpcomingReservations.id })
+    const candidates = await db
+      .select({
+        id: externalUpcomingReservations.id,
+        sourceReservationId: externalUpcomingReservations.sourceReservationId,
+        roomNumber: externalUpcomingReservations.roomNumber,
+        checkInDate: externalUpcomingReservations.checkInDate,
+      })
       .from(externalUpcomingReservations)
       .where(
         and(
@@ -3391,11 +3394,17 @@ export async function upsertExternalUpcomingReservations(
             externalUpcomingReservations.sourceReservationId,
             record.sourceReservationId
           ),
-          assignmentCondition,
           eq(externalUpcomingReservations.checkInDate, record.checkInDate)
         )
-      )
-      .limit(1);
+      );
+    const incomingKey = externalReservationAssignmentKey({
+      sourceReservationId: record.sourceReservationId,
+      roomNumber: record.roomNumber ?? null,
+      checkInDate: record.checkInDate,
+    });
+    const existing = candidates.find(candidate =>
+      externalReservationAssignmentKey(candidate) === incomingKey
+    );
     if (existing) {
       await db
         .update(externalUpcomingReservations)
@@ -3422,17 +3431,6 @@ export async function upsertExternalUpcomingReservations(
       await db.insert(externalUpcomingReservations).values(record);
     }
   }
-}
-
-function importedReservationAssignmentKey(
-  reservation: Pick<ExternalUpcomingReservation, "sourceReservationId" | "roomNumber" | "checkInDate">
-) {
-  const room = (reservation.roomNumber || "")
-    .replace(/^habitaci[oó]n\s*/i, "")
-    .toLocaleLowerCase("es")
-    .replace(/[^a-z0-9]+/g, "")
-    .trim() || "unassigned";
-  return `${reservation.sourceReservationId}\u0000${room}\u0000${reservation.checkInDate}`;
 }
 
 /**
@@ -3462,19 +3460,28 @@ export async function reconcileExternalUpcomingReservations(
           isNull(externalUpcomingReservations.checkOutDate)
         )
       )
-    );
-  const incomingKeys = new Set(incoming.map(importedReservationAssignmentKey));
-  const currentByKey = new Map(
-    current.map(reservation => [importedReservationAssignmentKey(reservation), reservation])
   );
+  const incomingKeys = new Set(incoming.map(externalReservationAssignmentKey));
+  const currentByKey = new Map<string, ExternalUpcomingReservation>();
+  const duplicateIds = new Set<number>();
+  for (const reservation of current) {
+    const key = externalReservationAssignmentKey(reservation);
+    if (currentByKey.has(key)) {
+      duplicateIds.add(reservation.id);
+    } else {
+      currentByKey.set(key, reservation);
+    }
+  }
   const replacementByReservation = new Map<string, ExternalUpcomingReservation>();
   for (const record of incoming) {
-    const replacement = currentByKey.get(importedReservationAssignmentKey(record));
+    const replacement = currentByKey.get(externalReservationAssignmentKey(record));
     if (replacement && !replacementByReservation.has(replacement.sourceReservationId)) {
       replacementByReservation.set(replacement.sourceReservationId, replacement);
     }
   }
-  const stale = current.filter(reservation => !incomingKeys.has(importedReservationAssignmentKey(reservation)));
+  const stale = current.filter(reservation =>
+    duplicateIds.has(reservation.id) || !incomingKeys.has(externalReservationAssignmentKey(reservation))
+  );
   for (const reservation of stale) {
     const replacement = replacementByReservation.get(reservation.sourceReservationId);
     if (replacement && replacement.id !== reservation.id) {

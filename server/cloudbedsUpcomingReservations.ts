@@ -522,7 +522,7 @@ type AssignmentOccurrence = {
 };
 
 type AssignmentSegment = AssignmentOccurrence & {
-  endDate: string;
+  lastAssignedDate: string;
 };
 
 /** Agrupa solo días consecutivos de la misma habitación física. */
@@ -539,14 +539,25 @@ function assignmentSegments(occurrences: AssignmentOccurrence[]): AssignmentSegm
     const segments: AssignmentSegment[] = [];
     for (const occurrence of ordered) {
       const previous = segments.at(-1);
-      if (previous && nextIsoDate(previous.endDate) === occurrence.date) {
-        previous.endDate = occurrence.date;
+      if (previous && nextIsoDate(previous.lastAssignedDate) === occurrence.date) {
+        previous.lastAssignedDate = occurrence.date;
       } else {
-        segments.push({ ...occurrence, endDate: occurrence.date });
+        segments.push({ ...occurrence, lastAssignedDate: occurrence.date });
       }
     }
     return segments;
   });
+}
+
+function transferCheckOutDate(segment: AssignmentSegment, segments: AssignmentSegment[]) {
+  const nextRoomSegment = segments
+    .filter(candidate =>
+      candidate.id === segment.id &&
+      candidate.roomKey !== segment.roomKey &&
+      candidate.date > segment.lastAssignedDate
+    )
+    .sort((left, right) => left.date.localeCompare(right.date))[0];
+  return nextRoomSegment?.date || null;
 }
 
 export async function fetchCloudbedsUpcomingReservations(
@@ -613,7 +624,8 @@ export async function fetchCloudbedsUpcomingReservations(
       details.set(id, { detail, importedReservationNotes });
     });
 
-  const imported = assignmentSegments(occurrences).flatMap(segment => {
+  const segments = assignmentSegments(occurrences);
+  const imported = segments.flatMap(segment => {
     const detail = details.get(segment.id);
     if (!detail) return [];
     const normalized = normalizeUpcomingReservation(
@@ -623,23 +635,18 @@ export async function fetchCloudbedsUpcomingReservations(
     );
     if (!normalized) return [];
     const firstRequestedDate = dates[0];
-    const lastRequestedDate = dates.at(-1);
     const startsBeforeWindow = Boolean(
       firstRequestedDate && segment.date === firstRequestedDate && normalized.checkInDate <= segment.date
     );
-    const endsAfterWindow = Boolean(
-      lastRequestedDate &&
-      segment.endDate === lastRequestedDate &&
-      normalized.checkOutDate &&
-      normalized.checkOutDate > segment.endDate
-    );
+    const movedToAnotherRoomOn = transferCheckOutDate(segment, segments);
     // getReservationAssignments es la fuente de verdad de la habitación para
     // cada día. Una reserva trasladada no debe ocupar la antigua habitación en
-    // toda la estancia: cada tramo termina la mañana siguiente a su último día.
+    // toda la estancia. Fuera de un traslado se conserva la salida oficial de
+    // la reserva, sin sumar días artificialmente.
     return [{
       ...normalized,
       checkInDate: startsBeforeWindow ? normalized.checkInDate : segment.date,
-      checkOutDate: endsAfterWindow ? normalized.checkOutDate : nextIsoDate(segment.endDate),
+      checkOutDate: movedToAnotherRoomOn || normalized.checkOutDate,
     }];
   });
 
