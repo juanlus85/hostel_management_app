@@ -1272,7 +1272,7 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Preparar el envío de bienvenida por correo desde la ficha de una próxima reserva
 - [x] Preparar el envío por WhatsApp usando el teléfono importado y registrar su trazabilidad
 - [x] Integrar el envío de enlace de Check-in Online precompletado con los datos de Cloudbeds
-- [ ] Definir la activación automática de comunicaciones sin realizar envíos no confirmados
+- [x] Mantener las comunicaciones en modo manual revisado, sin automatización ni envíos no confirmados
 - [x] Implementar mensajería manual revisada por recepción: correo SMTP y WhatsApp con mensaje preparado
 - [x] Corregir la ruta tRPC de envío de correo de reserva no encontrada desde Importaciones externas
 - [ ] Resolver la instancia desactualizada que sigue devolviendo una ruta tRPC de correo inexistente
@@ -1354,9 +1354,9 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 
 
 ## Error al Crear Guest - Valores Inválidos
-- [ ] Backend recibe campos con valores "default", "?", etc.
-- [ ] Investigar por qué handleSubmit envía estos valores
-- [ ] Corregir mapeo de campos para enviar solo valores válidos o undefined
+- [x] Backend recibía campos con valores "default", "?", etc.
+- [x] Investigar el origen de los valores heredados en el formulario
+- [x] Corregir mapeo de campos para enviar solo valores válidos o undefined
 
 
 ## Error 500 al Crear Guest - CORREGIDO (v35)
@@ -1829,3 +1829,5 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Mejorar la plantilla de bienvenida con códigos e instrucciones de acceso, en español e inglés, usando datos dinámicos de la reserva.
 - [x] Mostrar disponibilidad y precio por tipo en cada separador de la agenda, con edición por Tab y flechas igual que Disponibilidad y precios.
 - [x] Corregir la correspondencia de tarifas por tipo en los separadores, restaurar su altura compacta y eliminar el solape erróneo de la habitación 4.
+- [x] Diagnosticar el error real de carga de tarifas en la agenda móvil y mostrar un aviso de autorización accionable.
+- [ ] Renovar `CLOUDBEDS_API_KEY` en el VPS con permisos de lectura de Tarifas y Disponibilidad, y comprobar la carga real de precios editables.

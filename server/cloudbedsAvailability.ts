@@ -303,6 +303,11 @@ async function fetchCloudbedsAvailabilityChunk(apiKey: string, propertyId: strin
   }
   if (!response.ok) {
     const message = stringValue(asRecord(payload).message, asRecord(payload).error, asRecord(payload).errors);
+    if (response.status === 401 || response.status === 403) {
+      throw new Error(
+        `Cloudbeds rechazó la credencial de tarifas (HTTP ${response.status}). Renueva CLOUDBEDS_API_KEY en el VPS y concede acceso de lectura a Tarifas y Disponibilidad.`
+      );
+    }
     throw new Error(message || `Cloudbeds respondió HTTP ${response.status}. Revisa la API key, el Property ID y el permiso de tarifas y disponibilidad.`);
   }
   return normalizeCloudbedsAvailability(payload, startDate, endDate);

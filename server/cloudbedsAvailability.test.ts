@@ -1,5 +1,9 @@
-import { describe, expect, it } from "vitest";
-import { cloudbedsRateUpdateForm, mergeCloudbedsAvailabilityWeeks, normalizeCloudbedsAvailability } from "./cloudbedsAvailability";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cloudbedsRateUpdateForm, fetchCloudbedsAvailability, mergeCloudbedsAvailabilityWeeks, normalizeCloudbedsAvailability } from "./cloudbedsAvailability";
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe("normalizeCloudbedsAvailability", () => {
   it("normaliza precios y habitaciones disponibles por tipo y día", () => {
@@ -133,5 +137,16 @@ describe("normalizeCloudbedsAvailability", () => {
       "rates[0][interval][0][endDate]": "2026-10-12",
       "rates[0][interval][0][rate]": "85.5",
     });
+  });
+
+  it("explica cómo corregir una credencial sin permisos de tarifas", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      error: "access_denied",
+      message: "The resource owner or authorization server denied the request.",
+    }), { status: 401, headers: { "Content-Type": "application/json" } })));
+
+    await expect(fetchCloudbedsAvailability("api-key", "property", "2026-10-12", "2026-10-18"))
+      .rejects
+      .toThrow("Renueva CLOUDBEDS_API_KEY");
   });
 });

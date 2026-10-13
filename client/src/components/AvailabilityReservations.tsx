@@ -132,6 +132,7 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
   const [welcomeEditor, setWelcomeEditor] = useState<WelcomeEditor | null>(null);
   const [whatsAppEditor, setWhatsAppEditor] = useState<WhatsAppEditor | null>(null);
   const [agendaAvailability, setAgendaAvailability] = useState<AgendaAvailabilityResult | null>(null);
+  const [agendaAvailabilityError, setAgendaAvailabilityError] = useState<string | null>(null);
   const [agendaRateDrafts, setAgendaRateDrafts] = useState<Record<string, AgendaRateEditor>>({});
   const [pendingAgendaRates, setPendingAgendaRates] = useState<AgendaRateEditor[] | null>(null);
   const utils = trpc.useUtils();
@@ -152,8 +153,14 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
     importReservations.mutate();
   }, [autoImport, importReservations.mutate]);
   const importAgendaAvailability = trpc.cloudbedsAvailability.importWeek.useMutation({
-    onSuccess: result => setAgendaAvailability(result),
-    onError: error => toast.error(`No se pudo cargar disponibilidad y precios: ${error.message}`),
+    onSuccess: result => {
+      setAgendaAvailability(result);
+      setAgendaAvailabilityError(null);
+    },
+    onError: error => {
+      setAgendaAvailabilityError(error.message);
+      toast.error(`No se pudo cargar disponibilidad y precios: ${error.message}`);
+    },
   });
   useEffect(() => {
     if (!autoImport || hasLoadedAgendaAvailability.current) return;
@@ -391,6 +398,9 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
         <span className="inline-flex items-center gap-2"><span className="h-3 w-5 rounded bg-cyan-500" />Pendiente de Check-in</span>
         <span className="inline-flex items-center gap-2"><span className="h-3 w-5 rounded bg-slate-400" />Check-out o cancelada</span>
       </CardContent>
+      {agendaAvailabilityError && <CardContent className="border-t border-amber-200 bg-amber-50 py-3 text-sm text-amber-950">
+        <strong>No se cargaron precios ni disponibilidad.</strong> {agendaAvailabilityError}
+      </CardContent>}
     </Card>
 
     {reservations.isLoading ? <Card><CardContent className="flex items-center justify-center gap-3 py-16 text-sm text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin text-sky-700" />Cargando reservas importadas…</CardContent></Card> : agenda.length ? <Card className="overflow-hidden border-slate-200 shadow-sm">
