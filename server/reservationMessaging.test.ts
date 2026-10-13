@@ -29,7 +29,7 @@ describe("mensajería manual de reservas", () => {
     expect(message.text).toContain("La clave del Wi-Fi es *holasevilla*");
   });
 
-  it("incluye reserva, habitación y la petición de completar el Check-in Online", () => {
+  it("pide documentos antes de revelar habitación y códigos en el Check-in con acceso", () => {
     const message = buildOnlineCheckinInvitation(
       { ...context, roomType: "Double Room with Shared Bathroom" },
       "https://management.example/checkin-online/token",
@@ -41,21 +41,24 @@ describe("mensajería manual de reservas", () => {
     );
     expect(message.text).toContain("prefilled");
     expect(message.text).toContain("30 August 2026");
-    expect(message.text).toContain("Double Room with Shared Bathroom");
-    expect(message.text).toContain("avoid unnecessary waiting at reception");
+    expect(message.text).toContain("Before we provide your room details and access codes");
+    expect(message.text).not.toContain("Double Room with Shared Bathroom");
+    expect(message.text).not.toContain("Room 15");
+    expect(message.text).not.toContain("1469");
     expect(message.html).toContain("The Spot Central Hostel");
   });
 
-  it("presenta fecha y tipo de habitación en español", () => {
+  it("mantiene la petición de agilidad solo para el Check-in anticipado", () => {
     const message = buildOnlineCheckinInvitation(
       { ...context, roomType: "Twin Room with Shared Bathroom" },
       "https://management.example/checkin-online/token",
-      "es"
+      "es",
+      "early"
     );
-    expect(message.subject).toContain("estancia en Sevilla");
+    expect(message.subject).toContain("anticipado");
     expect(message.text).toContain("30 de agosto de 2026");
-    expect(message.text).toContain("Habitación doble con 2 camas y baño compartido");
     expect(message.text).toContain("evitar esperas innecesarias en recepción");
+    expect(message.text).not.toContain("Habitación 15");
   });
 
   it("prepara un texto de WhatsApp sin enviarlo", () => {
@@ -87,7 +90,7 @@ describe("mensajería manual de reservas", () => {
 
   it("sustituye el enlace en una invitación de Check-in configurable", () => {
     const message = buildConfiguredOnlineCheckinEmail(
-      "Hola {{NOMBRE_HUESPED}}, entra aquí: {{ENLACE_CHECKIN}}",
+      "Hola {{NOMBRE_HUESPED}}, entra aquí: {{ENLACE_CHECKIN}}. Habitación: {{NUMERO_HABITACION}}. Código: {{CODIGO_ENTRADA}}",
       context,
       "https://management.example/checkin-online/token",
       "es",
@@ -97,6 +100,8 @@ describe("mensajería manual de reservas", () => {
     expect(message.text).toContain(
       "https://management.example/checkin-online/token"
     );
+    expect(message.text).not.toContain("Habitación: 15");
+    expect(message.text).not.toContain("Código: 1469");
   });
 
   it("aplica una plantilla de WhatsApp antes de abrir la conversación", () => {

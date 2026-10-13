@@ -14,6 +14,20 @@ export type ReservationMessageContext = {
   roomCode?: string | null;
 };
 
+// La habitación y los códigos se comunican solo después de completar el formulario.
+// Esta vista se usa para todas las invitaciones previas de Check-in.
+function checkinInvitationContext(
+  context: ReservationMessageContext
+): ReservationMessageContext {
+  return {
+    ...context,
+    roomNumber: null,
+    roomType: null,
+    entranceCode: null,
+    roomCode: null,
+  };
+}
+
 const escapeHtml = (value: string | null | undefined) =>
   String(value ?? "").replace(
     /[&<>'"]/g,
@@ -229,17 +243,22 @@ export function buildConfiguredOnlineCheckinEmail(
   },
   mode: "access" | "early" = "access"
 ) {
+  const privateContext = checkinInvitationContext(context);
   const text = renderConfiguredReservationMessage(
     template,
-    context,
+    privateContext,
     hostel,
     checkinUrl
   );
-  if (!text) return buildOnlineCheckinInvitation(context, checkinUrl, language, mode);
+  if (!text) return buildOnlineCheckinInvitation(privateContext, checkinUrl, language, mode);
   const subject =
     language === "en"
-      ? "Complete your online check-in · The Spot Central Hostel"
-      : "Completa tu Check-in Online · The Spot Central Hostel";
+      ? mode === "early"
+        ? "Complete your early check-in · The Spot Central Hostel"
+        : "Complete your online check-in · The Spot Central Hostel"
+      : mode === "early"
+        ? "Completa tu Check-in anticipado · The Spot Central Hostel"
+        : "Completa tu Check-in Online · The Spot Central Hostel";
   return {
     subject,
     text,
@@ -257,12 +276,14 @@ export function buildConfiguredReservationWhatsApp(
     name?: string | null;
     address?: string | null;
     phone?: string | null;
-    email?: string | null;
+  email?: string | null;
   }
 ) {
+  const safeContext =
+    messageType === "welcome" ? context : checkinInvitationContext(context);
   const configured = renderConfiguredReservationMessage(
     template,
-    context,
+    safeContext,
     hostel,
     checkinUrl
   );
@@ -272,7 +293,7 @@ export function buildConfiguredReservationWhatsApp(
       : configured;
   }
   return buildReservationWhatsAppMessage(
-    context,
+    safeContext,
     messageType,
     checkinUrl,
     language
@@ -285,17 +306,18 @@ export function buildOnlineCheckinInvitation(
   language: ReservationMessageLanguage,
   mode: "access" | "early" = "access"
 ) {
-  const name = escapeHtml(displayName(context.guestName));
+  const privateContext = checkinInvitationContext(context);
+  const name = escapeHtml(displayName(privateContext.guestName));
   const safeUrl = escapeHtml(checkinUrl);
-  const arrivalDate = formatDate(context.checkInDate, language);
-  const roomType = roomTypeInMessage(context.roomType, language);
-  const room = roomLabel(context.roomNumber, language);
+  const arrivalDate = formatDate(privateContext.checkInDate, language);
+  const roomType = roomTypeInMessage(privateContext.roomType, language);
+  const room = roomLabel(privateContext.roomNumber, language);
   const isEarly = mode === "early";
-  const roomSuffix = !isEarly && context.roomNumber ? ` (${room})` : "";
+  const roomSuffix = privateContext.roomNumber ? ` (${room})` : "";
   const bookingSummary =
     language === "en"
-      ? `You have a reservation with us on <strong>${escapeHtml(arrivalDate)}</strong> for a <strong>${escapeHtml(roomType)}</strong>${escapeHtml(roomSuffix)}.`
-      : `Tienes una reserva con nosotros el <strong>${escapeHtml(arrivalDate)}</strong> para una <strong>${escapeHtml(roomType)}</strong>${escapeHtml(roomSuffix)}.`;
+      ? `You have a reservation with us on <strong>${escapeHtml(arrivalDate)}</strong>${privateContext.roomType ? ` for a <strong>${escapeHtml(roomType)}</strong>${escapeHtml(roomSuffix)}` : ""}.`
+      : `Tienes una reserva con nosotros el <strong>${escapeHtml(arrivalDate)}</strong>${privateContext.roomType ? ` para una <strong>${escapeHtml(roomType)}</strong>${escapeHtml(roomSuffix)}` : ""}.`;
   const subject =
     language === "en"
       ? isEarly
@@ -306,20 +328,28 @@ export function buildOnlineCheckinInvitation(
         : "Completa tu Check-in Online para tu estancia en Sevilla · The Spot Central Hostel";
   const text =
     language === "en"
-      ? `Hello ${displayName(context.guestName)},\n\nWe are writing to you from The Spot Central Hostel in Seville. You have a reservation with us on ${arrivalDate} for a ${roomType}${roomSuffix}.\n\nTo make your arrival quicker and avoid unnecessary waiting at reception, please complete the information in the ${isEarly ? "early check-in" : "online check-in"} link as soon as possible:\n${checkinUrl}\n\nWe have prefilled the booking information available. Please review it, complete the document details for every guest and sign the form.${isEarly ? " This will help us prepare your arrival. Our reception team will be expecting you and will provide your room details when you arrive." : " Once completed, you will receive your access instructions."}\n\nWe look forward to welcoming you :)\n\nThe Spot Central Hostel`
-      : `Hola ${displayName(context.guestName)},\n\nTe escribimos desde The Spot Central Hostel, en Sevilla. Tienes una reserva con nosotros el ${arrivalDate} para una ${roomType}${roomSuffix}.\n\nPara agilizar tu llegada y evitar esperas innecesarias en recepción, te agradeceríamos que completaras los datos del siguiente enlace de ${isEarly ? "Check-in anticipado" : "Check-in Online"} lo antes posible:\n${checkinUrl}\n\nHemos precargado la información disponible de la reserva. Revísala, completa los datos documentales de todos los huéspedes y firma el formulario.${isEarly ? " Esto nos ayudará a preparar tu llegada. Te estaremos esperando en recepción y allí te facilitaremos los datos de tu habitación." : " Una vez completado, recibirás las instrucciones de acceso."}\n\n¡Te esperamos! :)\n\nThe Spot Central Hostel`;
+      ? `Hello ${displayName(privateContext.guestName)},\n\nWe are writing to you from The Spot Central Hostel in Seville. You have a reservation with us on ${arrivalDate}${privateContext.roomType ? ` for a ${roomType}${roomSuffix}` : ""}.\n\n${isEarly ? "To make your arrival quicker and avoid unnecessary waiting at reception, please complete the information in the early check-in link as soon as possible:" : "Before we provide your room details and access codes, please complete the document information for every guest in the online check-in form:"}\n${checkinUrl}\n\nWe have prefilled the booking information available. Please review it, complete the document details for every guest and sign the form.${isEarly ? " This will help us prepare your arrival. Our reception team will be expecting you and will provide your room details when you arrive." : " Once it is complete, you will receive your room details, location and access instructions."}\n\nWe look forward to welcoming you :)\n\nThe Spot Central Hostel`
+      : `Hola ${displayName(privateContext.guestName)},\n\nTe escribimos desde The Spot Central Hostel, en Sevilla. Tienes una reserva con nosotros el ${arrivalDate}${privateContext.roomType ? ` para una ${roomType}${roomSuffix}` : ""}.\n\n${isEarly ? "Para agilizar tu llegada y evitar esperas innecesarias en recepción, te agradeceríamos que completaras los datos del enlace de Check-in anticipado lo antes posible:" : "Antes de facilitarte los datos de tu habitación y los códigos de acceso, te pedimos que completes la información documental de todos los huéspedes en el siguiente formulario de Check-in Online:"}\n${checkinUrl}\n\nHemos precargado la información disponible de la reserva. Revísala, completa los datos documentales de todos los huéspedes y firma el formulario.${isEarly ? " Esto nos ayudará a preparar tu llegada. Te estaremos esperando en recepción y allí te facilitaremos los datos de tu habitación." : " Cuando lo completes, recibirás la habitación asignada, su ubicación y las instrucciones de acceso."}\n\n¡Te esperamos! :)\n\nThe Spot Central Hostel`;
   const intro =
     language === "en"
       ? "We are writing to you from <strong>The Spot Central Hostel</strong>, in Seville."
       : "Te escribimos desde <strong>The Spot Central Hostel</strong>, en Sevilla.";
   const request =
     language === "en"
-      ? "To make your arrival quicker and avoid unnecessary waiting at reception, please complete the information in the online check-in link as soon as possible:"
-      : "Para agilizar tu llegada y evitar esperas innecesarias en recepción, te agradeceríamos que completaras los datos del enlace de Check-in Online lo antes posible:";
+      ? isEarly
+        ? "To make your arrival quicker and avoid unnecessary waiting at reception, please complete the information in the early check-in link as soon as possible:"
+        : "Before we provide your room details and access codes, please complete the document information for every guest in the online check-in form:"
+      : isEarly
+        ? "Para agilizar tu llegada y evitar esperas innecesarias en recepción, te agradeceríamos que completaras los datos del enlace de Check-in anticipado lo antes posible:"
+        : "Antes de facilitarte los datos de tu habitación y los códigos de acceso, te pedimos que completes la información documental de todos los huéspedes en el siguiente formulario de Check-in Online:";
   const completion =
     language === "en"
-      ? "We have prefilled the booking information available. Please review it, complete the document details for every guest and sign the form. Once completed, you will receive your access instructions."
-      : "Hemos precargado la información disponible de la reserva. Revísala, completa los datos documentales de todos los huéspedes y firma el formulario. Una vez completado, recibirás las instrucciones de acceso.";
+      ? isEarly
+        ? "We have prefilled the booking information available. Please review it, complete the document details for every guest and sign the form. This will help us prepare your arrival at reception."
+        : "We have prefilled the booking information available. Please review it, complete the document details for every guest and sign the form. Once it is complete, you will receive your room details, location and access instructions."
+      : isEarly
+        ? "Hemos precargado la información disponible de la reserva. Revísala, completa los datos documentales de todos los huéspedes y firma el formulario. Esto nos ayudará a preparar tu llegada en recepción."
+        : "Hemos precargado la información disponible de la reserva. Revísala, completa los datos documentales de todos los huéspedes y firma el formulario. Cuando lo completes, recibirás la habitación asignada, su ubicación y las instrucciones de acceso.";
   const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#1f2937;line-height:1.6"><div style="background:#0f766e;color:#fff;padding:22px;border-radius:10px 10px 0 0"><h1 style="margin:0;font-size:22px">${escapeHtml(subject)}</h1></div><div style="background:#f8fafc;padding:26px;border-radius:0 0 10px 10px"><p>${language === "en" ? "Hello" : "Hola"} <strong>${name}</strong>,</p><p>${intro}</p><p>${bookingSummary}</p><p>${request}</p><p style="text-align:center;margin:28px 0"><a href="${safeUrl}" style="display:inline-block;background:#0f766e;color:#fff;text-decoration:none;font-weight:bold;padding:13px 20px;border-radius:7px">${language === "en" ? "Open online check-in" : "Abrir Check-in Online"}</a></p><p style="font-size:13px;color:#475569;word-break:break-all">${safeUrl}</p><p>${completion}</p><p>${language === "en" ? "We look forward to welcoming you :)" : "¡Te esperamos! :)"}</p><p><strong>The Spot Central Hostel</strong></p></div></div>`;
   return { subject, text, html };
 }

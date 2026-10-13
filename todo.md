@@ -1855,3 +1855,9 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Separar en reservas el Check-in con códigos del Check-in anticipado sin códigos, con mensajes, enlaces y estados de agenda diferenciados.
 - [x] Ejecutada en producción la migración `0059_sad_zarek.sql` para activar el modo de enlace anticipado.
 - [x] Ocultar número de habitación en la invitación de Check-in anticipado y sustituir su pantalla final por un agradecimiento de recepción sin guía ni códigos.
+
+## Ficha operativa y archivo de Check-in
+- [x] Mostrar la habitación interna de reservas anticipadas en la ficha del huésped, sin revelarla al huésped.
+- [x] Añadir desde la ficha del huésped la acción «Realizar Check-in» con datos precargados y edición de datos faltantes.
+- [x] Generar y guardar automáticamente un PDF local del Check-in completado en `uploads/registros/MM-AAAA`.
+- [x] Ajustar el correo de Check-in con códigos para no revelar habitación ni códigos antes de completar el formulario, y reservar el mensaje de agilidad de recepción para el Check-in anticipado.

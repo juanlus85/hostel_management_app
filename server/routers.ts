@@ -3551,6 +3551,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             firstName: z.string().optional(),
             lastName: z.string().optional(),
             documentNumber: z.string().optional(),
+            documentSupport: z.string().optional(),
             documentType: z.string().optional(),
             gender: z.enum(["Hombre", "Mujer", "Otro"]).optional(),
             nationality: z.string().optional(),
@@ -3950,6 +3951,19 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
               entrance?.roomCode || hostelSettings?.defaultEntranceCode || null;
           }
 
+          // El huésped de un Check-in anticipado no recibe la habitación,
+          // pero recepción sí debe conservarla en su ficha para completar el registro.
+          const accessCodeList = await db.getAllAccessCodes();
+          const assignedRoom =
+            link.roomNumber && link.roomNumber !== "Por asignar"
+              ? findAccessCodeForRoom(accessCodeList, link.roomNumber)
+              : null;
+          const storedRoomNumber =
+            link.roomNumber && link.roomNumber !== "Por asignar"
+              ? link.roomNumber
+              : assignedRoom?.roomNumber || null;
+          const storedRoomType = link.roomType || assignedRoom?.roomType || null;
+
           const groupId = randomBytes(16).toString("hex");
           const guestIds: number[] = [];
           for (let index = 0; index < submittedGuests.length; index += 1) {
@@ -3980,8 +3994,8 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
               reservationNumber: link.reservationNumber,
               checkInDate: link.checkInDate,
               checkOutDate: link.checkOutDate,
-              roomNumber: link.roomNumber,
-              roomType: link.roomType,
+              roomNumber: storedRoomNumber,
+              roomType: storedRoomType,
               roomCode: sendsCodes ? link.roomCode : null,
               entranceCode,
               numberOfRooms: link.numberOfRooms,
@@ -4025,14 +4039,14 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           }
 
           const settings = await db.getHostelSettings();
-          const accessCodeList = await db.getAllAccessCodes();
           const hasRoomNumber = /\d/.test(link.roomNumber || "");
           const roomDetails =
+            assignedRoom ||
             accessCodeList.find(code => code.roomNumber === link.roomNumber) ||
             accessCodeList.find(code => code.roomCode === link.roomCode);
           const resolvedRoomNumber =
-            hasRoomNumber ? link.roomNumber : roomDetails?.roomNumber || link.roomNumber;
-          const resolvedRoomType = roomDetails?.roomType || link.roomType;
+            hasRoomNumber ? link.roomNumber : roomDetails?.roomNumber || storedRoomNumber;
+          const resolvedRoomType = roomDetails?.roomType || storedRoomType;
           if (sendsCodes) try {
             const { sendOnlineCheckinConfirmation } = await import("./email");
             await sendOnlineCheckinConfirmation({
@@ -4040,14 +4054,14 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
               email: input.email,
               language: input.language,
               checkInDate: link.checkInDate,
-              roomNumber: resolvedRoomNumber,
+              roomNumber: resolvedRoomNumber || link.roomNumber || "",
               roomCode: link.roomCode,
               entranceCode,
               welcomeMessage:
                 input.language === "en"
                   ? settings?.welcomeMessageEn
                   : settings?.welcomeMessageEs,
-              roomType: resolvedRoomType,
+              roomType: resolvedRoomType || link.roomType || "",
               floor:
                 input.language === "en"
                   ? roomDetails?.floorLevel
@@ -4084,11 +4098,11 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             success: true,
             checkinMode: link.checkinMode,
             sendCodes: sendsCodes,
-            roomNumber: resolvedRoomNumber,
+            roomNumber: resolvedRoomNumber || "",
             roomCode: sendsCodes ? link.roomCode : null,
             entranceCode: sendsCodes ? entranceCode : null,
             checkInDate: link.checkInDate,
-            roomType: resolvedRoomType,
+            roomType: resolvedRoomType || "",
             floor: roomDetails?.floor || "",
             floorLevel: roomDetails?.floorLevel || "",
             hostelName: settings?.hostelName || "The Spot Central Hostel",

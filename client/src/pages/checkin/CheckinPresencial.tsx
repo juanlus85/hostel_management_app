@@ -19,52 +19,59 @@ import { requiresDocumentSupport } from "@shared/documentSupport";
 import { isMinor } from "@shared/guestAge";
 import { GuestFormFields, type GuestFormData } from "@/components/checkin/GuestFormFields";
 
-export default function CheckinPresencial() {
+type InitialGuest = Record<string, any>;
+
+type CheckinPresencialProps = {
+  initialGuest?: InitialGuest | null;
+  onCompleted?: () => void;
+};
+
+export default function CheckinPresencial({ initialGuest, onCompleted }: CheckinPresencialProps) {
   const [guests, setGuests] = useState<GuestFormData[]>([
     {
-      firstName: "",
-      lastName: "",
-      documentNumber: "",
-      documentType: "PAS",
-      supportNumber: "",
-      gender: "Hombre",
-      nationality: "ESP",
+      firstName: initialGuest?.firstName || "",
+      lastName: initialGuest?.lastName || "",
+      documentNumber: initialGuest?.documentNumber || "",
+      documentType: initialGuest?.documentType || "PAS",
+      supportNumber: initialGuest?.documentSupport || "",
+      gender: initialGuest?.gender || "Hombre",
+      nationality: initialGuest?.nationality || "ESP",
       nationalityOther: "",
-      birthDate: "",
-      phone: "",
-      email: "",
-      relationship: "",
+      birthDate: initialGuest?.birthDate || "",
+      phone: initialGuest?.phone || "",
+      email: initialGuest?.email || "",
+      relationship: initialGuest?.relationship || "",
     },
   ]);
 
   // Dirección compartida
   const [sharedAddress, setSharedAddress] = useState({
-    street: "",
-    addressExtra: "",
-    postalCode: "",
-    city: "",
-    province: "",
-    country: "ESP",
+    street: initialGuest?.street || "",
+    addressExtra: initialGuest?.addressExtra || "",
+    postalCode: initialGuest?.postalCode || "",
+    city: initialGuest?.city || "",
+    province: initialGuest?.province || "",
+    country: initialGuest?.country || "ESP",
   });
 
   // Información de reserva
   const [reservationData, setReservationData] = useState({
-    reservationNumber: "",
-    checkInDate: new Date().toISOString().slice(0, 16), // YYYY-MM-DDTHH:MM
-    checkOutDate: "",
-    roomNumber: "",
-    roomType: "",
-    roomCode: "",
-    entranceCode: "",
-    numberOfRooms: 1,
+    reservationNumber: initialGuest?.reservationNumber || "",
+    checkInDate: initialGuest?.checkInDate ? `${String(initialGuest.checkInDate).slice(0, 10)}T14:00` : new Date().toISOString().slice(0, 16),
+    checkOutDate: initialGuest?.checkOutDate ? `${String(initialGuest.checkOutDate).slice(0, 10)}T11:00` : "",
+    roomNumber: initialGuest?.roomNumber || "",
+    roomType: initialGuest?.roomType || "",
+    roomCode: initialGuest?.roomCode || "",
+    entranceCode: initialGuest?.entranceCode || "",
+    numberOfRooms: initialGuest?.numberOfRooms || 1,
     hasInternet: true,
-    accommodationType: "S.A. (Solo Aloj.)",
-    reservationOrigin: "Booking.com",
+    accommodationType: initialGuest?.accommodationType || "S.A. (Solo Aloj.)",
+    reservationOrigin: initialGuest?.reservationOrigin || "Booking.com",
   });
 
   // Auto-calcular fecha de salida (+1 día a las 11:00)
   useEffect(() => {
-    if (reservationData.checkInDate) {
+    if (reservationData.checkInDate && !initialGuest?.checkOutDate) {
       const checkIn = new Date(reservationData.checkInDate);
       const checkOut = new Date(checkIn);
       checkOut.setDate(checkOut.getDate() + 1);
@@ -74,16 +81,16 @@ export default function CheckinPresencial() {
         checkOutDate: checkOut.toISOString().slice(0, 16)
       }));
     }
-  }, [reservationData.checkInDate]);
+  }, [reservationData.checkInDate, initialGuest?.checkOutDate]);
 
   // Información de pago (OBLIGATORIA según normativa)
   const [paymentData, setPaymentData] = useState({
-    paymentType: "TRANS",
-    paymentDate: new Date().toISOString().split("T")[0],
-    amountPaid: "0",
-    amountPending: "0",
-    paymentHolder: "",
-    paymentMethod: "Transferencia Booking",
+    paymentType: initialGuest?.paymentType || "TRANS",
+    paymentDate: initialGuest?.paymentDate || new Date().toISOString().split("T")[0],
+    amountPaid: initialGuest?.amountPaid || "0",
+    amountPending: initialGuest?.amountPending || "0",
+    paymentHolder: initialGuest?.paymentHolder || "",
+    paymentMethod: initialGuest?.paymentMethod || "Transferencia Booking",
   });
 
   // Auto-rellenar titular del pago con nombre del huésped principal
@@ -107,16 +114,17 @@ export default function CheckinPresencial() {
   }, [reservationData.checkInDate]);
 
   // Firma digital
-  const [signature, setSignature] = useState("");
+  const [signature, setSignature] = useState(initialGuest?.signature || "");
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(Boolean(initialGuest?.acceptedTerms));
 
   const { data: rooms } = trpc.accessCodes.list.useQuery(undefined, {
     retry: false,
   });
   const { data: settings } = trpc.checkin.settings.get.useQuery();
   const createGuest = trpc.checkin.guests.create.useMutation();
+  const updateGuestRecord = trpc.checkin.guests.update.useMutation();
 
   // Auto-completar tipo de habitación al seleccionar número
   useEffect(() => {
@@ -337,16 +345,15 @@ export default function CheckinPresencial() {
       return;
     }
 
-    // Generar groupId único para vincular huéspedes
-    const groupId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    // Mantener el grupo original cuando recepción termina un Check-in anticipado.
+    const groupId = initialGuest?.groupId || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
     try {
       // Guardar cada huésped
       for (let i = 0; i < guests.length; i++) {
         const guest = guests[i];
         const isMainGuest = i === 0;
-
-        await createGuest.mutateAsync({
+        const guestData = {
           // Datos personales
           firstName: guest.firstName,
           lastName: guest.lastName,
@@ -396,12 +403,29 @@ export default function CheckinPresencial() {
           signature: isMainGuest ? signature : undefined,
           isMainGuest,
           groupId,
-          status: "completed",
-          checkinType: "presencial",
-        });
+          status: "completed" as const,
+          checkinType: "presencial" as const,
+        };
+
+        // El primer huésped anticipado ya existe: se completa su ficha y se
+        // conservan los datos previamente aportados, incluida su habitación.
+        if (initialGuest?.id && isMainGuest) {
+          const { checkinType: _checkinType, groupId: _groupId, isMainGuest: _isMainGuest, ...updateData } = guestData;
+          await updateGuestRecord.mutateAsync({
+            id: initialGuest.id,
+            ...updateData,
+          });
+        } else {
+          await createGuest.mutateAsync(guestData);
+        }
       }
 
       toast.success(`Check-in completado: ${guests.length} huésped(es) registrado(s)`);
+
+      if (initialGuest) {
+        onCompleted?.();
+        return;
+      }
       
       // Limpiar formulario
       setGuests([
@@ -473,6 +497,13 @@ export default function CheckinPresencial() {
           </p>
         </div>
       </Card>
+
+      {initialGuest && (
+        <Card className="border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950">
+          <p className="font-semibold">Datos recuperados del Check-in anticipado</p>
+          <p className="mt-1">Revisa la información, completa lo necesario y confirma el registro. La habitación asignada se conserva solo para recepción.</p>
+        </Card>
+      )}
 
       {/* Información de Reserva */}
       <Card className="p-6">
@@ -814,6 +845,9 @@ export default function CheckinPresencial() {
         {/* Firma */}
         <div className="space-y-4">
           <Label className="text-base font-semibold">Firma / Signature *</Label>
+          {initialGuest?.signature && !isDrawing && (
+            <p className="text-sm text-emerald-700">La firma aportada previamente se conservará si no se realiza una nueva.</p>
+          )}
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-white">
             <canvas
               ref={canvasRef}
@@ -841,10 +875,10 @@ export default function CheckinPresencial() {
       <div className="flex justify-end">
         <Button
           onClick={handleSubmit}
-          disabled={createGuest.isPending}
+          disabled={createGuest.isPending || updateGuestRecord.isPending}
           size="lg"
         >
-          {createGuest.isPending ? (
+          {createGuest.isPending || updateGuestRecord.isPending ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Guardando...

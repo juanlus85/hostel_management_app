@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
-import { Loader2, Search, Eye, Edit, Trash2, Download, FileText } from "lucide-react";
+import { Loader2, Search, Eye, Edit, Trash2, Download, FileText, ClipboardCheck } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -22,6 +22,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useLocation } from "wouter";
+import CheckinPresencial from "./CheckinPresencial";
 
 export default function GestionHuespedes() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -29,6 +30,7 @@ export default function GestionHuespedes() {
   const [endDate, setEndDate] = useState("");
   const [selectedGuest, setSelectedGuest] = useState<any>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [isCheckinOpen, setIsCheckinOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingGuest, setEditingGuest] = useState<any>(null);
   const [, setLocation] = useLocation();
@@ -443,6 +445,21 @@ export default function GestionHuespedes() {
           
           {selectedGuest && (
             <div className="space-y-6">
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+                <p className="text-sm font-medium text-emerald-950">Finaliza el registro en recepción</p>
+                <p className="mt-1 text-xs text-emerald-800">Los datos disponibles se cargarán para completar, revisar y firmar el Check-in.</p>
+                <Button
+                  className="mt-3"
+                  onClick={() => {
+                    setIsDetailsOpen(false);
+                    setIsCheckinOpen(true);
+                  }}
+                >
+                  <ClipboardCheck className="mr-2 h-4 w-4" />
+                  Realizar Check-in
+                </Button>
+              </div>
+
               {/* Datos Personales */}
               <div>
                 <h3 className="font-semibold text-lg mb-3">Datos Personales</h3>
@@ -569,6 +586,28 @@ export default function GestionHuespedes() {
                 </div>
               )}
             </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isCheckinOpen} onOpenChange={setIsCheckinOpen}>
+        <DialogContent className="max-h-[92vh] max-w-6xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Realizar Check-in</DialogTitle>
+            <DialogDescription>
+              Revisa los datos ya recibidos, completa los campos necesarios y guarda el registro definitivo.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedGuest && (
+            <CheckinPresencial
+              key={selectedGuest.id}
+              initialGuest={selectedGuest}
+              onCompleted={() => {
+                setIsCheckinOpen(false);
+                setIsDetailsOpen(false);
+                refetch();
+              }}
+            />
           )}
         </DialogContent>
       </Dialog>
