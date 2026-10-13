@@ -12,40 +12,15 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { trpc } from "@/lib/trpc";
-import { Loader2, Plus, Trash2, Save } from "lucide-react";
+import { Loader2, Plus, Save } from "lucide-react";
 import { toast } from "sonner";
-import { COUNTRIES, getAllowedDocumentTypes, PAYMENT_TYPES, GENDER_CODES } from "@/../../shared/countries";
+import { COUNTRIES, PAYMENT_TYPES } from "@/../../shared/countries";
 import { requiresDocumentSupport } from "@shared/documentSupport";
-import { calculateAge, isMinor } from "@shared/guestAge";
-
-const RELATIONSHIP_OPTIONS = [
-  { value: "HJ", label: "Hijo/a" },
-  { value: "NI", label: "Nieto/a" },
-  { value: "SB", label: "Sobrino/a" },
-  { value: "PM", label: "Persona mayor responsable" },
-  { value: "AB", label: "Abuelo/a" },
-  { value: "HR", label: "Hermano/a" },
-  { value: "TU", label: "Tutor/a" },
-  { value: "OT", label: "Otro" },
-];
-
-interface GuestData {
-  firstName: string;
-  lastName: string;
-  documentNumber: string;
-  documentType: string;
-  supportNumber: string; // Número de soporte (solo para DNI)
-  gender: string;
-  nationality: string;
-  nationalityOther: string; // Campo libre cuando selecciona "Otro"
-  birthDate: string;
-  phone: string;
-  email: string;
-  relationship?: string; // Parentesco (SOLO obligatorio para menores de edad)
-}
+import { isMinor } from "@shared/guestAge";
+import { GuestFormFields, type GuestFormData } from "@/components/checkin/GuestFormFields";
 
 export default function CheckinPresencial() {
-  const [guests, setGuests] = useState<GuestData[]>([
+  const [guests, setGuests] = useState<GuestFormData[]>([
     {
       firstName: "",
       lastName: "",
@@ -279,7 +254,7 @@ export default function CheckinPresencial() {
     setGuests(guests.filter((_, i) => i !== index));
   };
 
-  const updateGuest = (index: number, field: keyof GuestData, value: string) => {
+  const updateGuest = (index: number, field: keyof GuestFormData, value: string) => {
     const newGuests = [...guests];
     const updatedGuest = { ...newGuests[index], [field]: value };
     newGuests[index] = requiresDocumentSupport(updatedGuest.documentType, updatedGuest.nationality)
@@ -685,186 +660,16 @@ export default function CheckinPresencial() {
       </Card>
 
       {/* Huéspedes */}
-      {guests.map((guest, index) => {
-        const allowedDocs = getAllowedDocumentTypes(guest.nationality);
-        const isSpanish = guest.nationality === "ESP";
-        const country = COUNTRIES.find(c => c.code === guest.nationality);
-        const isEU = country?.isEU || false;
-        const age = calculateAge(guest.birthDate);
-        const guestIsMinor = isMinor(guest.birthDate);
-
-        return (
-          <Card key={index} className="p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">
-                Huésped {index + 1} {index === 0 && "(Principal)"}
-              </h2>
-              {index > 0 && (
-                <Button variant="destructive" size="sm" onClick={() => removeGuest(index)}>
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Eliminar
-                </Button>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor={`firstName-${index}`}>Nombre *</Label>
-                <Input
-                  id={`firstName-${index}`}
-                  value={guest.firstName}
-                  onChange={(e) => updateGuest(index, "firstName", e.target.value)}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor={`lastName-${index}`}>Apellidos *</Label>
-                <Input
-                  id={`lastName-${index}`}
-                  value={guest.lastName}
-                  onChange={(e) => updateGuest(index, "lastName", e.target.value)}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor={`nationality-${index}`}>Nacionalidad *</Label>
-                <Select
-                  value={guest.nationality}
-                  onValueChange={(value) => updateGuest(index, "nationality", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {COUNTRIES.map((country) => (
-                      <SelectItem key={`${index}-nationality-${country.code}`} value={country.code}>
-                        {country.name}
-                      </SelectItem>
-                    ))}
-                    <SelectItem key={`${index}-nationality-OTRO`} value="OTRO">Otro (especificar)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {guest.nationality === "OTRO" && (
-                <div>
-                  <Label htmlFor={`nationalityOther-${index}`}>Especificar País *</Label>
-                  <Input
-                    id={`nationalityOther-${index}`}
-                    value={guest.nationalityOther}
-                    onChange={(e) => updateGuest(index, "nationalityOther", e.target.value)}
-                    placeholder="Nombre del país"
-                  />
-                </div>
-              )}
-
-              <div>
-                <Label htmlFor={`documentType-${index}`}>Tipo de Documento *</Label>
-                <Select
-                  value={guest.documentType}
-                  onValueChange={(value) => {
-                    updateGuest(index, "documentType", value);
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {allowedDocs.map((doc) => (
-                      <SelectItem key={doc.code} value={doc.code}>
-                        {doc.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {isSpanish && "Españoles: DNI/NIF, NIE, carnet de conducir o Pasaporte"}
-                  {isEU && !isSpanish && "Europeos: NIE o Pasaporte"}
-                  {!isEU && !isSpanish && "No europeos: Solo Pasaporte"}
-                </p>
-              </div>
-
-              <div>
-                <Label htmlFor={`documentNumber-${index}`}>Número de Documento *</Label>
-                <Input
-                  id={`documentNumber-${index}`}
-                  value={guest.documentNumber}
-                  onChange={(e) => updateGuest(index, "documentNumber", e.target.value)}
-                />
-              </div>
-
-              {requiresDocumentSupport(guest.documentType, guest.nationality) && (
-                <div>
-                  <Label htmlFor={`supportNumber-${index}`}>Número de Soporte *</Label>
-                  <Input
-                    id={`supportNumber-${index}`}
-                    value={guest.supportNumber}
-                    onChange={(e) => updateGuest(index, "supportNumber", e.target.value)}
-                    placeholder="Número de soporte del documento"
-                  />
-                </div>
-              )}
-
-              <div>
-                <Label htmlFor={`gender-${index}`}>Sexo *</Label>
-                <Select
-                  value={guest.gender}
-                  onValueChange={(value) => updateGuest(index, "gender", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Hombre">Hombre</SelectItem>
-                    <SelectItem value="Mujer">Mujer</SelectItem>
-                    <SelectItem value="Otro">Otro</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor={`birthDate-${index}`}>Fecha de Nacimiento *</Label>
-                <Input
-                  id={`birthDate-${index}`}
-                  type="date"
-                  value={guest.birthDate}
-                  onChange={(e) => updateGuest(index, "birthDate", e.target.value)}
-                />
-                {age !== null && <p className={`mt-1 text-xs ${guestIsMinor ? "font-medium text-amber-700" : "text-muted-foreground"}`}>{age} años{guestIsMinor ? " · Menor de edad" : ""}</p>}
-              </div>
-
-              {guestIsMinor && <div>
-                <Label htmlFor={`relationship-${index}`}>Parentesco del menor *</Label>
-                <Select value={guest.relationship || undefined} onValueChange={(value) => updateGuest(index, "relationship", value)}>
-                  <SelectTrigger id={`relationship-${index}`}><SelectValue placeholder="Seleccionar parentesco" /></SelectTrigger>
-                  <SelectContent>{RELATIONSHIP_OPTIONS.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
-                </Select>
-                <p className="mt-1 text-xs text-muted-foreground">Obligatorio para el parte de viajeros de un menor.</p>
-              </div>}
-
-              <div>
-                <Label htmlFor={`phone-${index}`}>Teléfono</Label>
-                <Input
-                  id={`phone-${index}`}
-                  type="tel"
-                  value={guest.phone}
-                  onChange={(e) => updateGuest(index, "phone", e.target.value)}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor={`email-${index}`}>Email</Label>
-                <Input
-                  id={`email-${index}`}
-                  type="email"
-                  value={guest.email}
-                  onChange={(e) => updateGuest(index, "email", e.target.value)}
-                />
-              </div>
-            </div>
-          </Card>
-        );
-      })}
+      {guests.map((guest, index) => (
+        <GuestFormFields
+          key={index}
+          guest={guest}
+          index={index}
+          removable={index > 0}
+          onChange={(field, value) => updateGuest(index, field, value)}
+          onRemove={() => removeGuest(index)}
+        />
+      ))}
 
       {guests.length < 3 && (
         <Button onClick={addGuest} variant="outline" className="w-full">
