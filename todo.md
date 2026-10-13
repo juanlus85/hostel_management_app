@@ -1827,3 +1827,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Mostrar acciones explícitas de envío de códigos e instrucciones por correo y WhatsApp dentro de Check-in y mensajería.
 - [x] Evitar los errores HTTP 504 al consultar disponibilidad de más de siete días mediante carga concurrente limitada de tramos Cloudbeds.
 - [x] Mejorar la plantilla de bienvenida con códigos e instrucciones de acceso, en español e inglés, usando datos dinámicos de la reserva.
+- [x] Mostrar disponibilidad y precio por tipo en cada separador de la agenda, con edición por Tab y flechas igual que Disponibilidad y precios.

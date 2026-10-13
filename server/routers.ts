@@ -1150,7 +1150,7 @@ export const appRouter = router({
       .input(
         z.object({
           startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-          days: z.union([z.literal(7), z.literal(14), z.literal(30), z.literal(60)]).default(7),
+          days: z.union([z.literal(7), z.literal(14), z.literal(15), z.literal(30), z.literal(60)]).default(7),
         })
       )
       .mutation(async ({ input }) => {

@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { BedDouble, CalendarDays, CheckCircle2, CreditCard, FileText, Loader2, Mail, MessageCircle, PencilLine, PlusCircle, ReceiptText, RefreshCw, Send, StickyNote } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { BedDouble, CalendarDays, CheckCircle2, CreditCard, Euro, FileText, Loader2, Mail, MessageCircle, PencilLine, PlusCircle, ReceiptText, RefreshCw, Send, StickyNote } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { buildReservationAgenda, type ReservationAgendaTone } from "@shared/reservationAgenda";
@@ -11,6 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getReservationWindowRange } from "@/lib/reservationWindow";
+import { availabilityRoomTypeKey, buildAgendaAvailabilityByType, findAgendaAvailabilityDay } from "@/lib/availabilityAgenda";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const madridDate = (date: Date) => date.toLocaleDateString("en-CA", { timeZone: "Europe/Madrid" });
@@ -37,6 +38,8 @@ type PendingStatus = { status: CloudbedsStatus; label: string };
 type MessageLanguage = "es" | "en";
 type WelcomeEditor = { reservationId: number; guestName: string; guestEmail: string; messageType: "welcome" | "online_checkin"; subject: string; message: string };
 type WhatsAppEditor = { reservationId: number; guestName: string; messageType: "welcome" | "online_checkin"; message: string };
+type AgendaAvailabilityResult = Awaited<ReturnType<typeof import("../../../server/cloudbedsAvailability").fetchCloudbedsAvailability>>;
+type AgendaRateEditor = { roomTypeName: string; date: string; rateId: string; previousRate: number; rateText: string };
 
 function getReservationWindow() {
   return getReservationWindowRange(madridDate(new Date()));
@@ -128,6 +131,9 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
   const [messageLanguage, setMessageLanguage] = useState<MessageLanguage>("es");
   const [welcomeEditor, setWelcomeEditor] = useState<WelcomeEditor | null>(null);
   const [whatsAppEditor, setWhatsAppEditor] = useState<WhatsAppEditor | null>(null);
+  const [agendaAvailability, setAgendaAvailability] = useState<AgendaAvailabilityResult | null>(null);
+  const [agendaRateDrafts, setAgendaRateDrafts] = useState<Record<string, AgendaRateEditor>>({});
+  const [pendingAgendaRates, setPendingAgendaRates] = useState<AgendaRateEditor[] | null>(null);
   const utils = trpc.useUtils();
   const reservations = trpc.checkin.externalImports.listCloudbedsUpcomingReservations.useQuery({ dateFrom: window.dateFrom, dateTo: window.dateTo });
   const importReservations = trpc.checkin.externalImports.importCloudbedsUpcomingReservations.useMutation({
@@ -138,11 +144,21 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
     onError: error => toast.error(error.message),
   });
   const hasImportedOnEntry = useRef(false);
+  const hasLoadedAgendaAvailability = useRef(false);
   useEffect(() => {
     if (!autoImport || hasImportedOnEntry.current) return;
     hasImportedOnEntry.current = true;
     importReservations.mutate();
   }, [autoImport, importReservations.mutate]);
+  const importAgendaAvailability = trpc.cloudbedsAvailability.importWeek.useMutation({
+    onSuccess: result => setAgendaAvailability(result),
+    onError: error => toast.error(`No se pudo cargar disponibilidad y precios: ${error.message}`),
+  });
+  useEffect(() => {
+    if (!autoImport || hasLoadedAgendaAvailability.current) return;
+    hasLoadedAgendaAvailability.current = true;
+    importAgendaAvailability.mutate({ startDate: window.dateFrom, days: 15 });
+  }, [autoImport, importAgendaAvailability.mutate, window.dateFrom]);
   const detail = trpc.checkin.externalImports.getCloudbedsUpcomingReservationDetail.useQuery(
     { id: selectedId ?? 0 },
     { enabled: selectedId !== null, retry: false },
@@ -224,6 +240,20 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
   const prepareReservationWhatsApp = trpc.checkin.externalImports.prepareCloudbedsReservationWhatsApp.useMutation({
     onError: error => toast.error(error.message),
   });
+  const updateAgendaRates = trpc.cloudbedsAvailability.updateRates.useMutation({
+    onSuccess: result => {
+      setPendingAgendaRates(null);
+      const updated = new Set(result.updated.map(change => `${change.rateId}:${change.date}`));
+      setAgendaRateDrafts(current => Object.fromEntries(Object.entries(current).filter(([key]) => !updated.has(key))));
+      if (result.failed.length) {
+        toast.warning(`${result.updated.length} precios enviados; ${result.failed.length} no pudieron actualizarse.`);
+      } else {
+        toast.success(`${result.updated.length} precios enviados a Cloudbeds.`);
+      }
+      importAgendaAvailability.mutate({ startDate: window.dateFrom, days: 15 });
+    },
+    onError: error => toast.error(error.message),
+  });
 
   const displayedReservations = useMemo(
     () =>
@@ -237,6 +267,10 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
     (reservations.data || []).filter(reservation => !reservation.roomNumber?.trim()).length
   );
   const agenda = useMemo(() => buildReservationAgenda(displayedReservations, window.dates), [displayedReservations, window.dates]);
+  const availabilityByType = useMemo(
+    () => buildAgendaAvailabilityByType(agendaAvailability?.roomTypes || []),
+    [agendaAvailability]
+  );
   const arrivalsByDate = useMemo(() => new Map(window.dates.map(date => [date, (reservations.data || []).filter(reservation => reservation.checkInDate === date).length])), [reservations.data, window.dates]);
   const selected = (reservations.data || []).find(reservation => reservation.id === selectedId) || null;
   const reservation = detail.data?.reservation || selected;
@@ -245,12 +279,37 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
   const canRecordPayments = user?.role === "admin";
   const canManageReservations = user?.role === "admin";
   const canManageMessages = user?.role === "admin" || user?.role === "user";
+  const canEditAgendaRates = user?.role === "admin";
   const todayIndex = 1;
   const officialPending = Number(String(reservation?.amountPending ?? "0").replace(",", "."));
   const plannedTotal = payments ? payments.chargeTotal + payments.pendingChargeTotal : 0;
   const plannedBalance = payments ? plannedTotal + payments.refundedTotal - payments.paidTotal : null;
   const plannedCredit = plannedBalance !== null && plannedBalance < -0.004 ? Math.abs(plannedBalance) : 0;
   const hotelCollect = Boolean(detail.data?.reservation && "hotelCollect" in detail.data.reservation && detail.data.reservation.hotelCollect === true);
+  const agendaRateKey = (rateId: string, date: string) => `${rateId}:${date}`;
+  const setAgendaRateDraft = (editor: Omit<AgendaRateEditor, "rateText">, rateText: string) => {
+    setAgendaRateDrafts(current => ({
+      ...current,
+      [agendaRateKey(editor.rateId, editor.date)]: { ...editor, rateText },
+    }));
+  };
+  const editedAgendaRates = useMemo(
+    () => Object.values(agendaRateDrafts).filter(draft => {
+      const value = Number(draft.rateText.replace(",", "."));
+      return Number.isFinite(value) && value >= 0 && Math.abs(value - draft.previousRate) > 0.004;
+    }),
+    [agendaRateDrafts]
+  );
+  const focusAgendaRateInput = (event: KeyboardEvent<HTMLInputElement>, rowIndex: number, dayIndex: number) => {
+    const movement = event.key === "ArrowRight" ? [0, 1] : event.key === "ArrowLeft" ? [0, -1] : event.key === "ArrowDown" ? [1, 0] : event.key === "ArrowUp" ? [-1, 0] : null;
+    if (!movement) return;
+    const next = document.querySelector<HTMLInputElement>(`[data-agenda-rate-row="${rowIndex + movement[0]}"][data-agenda-rate-day="${dayIndex + movement[1]}"]`);
+    if (next) {
+      event.preventDefault();
+      next.focus();
+      next.select();
+    }
+  };
 
   const openPaymentEditor = () => {
     const amountPending = Number(String(reservation?.amountPending ?? "0").replace(",", "."));
@@ -321,7 +380,7 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
         <div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" onClick={() => setShowUnassignedReservations(current => !current)}>{showUnassignedReservations ? "Ocultar sin habitación" : `Mostrar sin habitación${hiddenUnassignedReservations ? ` (${hiddenUnassignedReservations})` : ""}`}</Button><Button className="bg-sky-700 hover:bg-sky-800" onClick={() => importReservations.mutate()} disabled={importReservations.isPending}>
           {importReservations.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
           Actualizar reservas
-        </Button></div>
+        </Button>{canEditAgendaRates && <Button variant="outline" onClick={() => setPendingAgendaRates(editedAgendaRates)} disabled={!editedAgendaRates.length || updateAgendaRates.isPending}>{updateAgendaRates.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}Enviar {editedAgendaRates.length || ""} precios</Button>}</div>
       </CardHeader>
       <CardContent className="flex flex-wrap gap-x-5 gap-y-2 border-t bg-sky-50/30 py-3 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-red-500" />Importe pendiente</span>
@@ -346,10 +405,24 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
                 return <div key={date} className={`border-r px-1 py-2 text-center ${isToday ? "z-10 border-x-2 border-amber-400 bg-amber-100 text-amber-950 shadow-[inset_0_3px_0_rgb(251_191_36)]" : ""} sm:px-3 sm:py-3`}><p className="text-[9px] font-semibold uppercase tracking-wide sm:text-[11px]">{index === 0 ? "Ayer" : isToday ? "Hoy" : day.weekday}</p><p className="mt-0.5 text-lg font-bold leading-none sm:text-2xl">{day.date}</p><p className="mt-1 text-[9px] capitalize text-muted-foreground sm:text-[11px]"><span className="sm:hidden">{arrivals} lleg.</span><span className="hidden sm:inline">{day.month} · {arrivals} llegada{arrivals === 1 ? "" : "s"}</span></p></div>;
               })}
             </div>
-            {agenda.map(group => <section key={group.key} className="border-b last:border-b-0">
-              <div className="reservation-agenda-grid grid h-8 border-y border-slate-200 bg-slate-100/95" style={gridStyle}>
-                <div className="sticky left-0 z-20 flex min-w-0 items-center border-r bg-slate-100 px-2 shadow-[8px_0_12px_-12px_rgba(15,23,42,0.5)] sm:px-4"><p title={group.label} className="flex min-w-0 items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-slate-700 sm:gap-2 sm:text-xs"><BedDouble className="h-3 w-3 shrink-0 text-sky-700" /><span className="truncate">{group.label}</span><span className="shrink-0 text-[9px] font-medium normal-case tracking-normal text-slate-500">· {group.reservationsCount} res.</span></p></div>
-                {window.dates.map((date, index) => <div key={date} aria-hidden="true" className={`border-r ${index === todayIndex ? "border-x-2 border-amber-400 bg-amber-50" : ""}`} />)}
+            {agenda.map((group, groupIndex) => {
+              const availabilityType = availabilityByType.get(availabilityRoomTypeKey(group.label));
+              return <section key={group.key} className="border-b last:border-b-0">
+              <div className="reservation-agenda-grid grid border-y border-slate-200 bg-slate-100/95" style={gridStyle}>
+                <div className="sticky left-0 z-20 flex min-w-0 items-center border-r bg-slate-100 px-2 py-2 shadow-[8px_0_12px_-12px_rgba(15,23,42,0.5)] sm:px-4"><p title={group.label} className="flex min-w-0 items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-slate-700 sm:gap-2 sm:text-xs"><BedDouble className="h-3 w-3 shrink-0 text-sky-700" /><span className="truncate">{group.label}</span><span className="shrink-0 text-[9px] font-medium normal-case tracking-normal text-slate-500">· {group.reservationsCount} res.</span></p></div>
+                {window.dates.map((date, index) => {
+                  const day = findAgendaAvailabilityDay(availabilityType, date);
+                  const currentRate = day?.totalRate ?? day?.roomRate ?? null;
+                  const editor = day?.rateId && currentRate !== null ? { roomTypeName: group.label, date, rateId: day.rateId, previousRate: currentRate } : null;
+                  const draft = editor ? agendaRateDrafts[agendaRateKey(editor.rateId, editor.date)] : null;
+                  const todayStyle = index === todayIndex ? "border-x-2 border-amber-400 bg-amber-50" : "";
+                  return <div key={date} className={`flex min-h-[52px] flex-col items-center justify-center border-r px-1 py-1 ${todayStyle} sm:min-h-[58px] sm:px-2`}>
+                    {day ? <>
+                      <span className={`text-[9px] font-semibold ${day.roomsAvailable === null ? "text-slate-500" : day.roomsAvailable <= 0 ? "text-rose-700" : day.roomsAvailable <= 2 ? "text-amber-700" : "text-emerald-700"}`}>{day.roomsAvailable === null ? "—" : `${day.roomsAvailable} disp.`}</span>
+                      {canEditAgendaRates && editor ? <div className="mt-0.5 flex w-full items-center rounded border bg-background px-0.5 shadow-sm focus-within:ring-2 focus-within:ring-sky-600"><Euro className="h-2.5 w-2.5 shrink-0 text-sky-700 sm:h-3 sm:w-3" /><Input aria-label={`Precio de ${group.label} el ${date}`} data-agenda-rate-row={groupIndex} data-agenda-rate-day={index} type="number" min="0" step="0.01" inputMode="decimal" value={draft?.rateText ?? editor.previousRate.toFixed(2)} onFocus={event => event.currentTarget.select()} onKeyDown={event => focusAgendaRateInput(event, groupIndex, index)} onChange={event => setAgendaRateDraft(editor, event.target.value)} className={`h-5 min-w-0 border-0 p-0 text-center text-[10px] font-bold shadow-none focus-visible:ring-0 sm:h-6 sm:text-xs ${draft ? "text-sky-800" : "text-slate-800"}`} /></div> : <span className="mt-0.5 text-[10px] font-bold text-slate-800 sm:text-xs">{currentRate === null ? "—" : money(currentRate)}</span>}
+                    </> : <span className="text-[10px] text-slate-400">—</span>}
+                  </div>;
+                })}
               </div>
               {group.rooms.map(room => <div key={room.key} className="reservation-agenda-grid grid min-h-[48px] bg-background sm:min-h-[64px]" style={{ ...gridStyle, gridAutoRows: "minmax(var(--agenda-row-height), auto)" }}>
                 <div className="sticky left-0 z-20 flex min-w-0 items-center border-r border-b bg-background px-2 shadow-[8px_0_12px_-12px_rgba(15,23,42,0.48)] sm:px-4" style={{ gridColumn: 1, gridRow: `1 / span ${room.laneCount}` }}><p title={room.label} className="truncate text-xs font-medium text-slate-800 sm:text-sm">{room.label}</p></div>
@@ -361,7 +434,8 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
                   <span className="mt-0.5 block truncate text-[9px] font-medium opacity-90 sm:text-[11px]"><span className="sm:hidden">{compactDate(card.reservation.checkInDate)} → {compactDate(card.reservation.checkOutDate)}</span><span className="hidden sm:inline">Entra {compactDate(card.reservation.checkInDate)} · Sale {compactDate(card.reservation.checkOutDate)}</span></span>
                 </button>)}
               </div>)}
-            </section>)}
+            </section>;
+            })}
           </div>
         </div>
       </CardContent>
@@ -438,6 +512,10 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
 
     <AlertDialog open={Boolean(pendingStatus)} onOpenChange={open => { if (!open) setPendingStatus(null); }}>
       <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Confirmar cambio de estado</AlertDialogTitle><AlertDialogDescription>Este cambio modificará el estado de la reserva en Cloudbeds.</AlertDialogDescription></AlertDialogHeader>{pendingStatus && <div className="rounded-lg border bg-muted/40 p-4 text-sm"><p><strong>Reserva:</strong> {reservation?.guestName || "Sin nombre"}</p><p><strong>Estado actual:</strong> {reservationStatus(reservation?.reservationStatus)}</p><p><strong>Nuevo estado:</strong> {pendingStatus.label}</p></div>}<AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction disabled={updateStatus.isPending} onClick={() => selectedId !== null && pendingStatus && updateStatus.mutate({ id: selectedId, status: pendingStatus.status })}>{updateStatus.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}Actualizar en Cloudbeds</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+    </AlertDialog>
+
+    <AlertDialog open={Boolean(pendingAgendaRates)} onOpenChange={open => { if (!open) setPendingAgendaRates(null); }}>
+      <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Confirmar envío de precios</AlertDialogTitle><AlertDialogDescription>Se actualizarán {pendingAgendaRates?.length || 0} tarifas base en Cloudbeds. Revisa los cambios antes de enviarlos.</AlertDialogDescription></AlertDialogHeader>{pendingAgendaRates && <div className="max-h-64 overflow-y-auto rounded-lg border bg-muted/40 p-3 text-sm"><div className="space-y-2">{pendingAgendaRates.map(change => <div key={agendaRateKey(change.rateId, change.date)} className="flex justify-between gap-3"><span>{change.roomTypeName} · {compactDate(change.date)}</span><strong>{money(Number(change.rateText.replace(",", ".")))}</strong></div>)}</div></div>}<AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction disabled={updateAgendaRates.isPending} onClick={() => pendingAgendaRates && updateAgendaRates.mutate({ changes: pendingAgendaRates.map(change => ({ rateId: change.rateId, date: change.date, rate: Number(change.rateText.replace(",", ".")) })) })}>{updateAgendaRates.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}Enviar precios</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
     </AlertDialog>
   </div>;
 }
