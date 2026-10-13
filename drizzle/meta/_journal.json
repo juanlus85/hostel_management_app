@@ -414,6 +414,13 @@
       "when": 1791714723339,
       "tag": "0058_furry_santa_claus",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "5",
+      "when": 1791887373834,
+      "tag": "0059_sad_zarek",
+      "breakpoints": true
     }
   ]
 }

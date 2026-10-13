@@ -935,6 +935,9 @@ export type InsertGuest = typeof guests.$inferInsert;
 export const onlineCheckinLinks = mysqlTable("online_checkin_links", {
   id: int("id").autoincrement().primaryKey(),
   token: varchar("token", { length: 128 }).notNull().unique(),
+  checkinMode: mysqlEnum("checkinMode", ["access", "early"])
+    .default("access")
+    .notNull(),
   status: mysqlEnum("status", ["pending", "completed", "cancelled", "expired"])
     .default("pending")
     .notNull(),

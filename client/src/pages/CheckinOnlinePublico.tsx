@@ -76,6 +76,8 @@ type GuestForm = {
 };
 type OnlineCompletion = {
   success: boolean;
+  checkinMode?: "access" | "early";
+  sendCodes?: boolean;
   roomNumber: string;
   roomCode?: string | null;
   entranceCode?: string | null;
@@ -329,6 +331,8 @@ export default function CheckinOnlinePublico() {
         guestEmail={invitation.email || ""}
         data={{
           success: true,
+          checkinMode: invitation.checkinMode,
+          sendCodes: invitation.sendCodes,
           roomNumber: invitation.roomNumber,
           roomCode: invitation.roomCode,
           entranceCode: invitation.entranceCode,
@@ -860,6 +864,7 @@ function ArrivalConfirmation({
   data: OnlineCompletion;
 }) {
   const t = (es: string, en: string) => (lang === "es" ? es : en);
+  const sendsCodes = data.sendCodes !== false;
   const copyCode = async (code?: string | null) => {
     if (!code) return;
     try {
@@ -955,10 +960,15 @@ function ArrivalConfirmation({
             {t("¡Check-in completado!", "Check-in completed!")}
           </CardTitle>
           <CardDescription>
-            {t(
-              "Tus códigos y esta guía también se han enviado a tu email.",
-              "Your codes and this guide have also been sent to your email."
-            )}
+            {sendsCodes
+              ? t(
+                  "Tus códigos y esta guía también se han enviado a tu email.",
+                  "Your codes and this guide have also been sent to your email."
+                )
+              : t(
+                  "Hemos recibido tus datos. Gracias por completar el Check-in anticipado.",
+                  "We have received your details. Thank you for completing the early check-in."
+                )}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
@@ -970,7 +980,7 @@ function ArrivalConfirmation({
               {intro || defaultIntro}
             </p>
           </section>
-          <section className="grid gap-3 sm:grid-cols-2">
+          {sendsCodes ? <section className="grid gap-3 sm:grid-cols-2">
             <CodeBox
               label={t(
                 "1. Código de acceso al hostel",
@@ -986,8 +996,8 @@ function ArrivalConfirmation({
               onCopy={copyCode}
               copyLabel={t("Copiar", "Copy")}
             />
-          </section>
-          <GuideBlock
+          </section> : null}
+          {sendsCodes && <GuideBlock
             icon={<KeyRound className="h-5 w-5" />}
             title={t("Tu habitación", "Your room")}
           >
@@ -1006,8 +1016,8 @@ function ArrivalConfirmation({
                   "Use the room code shown above to access your room."
                 )}
             </p>
-          </GuideBlock>
-          {data.wifiPassword && (
+          </GuideBlock>}
+          {sendsCodes && data.wifiPassword && (
             <GuideBlock icon={<Wifi className="h-5 w-5" />} title="Wi‑Fi">
               <p>
                 {t("Contraseña", "Password")}:{" "}
@@ -1015,7 +1025,7 @@ function ArrivalConfirmation({
               </p>
             </GuideBlock>
           )}
-          {commonAreas && (
+          {sendsCodes && commonAreas && (
             <GuideBlock
               icon={<Building2 className="h-5 w-5" />}
               title={t("Zonas comunes", "Common areas")}
@@ -1023,7 +1033,7 @@ function ArrivalConfirmation({
               <p className="whitespace-pre-line">{commonAreas}</p>
             </GuideBlock>
           )}
-          {houseRules && (
+          {sendsCodes && houseRules && (
             <GuideBlock
               icon={<ShieldCheck className="h-5 w-5" />}
               title={t("Normas del hostel", "Hostel rules")}
@@ -1058,7 +1068,7 @@ function ArrivalConfirmation({
               )}
             </div>
           </GuideBlock>
-          <section className="rounded-xl border bg-slate-50 p-5">
+          {sendsCodes && <section className="rounded-xl border bg-slate-50 p-5">
             <h2 className="mb-3 font-bold text-slate-900">
               {t(
                 "Guardar o compartir estas instrucciones",
@@ -1083,7 +1093,7 @@ function ArrivalConfirmation({
                 </a>
               </Button>
             </div>
-          </section>
+          </section>}
         </CardContent>
       </Card>
     </div>

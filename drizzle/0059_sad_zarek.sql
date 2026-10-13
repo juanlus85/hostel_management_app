@@ -1,0 +1,1 @@
+ALTER TABLE `online_checkin_links` ADD `checkinMode` enum('access','early') DEFAULT 'access' NOT NULL;

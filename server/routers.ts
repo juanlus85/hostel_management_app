@@ -227,17 +227,21 @@ function requestOrigin(req: any) {
 async function createOnlineCheckinFromExternalReservation(
   reservation: ExternalUpcomingReservation,
   createdBy: number,
-  origin: string
+  origin: string,
+  mode: "access" | "early" = "access"
 ) {
-  if (!reservation.roomNumber)
+  const sendsCodes = mode === "access";
+  if (sendsCodes && !reservation.roomNumber)
     throw new TRPCError({
       code: "BAD_REQUEST",
       message:
         "Asigna una habitación con código de acceso antes de enviar el Check-in Online",
     });
   const accessCodeList = await db.getAllAccessCodes();
-  const room = findAccessCodeForRoom(accessCodeList, reservation.roomNumber);
-  if (!room || room.roomNumber === "ENTRADA")
+  const room = reservation.roomNumber
+    ? findAccessCodeForRoom(accessCodeList, reservation.roomNumber)
+    : null;
+  if (sendsCodes && (!room || room.roomNumber === "ENTRADA"))
     throw new TRPCError({
       code: "BAD_REQUEST",
       message: `La habitación ${reservation.roomNumber} no tiene códigos de acceso configurados`,
@@ -255,6 +259,7 @@ async function createOnlineCheckinFromExternalReservation(
       .slice(0, 10);
   const linkId = await db.createOnlineCheckinLink({
     token,
+    checkinMode: mode,
     email: reservation.guestEmail?.trim().toLowerCase() || "",
     prefilledFirstName: guest.firstName,
     prefilledLastName: guest.lastName,
@@ -265,14 +270,15 @@ async function createOnlineCheckinFromExternalReservation(
     reservationOrigin: externalReservationOrigin(reservation.bookingSource),
     checkInDate: reservation.checkInDate,
     checkOutDate,
-    roomNumber: reservation.roomNumber,
-    roomType: reservation.roomType || room.roomType,
-    roomCode: room.roomCode,
-    entranceCode:
-      room.entranceCode ||
-      entrance?.roomCode ||
-      hostelSettings?.defaultEntranceCode ||
-      null,
+    roomNumber: reservation.roomNumber || "Por asignar",
+    roomType: reservation.roomType || room?.roomType || null,
+    roomCode: sendsCodes ? room?.roomCode || null : null,
+    entranceCode: sendsCodes
+      ? room?.entranceCode ||
+        entrance?.roomCode ||
+        hostelSettings?.defaultEntranceCode ||
+        null
+      : null,
     numberOfRooms: 1,
     numberOfGuests: reservation.guestCount || 1,
     paymentType: "PLATF",
@@ -3790,6 +3796,8 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
               : null;
           return {
             completed: link.status === "completed",
+            checkinMode: link.checkinMode,
+            sendCodes: link.checkinMode === "access",
             guestName: completedGuest?.firstName || "",
             email: link.email,
             prefilledFirstName: link.prefilledFirstName,
@@ -3801,8 +3809,14 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             checkOutDate: link.checkOutDate,
             roomType: link.roomType,
             roomNumber: link.roomNumber,
-            roomCode: link.status === "completed" ? link.roomCode : "",
-            entranceCode: link.status === "completed" ? link.entranceCode : "",
+            roomCode:
+              link.status === "completed" && link.checkinMode === "access"
+                ? link.roomCode
+                : "",
+            entranceCode:
+              link.status === "completed" && link.checkinMode === "access"
+                ? link.entranceCode
+                : "",
             floor: room?.floor || "",
             floorLevel: room?.floorLevel || "",
             numberOfGuests: link.numberOfGuests,
@@ -3924,8 +3938,9 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
               message: `Este enlace requiere los datos de ${link.numberOfGuests} huésped(es)`,
             });
           }
-          let entranceCode = link.entranceCode;
-          if (!entranceCode) {
+          const sendsCodes = link.checkinMode === "access";
+          let entranceCode = sendsCodes ? link.entranceCode : null;
+          if (sendsCodes && !entranceCode) {
             const accessCodeList = await db.getAllAccessCodes();
             const entrance = accessCodeList.find(
               code => code.roomNumber === "ENTRADA"
@@ -3967,7 +3982,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
               checkOutDate: link.checkOutDate,
               roomNumber: link.roomNumber,
               roomType: link.roomType,
-              roomCode: link.roomCode,
+              roomCode: sendsCodes ? link.roomCode : null,
               entranceCode,
               numberOfRooms: link.numberOfRooms,
               reservationOrigin: link.reservationOrigin,
@@ -3984,7 +3999,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
               checkinType: "online",
               language: input.language,
               token: onlineGuestToken(link.token, index),
-              sendCodes: true,
+              sendCodes: sendsCodes,
               createdBy: null,
             });
             guestIds.push(guestId);
@@ -3995,7 +4010,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             status: "completed",
             guestId,
             completedAt: new Date(),
-            entranceCode,
+            entranceCode: sendsCodes ? entranceCode : null,
             expiresAt: dayAfter(link.checkInDate),
             language: input.language,
           });
@@ -4018,7 +4033,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           const resolvedRoomNumber =
             hasRoomNumber ? link.roomNumber : roomDetails?.roomNumber || link.roomNumber;
           const resolvedRoomType = roomDetails?.roomType || link.roomType;
-          try {
+          if (sendsCodes) try {
             const { sendOnlineCheckinConfirmation } = await import("./email");
             await sendOnlineCheckinConfirmation({
               firstName: input.firstName,
@@ -4067,9 +4082,11 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
 
           return {
             success: true,
+            checkinMode: link.checkinMode,
+            sendCodes: sendsCodes,
             roomNumber: resolvedRoomNumber,
-            roomCode: link.roomCode,
-            entranceCode,
+            roomCode: sendsCodes ? link.roomCode : null,
+            entranceCode: sendsCodes ? entranceCode : null,
             checkInDate: link.checkInDate,
             roomType: resolvedRoomType,
             floor: roomDetails?.floor || "",
@@ -4507,15 +4524,35 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             const matchingLinks = checkinLinks.filter(link =>
               Boolean(link.reservationNumber && reservationKeys.has(link.reservationNumber))
             );
-            const checkinCompleted = matchingLinks.some(link => link.status === "completed");
-            const checkinInvitationSent = !checkinCompleted && communications.some(
+            const accessCompleted = matchingLinks.some(
+              link => link.checkinMode !== "early" && link.status === "completed"
+            );
+            const earlyCompleted = matchingLinks.some(
+              link => link.checkinMode === "early" && link.status === "completed"
+            );
+            const accessInvitationSent = !accessCompleted && communications.some(
               communication =>
                 communication.externalReservationId === reservation.id &&
                 communication.channel === "email" &&
                 communication.messageType === "online_checkin" &&
                 communication.status === "sent"
             );
-            return { ...reservation, checkinInvitationSent, checkinCompleted };
+            const earlyInvitationSent = !earlyCompleted && communications.some(
+              communication =>
+                communication.externalReservationId === reservation.id &&
+                communication.channel === "email" &&
+                communication.messageType === "early_checkin" &&
+                communication.status === "sent"
+            );
+            return {
+              ...reservation,
+              checkinInvitationSent: accessInvitationSent || earlyInvitationSent,
+              checkinCompleted: accessCompleted || earlyCompleted,
+              accessInvitationSent,
+              accessCompleted,
+              earlyInvitationSent,
+              earlyCompleted,
+            };
           });
         }),
       getCloudbedsUpcomingReservationDetail: protectedProcedure
@@ -4817,7 +4854,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
         .input(
           z.object({
             externalReservationId: z.number(),
-            messageType: z.enum(["welcome", "online_checkin"]),
+            messageType: z.enum(["welcome", "online_checkin", "early_checkin"]),
             language: z.enum(["es", "en"]).default("es"),
             subject: z.string().trim().min(1).max(200).optional(),
             message: z.string().trim().min(1).max(10000).optional(),
@@ -4847,17 +4884,19 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             roomType: reservation.roomType,
             reservationCode: reservation.reservationCode,
           };
-          if (input.messageType === "online_checkin") {
+          if (input.messageType === "online_checkin" || input.messageType === "early_checkin") {
+            const checkinMode = input.messageType === "early_checkin" ? "early" : "access";
             const customMessage =
               input.subject && input.message
                 ? buildEditedReservationEmail(input.subject, input.message)
                 : null;
             const invitation = customMessage
               ? null
-              : await createOnlineCheckinFromExternalReservation(
+                : await createOnlineCheckinFromExternalReservation(
                   reservation,
                   ctx.user.id,
-                  requestOrigin(ctx.req)
+                  requestOrigin(ctx.req),
+                  checkinMode
                 );
             const settings = await db.getHostelSettings();
             const configuredInvitation =
@@ -4874,7 +4913,8 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
                   address: settings?.hostelAddress,
                   phone: settings?.hostelPhone,
                   email: settings?.hostelEmail,
-                }
+                },
+                checkinMode
               );
             const { sendEmail } = await import("./email");
             const result = await sendEmail(
@@ -4887,9 +4927,11 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
               externalReservationId: reservation.id,
               channel: "email",
               status: result.success ? "sent" : "failed",
-              messageType: "online_checkin",
+              messageType: input.messageType,
               notes: result.success
-                ? "Invitación de Check-in Online enviada por recepción"
+                ? input.messageType === "early_checkin"
+                  ? "Invitación de Check-in anticipado enviada por recepción"
+                  : "Invitación de Check-in Online con códigos enviada por recepción"
                 : result.error || "No se pudo enviar la invitación",
               sentAt: result.success ? new Date() : null,
               createdBy: ctx.user.id,
@@ -4952,7 +4994,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             externalReservationId: z.number(),
             language: z.enum(["es", "en"]).default("es"),
             messageType: z
-              .enum(["welcome", "online_checkin"])
+              .enum(["welcome", "online_checkin", "early_checkin"])
               .default("welcome"),
           })
         )
@@ -4974,11 +5016,13 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             roomType: reservation.roomType,
             reservationCode: reservation.reservationCode,
           };
-          if (input.messageType === "online_checkin") {
+          if (input.messageType === "online_checkin" || input.messageType === "early_checkin") {
+            const checkinMode = input.messageType === "early_checkin" ? "early" : "access";
             const invitation = await createOnlineCheckinFromExternalReservation(
               reservation,
               ctx.user.id,
-              requestOrigin(ctx.req)
+              requestOrigin(ctx.req),
+              checkinMode
             );
             return buildConfiguredOnlineCheckinEmail(
               input.language === "en"
@@ -4992,7 +5036,8 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
                 address: settings?.hostelAddress,
                 phone: settings?.hostelPhone,
                 email: settings?.hostelEmail,
-              }
+              },
+              checkinMode
             );
           }
           const { settings: welcomeSettings, context: welcomeContext } =
@@ -5017,7 +5062,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
         .input(
           z.object({
             externalReservationId: z.number(),
-            messageType: z.enum(["welcome", "online_checkin"]),
+            messageType: z.enum(["welcome", "online_checkin", "early_checkin"]),
             language: z.enum(["es", "en"]).default("es"),
             message: z.string().trim().min(1).max(10000).optional(),
           })
@@ -5045,12 +5090,14 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             roomType: reservation.roomType,
             reservationCode: reservation.reservationCode,
           };
+          const checkinMode = input.messageType === "early_checkin" ? "early" : "access";
           const invitation =
-            input.messageType === "online_checkin" && !input.message?.trim()
+            (input.messageType === "online_checkin" || input.messageType === "early_checkin") && !input.message?.trim()
               ? await createOnlineCheckinFromExternalReservation(
                   reservation,
                   ctx.user.id,
-                  requestOrigin(ctx.req)
+                  requestOrigin(ctx.req),
+                  checkinMode
                 )
               : null;
           const settings = await db.getHostelSettings();
@@ -5063,6 +5110,8 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
               ? input.language === "en"
                 ? settings?.reservationCheckinWhatsappEn
                 : settings?.reservationCheckinWhatsappEs
+              : input.messageType === "early_checkin"
+                ? null
               : input.language === "en"
                 ? settings?.reservationWelcomeWhatsappEn
                 : settings?.reservationWelcomeWhatsappEs;
@@ -5084,7 +5133,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             channel: "whatsapp",
             status: "prepared",
             messageType: input.messageType,
-            notes: `Borrador de ${input.messageType === "online_checkin" ? "Check-in Online" : "bienvenida"} preparado para confirmación manual`,
+            notes: `Borrador de ${input.messageType === "online_checkin" ? "Check-in Online con códigos" : input.messageType === "early_checkin" ? "Check-in anticipado" : "bienvenida"} preparado para confirmación manual`,
             sentAt: null,
             createdBy: ctx.user.id,
           });

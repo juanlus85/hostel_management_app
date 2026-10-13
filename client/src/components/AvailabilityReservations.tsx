@@ -38,8 +38,9 @@ type PaymentDraft = { type: string; label: string; amount: string; description: 
 type PendingPayment = PaymentDraft & { amountNumber: number };
 type PendingStatus = { status: CloudbedsStatus; label: string };
 type MessageLanguage = "es" | "en";
-type WelcomeEditor = { reservationId: number; guestName: string; guestEmail: string; messageType: "welcome" | "online_checkin"; subject: string; message: string };
-type WhatsAppEditor = { reservationId: number; guestName: string; messageType: "welcome" | "online_checkin"; message: string };
+type ReservationMessageType = "welcome" | "online_checkin" | "early_checkin";
+type WelcomeEditor = { reservationId: number; guestName: string; guestEmail: string; messageType: ReservationMessageType; subject: string; message: string };
+type WhatsAppEditor = { reservationId: number; guestName: string; messageType: ReservationMessageType; message: string };
 type AgendaRateEditor = { roomTypeName: string; date: string; rateId: string; previousRate: number; rateText: string };
 
 function getReservationWindow() {
@@ -266,7 +267,7 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
   });
   const sendReservationEmail = trpc.checkin.externalImports.sendCloudbedsReservationEmail.useMutation({
     onSuccess: (_result, variables) => {
-      toast.success(variables.messageType === "welcome" ? "Correo de bienvenida enviado" : "Invitación de Check-in Online enviada");
+      toast.success(variables.messageType === "welcome" ? "Correo de bienvenida enviado" : variables.messageType === "early_checkin" ? "Invitación de Check-in anticipado enviada" : "Invitación de Check-in con códigos enviada");
       setWelcomeEditor(null);
       if (selectedId !== null) utils.checkin.externalImports.getCloudbedsUpcomingReservationDetail.invalidate({ id: selectedId });
       utils.checkin.externalImports.listCloudbedsUpcomingReservations.invalidate({ dateFrom: window.dateFrom, dateTo: window.dateTo });
@@ -313,6 +314,9 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
   const payments = detail.data?.payments;
   const onlineCheckinSent = detail.data?.communications?.find(
     communication => communication.messageType === "online_checkin" && communication.channel === "email" && communication.status === "sent"
+  );
+  const earlyCheckinSent = detail.data?.communications?.find(
+    communication => communication.messageType === "early_checkin" && communication.channel === "email" && communication.status === "sent"
   );
   const gridStyle = { gridTemplateColumns: `var(--agenda-label-column) repeat(${window.dates.length}, var(--agenda-day-column))` };
   const canRecordPayments = user?.role === "admin";
@@ -371,7 +375,7 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
     const label = statusOptions.find(option => option.value === statusEditor)?.label || statusEditor;
     setPendingStatus({ status: statusEditor, label });
   };
-  const editReservationEmail = async (messageType: "welcome" | "online_checkin") => {
+  const editReservationEmail = async (messageType: ReservationMessageType) => {
     if (!reservation?.guestEmail) return toast.error("La reserva no tiene correo electrónico");
     try {
       const draft = await prepareReservationMessage.mutateAsync({ externalReservationId: reservation.id, language: messageLanguage, messageType });
@@ -380,7 +384,7 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
       toast.error(error instanceof Error ? error.message : "No se pudo preparar el correo");
     }
   };
-  const editReservationWhatsApp = async (messageType: "welcome" | "online_checkin") => {
+  const editReservationWhatsApp = async (messageType: ReservationMessageType) => {
     if (!reservation) return;
     try {
       const draft = await prepareReservationWhatsApp.mutateAsync({ externalReservationId: reservation.id, language: messageLanguage, messageType });
@@ -565,12 +569,18 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
                 <div className="flex rounded-md border bg-background p-0.5 text-xs"><Button variant={messageLanguage === "es" ? "secondary" : "ghost"} size="sm" className="h-7 px-2" onClick={() => setMessageLanguage("es")}>ES</Button><Button variant={messageLanguage === "en" ? "secondary" : "ghost"} size="sm" className="h-7 px-2" onClick={() => setMessageLanguage("en")}>EN</Button></div>
               </div>
               {onlineCheckinSent && (
-                <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-950">
-                  <p className="font-semibold">Check-in Online ya enviado</p>
+                <div className="mt-4 rounded-lg border border-sky-200 bg-sky-50 p-3 text-sm text-sky-950">
+                  <p className="font-semibold">Check-in con códigos ya enviado</p>
                   <p className="mt-1">Se envió por correo el {new Date(onlineCheckinSent.sentAt || onlineCheckinSent.createdAt).toLocaleString("es-ES")}.</p>
                 </div>
               )}
-              {welcomeEditor ? <div className="mt-4 space-y-4 rounded-lg border bg-muted/20 p-4"><div><p className="font-medium">Personalizar correo</p><p className="mt-1 text-sm text-muted-foreground">Revisa el correo antes de enviarlo a {welcomeEditor.guestEmail}.</p></div><div className="space-y-2"><label htmlFor="reservation-email-subject" className="text-sm font-medium">Asunto</label><Input id="reservation-email-subject" value={welcomeEditor.subject} onChange={event => setWelcomeEditor(current => current ? { ...current, subject: event.target.value } : current)} /></div><div className="space-y-2"><label htmlFor="reservation-email-message" className="text-sm font-medium">Mensaje</label><textarea id="reservation-email-message" className="min-h-48 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" value={welcomeEditor.message} onChange={event => setWelcomeEditor(current => current ? { ...current, message: event.target.value } : current)} /></div><div className="flex justify-end gap-2"><Button variant="outline" onClick={() => setWelcomeEditor(null)}>Cancelar</Button><Button onClick={sendEditedWelcome} disabled={sendReservationEmail.isPending}>{sendReservationEmail.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{welcomeEditor.messageType === "online_checkin" ? "Enviar Check-in" : "Enviar bienvenida"}</Button></div></div> : whatsAppEditor ? <div className="mt-4 space-y-4 rounded-lg border bg-muted/20 p-4"><div><p className="font-medium">Personalizar WhatsApp</p><p className="mt-1 text-sm text-muted-foreground">Se abrirá un borrador en WhatsApp para enviarlo manualmente.</p></div><div className="space-y-2"><label htmlFor="reservation-whatsapp-message" className="text-sm font-medium">Mensaje</label><textarea id="reservation-whatsapp-message" className="min-h-48 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" value={whatsAppEditor.message} onChange={event => setWhatsAppEditor(current => current ? { ...current, message: event.target.value } : current)} /></div><div className="flex justify-end gap-2"><Button variant="outline" onClick={() => setWhatsAppEditor(null)}>Cancelar</Button><Button onClick={openEditedWhatsApp} disabled={prepareReservationWhatsApp.isPending}>{prepareReservationWhatsApp.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Abrir WhatsApp</Button></div></div> : <div className="mt-4 grid gap-2 sm:grid-cols-2"><Button variant="outline" disabled={setReviewed.isPending} onClick={() => setReviewed.mutate({ id: reservation.id, isReviewed: !reservation.isReviewed })}><CheckCircle2 className="mr-2 h-4 w-4" />{reservation.isReviewed ? "Quitar revisión" : "Marcar revisada"}</Button><Button variant="outline" disabled={prepareReservationMessage.isPending} onClick={copyReservationCodes}><ClipboardCopy className="mr-2 h-4 w-4" />Copiar mensaje de códigos</Button><Button variant="outline" disabled={prepareReservationMessage.isPending} onClick={() => editReservationEmail("welcome")}><Mail className="mr-2 h-4 w-4" />Enviar códigos por correo</Button><Button variant="outline" disabled={prepareReservationMessage.isPending} onClick={() => editReservationEmail("online_checkin")}><Mail className="mr-2 h-4 w-4" />Enviar Check-in Online</Button><Button variant="outline" disabled={prepareReservationWhatsApp.isPending} onClick={() => editReservationWhatsApp("welcome")}><MessageCircle className="mr-2 h-4 w-4" />Enviar códigos por WhatsApp</Button><Button variant="outline" disabled={prepareReservationWhatsApp.isPending} onClick={() => editReservationWhatsApp("online_checkin")} className="sm:col-span-2"><MessageCircle className="mr-2 h-4 w-4" />WhatsApp Check-in Online</Button></div>}
+              {earlyCheckinSent && (
+                <div className="mt-4 rounded-lg border border-sky-200 bg-sky-50 p-3 text-sm text-sky-950">
+                  <p className="font-semibold">Check-in anticipado ya enviado</p>
+                  <p className="mt-1">Se envió por correo el {new Date(earlyCheckinSent.sentAt || earlyCheckinSent.createdAt).toLocaleString("es-ES")}.</p>
+                </div>
+              )}
+              {welcomeEditor ? <div className="mt-4 space-y-4 rounded-lg border bg-muted/20 p-4"><div><p className="font-medium">Personalizar correo</p><p className="mt-1 text-sm text-muted-foreground">Revisa el correo antes de enviarlo a {welcomeEditor.guestEmail}.</p></div><div className="space-y-2"><label htmlFor="reservation-email-subject" className="text-sm font-medium">Asunto</label><Input id="reservation-email-subject" value={welcomeEditor.subject} onChange={event => setWelcomeEditor(current => current ? { ...current, subject: event.target.value } : current)} /></div><div className="space-y-2"><label htmlFor="reservation-email-message" className="text-sm font-medium">Mensaje</label><textarea id="reservation-email-message" className="min-h-48 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" value={welcomeEditor.message} onChange={event => setWelcomeEditor(current => current ? { ...current, message: event.target.value } : current)} /></div><div className="flex justify-end gap-2"><Button variant="outline" onClick={() => setWelcomeEditor(null)}>Cancelar</Button><Button onClick={sendEditedWelcome} disabled={sendReservationEmail.isPending}>{sendReservationEmail.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{welcomeEditor.messageType === "online_checkin" ? "Enviar Check-in con códigos" : welcomeEditor.messageType === "early_checkin" ? "Enviar Check-in anticipado" : "Enviar bienvenida"}</Button></div></div> : whatsAppEditor ? <div className="mt-4 space-y-4 rounded-lg border bg-muted/20 p-4"><div><p className="font-medium">Personalizar WhatsApp</p><p className="mt-1 text-sm text-muted-foreground">Se abrirá un borrador en WhatsApp para enviarlo manualmente.</p></div><div className="space-y-2"><label htmlFor="reservation-whatsapp-message" className="text-sm font-medium">Mensaje</label><textarea id="reservation-whatsapp-message" className="min-h-48 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" value={whatsAppEditor.message} onChange={event => setWhatsAppEditor(current => current ? { ...current, message: event.target.value } : current)} /></div><div className="flex justify-end gap-2"><Button variant="outline" onClick={() => setWhatsAppEditor(null)}>Cancelar</Button><Button onClick={openEditedWhatsApp} disabled={prepareReservationWhatsApp.isPending}>{prepareReservationWhatsApp.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Abrir WhatsApp</Button></div></div> : <div className="mt-4 grid gap-2 sm:grid-cols-2"><Button variant="outline" disabled={setReviewed.isPending} onClick={() => setReviewed.mutate({ id: reservation.id, isReviewed: !reservation.isReviewed })}><CheckCircle2 className="mr-2 h-4 w-4" />{reservation.isReviewed ? "Quitar revisión" : "Marcar revisada"}</Button><Button variant="outline" disabled={prepareReservationMessage.isPending} onClick={copyReservationCodes}><ClipboardCopy className="mr-2 h-4 w-4" />Copiar mensaje de códigos</Button><Button variant="outline" disabled={prepareReservationMessage.isPending} onClick={() => editReservationEmail("welcome")}><Mail className="mr-2 h-4 w-4" />Enviar códigos por correo</Button><Button variant="outline" disabled={prepareReservationMessage.isPending} onClick={() => editReservationEmail("online_checkin")}><Mail className="mr-2 h-4 w-4" />Enviar Check-in con códigos</Button><Button variant="outline" disabled={prepareReservationMessage.isPending} onClick={() => editReservationEmail("early_checkin")}><Mail className="mr-2 h-4 w-4" />Enviar Check-in anticipado</Button><Button variant="outline" disabled={prepareReservationWhatsApp.isPending} onClick={() => editReservationWhatsApp("welcome")}><MessageCircle className="mr-2 h-4 w-4" />Enviar códigos por WhatsApp</Button><Button variant="outline" disabled={prepareReservationWhatsApp.isPending} onClick={() => editReservationWhatsApp("online_checkin")} className="sm:col-span-2"><MessageCircle className="mr-2 h-4 w-4" />WhatsApp Check-in con códigos</Button><Button variant="outline" disabled={prepareReservationWhatsApp.isPending} onClick={() => editReservationWhatsApp("early_checkin")} className="sm:col-span-2"><MessageCircle className="mr-2 h-4 w-4" />WhatsApp Check-in anticipado</Button></div>}
             </section> : <p className="rounded-lg bg-muted p-4 text-sm text-muted-foreground">Las acciones de comunicación requieren un usuario de recepción o administración.</p>}
           </TabsContent>
         </Tabs>}
