@@ -169,7 +169,7 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
             setIsLoadingAgendaSecondWeek(false);
             if (importReservationsAfter && !hasImportedOnEntry.current) {
               hasImportedOnEntry.current = true;
-              importReservations.mutate();
+              importReservations.mutate({ days: 5 });
             }
           },
           onError: error => {
@@ -177,7 +177,7 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
             toast.warning(`Los próximos 7 días no se cargaron: ${error.message}`);
             if (importReservationsAfter && !hasImportedOnEntry.current) {
               hasImportedOnEntry.current = true;
-              importReservations.mutate();
+              importReservations.mutate({ days: 5 });
             }
           },
         });
@@ -416,9 +416,11 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
           <CardTitle className="flex items-center gap-2"><CalendarDays className="h-5 w-5 text-sky-700" />Agenda de reservas</CardTitle>
           <CardDescription className="mt-1">Vista por tipo de habitación y estancia. Pulsa una reserva para ver huésped, pagos y notas.</CardDescription>
         </div>
-        <div className="flex flex-wrap gap-2">{canEditAgendaRates && editedAgendaRates.length > 0 && <Button className="bg-amber-500 text-amber-950 hover:bg-amber-400" onClick={requestAgendaRateUpdate} disabled={updateAgendaRates.isPending}><Send className="mr-2 h-4 w-4" />Enviar {editedAgendaRates.length} precio{editedAgendaRates.length === 1 ? "" : "s"}</Button>}<Button variant="outline" size="sm" onClick={() => setShowUnassignedReservations(current => !current)}>{showUnassignedReservations ? "Ocultar sin habitación" : `Mostrar sin habitación${hiddenUnassignedReservations ? ` (${hiddenUnassignedReservations})` : ""}`}</Button><Button className="bg-sky-700 hover:bg-sky-800" onClick={() => importReservations.mutate()} disabled={importReservations.isPending}>
+        <div className="flex flex-wrap gap-2">{canEditAgendaRates && editedAgendaRates.length > 0 && <Button className="bg-amber-500 text-amber-950 hover:bg-amber-400" onClick={requestAgendaRateUpdate} disabled={updateAgendaRates.isPending}><Send className="mr-2 h-4 w-4" />Enviar {editedAgendaRates.length} precio{editedAgendaRates.length === 1 ? "" : "s"}</Button>}<Button variant="outline" size="sm" onClick={() => setShowUnassignedReservations(current => !current)}>{showUnassignedReservations ? "Ocultar sin habitación" : `Mostrar sin habitación${hiddenUnassignedReservations ? ` (${hiddenUnassignedReservations})` : ""}`}</Button><Button className="bg-sky-700 hover:bg-sky-800" onClick={() => importReservations.mutate({ days: 5 })} disabled={importReservations.isPending}>
           {importReservations.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-          Actualizar reservas
+          Actualizar 5 días
+        </Button><Button variant="outline" size="sm" onClick={() => importReservations.mutate({ days: 15 })} disabled={importReservations.isPending}>
+          Actualizar 15 días
         </Button><Button variant="outline" size="sm" onClick={() => loadAgendaAvailability()} disabled={importAgendaAvailability.isPending}>{importAgendaAvailability.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}Actualizar precios</Button></div>
       </CardHeader>
       <CardContent className="flex flex-wrap gap-x-5 gap-y-2 border-t bg-sky-50/30 py-3 text-xs text-muted-foreground">

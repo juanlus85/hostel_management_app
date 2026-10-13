@@ -779,7 +779,7 @@ export default function ImportacionesExternas() {
                 disabled={
                   !canImportCloudbeds || importUpcomingReservations.isPending
                 }
-                onClick={() => importUpcomingReservations.mutate()}
+                onClick={() => importUpcomingReservations.mutate({ days: 15 })}
               >
                 {importUpcomingReservations.isPending ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

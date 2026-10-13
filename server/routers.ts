@@ -4394,8 +4394,13 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             throw new TRPCError({ code: "BAD_GATEWAY", message });
           }
         }),
-      importCloudbedsUpcomingReservations: protectedProcedure.mutation(
-        async ({ ctx }) => {
+      importCloudbedsUpcomingReservations: protectedProcedure
+        .input(
+          z.object({
+            days: z.number().int().min(5).max(15).default(5),
+          })
+        )
+        .mutation(async ({ ctx, input }) => {
           const apiKey = process.env.CLOUDBEDS_API_KEY;
           const propertyId = process.env.CLOUDBEDS_PROPERTY_ID;
           if (!apiKey || !propertyId)
@@ -4404,7 +4409,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
               message:
                 "Configura CLOUDBEDS_API_KEY y CLOUDBEDS_PROPERTY_ID para importar reservas",
             });
-          const dates = getNextMadridCalendarDates(new Date(), 15, -1);
+          const dates = getNextMadridCalendarDates(new Date(), input.days, -1);
           const runId = await db.createExternalImportRun({
             provider: "cloudbeds",
             importType: "future",
@@ -4466,8 +4471,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             });
             throw new TRPCError({ code: "BAD_GATEWAY", message });
           }
-        }
-      ),
+        }),
       listCloudbedsUpcomingReservations: protectedProcedure
         .input(
           z.object({

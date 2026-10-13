@@ -1840,3 +1840,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Diferenciar sutilmente las columnas de viernes y sábado en el calendario de reservas y disponibilidad.
 - [x] Auditar y corregir el error al completar Check-in Online reportado en producción.
 - [x] Eliminar los 504 y la espera al cargar Reservas desacoplando la visualización local de la sincronización pesada de Cloudbeds.
+- [x] Actualizar automáticamente solo ayer y los próximos cuatro días, dejando una recarga completa de quince días como acción manual para evitar esperas y 504.
