@@ -348,6 +348,10 @@ export function normalizeUpcomingReservation(
       assignmentRecord.end_date
     ),
     roomType: firstText(
+      assignmentRecord.roomTypeName,
+      assignmentRecord.room_type_name,
+      assignmentRecord.roomTypeNameDisplay,
+      assignmentRecord.room_type_name_display,
       room.roomTypeName,
       room.room_type_name,
       room.roomTypeNameDisplay,
@@ -367,6 +371,13 @@ export function normalizeUpcomingReservation(
       assignmentRecord.room_type
     ),
     roomNumber: firstText(
+      assignmentRecord.roomName,
+      assignmentRecord.room_name,
+      assignmentRecord.roomNumber,
+      assignmentRecord.room_number,
+      assignmentRecord.room_number_display,
+      assignmentRecord.assignedRoomNumber,
+      assignmentRecord.assigned_room_number,
       room.roomName,
       room.room_name,
       room.roomNumber,
@@ -490,7 +501,7 @@ export async function fetchCloudbedsUpcomingReservations(
   dates: string[],
   onDiagnostics?: (diagnostics: CloudbedsReservationFieldDiagnostics) => void
 ) {
-  const seen = new Set<string>();
+  const seenAssignments = new Set<string>();
   let diagnosticsReported = false;
   const assignmentsByDate = await mapWithConcurrency(dates, 3, async date => {
     const assignmentsUrl = new URL(
@@ -504,8 +515,22 @@ export async function fetchCloudbedsUpcomingReservations(
   const uniqueAssignments = assignmentsByDate.flatMap(({ date, assignments }) =>
     assignments.flatMap(assignment => {
       const id = reservationId(assignment);
-      if (!id || seen.has(id)) return [];
-      seen.add(id);
+      // Una misma reserva puede ocupar más de una habitación. Conservamos una
+      // entrada por habitación física, pero evitamos repetirla al consultar cada
+      // día del calendario.
+      const roomKey = firstText(
+        assignment.roomID,
+        assignment.roomId,
+        assignment.assignedRoomID,
+        assignment.assigned_room_id,
+        assignment.roomName,
+        assignment.room_name,
+        assignment.roomNumber,
+        assignment.room_number
+      ) || "unassigned";
+      const assignmentKey = `${id}:${roomKey}`;
+      if (!id || seenAssignments.has(assignmentKey)) return [];
+      seenAssignments.add(assignmentKey);
       return [{ assignment, id, date }];
     })
   );

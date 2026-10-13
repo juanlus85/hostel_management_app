@@ -7,7 +7,14 @@ export type CloudbedsBookableRoomType = {
   maxGuests: number | null;
   rate: number | null;
   rateId: string | null;
-  individualRooms: Array<{ roomId: string; roomName: string; dormRoomName: string | null }>;
+  individualRooms: CloudbedsIndividualRoom[];
+};
+
+export type CloudbedsIndividualRoom = {
+  roomId: string;
+  roomName: string;
+  dormRoomName: string | null;
+  roomTypeName: string | null;
 };
 
 export type CloudbedsReservationSource = {
@@ -122,7 +129,7 @@ function propertyRoomTypes(payload: unknown): JsonRecord[] {
 function availableIndividualRoomsByType(payload: unknown) {
   const root = asRecord(payload);
   const containers = [...asList(root.data), root.data, root];
-  const roomsByType = new Map<string, Array<{ roomId: string; roomName: string; dormRoomName: string | null }>>();
+  const roomsByType = new Map<string, CloudbedsIndividualRoom[]>();
   for (const container of containers) {
     const record = asRecord(container);
     for (const room of asList(record.rooms ?? record.propertyRooms)) {
@@ -133,12 +140,29 @@ function availableIndividualRoomsByType(payload: unknown) {
       if (!roomTypeId || !roomId || !roomName) continue;
       const list = roomsByType.get(roomTypeId) || [];
       if (!list.some(candidate => candidate.roomId === roomId)) {
-        list.push({ roomId, roomName, dormRoomName: text(roomRecord.dormRoomName, roomRecord.dorm_room_name) });
+        list.push({
+          roomId,
+          roomName,
+          dormRoomName: text(roomRecord.dormRoomName, roomRecord.dorm_room_name),
+          roomTypeName: text(roomRecord.roomTypeName, roomRecord.room_type_name, roomRecord.roomTypeNameShort),
+        });
       }
       roomsByType.set(roomTypeId, list);
     }
   }
   return roomsByType;
+}
+
+function reservationSourceRecords(payload: unknown): JsonRecord[] {
+  if (Array.isArray(payload)) return payload.map(asRecord);
+  if (!payload || typeof payload !== "object") return [];
+  const record = asRecord(payload);
+  if (text(record.sourceID, record.sourceId, record.id)) return [record];
+  for (const key of ["data", "sources", "sourceList", "source_list", "results", "items"]) {
+    const nested = reservationSourceRecords(record[key]);
+    if (nested.length) return nested;
+  }
+  return Object.values(record).flatMap(value => reservationSourceRecords(value));
 }
 
 function totalDetailedRate(room: JsonRecord) {
@@ -155,7 +179,7 @@ function totalDetailedRate(room: JsonRecord) {
 
 export function normalizeCloudbedsBookableRoomTypes(
   payload: unknown,
-  individualRoomsByType: Map<string, Array<{ roomId: string; roomName: string; dormRoomName: string | null }>> = new Map(),
+  individualRoomsByType: Map<string, CloudbedsIndividualRoom[]> = new Map(),
 ): CloudbedsBookableRoomType[] {
   const roomTypes = new Map<string, CloudbedsBookableRoomType>();
   for (const room of propertyRoomTypes(payload)) {
@@ -175,13 +199,33 @@ export function normalizeCloudbedsBookableRoomTypes(
         const roomId = text(record.roomID, record.roomId, record.id);
         const roomName = text(record.roomName, record.room_name, record.name);
         if (!roomId || !roomName) return [];
-        return [{ roomId, roomName, dormRoomName: text(record.dormRoomName, record.dorm_room_name) }];
+        return [{
+          roomId,
+          roomName,
+          dormRoomName: text(record.dormRoomName, record.dorm_room_name),
+          roomTypeName: text(record.roomTypeName, record.room_type_name),
+        }];
       }),
     };
     const previous = roomTypes.get(roomTypeId);
     if (!previous || candidate.roomsAvailable > previous.roomsAvailable || (candidate.rate !== null && previous.rate === null)) {
       roomTypes.set(roomTypeId, candidate);
     }
+  }
+  // getAvailableRoomTypes puede omitir un tipo agotado aunque getRooms devuelva
+  // una habitación física libre. Mantener esa habitación permite validar el hueco
+  // concreto sin inventar disponibilidad agregada.
+  for (const [roomTypeId, individualRooms] of Array.from(individualRoomsByType.entries())) {
+    if (roomTypes.has(roomTypeId) || !individualRooms.length) continue;
+    roomTypes.set(roomTypeId, {
+      roomTypeId,
+      roomTypeName: individualRooms[0]?.roomTypeName || individualRooms[0]?.dormRoomName || `Tipo ${roomTypeId}`,
+      roomsAvailable: 0,
+      maxGuests: null,
+      rate: null,
+      rateId: null,
+      individualRooms,
+    });
   }
   return Array.from(roomTypes.values()).sort((left, right) => left.roomTypeName.localeCompare(right.roomTypeName, "es"));
 }
@@ -225,7 +269,7 @@ export async function fetchCloudbedsBookableRoomTypes({
   // Si la cuenta no tiene acceso a la lectura de habitaciones individuales,
   // se mantiene la comprobación por tipo; la creación con habitación concreta
   // quedará bloqueada hasta que Cloudbeds devuelva esa asignación.
-  let individualRooms = new Map<string, Array<{ roomId: string; roomName: string; dormRoomName: string | null }>>();
+  let individualRooms = new Map<string, CloudbedsIndividualRoom[]>();
   try {
     individualRooms = availableIndividualRoomsByType(await parseResponse(roomsResponse));
   } catch {
@@ -292,18 +336,21 @@ export async function fetchCloudbedsReservationSources(apiKey: string, propertyI
     signal: AbortSignal.timeout(10_000),
   });
   const payload = await parseResponse(response);
-  const root = asRecord(payload);
-  const sources = asList(root.data ?? root.sources);
+  const sources = reservationSourceRecords(payload);
   const output = sources.flatMap(source => {
     const record = asRecord(source);
     const sourceId = text(record.sourceID, record.sourceId, record.id);
     const name = text(record.sourceName, record.name);
-    if (!sourceId || !name || booleanValue(record.status, record.active) === false || booleanValue(record.isThirdParty, record.is_third_party) === true) return [];
+    // Las fuentes de terceros (Booking, Expedia, etc.) son válidas para
+    // postReservation como sourceID ss-…-0/1. Se conserva exactamente el ID
+    // que devuelve Cloudbeds, incluido el sufijo de cobro.
+    if (!sourceId || !name || booleanValue(record.status, record.active) === false) return [];
     return [{
       sourceId,
       name,
       isDefault: /walk\s*in|recepci[oó]n|direct|telefono|phone/i.test(name),
     }];
   });
-  return output.sort((left, right) => Number(right.isDefault) - Number(left.isDefault) || left.name.localeCompare(right.name, "es"));
+  return Array.from(new Map(output.map(source => [source.sourceId, source])).values())
+    .sort((left, right) => Number(right.isDefault) - Number(left.isDefault) || left.name.localeCompare(right.name, "es"));
 }

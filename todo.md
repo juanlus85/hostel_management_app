@@ -1870,3 +1870,5 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Permitir crear una reserva desde un día libre del calendario, solicitando datos de huésped, estancia y noches, y confirmarla en Cloudbeds solo tras verificar disponibilidad.
 - [x] Restaurar el orden original de las habitaciones y abrir Nueva reserva solo al pulsar un hueco libre dentro de una habitación real, dejando preseleccionados esa habitación y su tipo.
 - [x] Añadir y enviar el método de pago obligatorio de Cloudbeds al crear una reserva manual.
+- [x] Corregir la importación de reservas con varias habitaciones para que la agenda muestre cada asignación física y no deje huecos falsos; mantener el bloqueo cuando el tipo esté completo.
+- [x] Mostrar todas las fuentes activas, incluidos canales de terceros, y permitir registrar un cobro inicial con los métodos reales configurados en Cloudbeds (Prepago Booking, Bizum, SumUp u otros).

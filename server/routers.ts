@@ -1311,11 +1311,16 @@ export const appRouter = router({
         sourceId: z.string().trim().max(120).optional(),
         estimatedArrivalTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),
         paymentMethod: z.enum(["cash", "credit", "ebanking", "pay_pal"]).default("cash"),
+        initialPaymentType: z.string().trim().min(1).max(100).optional(),
+        initialPaymentAmount: z.number().positive().max(100000).optional(),
         sendEmailConfirmation: z.boolean().default(false),
       }))
       .mutation(async ({ input }) => {
         if (input.endDate <= input.startDate) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "La salida debe ser posterior a la entrada." });
+        }
+        if (Boolean(input.initialPaymentType) !== Boolean(input.initialPaymentAmount)) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Para registrar un cobro inicial indica tanto el método como el importe." });
         }
         const apiKey = process.env.CLOUDBEDS_API_KEY;
         const propertyId = process.env.CLOUDBEDS_PROPERTY_ID;
@@ -1351,7 +1356,26 @@ export const appRouter = router({
             });
           }
           const result = await createCloudbedsManualReservation({ apiKey, propertyId, ...input, paymentMethod: input.paymentMethod || "cash" });
-          return { ...result, roomTypeName: selectedRoomType.roomTypeName };
+          let initialPaymentWarning: string | null = null;
+          if (input.initialPaymentType && input.initialPaymentAmount) {
+            if (!result.reservationId) {
+              initialPaymentWarning = "La reserva se creó, pero Cloudbeds no devolvió su identificador para registrar el cobro inicial. Añádelo desde el detalle de la reserva.";
+            } else {
+              try {
+                await recordCloudbedsReservationPayment({
+                  apiKey,
+                  propertyId,
+                  reservationId: result.reservationId,
+                  type: input.initialPaymentType,
+                  amount: input.initialPaymentAmount,
+                  isDeposit: true,
+                });
+              } catch (error) {
+                initialPaymentWarning = `La reserva se creó, pero no se pudo registrar el cobro inicial: ${error instanceof Error ? error.message : "revisa el detalle de la reserva"}`;
+              }
+            }
+          }
+          return { ...result, roomTypeName: selectedRoomType.roomTypeName, initialPaymentWarning };
         } catch (error) {
           if (error instanceof TRPCError) throw error;
           throw new TRPCError({

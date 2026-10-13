@@ -3378,13 +3378,19 @@ export async function upsertExternalUpcomingReservations(
   const db = await getDb();
   if (!db) return;
   for (const record of records) {
+    const assignmentCondition = record.roomNumber?.trim()
+      ? eq(externalUpcomingReservations.roomNumber, record.roomNumber.trim())
+      : isNull(externalUpcomingReservations.roomNumber);
     const [existing] = await db
       .select({ id: externalUpcomingReservations.id })
       .from(externalUpcomingReservations)
       .where(
-        eq(
-          externalUpcomingReservations.sourceReservationId,
-          record.sourceReservationId
+        and(
+          eq(
+            externalUpcomingReservations.sourceReservationId,
+            record.sourceReservationId
+          ),
+          assignmentCondition
         )
       )
       .limit(1);

@@ -3,6 +3,7 @@ import {
   cloudbedsManualReservationForm,
   createCloudbedsManualReservation,
   fetchCloudbedsBookableRoomTypes,
+  fetchCloudbedsReservationSources,
   normalizeCloudbedsBookableRoomTypes,
 } from "./cloudbedsManualReservations";
 
@@ -73,7 +74,37 @@ describe("reservas manuales de Cloudbeds", () => {
     const roomsUrl = fetchMock.mock.calls[1][0] as URL;
     expect(roomsUrl.pathname).toBe("/api/v1.3/getRooms");
     expect(roomsUrl.searchParams.get("startDate")).toBe("2026-10-20");
-    expect(result[0]?.individualRooms).toEqual([{ roomId: "room-15", roomName: "Habitación 15", dormRoomName: null }]);
+    expect(result[0]?.individualRooms).toEqual([{ roomId: "room-15", roomName: "Habitación 15", dormRoomName: null, roomTypeName: null }]);
+  });
+
+  it("mantiene una habitación física aunque el tipo no llegue en la disponibilidad agregada", () => {
+    const individualRooms = new Map([[
+      "double-1",
+      [{ roomId: "room-18", roomName: "Habitación 18", dormRoomName: null, roomTypeName: "Doble" }],
+    ]]);
+
+    expect(normalizeCloudbedsBookableRoomTypes({ data: [] }, individualRooms)).toEqual([{
+      roomTypeId: "double-1",
+      roomTypeName: "Doble",
+      roomsAvailable: 0,
+      maxGuests: null,
+      rate: null,
+      rateId: null,
+      individualRooms: [{ roomId: "room-18", roomName: "Habitación 18", dormRoomName: null, roomTypeName: "Doble" }],
+    }]);
+  });
+
+  it("incluye las fuentes de terceros con el sourceID exacto de Cloudbeds", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ data: [
+      { sourceID: "s-1", sourceName: "Walk In", active: true },
+      { sourceID: "ss-22-0", sourceName: "Booking.com · Prepago", isThirdParty: true, active: true },
+      { sourceID: "ss-22-1", sourceName: "Booking.com · Hotel collect", isThirdParty: true, active: true },
+    ] }), { status: 200 })));
+
+    await expect(fetchCloudbedsReservationSources("cbat_test", "204754")).resolves.toEqual(expect.arrayContaining([
+      expect.objectContaining({ sourceId: "ss-22-0", name: "Booking.com · Prepago" }),
+      expect.objectContaining({ sourceId: "ss-22-1", name: "Booking.com · Hotel collect" }),
+    ]));
   });
 
   it("prepara los campos de huésped, estancia y ocupación en el formato Cloudbeds", () => {
