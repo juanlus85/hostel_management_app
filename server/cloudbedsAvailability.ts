@@ -257,6 +257,21 @@ function dateToIso(value: Date) {
   return value.toISOString().slice(0, 10);
 }
 
+export function buildCloudbedsAvailabilityChunks(startDate: string, endDate: string) {
+  const start = dateFromIso(startDate);
+  const end = dateFromIso(endDate);
+  const chunks: Array<{ startDate: string; endDate: string }> = [];
+  for (let cursor = new Date(start); cursor <= end; ) {
+    const chunkStart = new Date(cursor);
+    const chunkEnd = new Date(cursor);
+    chunkEnd.setUTCDate(chunkEnd.getUTCDate() + CLOUDBEDS_MAX_DAYS_PER_QUERY - 1);
+    if (chunkEnd > end) chunkEnd.setTime(end.getTime());
+    chunks.push({ startDate: dateToIso(chunkStart), endDate: dateToIso(chunkEnd) });
+    cursor.setUTCDate(cursor.getUTCDate() + CLOUDBEDS_MAX_DAYS_PER_QUERY);
+  }
+  return chunks;
+}
+
 export function mergeCloudbedsAvailabilityWeeks(weeks: CloudbedsAvailabilityWeek[], startDate: string, endDate: string): CloudbedsAvailabilityWeek {
   const byRoomType = new Map<string, CloudbedsRoomTypeAvailability>();
   for (const week of weeks) {
@@ -314,16 +329,7 @@ async function fetchCloudbedsAvailabilityChunk(apiKey: string, propertyId: strin
 }
 
 export async function fetchCloudbedsAvailability(apiKey: string, propertyId: string, startDate: string, endDate: string) {
-  const start = dateFromIso(startDate);
-  const end = dateFromIso(endDate);
-  const chunks: Array<{ startDate: string; endDate: string }> = [];
-  for (let cursor = new Date(start); cursor <= end; ) {
-    const chunkStart = new Date(cursor);
-    const chunkEnd = new Date(cursor);
-    chunkEnd.setUTCDate(chunkEnd.getUTCDate() + CLOUDBEDS_MAX_DAYS_PER_QUERY);
-    chunks.push({ startDate: dateToIso(chunkStart), endDate: dateToIso(chunkEnd) });
-    cursor.setUTCDate(cursor.getUTCDate() + CLOUDBEDS_MAX_DAYS_PER_QUERY);
-  }
+  const chunks = buildCloudbedsAvailabilityChunks(startDate, endDate);
 
   // Cloudbeds limita la respuesta detallada a una semana. Tres solicitudes en
   // paralelo mantienen la espera por debajo del límite del proxy sin saturar

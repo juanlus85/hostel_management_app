@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cloudbedsRateUpdateForm, fetchCloudbedsAvailability, mergeCloudbedsAvailabilityWeeks, normalizeCloudbedsAvailability } from "./cloudbedsAvailability";
+import { buildCloudbedsAvailabilityChunks, cloudbedsRateUpdateForm, fetchCloudbedsAvailability, mergeCloudbedsAvailabilityWeeks, normalizeCloudbedsAvailability } from "./cloudbedsAvailability";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -127,6 +127,13 @@ describe("normalizeCloudbedsAvailability", () => {
     ], "2026-10-12", "2026-10-25");
 
     expect(result.roomTypes[0]?.days.map(day => day.date)).toEqual(["2026-10-12", "2026-10-19"]);
+  });
+
+  it("divide catorce días en dos consultas exactas de una semana", () => {
+    expect(buildCloudbedsAvailabilityChunks("2026-10-13", "2026-10-26")).toEqual([
+      { startDate: "2026-10-13", endDate: "2026-10-19" },
+      { startDate: "2026-10-20", endDate: "2026-10-26" },
+    ]);
   });
 
   it("prepara un cambio de precio para una única fecha", () => {

@@ -1829,5 +1829,5 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Mejorar la plantilla de bienvenida con códigos e instrucciones de acceso, en español e inglés, usando datos dinámicos de la reserva.
 - [x] Mostrar disponibilidad y precio por tipo en cada separador de la agenda, con edición por Tab y flechas igual que Disponibilidad y precios.
 - [x] Corregir la correspondencia de tarifas por tipo en los separadores, restaurar su altura compacta y eliminar el solape erróneo de la habitación 4.
-- [x] Diagnosticar el error real de carga de tarifas en la agenda móvil y mostrar un aviso de autorización accionable.
-- [ ] Renovar `CLOUDBEDS_API_KEY` en el VPS con permisos de lectura de Tarifas y Disponibilidad, y comprobar la carga real de precios editables.
+- [x] Identificar que la credencial es válida cuando carga el calendario de siete días.
+- [x] Corregir la división de consultas de catorce días de la agenda para que use tramos exactos de siete días, igual que la pestaña de precios.

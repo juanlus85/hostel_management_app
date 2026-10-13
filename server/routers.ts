@@ -1165,12 +1165,10 @@ export const appRouter = router({
         const start = new Date(`${input.startDate}T00:00:00`);
         const displayEnd = new Date(start);
         displayEnd.setDate(start.getDate() + input.days - 1);
-        const apiEnd = new Date(start);
-        apiEnd.setDate(start.getDate() + input.days);
         const toDateString = (date: Date) => [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
         const displayEndDate = toDateString(displayEnd);
         try {
-          const availability = await fetchCloudbedsAvailability(apiKey, propertyId, input.startDate, toDateString(apiEnd));
+          const availability = await fetchCloudbedsAvailability(apiKey, propertyId, input.startDate, displayEndDate);
           return {
             ...availability,
             endDate: displayEndDate,
