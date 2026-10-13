@@ -285,15 +285,34 @@ export function buildOnlineCheckinInvitation(
 ) {
   const name = escapeHtml(displayName(context.guestName));
   const safeUrl = escapeHtml(checkinUrl);
+  const arrivalDate = formatDate(context.checkInDate, language);
+  const roomType = roomTypeInMessage(context.roomType, language);
+  const room = roomLabel(context.roomNumber, language);
+  const bookingSummary =
+    language === "en"
+      ? `You have a reservation with us on <strong>${escapeHtml(arrivalDate)}</strong> for a <strong>${escapeHtml(roomType)}</strong>${context.roomNumber ? ` (${escapeHtml(room)})` : ""}.`
+      : `Tienes una reserva con nosotros el <strong>${escapeHtml(arrivalDate)}</strong> para una <strong>${escapeHtml(roomType)}</strong>${context.roomNumber ? ` (${escapeHtml(room)})` : ""}.`;
   const subject =
     language === "en"
-      ? "Complete your online check-in · The Spot Central Hostel"
-      : "Completa tu Check-in Online · The Spot Central Hostel";
+      ? "Complete your online check-in for your stay in Seville · The Spot Central Hostel"
+      : "Completa tu Check-in Online para tu estancia en Sevilla · The Spot Central Hostel";
   const text =
     language === "en"
-      ? `Hello ${displayName(context.guestName)},\n\nYou can complete your online check-in securely using this link:\n${checkinUrl}\n\nYour booking information has been prefilled where available. Please review it, complete the document details for all guests, and sign the form. You will receive your access instructions after completion.\n\nThe Spot Central Hostel`
-      : `Hola ${displayName(context.guestName)},\n\nPuedes completar tu Check-in Online de forma segura en este enlace:\n${checkinUrl}\n\nHemos precargado los datos disponibles de tu reserva. Revísalos, completa los datos documentales de todos los huéspedes y firma el formulario. Recibirás las instrucciones de acceso después de completarlo.\n\nThe Spot Central Hostel`;
-  const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#1f2937;line-height:1.6"><div style="background:#0f766e;color:#fff;padding:22px;border-radius:10px 10px 0 0"><h1 style="margin:0;font-size:22px">${escapeHtml(subject)}</h1></div><div style="background:#f8fafc;padding:26px;border-radius:0 0 10px 10px"><p>${language === "en" ? "Hello" : "Hola"} <strong>${name}</strong>,</p><p>${language === "en" ? "Please complete your secure online check-in before arrival." : "Completa tu Check-in Online seguro antes de la llegada."}</p><p style="text-align:center;margin:28px 0"><a href="${safeUrl}" style="display:inline-block;background:#0f766e;color:#fff;text-decoration:none;font-weight:bold;padding:13px 20px;border-radius:7px">${language === "en" ? "Open online check-in" : "Abrir Check-in Online"}</a></p><p style="font-size:13px;color:#475569;word-break:break-all">${safeUrl}</p><p>${language === "en" ? "Your available booking information has been prefilled. You may correct it, complete the document details for every guest, and sign the form. Access instructions are sent after the check-in is completed." : "Hemos precargado los datos disponibles de la reserva. Puedes corregirlos, completar los datos documentales de cada huésped y firmar el formulario. Las instrucciones de acceso se enviarán tras completarlo."}</p><p><strong>The Spot Central Hostel</strong></p></div></div>`;
+      ? `Hello ${displayName(context.guestName)},\n\nWe are writing to you from The Spot Central Hostel in Seville. You have a reservation with us on ${arrivalDate} for a ${roomType}${context.roomNumber ? ` (${room})` : ""}.\n\nTo make your arrival quicker and avoid unnecessary waiting at reception, please complete the information in the online check-in link as soon as possible:\n${checkinUrl}\n\nWe have prefilled the booking information available. Please review it, complete the document details for every guest and sign the form. Once completed, you will receive your access instructions.\n\nWe look forward to welcoming you :)\n\nThe Spot Central Hostel`
+      : `Hola ${displayName(context.guestName)},\n\nTe escribimos desde The Spot Central Hostel, en Sevilla. Tienes una reserva con nosotros el ${arrivalDate} para una ${roomType}${context.roomNumber ? ` (${room})` : ""}.\n\nPara agilizar tu llegada y evitar esperas innecesarias en recepción, te agradeceríamos que completaras los datos del siguiente enlace de Check-in Online lo antes posible:\n${checkinUrl}\n\nHemos precargado la información disponible de la reserva. Revísala, completa los datos documentales de todos los huéspedes y firma el formulario. Una vez completado, recibirás las instrucciones de acceso.\n\n¡Te esperamos! :)\n\nThe Spot Central Hostel`;
+  const intro =
+    language === "en"
+      ? "We are writing to you from <strong>The Spot Central Hostel</strong>, in Seville."
+      : "Te escribimos desde <strong>The Spot Central Hostel</strong>, en Sevilla.";
+  const request =
+    language === "en"
+      ? "To make your arrival quicker and avoid unnecessary waiting at reception, please complete the information in the online check-in link as soon as possible:"
+      : "Para agilizar tu llegada y evitar esperas innecesarias en recepción, te agradeceríamos que completaras los datos del enlace de Check-in Online lo antes posible:";
+  const completion =
+    language === "en"
+      ? "We have prefilled the booking information available. Please review it, complete the document details for every guest and sign the form. Once completed, you will receive your access instructions."
+      : "Hemos precargado la información disponible de la reserva. Revísala, completa los datos documentales de todos los huéspedes y firma el formulario. Una vez completado, recibirás las instrucciones de acceso.";
+  const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#1f2937;line-height:1.6"><div style="background:#0f766e;color:#fff;padding:22px;border-radius:10px 10px 0 0"><h1 style="margin:0;font-size:22px">${escapeHtml(subject)}</h1></div><div style="background:#f8fafc;padding:26px;border-radius:0 0 10px 10px"><p>${language === "en" ? "Hello" : "Hola"} <strong>${name}</strong>,</p><p>${intro}</p><p>${bookingSummary}</p><p>${request}</p><p style="text-align:center;margin:28px 0"><a href="${safeUrl}" style="display:inline-block;background:#0f766e;color:#fff;text-decoration:none;font-weight:bold;padding:13px 20px;border-radius:7px">${language === "en" ? "Open online check-in" : "Abrir Check-in Online"}</a></p><p style="font-size:13px;color:#475569;word-break:break-all">${safeUrl}</p><p>${completion}</p><p>${language === "en" ? "We look forward to welcoming you :)" : "¡Te esperamos! :)"}</p><p><strong>The Spot Central Hostel</strong></p></div></div>`;
   return { subject, text, html };
 }
 

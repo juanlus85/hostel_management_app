@@ -87,6 +87,18 @@ describe("buildReservationAgenda", () => {
     expect(reservationAgendaTone("cancelled")).toBe("slate");
   });
 
+  it("distingue invitaciones enviadas de Check-ins completados", () => {
+    const agenda = buildReservationAgenda([
+      { id: 51, guestName: "Invitada", checkInDate: "2026-10-10", checkOutDate: "2026-10-11", roomType: "Twin", roomNumber: "4", reservationStatus: "confirmed", amountPending: "0", reservationNotes: null, checkinInvitationSent: true, checkinCompleted: false },
+      { id: 52, guestName: "Completada", checkInDate: "2026-10-11", checkOutDate: "2026-10-12", roomType: "Twin", roomNumber: "4", reservationStatus: "confirmed", amountPending: "0", reservationNotes: null, checkinInvitationSent: true, checkinCompleted: true },
+    ], dates);
+
+    expect(agenda[0].rooms[0].cards).toEqual(expect.arrayContaining([
+      expect.objectContaining({ reservation: expect.objectContaining({ id: 51 }), hasCheckinInvitation: true, hasCheckinCompleted: false }),
+      expect.objectContaining({ reservation: expect.objectContaining({ id: 52 }), hasCheckinInvitation: false, hasCheckinCompleted: true }),
+    ]));
+  });
+
   it("coloca estancias que coinciden en carriles separados y reutiliza un carril libre", () => {
     const agenda = buildReservationAgenda([
       { id: 10, guestName: "Ana", checkInDate: "2026-10-10", checkOutDate: "2026-10-13", roomType: "Twin", roomNumber: "15", reservationStatus: "confirmed", amountPending: "0", reservationNotes: null },

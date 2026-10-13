@@ -1850,3 +1850,5 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Corregir la guía final de Check-in Online: traducir tipos de habitación al español y evitar ubicaciones incompletas o repetidas cuando falte planta/número.
 - [x] Resolver siempre número y planta desde los códigos de acceso configurados en la guía final, y retirar el bloque de mapa/enlace de ubicación.
 - [x] Mostrar P0/PB, P1 y P2 como planta baja, primera y segunda planta (también en inglés), destacar la habitación en la guía y avisar cuando el Check-in Online ya se haya enviado.
+- [x] Mejorar los correos de invitación al Check-in Online en español e inglés con contexto de reserva, fecha, habitación y una petición clara de completarlo antes de llegar.
+- [x] Marcar la agenda con punto azul cuando se envíe la invitación de Check-in Online y con punto verde cuando el huésped lo complete.

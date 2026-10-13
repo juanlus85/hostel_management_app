@@ -269,6 +269,7 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
       toast.success(variables.messageType === "welcome" ? "Correo de bienvenida enviado" : "Invitación de Check-in Online enviada");
       setWelcomeEditor(null);
       if (selectedId !== null) utils.checkin.externalImports.getCloudbedsUpcomingReservationDetail.invalidate({ id: selectedId });
+      utils.checkin.externalImports.listCloudbedsUpcomingReservations.invalidate({ dateFrom: window.dateFrom, dateTo: window.dateTo });
     },
     onError: error => toast.error(error.message),
   });
@@ -508,6 +509,8 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
                 {room.cards.map(card => <button key={card.reservation.id} type="button" title={`${card.reservation.guestName || "Huésped sin nombre"} · Entrada ${compactDate(card.reservation.checkInDate)} · Salida ${compactDate(card.reservation.checkOutDate)}`} onClick={() => { setSelectedId(card.reservation.id); setDetailTab("information"); }} className={`relative z-10 min-w-0 self-center overflow-visible border px-1.5 py-1 text-left shadow-sm transition duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-700 sm:px-3 sm:py-2 ${card.startSlot % 1 ? "rounded-l-none" : "rounded-l-md"} ${card.endSlot % 1 ? "rounded-r-none" : "rounded-r-full"} ${agendaToneClasses[card.tone]}`} style={agendaCardGridStyle(card)}>
                   {card.hasPendingAmount && <span aria-label="Importe pendiente" title="Importe pendiente" className="absolute -top-1 left-1 h-2.5 w-2.5 rounded-full border-2 border-white bg-red-500 shadow-sm sm:-top-1.5 sm:left-2 sm:h-3 sm:w-3" />}
                   {card.hasNotes && <span aria-label="Tiene notas" title="Tiene notas" className="absolute -top-1 left-4 h-2.5 w-2.5 rounded-full border-2 border-white bg-amber-400 shadow-sm sm:-top-1.5 sm:left-6 sm:h-3 sm:w-3" />}
+                  {card.hasCheckinInvitation && <span aria-label="Check-in Online enviado" title="Check-in Online enviado" className="absolute -top-1 right-1 h-2.5 w-2.5 rounded-full border-2 border-white bg-blue-500 shadow-sm sm:-top-1.5 sm:right-2 sm:h-3 sm:w-3" />}
+                  {card.hasCheckinCompleted && <span aria-label="Check-in Online completado" title="Check-in Online completado" className="absolute -top-1 right-4 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500 shadow-sm sm:-top-1.5 sm:right-6 sm:h-3 sm:w-3" />}
                   <span className="block truncate text-[10px] font-bold leading-tight sm:text-sm">{card.reservation.guestName || "Huésped sin nombre"}</span>
                   <span className="mt-0.5 block truncate text-[9px] font-medium opacity-90 sm:text-[11px]"><span className="sm:hidden">{compactDate(card.reservation.checkInDate)} → {compactDate(card.reservation.checkOutDate)}</span><span className="hidden sm:inline">Entra {compactDate(card.reservation.checkInDate)} · Sale {compactDate(card.reservation.checkOutDate)}</span></span>
                 </button>)}

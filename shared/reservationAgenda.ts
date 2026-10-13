@@ -8,6 +8,8 @@ export type ReservationAgendaItem = {
   reservationStatus: string | null;
   amountPending: string | number | null;
   reservationNotes: string | null;
+  checkinInvitationSent?: boolean;
+  checkinCompleted?: boolean;
 };
 
 export type ReservationAgendaTone = "emerald" | "sky" | "amber" | "slate" | "rose";
@@ -22,6 +24,8 @@ export type ReservationAgendaCard<T extends ReservationAgendaItem> = {
   tone: ReservationAgendaTone;
   hasPendingAmount: boolean;
   hasNotes: boolean;
+  hasCheckinInvitation: boolean;
+  hasCheckinCompleted: boolean;
 };
 
 export type ReservationAgendaRoom<T extends ReservationAgendaItem> = {
@@ -177,6 +181,8 @@ export function buildReservationAgenda<T extends ReservationAgendaItem>(reservat
       tone: reservationAgendaTone(reservation.reservationStatus, hasPendingAmount),
       hasPendingAmount,
       hasNotes: reservationHasNotes(reservation.reservationNotes),
+      hasCheckinInvitation: Boolean(reservation.checkinInvitationSent) && !Boolean(reservation.checkinCompleted),
+      hasCheckinCompleted: Boolean(reservation.checkinCompleted),
     });
     group.rooms.set(roomKey, room);
     group.count += 1;

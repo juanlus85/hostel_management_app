@@ -29,9 +29,9 @@ describe("mensajería manual de reservas", () => {
     expect(message.text).toContain("La clave del Wi-Fi es *holasevilla*");
   });
 
-  it("incluye el enlace seguro y las instrucciones en la invitación de check-in", () => {
+  it("incluye reserva, habitación y la petición de completar el Check-in Online", () => {
     const message = buildOnlineCheckinInvitation(
-      context,
+      { ...context, roomType: "Double Room with Shared Bathroom" },
       "https://management.example/checkin-online/token",
       "en"
     );
@@ -40,6 +40,22 @@ describe("mensajería manual de reservas", () => {
       "https://management.example/checkin-online/token"
     );
     expect(message.text).toContain("prefilled");
+    expect(message.text).toContain("30 August 2026");
+    expect(message.text).toContain("Double Room with Shared Bathroom");
+    expect(message.text).toContain("avoid unnecessary waiting at reception");
+    expect(message.html).toContain("The Spot Central Hostel");
+  });
+
+  it("presenta fecha y tipo de habitación en español", () => {
+    const message = buildOnlineCheckinInvitation(
+      { ...context, roomType: "Twin Room with Shared Bathroom" },
+      "https://management.example/checkin-online/token",
+      "es"
+    );
+    expect(message.subject).toContain("estancia en Sevilla");
+    expect(message.text).toContain("30 de agosto de 2026");
+    expect(message.text).toContain("Habitación doble con 2 camas y baño compartido");
+    expect(message.text).toContain("evitar esperas innecesarias en recepción");
   });
 
   it("prepara un texto de WhatsApp sin enviarlo", () => {

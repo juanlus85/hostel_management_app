@@ -4492,9 +4492,32 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             dateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
           })
         )
-        .query(async ({ input }) =>
-          db.getExternalUpcomingReservations(input.dateFrom, input.dateTo)
-        ),
+        .query(async ({ input }) => {
+          const [reservations, communications, checkinLinks] = await Promise.all([
+            db.getExternalUpcomingReservations(input.dateFrom, input.dateTo),
+            db.getExternalReservationCommunications(),
+            db.getOnlineCheckinLinks(),
+          ]);
+          return reservations.map(reservation => {
+            const reservationKeys = new Set(
+              [reservation.reservationCode, reservation.sourceReservationId].filter(
+                (value): value is string => Boolean(value?.trim())
+              )
+            );
+            const matchingLinks = checkinLinks.filter(link =>
+              Boolean(link.reservationNumber && reservationKeys.has(link.reservationNumber))
+            );
+            const checkinCompleted = matchingLinks.some(link => link.status === "completed");
+            const checkinInvitationSent = !checkinCompleted && communications.some(
+              communication =>
+                communication.externalReservationId === reservation.id &&
+                communication.channel === "email" &&
+                communication.messageType === "online_checkin" &&
+                communication.status === "sent"
+            );
+            return { ...reservation, checkinInvitationSent, checkinCompleted };
+          });
+        }),
       getCloudbedsUpcomingReservationDetail: protectedProcedure
         .input(z.object({ id: z.number() }))
         .query(async ({ input }) => {
