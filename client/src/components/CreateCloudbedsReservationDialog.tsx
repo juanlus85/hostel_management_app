@@ -23,7 +23,6 @@ type ReservationDraft = {
   guestZip: string;
   sourceId: string;
   estimatedArrivalTime: string;
-  paymentMethod: "cash" | "credit" | "ebanking" | "pay_pal";
   initialPaymentType: string;
   initialPaymentAmount: string;
   initialPaymentDate: string;
@@ -73,10 +72,6 @@ function roomKey(value: string | null | undefined) {
   return trailingNumber || text.replace(/[^a-z0-9]/g, "");
 }
 
-function paymentMethodLabel(value: ReservationDraft["paymentMethod"]) {
-  return { cash: "Efectivo", credit: "Tarjeta", ebanking: "Transferencia bancaria", pay_pal: "PayPal" }[value];
-}
-
 function emptyDraft(startDate: string, roomTypeId = "", roomId = ""): ReservationDraft {
   return {
     startDate,
@@ -94,7 +89,6 @@ function emptyDraft(startDate: string, roomTypeId = "", roomId = ""): Reservatio
     guestZip: "",
     sourceId: "",
     estimatedArrivalTime: "",
-    paymentMethod: "cash",
     initialPaymentType: "",
     initialPaymentAmount: "",
     initialPaymentDate: "",
@@ -180,6 +174,13 @@ export function CreateCloudbedsReservationDialog({
     }
   }, [sources.data]);
 
+  useEffect(() => {
+    const preferredPaymentMethod = paymentMethods.data?.[0];
+    if (preferredPaymentMethod) {
+      setDraft(current => current.initialPaymentType ? current : { ...current, initialPaymentType: preferredPaymentMethod.value });
+    }
+  }, [paymentMethods.data]);
+
   const nightsNumber = Math.max(1, positiveInt(draft.nights, 1));
   const roomsNumber = Math.max(1, positiveInt(draft.rooms, 1));
   const adultsNumber = Math.max(1, positiveInt(draft.adults, 1));
@@ -211,8 +212,8 @@ export function CreateCloudbedsReservationDialog({
     if (!/^[A-Za-z]{2}$/.test(draft.guestCountry.trim())) return toast.error("El país debe ser un código de dos letras, por ejemplo ES.");
     if (!draft.guestZip.trim()) return toast.error("Indica el código postal del huésped.");
     const initialPaymentAmount = Number(draft.initialPaymentAmount.replace(",", "."));
-    if (Boolean(draft.initialPaymentType) !== Boolean(draft.initialPaymentAmount.trim())) return toast.error("Para registrar un cobro inicial indica tanto el método como el importe.");
-    if (draft.initialPaymentType && (!Number.isFinite(initialPaymentAmount) || initialPaymentAmount <= 0)) return toast.error("El importe del cobro inicial debe ser superior a 0 €.");
+    if (!draft.initialPaymentType) return toast.error("Selecciona la forma de pago configurada en Cloudbeds.");
+    if (draft.initialPaymentAmount.trim() && (!Number.isFinite(initialPaymentAmount) || initialPaymentAmount <= 0)) return toast.error("El importe del cobro inicial debe ser superior a 0 €.");
     setPendingConfirmation({
       ...draft,
       endDate,
@@ -243,8 +244,7 @@ export function CreateCloudbedsReservationDialog({
       guestZip: pendingConfirmation.guestZip,
       sourceId: pendingConfirmation.sourceId || undefined,
       estimatedArrivalTime: pendingConfirmation.estimatedArrivalTime || undefined,
-      paymentMethod: pendingConfirmation.paymentMethod,
-      initialPaymentType: pendingConfirmation.initialPaymentType || undefined,
+      initialPaymentType: pendingConfirmation.initialPaymentType,
       initialPaymentAmount: pendingConfirmation.initialPaymentAmount ? Number(pendingConfirmation.initialPaymentAmount.replace(",", ".")) : undefined,
       initialPaymentDate: pendingConfirmation.initialPaymentDate || undefined,
       sendEmailConfirmation: pendingConfirmation.sendEmailConfirmation,
@@ -296,20 +296,16 @@ export function CreateCloudbedsReservationDialog({
               <label className="space-y-1 text-sm font-medium">Teléfono<Input type="tel" value={draft.guestPhone} onChange={event => set("guestPhone", event.target.value)} /></label>
               <label className="space-y-1 text-sm font-medium">País <span className="font-normal text-muted-foreground">(ISO, p. ej. ES)</span><Input maxLength={2} value={draft.guestCountry} onChange={event => set("guestCountry", event.target.value.toUpperCase())} /></label>
               <label className="space-y-1 text-sm font-medium">Código postal<Input value={draft.guestZip} onChange={event => set("guestZip", event.target.value)} /></label>
-              <label className="space-y-1 text-sm font-medium sm:col-span-2">Origen de la reserva<select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm" value={draft.sourceId} onChange={event => set("sourceId", event.target.value)} disabled={sources.isLoading || Boolean(sources.error)}><option value="">Recepción directa</option>{sources.data?.map(source => <option key={source.sourceId} value={source.sourceId}>{source.name}</option>)}</select>{sources.error && <p className="text-xs font-normal text-muted-foreground">No se pudieron cargar los orígenes; Cloudbeds usará la fuente predeterminada.</p>}</label>
+              <label className="space-y-1 text-sm font-medium sm:col-span-2">Origen de la reserva<select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm" value={draft.sourceId} onChange={event => set("sourceId", event.target.value)} disabled={sources.isLoading || Boolean(sources.error)}><option value="">Recepción directa</option>{sources.data?.map(source => <option key={source.sourceId} value={source.sourceId}>{source.name}</option>)}</select>{sources.isLoading && <p className="text-xs font-normal text-muted-foreground">Cargando orígenes de Cloudbeds…</p>}{sources.error && <p className="text-xs font-normal text-rose-700">No se pudieron cargar los orígenes: {sources.error.message}</p>}{!sources.isLoading && !sources.error && !sources.data?.length && <p className="text-xs font-normal text-amber-800">Cloudbeds no ha devuelto orígenes configurados. Se usará Recepción directa.</p>}</label>
               <div className="space-y-3 sm:col-span-2">
-                <label className="block space-y-1 text-sm font-medium">Categoría de pago para crear la reserva<select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm" value={draft.paymentMethod} onChange={event => set("paymentMethod", event.target.value as ReservationDraft["paymentMethod"])}><option value="cash">Efectivo</option><option value="credit">Tarjeta</option><option value="ebanking">Transferencia bancaria / pago de plataforma</option><option value="pay_pal">PayPal</option></select></label>
+                <label className="block space-y-1 text-sm font-medium">Forma de pago prevista<select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm" value={draft.initialPaymentType} onChange={event => set("initialPaymentType", event.target.value)} disabled={paymentMethods.isLoading || Boolean(paymentMethods.error)}><option value="">{paymentMethods.isLoading ? "Cargando formas de pago…" : "Selecciona una forma de pago"}</option>{paymentMethods.data?.map(method => <option key={method.value} value={method.value}>{method.label}</option>)}</select>{paymentMethods.error && <p className="text-xs font-normal text-rose-700">No se pudieron cargar las formas de pago: {paymentMethods.error.message}</p>}</label>
                 <div className="rounded-lg border bg-slate-50/70 p-3">
-                  <p className="text-sm font-medium text-slate-900">Cobro inicial <span className="font-normal text-muted-foreground">(opcional)</span></p>
-                  <div className="mt-2 grid gap-2 sm:grid-cols-[minmax(0,1fr)_10rem]">
-                    <select aria-label="Método del cobro inicial" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm" value={draft.initialPaymentType} onChange={event => set("initialPaymentType", event.target.value)} disabled={paymentMethods.isLoading || Boolean(paymentMethods.error)}><option value="">Sin cobro ahora</option>{paymentMethods.data?.map(method => <option key={method.value} value={method.value}>{method.label}</option>)}</select>
-                    <Input aria-label="Importe del cobro inicial" type="number" min="0.01" step="0.01" inputMode="decimal" placeholder="Importe €" value={draft.initialPaymentAmount} onChange={event => set("initialPaymentAmount", event.target.value)} disabled={!draft.initialPaymentType} />
-                  </div>
+                  <p className="text-sm font-medium text-slate-900">Registrar cobro ahora <span className="font-normal text-muted-foreground">(opcional)</span></p>
+                  <Input className="mt-2" aria-label="Importe del cobro inicial" type="number" min="0.01" step="0.01" inputMode="decimal" placeholder="Importe €" value={draft.initialPaymentAmount} onChange={event => set("initialPaymentAmount", event.target.value)} disabled={!draft.initialPaymentType} />
                   <label className="mt-2 block space-y-1 text-sm font-medium">Fecha de cobro o liquidación <span className="font-normal text-muted-foreground">(opcional)</span><Input type="date" value={draft.initialPaymentDate} onChange={event => set("initialPaymentDate", event.target.value)} disabled={!draft.initialPaymentType} /></label>
-                  <p className="mt-2 text-xs font-normal text-muted-foreground">Incluye los métodos configurados en Cloudbeds, como Prepago Booking, Bizum, SumUp u otros. Solo se registra un pago real si indicas también su importe.</p>
-                  {paymentMethods.error && <p className="mt-2 text-xs font-normal text-amber-800">No se pudieron cargar los métodos configurados. Podrás añadir el pago desde el detalle de la reserva.</p>}
+                  <p className="mt-2 text-xs font-normal text-muted-foreground">Se usa la forma de pago anterior. Puedes dejar el importe vacío si solo quieres dejar prevista la forma de pago; con importe se registrará el cobro real en Cloudbeds.</p>
                 </div>
-                <p className="text-xs font-normal text-muted-foreground">Cloudbeds exige una de estas cuatro categorías al crear la reserva. La categoría no registra por sí sola ningún cobro.</p>
+                <p className="text-xs font-normal text-muted-foreground">Cloudbeds requiere internamente una categoría técnica. La aplicación la adapta sin ocultarte las formas de pago configuradas.</p>
               </div>
             </div>
             <label className="mt-4 flex items-start gap-2 text-sm"><input className="mt-0.5 h-4 w-4" type="checkbox" checked={draft.sendEmailConfirmation} onChange={event => set("sendEmailConfirmation", event.target.checked)} /><span>Enviar la confirmación estándar de Cloudbeds al huésped.</span></label>
@@ -318,7 +314,7 @@ export function CreateCloudbedsReservationDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button disabled={!selectedRoomType || !availabilityChecked || selectedRoomType.roomsAvailable < roomsNumber || Boolean(roomsNumber === 1 && (initialRoomId || initialRoomName) && !selectedIndividualRoom) || createReservation.isPending} onClick={requestConfirmation} className="bg-emerald-700 hover:bg-emerald-800"><Send className="mr-2 h-4 w-4" />Revisar y crear reserva</Button>
+          <Button disabled={!selectedRoomType || !availabilityChecked || !draft.initialPaymentType || selectedRoomType.roomsAvailable < roomsNumber || Boolean(roomsNumber === 1 && (initialRoomId || initialRoomName) && !selectedIndividualRoom) || createReservation.isPending} onClick={requestConfirmation} className="bg-emerald-700 hover:bg-emerald-800"><Send className="mr-2 h-4 w-4" />Revisar y crear reserva</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -326,7 +322,7 @@ export function CreateCloudbedsReservationDialog({
     <AlertDialog open={Boolean(pendingConfirmation)} onOpenChange={open => { if (!open) setPendingConfirmation(null); }}>
       <AlertDialogContent>
         <AlertDialogHeader><AlertDialogTitle>Confirmar nueva reserva en Cloudbeds</AlertDialogTitle><AlertDialogDescription>Esta acción creará una reserva real en Cloudbeds. Comprueba el resumen antes de confirmar.</AlertDialogDescription></AlertDialogHeader>
-        {pendingConfirmation && <div className="space-y-2 rounded-lg border bg-muted/40 p-4 text-sm"><p><strong>Huésped:</strong> {pendingConfirmation.guestFirstName} {pendingConfirmation.guestLastName}</p><p><strong>Estancia:</strong> {pendingConfirmation.startDate} → {pendingConfirmation.endDate} · {pendingConfirmation.nightsNumber} noche{pendingConfirmation.nightsNumber === 1 ? "" : "s"}</p><p><strong>Habitación:</strong> {selectedIndividualRoom?.roomName || pendingConfirmation.roomTypeName} · {pendingConfirmation.roomsNumber} unidad{pendingConfirmation.roomsNumber === 1 ? "" : "es"}</p>{pendingConfirmation.roomsNumber > 1 && <p className="text-sky-900"><strong>Reserva única:</strong> Cloudbeds creará sus subreservas dentro de la misma reserva.</p>}<p><strong>Ocupación:</strong> {pendingConfirmation.adultsNumber} adulto{pendingConfirmation.adultsNumber === 1 ? "" : "s"}{pendingConfirmation.childrenNumber ? ` · ${pendingConfirmation.childrenNumber} menor${pendingConfirmation.childrenNumber === 1 ? "" : "es"}` : ""}</p><p><strong>Precio consultado:</strong> {money(pendingConfirmation.rate)}</p><p><strong>Categoría de pago:</strong> {paymentMethodLabel(pendingConfirmation.paymentMethod)}</p>{pendingConfirmation.initialPaymentType && <p><strong>Cobro inicial:</strong> {paymentMethods.data?.find(method => method.value === pendingConfirmation.initialPaymentType)?.label || pendingConfirmation.initialPaymentType} · {money(Number(pendingConfirmation.initialPaymentAmount.replace(",", ".")))}{pendingConfirmation.initialPaymentDate ? ` · liquidación ${pendingConfirmation.initialPaymentDate}` : ""}</p>}<p><strong>Contacto:</strong> {pendingConfirmation.guestEmail} · {pendingConfirmation.guestPhone}</p>{pendingConfirmation.sendEmailConfirmation && <p><strong>Correo:</strong> Cloudbeds enviará su confirmación estándar.</p>}</div>}
+        {pendingConfirmation && <div className="space-y-2 rounded-lg border bg-muted/40 p-4 text-sm"><p><strong>Huésped:</strong> {pendingConfirmation.guestFirstName} {pendingConfirmation.guestLastName}</p><p><strong>Estancia:</strong> {pendingConfirmation.startDate} → {pendingConfirmation.endDate} · {pendingConfirmation.nightsNumber} noche{pendingConfirmation.nightsNumber === 1 ? "" : "s"}</p><p><strong>Habitación:</strong> {selectedIndividualRoom?.roomName || pendingConfirmation.roomTypeName} · {pendingConfirmation.roomsNumber} unidad{pendingConfirmation.roomsNumber === 1 ? "" : "es"}</p>{pendingConfirmation.roomsNumber > 1 && <p className="text-sky-900"><strong>Reserva única:</strong> Cloudbeds creará sus subreservas dentro de la misma reserva.</p>}<p><strong>Ocupación:</strong> {pendingConfirmation.adultsNumber} adulto{pendingConfirmation.adultsNumber === 1 ? "" : "s"}{pendingConfirmation.childrenNumber ? ` · ${pendingConfirmation.childrenNumber} menor${pendingConfirmation.childrenNumber === 1 ? "" : "es"}` : ""}</p><p><strong>Precio consultado:</strong> {money(pendingConfirmation.rate)}</p><p><strong>Forma de pago:</strong> {paymentMethods.data?.find(method => method.value === pendingConfirmation.initialPaymentType)?.label || pendingConfirmation.initialPaymentType}</p>{pendingConfirmation.initialPaymentAmount && <p><strong>Cobro inicial:</strong> {money(Number(pendingConfirmation.initialPaymentAmount.replace(",", ".")))}{pendingConfirmation.initialPaymentDate ? ` · liquidación ${pendingConfirmation.initialPaymentDate}` : ""}</p>}<p><strong>Contacto:</strong> {pendingConfirmation.guestEmail} · {pendingConfirmation.guestPhone}</p>{pendingConfirmation.sendEmailConfirmation && <p><strong>Correo:</strong> Cloudbeds enviará su confirmación estándar.</p>}</div>}
         <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction disabled={createReservation.isPending} onClick={submitReservation}>{createReservation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}Crear reserva en Cloudbeds</AlertDialogAction></AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

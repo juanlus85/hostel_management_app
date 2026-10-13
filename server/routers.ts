@@ -78,6 +78,7 @@ import {
 import { fetchCloudbedsAvailability, updateCloudbedsRate } from "./cloudbedsAvailability";
 import {
   createCloudbedsManualReservation,
+  cloudbedsReservationPaymentCategory,
   fetchCloudbedsBookableRoomTypes,
   fetchCloudbedsReservationSources,
 } from "./cloudbedsManualReservations";
@@ -1310,8 +1311,10 @@ export const appRouter = router({
         guestZip: z.string().trim().min(1).max(32),
         sourceId: z.string().trim().max(120).optional(),
         estimatedArrivalTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),
-        paymentMethod: z.enum(["cash", "credit", "ebanking", "pay_pal"]).default("cash"),
-        initialPaymentType: z.string().trim().min(1).max(100).optional(),
+        // `postReservation` solo acepta cuatro categorías técnicas. La pantalla
+        // recibe el método real configurado (Bizum, Prepago Booking, SumUp, etc.)
+        // y lo convierte internamente antes de llamar a Cloudbeds.
+        initialPaymentType: z.string().trim().min(1).max(100),
         initialPaymentAmount: z.number().positive().max(100000).optional(),
         initialPaymentDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
         sendEmailConfirmation: z.boolean().default(false),
@@ -1319,9 +1322,6 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         if (input.endDate <= input.startDate) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "La salida debe ser posterior a la entrada." });
-        }
-        if (Boolean(input.initialPaymentType) !== Boolean(input.initialPaymentAmount)) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Para registrar un cobro inicial indica tanto el método como el importe." });
         }
         const apiKey = process.env.CLOUDBEDS_API_KEY;
         const propertyId = process.env.CLOUDBEDS_PROPERTY_ID;
@@ -1362,7 +1362,12 @@ export const appRouter = router({
               message: `La ocupación indicada supera el máximo de ${selectedRoomType.maxGuests} huésped(es) por habitación para este tipo.`,
             });
           }
-          const result = await createCloudbedsManualReservation({ apiKey, propertyId, ...input, paymentMethod: input.paymentMethod || "cash" });
+          const result = await createCloudbedsManualReservation({
+            apiKey,
+            propertyId,
+            ...input,
+            paymentMethod: cloudbedsReservationPaymentCategory(input.initialPaymentType),
+          });
           let initialPaymentWarning: string | null = null;
           if (input.initialPaymentType && input.initialPaymentAmount) {
             if (!result.reservationId) {

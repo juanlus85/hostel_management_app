@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   cloudbedsManualReservationForm,
+  cloudbedsReservationPaymentCategory,
   createCloudbedsManualReservation,
   fetchCloudbedsBookableRoomTypes,
   fetchCloudbedsReservationSources,
@@ -105,6 +106,28 @@ describe("reservas manuales de Cloudbeds", () => {
       expect.objectContaining({ sourceId: "ss-22-0", name: "Booking.com · Prepago" }),
       expect.objectContaining({ sourceId: "ss-22-1", name: "Booking.com · Hotel collect" }),
     ]));
+  });
+
+  it("admite fuentes en formato mapa y consulta propertyIDs", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ data: {
+      "ss-22-0": "Booking.com · Prepago",
+      "ss-22-1": "Booking.com · Hotel collect",
+    } }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(fetchCloudbedsReservationSources("cbat_test", "204754")).resolves.toEqual(expect.arrayContaining([
+      expect.objectContaining({ sourceId: "ss-22-0", name: "Booking.com · Prepago" }),
+      expect.objectContaining({ sourceId: "ss-22-1", name: "Booking.com · Hotel collect" }),
+    ]));
+    const url = fetchMock.mock.calls[0][0] as URL;
+    expect(url.searchParams.get("propertyIDs")).toBe("204754");
+  });
+
+  it("convierte métodos reales a la categoría que admite postReservation", () => {
+    expect(cloudbedsReservationPaymentCategory("PREPAID BOOKING")).toBe("ebanking");
+    expect(cloudbedsReservationPaymentCategory("Bizum")).toBe("ebanking");
+    expect(cloudbedsReservationPaymentCategory("SumUp")).toBe("credit");
+    expect(cloudbedsReservationPaymentCategory("Efectivo")).toBe("cash");
   });
 
   it("prepara los campos de huésped, estancia y ocupación en el formato Cloudbeds", () => {

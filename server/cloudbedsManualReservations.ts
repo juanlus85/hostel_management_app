@@ -157,12 +157,35 @@ function reservationSourceRecords(payload: unknown): JsonRecord[] {
   if (Array.isArray(payload)) return payload.map(asRecord);
   if (!payload || typeof payload !== "object") return [];
   const record = asRecord(payload);
-  if (text(record.sourceID, record.sourceId, record.id)) return [record];
+  if (text(record.sourceID, record.sourceId, record.source_id, record.id, record.value)) return [record];
   for (const key of ["data", "sources", "sourceList", "source_list", "results", "items"]) {
     const nested = reservationSourceRecords(record[key]);
     if (nested.length) return nested;
   }
-  return Object.values(record).flatMap(value => reservationSourceRecords(value));
+  const nestedSources = Object.entries(record).flatMap(([key, value]) => {
+    const nested = reservationSourceRecords(value);
+    if (nested.length) {
+      return nested.map(source => text(source.sourceID, source.sourceId, source.source_id, source.id, source.value)
+        ? source
+        : { ...source, sourceID: key });
+    }
+    if (typeof value === "string" && value.trim() && /^(?:ss-|s-|source[-_:]|\d+$)/i.test(key)) {
+      return [{ sourceID: key, sourceName: value }];
+    }
+    return [];
+  });
+  return nestedSources;
+}
+
+export function cloudbedsReservationPaymentCategory(value: string | null | undefined): CloudbedsManualReservationInput["paymentMethod"] {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (/pay\s*pal/.test(normalized)) return "pay_pal";
+  if (/cash|efectivo/.test(normalized)) return "cash";
+  if (/credit|card|tarjeta|visa|master|amex|sumup/.test(normalized)) return "credit";
+  // Booking prepagado, Bizum, transferencias y métodos personalizados se
+  // representan como pago electrónico: postReservation solo admite estas
+  // cuatro categorías técnicas, mientras postPayment conserva el método real.
+  return "ebanking";
 }
 
 function totalDetailedRate(room: JsonRecord) {
@@ -330,7 +353,9 @@ export async function createCloudbedsManualReservation(input: CloudbedsManualRes
 
 export async function fetchCloudbedsReservationSources(apiKey: string, propertyId: string): Promise<CloudbedsReservationSource[]> {
   const url = new URL("https://api.cloudbeds.com/api/v1.3/getSources");
-  url.searchParams.set("propertyID", propertyId);
+  // El contrato v1.3 usa propertyIDs (plural). Con propertyID algunas cuentas
+  // respondían sin error pero devolvían únicamente la fuente directa.
+  url.searchParams.set("propertyIDs", propertyId);
   const response = await fetch(url, {
     headers: { "x-api-key": apiKey, Accept: "application/json" },
     signal: AbortSignal.timeout(10_000),
@@ -339,8 +364,8 @@ export async function fetchCloudbedsReservationSources(apiKey: string, propertyI
   const sources = reservationSourceRecords(payload);
   const output = sources.flatMap(source => {
     const record = asRecord(source);
-    const sourceId = text(record.sourceID, record.sourceId, record.id);
-    const name = text(record.sourceName, record.name);
+    const sourceId = text(record.sourceID, record.sourceId, record.source_id, record.id, record.value);
+    const name = text(record.sourceName, record.source_name, record.name, record.displayName, record.display_name, record.label, record.description);
     // Las fuentes de terceros (Booking, Expedia, etc.) son válidas para
     // postReservation como sourceID ss-…-0/1. Se conserva exactamente el ID
     // que devuelve Cloudbeds, incluido el sufijo de cobro.
