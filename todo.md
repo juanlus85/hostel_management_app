@@ -1847,3 +1847,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Corregir el flujo de Check-in Online que muestra la respuesta JSON y la firma en pantalla tras completar el registro.
 - [x] Restaurar la carga de Huéspedes cuando falta la columna `relationship` en producción mediante una lectura compatible.
 - [ ] Ejecutar `SQL_PARENTESCO_MENORES.sql` en el VPS para habilitar la persistencia y visualización completa de parentesco.
+- [x] Corregir la guía final de Check-in Online: traducir tipos de habitación al español y evitar ubicaciones incompletas o repetidas cuando falte planta/número.

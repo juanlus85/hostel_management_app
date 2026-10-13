@@ -6,6 +6,9 @@ describe("arrival display translations", () => {
     expect(translateRoomType("Habitación Doble con 2 camas y baño compartido", "en")).toBe("Twin room with shared bathroom");
     expect(translateFloor("PB", "en")).toBe("Ground floor");
   });
+  it("translates Cloudbeds room types to Spanish for Spanish guests", () => {
+    expect(translateRoomType("Double Room with Shared Bathroom", "es")).toBe("Habitación doble con cama de matrimonio y baño compartido");
+  });
   it("uses a complete hostel address and Google Maps query", () => {
     const address = formatHostelAddress("Calle Adriano 6");
     expect(address).toBe("Calle Adriano 6, Sevilla, Spain");

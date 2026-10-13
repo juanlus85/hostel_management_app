@@ -1,6 +1,23 @@
 export function translateRoomType(roomType: string | null | undefined, language: "es" | "en"): string {
-  if (!roomType || language === "es") return roomType || "Habitación";
+  if (!roomType) return language === "es" ? "Habitación" : "Room";
   const normalized = roomType.toLocaleLowerCase("es-ES").trim();
+  if (language === "es") {
+    const englishExact: Record<string, string> = {
+      "twin room with shared bathroom": "Habitación doble con 2 camas y baño compartido",
+      "twin room with private bathroom": "Habitación doble con 2 camas y baño privado",
+      "double room with shared bathroom": "Habitación doble con cama de matrimonio y baño compartido",
+      "double room with private bathroom": "Habitación doble con cama de matrimonio y baño privado",
+      "single room with shared bathroom": "Habitación individual con baño compartido",
+      "single room with private bathroom": "Habitación individual con baño privado",
+      "triple room with shared bathroom": "Habitación triple con baño compartido",
+      "triple room with private bathroom": "Habitación triple con baño privado",
+      "bed in 3-bed mixed dormitory": "Cama en habitación compartida mixta de 3 camas",
+      "single bed in a 3-bed mixed dormitory": "Cama en habitación compartida mixta de 3 camas",
+      "bed in 4-bed mixed dormitory": "Cama en habitación compartida mixta de 4 camas",
+      "single bed in a 4-bed mixed dormitory": "Cama en habitación compartida mixta de 4 camas",
+    };
+    return englishExact[normalized] || roomType;
+  }
   const exact: Record<string, string> = {
     "habitación doble con 2 camas y baño compartido": "Twin room with shared bathroom",
     "habitación doble con cama de matrimonio y baño compartido": "Double room with shared bathroom",

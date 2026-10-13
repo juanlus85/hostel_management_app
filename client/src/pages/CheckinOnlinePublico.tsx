@@ -101,6 +101,14 @@ type OnlineCompletion = {
   houseRulesEn?: string;
 };
 
+function cleanArrivalCopy(text: string) {
+  return text
+    .replace(/\ben\s*,\s*habitaci[oó]n\s+([^.,\n]+)/gi, "en la habitación $1")
+    .replace(/\bhabitaci[oó]n\s+habitaci[oó]n\b/gi, "tu habitación")
+    .replace(/\s+,/g, ",")
+    .replace(/\s{2,}/g, " ");
+}
+
 const emptyGuest = (
   email = "",
   prefilled?: Pick<GuestForm, "firstName" | "lastName" | "phone">
@@ -870,11 +878,21 @@ function ArrivalConfirmation({
     lang
   );
   const roomType = translateRoomType(data.roomType, lang);
+  const roomNumber = (data.roomNumber || "").replace(/^(habitaci[oó]n|room)\s*/i, "").trim();
+  const roomLocation = [
+    floor,
+    roomNumber
+      ? `${t("habitación", "room")} ${roomNumber}`
+      : "",
+  ]
+    .filter(Boolean)
+    .join(", ");
+  const roomSummary = `${roomType}${roomLocation ? ` · ${roomLocation}` : ""}`;
   const address = formatHostelAddress(data.hostelAddress);
   const mapsUrl = googleMapsLink(address);
   const context = {
     guestName,
-    roomNumber: data.roomNumber,
+    roomNumber,
     roomType,
     floor,
     entranceCode: data.entranceCode,
@@ -886,22 +904,22 @@ function ArrivalConfirmation({
     hostelEmail: data.hostelEmail,
     checkInDate: data.checkInDate,
   };
-  const intro = renderArrivalTemplate(
+  const intro = cleanArrivalCopy(renderArrivalTemplate(
     lang === "es" ? data.arrivalIntroEs : data.arrivalIntroEn,
     context
-  );
-  const keyInstructions = renderArrivalTemplate(
+  ));
+  const keyInstructions = cleanArrivalCopy(renderArrivalTemplate(
     lang === "es" ? data.keyInstructionsEs : data.keyInstructionsEn,
     context
-  );
-  const commonAreas = renderArrivalTemplate(
+  ));
+  const commonAreas = cleanArrivalCopy(renderArrivalTemplate(
     lang === "es" ? data.commonAreasEs : data.commonAreasEn,
     context
-  );
-  const houseRules = renderArrivalTemplate(
+  ));
+  const houseRules = cleanArrivalCopy(renderArrivalTemplate(
     lang === "es" ? data.houseRulesEs : data.houseRulesEn,
     context
-  );
+  ));
   const defaultIntro = t(
     `Hola ${guestName}. Sigue estas indicaciones para acceder al hostel y a tu habitación.`,
     `Hello ${guestName}. Follow these instructions to access the hostel and your room.`
@@ -913,7 +931,7 @@ function ArrivalConfirmation({
     "",
     `${t("Código de entrada", "Entrance code")}: ${data.entranceCode || "—"}`,
     `${t("Código de habitación", "Room code")}: ${data.roomCode || "—"}`,
-    `${t("Habitación", "Room")} ${data.roomNumber}${roomType ? ` · ${roomType}` : ""}${floor ? ` · ${floor}` : ""}`,
+    roomSummary,
     address,
     mapsUrl,
     data.wifiPassword ? `Wi‑Fi: ${data.wifiPassword}` : "",
@@ -1000,8 +1018,7 @@ function ArrivalConfirmation({
           >
             <p>
               <strong>
-                {roomType} · {t("Habitación", "Room")} {data.roomNumber}
-                {floor ? ` · ${floor}` : ""}
+                {roomSummary}
               </strong>
             </p>
             <p className="mt-2 whitespace-pre-line">
