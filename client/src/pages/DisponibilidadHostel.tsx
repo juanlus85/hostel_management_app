@@ -63,16 +63,9 @@ export default function DisponibilidadHostel() {
   const autoLoadedAvailabilityDate = useRef<string | null>(null);
   const dashboardReservationId = useMemo(() => {
     const search = location.includes("?") ? location.slice(location.indexOf("?")) : "";
-    return new URLSearchParams(search).get("reservation")?.trim() || null;
+    const value = Number(new URLSearchParams(search).get("detail"));
+    return Number.isInteger(value) && value > 0 ? value : null;
   }, [location]);
-  const dashboardReservation = trpc.checkin.externalImports.findCloudbedsUpcomingReservation.useQuery(
-    { sourceReservationId: dashboardReservationId || "-" },
-    { enabled: Boolean(dashboardReservationId), retry: false }
-  );
-
-  useEffect(() => {
-    if (dashboardReservation.error) toast.error(dashboardReservation.error.message);
-  }, [dashboardReservation.error]);
 
   const importWeekMutation = trpc.cloudbedsAvailability.importWeek.useMutation({
     onSuccess: result => {
@@ -189,7 +182,7 @@ export default function DisponibilidadHostel() {
         <Button variant={section === "availability" ? "default" : "ghost"} size="sm" onClick={() => setSection("availability")}><BedDouble className="mr-2 h-4 w-4" />Disponibilidad y precios</Button>
       </div>
 
-      {section === "reservations" ? <AvailabilityReservations autoImport openReservationId={dashboardReservation.data?.id ?? null} /> : <>
+      {section === "reservations" ? <AvailabilityReservations autoImport openReservationId={dashboardReservationId} /> : <>
       {!availability && !importWeekMutation.isPending && <Card className="border-dashed"><CardContent className="flex flex-col items-center justify-center py-16 text-center"><div className="mb-4 rounded-full bg-sky-100 p-4 text-sky-700"><BedDouble className="h-8 w-8" /></div><h2 className="font-semibold">No se ha podido cargar el calendario</h2><p className="mt-2 max-w-lg text-sm text-muted-foreground">{importWeekMutation.error?.message || "Pulsa “Actualizar disponibilidad” para repetir la consulta manual a Cloudbeds."}</p></CardContent></Card>}
 
       {importWeekMutation.isPending && !availability && <Card><CardContent className="flex items-center justify-center gap-3 py-16 text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin text-sky-700" />Consultando disponibilidad y precios en Cloudbeds…</CardContent></Card>}

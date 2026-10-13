@@ -2251,7 +2251,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             businessDate: loyverseDate,
             total: summary.total.toFixed(2),
             receiptCount: summary.receiptCount,
-            latestReceipts: ticketDetails.slice(0, 5),
+            latestReceipts: ticketDetails.slice(0, 15),
             topProducts: aggregateLoyverseDashboardProducts(ticketDetails, 15),
           };
         } catch {
@@ -4765,7 +4765,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
         }),
       findCloudbedsUpcomingReservation: protectedProcedure
         .input(z.object({ sourceReservationId: z.string().trim().min(1).max(100) }))
-        .query(async ({ input }) => {
+        .mutation(async ({ input }) => {
           const reservation = await db.getExternalUpcomingReservationBySourceId(
             input.sourceReservationId
           );

@@ -143,7 +143,12 @@ export function getCloudbedsDashboardPayments(
         transaction.transaction_category,
         transaction.category,
       ) || "Pago Cloudbeds",
-      reservationId: textField(transaction.sourceIdentifier, transaction.source_identifier),
+      reservationId: textField(
+        transaction.sourceIdentifier,
+        transaction.source_identifier,
+        transaction.sourceId,
+        transaction.source_id,
+      ),
     }))
     .filter(payment => payment.amount !== 0)
     .sort((a, b) => String(b.occurredAt || "").localeCompare(String(a.occurredAt || "")));

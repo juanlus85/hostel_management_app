@@ -148,6 +148,13 @@ export default function Home() {
   const latestStoreReceipts = provisionalExternalCash.data?.tienda.latestReceipts || [];
   const topStoreProducts = provisionalExternalCash.data?.tienda.topProducts || [];
   const hostelPayments = provisionalExternalCash.data?.hostel.payments || [];
+  const openHostelPaymentReservation = trpc.checkin.externalImports.findCloudbedsUpcomingReservation.useMutation({
+    onSuccess: result => {
+      setProvisionalDialog(null);
+      setLocation(`/disponibilidad-hostel?detail=${result.id}`);
+    },
+    onError: error => toast.error(error.message),
+  });
   
   const hostelId = businesses?.find(b => b.code === "hostel")?.id;
   const tiendaId = businesses?.find(b => b.code === "tienda")?.id;
@@ -500,11 +507,11 @@ export default function Home() {
           {provisionalDialog === "tienda" ? <>
             <DialogHeader>
               <DialogTitle>Provisional Tienda · jornada {provisionalExternalCash.data?.tienda.businessDate || "actual"}</DialogTitle>
-              <DialogDescription>Datos de Loyverse desde las 07:00. Pulsa un ticket para ver su recibo.</DialogDescription>
+              <DialogDescription>Hasta los últimos 15 tickets desde las 07:00. Pulsa un ticket para ver su recibo.</DialogDescription>
             </DialogHeader>
             <div className="grid gap-6 lg:grid-cols-2">
               <section>
-                <h3 className="mb-3 text-sm font-semibold">Últimos 5 tickets</h3>
+                <h3 className="mb-3 text-sm font-semibold">Últimos {latestStoreReceipts.length} ticket{latestStoreReceipts.length !== 1 ? "s" : ""}</h3>
                 {latestStoreReceipts.length ? <div className="space-y-2">{latestStoreReceipts.map(receipt => <button key={receipt.id} type="button" onClick={() => setSelectedReceipt(receipt)} className="flex w-full items-center justify-between gap-3 rounded-lg border bg-card p-3 text-left transition hover:border-violet-300 hover:bg-violet-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"><div className="min-w-0"><p className="truncate text-sm font-semibold">Ticket {receipt.number}</p><p className="text-xs text-muted-foreground">{madridTime(receipt.createdAt)} · {receipt.lines.length} artículo{receipt.lines.length !== 1 ? "s" : ""}</p></div><p className="shrink-0 font-semibold text-violet-700">{euro(receipt.total)}</p></button>)}</div> : <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">No hay tickets en esta jornada.</p>}
               </section>
               <section>
@@ -517,7 +524,7 @@ export default function Home() {
               <DialogTitle>Provisional Hostel · cobros del día</DialogTitle>
               <DialogDescription>Pagos contabilizados en Cloudbeds para la fecha de servicio {provisionalExternalCash.data?.hostel.serviceDate || "actual"}. Pulsa un cobro para abrir su reserva.</DialogDescription>
             </DialogHeader>
-            {hostelPayments.length ? <div className="divide-y overflow-hidden rounded-lg border">{hostelPayments.map((payment, index) => <button key={payment.id || `${payment.reservationId || "payment"}-${index}`} type="button" onClick={() => { if (!payment.reservationId) { toast.error("Cloudbeds no ha devuelto la reserva asociada a este cobro."); return; } setProvisionalDialog(null); setLocation(`/disponibilidad-hostel?reservation=${encodeURIComponent(payment.reservationId)}`); }} className="flex w-full items-center justify-between gap-3 p-3 text-left transition hover:bg-cyan-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600"><div className="min-w-0"><p className="truncate text-sm font-semibold">{payment.paymentMethod}</p><p className="truncate text-xs text-muted-foreground">{madridTime(payment.occurredAt)} · {payment.reservationId ? `Reserva ${payment.reservationId}` : "Reserva no identificada"}</p></div><p className="shrink-0 font-semibold text-cyan-700">{euro(payment.amount)}</p></button>)}</div> : <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">No hay cobros contabilizados para esta fecha de servicio.</p>}
+            {hostelPayments.length ? <div className="divide-y overflow-hidden rounded-lg border">{hostelPayments.map((payment, index) => <button key={payment.id || `${payment.reservationId || "payment"}-${index}`} type="button" disabled={openHostelPaymentReservation.isPending} onClick={() => { if (!payment.reservationId) { toast.error("Cloudbeds no ha devuelto la reserva asociada a este cobro."); return; } openHostelPaymentReservation.mutate({ sourceReservationId: payment.reservationId }); }} className="flex w-full items-center justify-between gap-3 p-3 text-left transition hover:bg-cyan-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600 disabled:cursor-wait disabled:opacity-60"><div className="min-w-0"><p className="truncate text-sm font-semibold">{payment.paymentMethod}</p><p className="truncate text-xs text-muted-foreground">{madridTime(payment.occurredAt)} · {payment.reservationId ? `Reserva ${payment.reservationId}` : "Reserva no identificada"}</p></div><p className="shrink-0 font-semibold text-cyan-700">{euro(payment.amount)}</p></button>)}</div> : <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">No hay cobros contabilizados para esta fecha de servicio.</p>}
           </>}
         </DialogContent>
       </Dialog>
