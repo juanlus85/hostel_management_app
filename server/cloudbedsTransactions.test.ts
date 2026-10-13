@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { aggregateCloudbedsPaymentsByOperationalDay, fetchCloudbedsReservationPayments, fetchCloudbedsTransactions, getCloudbedsBookingPrepayment, summarizeCloudbedsReservationTransactions } from "./cloudbedsTransactions";
+import { aggregateCloudbedsPaymentsByOperationalDay, fetchCloudbedsReservationPayments, fetchCloudbedsTransactions, getCloudbedsBookingPrepayment, getCloudbedsDashboardPayments, summarizeCloudbedsReservationTransactions } from "./cloudbedsTransactions";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -32,6 +32,16 @@ describe("aggregateCloudbedsPaymentsByOperationalDay", () => {
       { id: "3", internalCode: "9300", amount: "-100.00", serviceDate: "2026-08-27", paymentTypeName: "PREPAID BOOKING" },
     ], "2026-08-26");
     expect(result).toEqual({ total: "229.76", paymentCount: 1 });
+  });
+
+  it("expone los cobros diarios con el identificador de su reserva", () => {
+    expect(getCloudbedsDashboardPayments([
+      { id: "p-1", internalCode: "9300", amount: "-45", serviceDate: "2026-08-26", transactionDatetime: "2026-08-26T10:00:00Z", paymentMethodName: "Bizum", sourceIdentifier: "R-88" },
+      { id: "charge", internalCode: "4100", amount: "45", serviceDate: "2026-08-26", sourceIdentifier: "R-88" },
+      { id: "other-day", internalCode: "9300", amount: "-20", serviceDate: "2026-08-27", sourceIdentifier: "R-89" },
+    ], "2026-08-26")).toEqual([
+      { id: "p-1", amount: 45, occurredAt: "2026-08-26T10:00:00Z", paymentMethod: "Bizum", reservationId: "R-88" },
+    ]);
   });
 
   it("resume pagos, devoluciones y cargos de una reserva sin guardar los datos", () => {

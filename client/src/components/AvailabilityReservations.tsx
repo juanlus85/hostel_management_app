@@ -158,7 +158,13 @@ function agendaCardGridStyle(card: { startSlot: number; endSlot: number; lane: n
   };
 }
 
-export function AvailabilityReservations({ autoImport = false }: { autoImport?: boolean }) {
+export function AvailabilityReservations({
+  autoImport = false,
+  openReservationId = null,
+}: {
+  autoImport?: boolean;
+  openReservationId?: number | null;
+}) {
   const { user } = useAuth();
   const [window] = useState(getReservationWindow);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -234,6 +240,11 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
     { id: selectedId ?? 0 },
     { enabled: selectedId !== null, retry: false },
   );
+  useEffect(() => {
+    if (openReservationId === null) return;
+    setSelectedId(openReservationId);
+    setDetailTab("information");
+  }, [openReservationId]);
   const fiscalDocuments = trpc.checkin.externalImports.listCloudbedsReservationFiscalDocuments.useQuery(
     { id: selectedId ?? 0 },
     { enabled: selectedId !== null && detailTab === "billing", retry: false },

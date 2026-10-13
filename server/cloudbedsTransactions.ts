@@ -58,6 +58,14 @@ export type CloudbedsReservationPayments = {
   pendingWarning: string | null;
 };
 
+export type CloudbedsDashboardPayment = {
+  id: string | null;
+  amount: number;
+  occurredAt: string | null;
+  paymentMethod: string;
+  reservationId: string | null;
+};
+
 type CloudbedsPostedReservationPayments = Omit<
   CloudbedsReservationPayments,
   "pendingMovements" | "pendingChargeTotal" | "pendingWarning"
@@ -112,6 +120,33 @@ function isReservationPayment(transaction: CloudbedsTransaction) {
     textField(transaction.transactionCategory, transaction.transaction_category, transaction.category) || "",
   ].join(" ").toUpperCase();
   return /^9\d{3}(?:A|V)?\b/.test(transactionCode(transaction)) || /\bPAYMENT\b|\bPAGO\b|\bDEPOSIT\b|\bDEPÓSITO\b/.test(combined);
+}
+
+/** Cobros contabilizados para la fecha de servicio que muestra la X provisional. */
+export function getCloudbedsDashboardPayments(
+  transactions: CloudbedsTransaction[],
+  targetServiceDate: string
+): CloudbedsDashboardPayment[] {
+  return transactions
+    .filter(transaction => isReservationPayment(transaction) && serviceDate(transaction) === targetServiceDate)
+    .map(transaction => ({
+      id: textField(transaction.id),
+      // Cloudbeds expresa los cobros como importes negativos; se muestra el cobro recibido en positivo.
+      amount: -numericAmount(transaction.amount),
+      occurredAt: textField(transaction.transactionDatetime, transaction.transaction_datetime, transaction.createdAt, transaction.created_at),
+      paymentMethod: textField(
+        transaction.paymentMethodName,
+        transaction.paymentTypeName,
+        transaction.description,
+        transaction.notes,
+        transaction.transactionCategory,
+        transaction.transaction_category,
+        transaction.category,
+      ) || "Pago Cloudbeds",
+      reservationId: textField(transaction.sourceIdentifier, transaction.source_identifier),
+    }))
+    .filter(payment => payment.amount !== 0)
+    .sort((a, b) => String(b.occurredAt || "").localeCompare(String(a.occurredAt || "")));
 }
 
 function isTaxCharge(transaction: CloudbedsTransaction) {

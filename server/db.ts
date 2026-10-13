@@ -3372,6 +3372,25 @@ export async function getExternalUpcomingReservationById(
   return reservation || null;
 }
 
+export async function getExternalUpcomingReservationBySourceId(
+  sourceReservationId: string
+): Promise<ExternalUpcomingReservation | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const [reservation] = await db
+    .select()
+    .from(externalUpcomingReservations)
+    .where(
+      and(
+        eq(externalUpcomingReservations.provider, "cloudbeds"),
+        eq(externalUpcomingReservations.sourceReservationId, sourceReservationId.trim())
+      )
+    )
+    .orderBy(desc(externalUpcomingReservations.importedAt))
+    .limit(1);
+  return reservation || null;
+}
+
 export async function updateExternalUpcomingReservationCloudbeds(
   id: number,
   changes: { reservationStatus?: string | null; amountPending?: string }
