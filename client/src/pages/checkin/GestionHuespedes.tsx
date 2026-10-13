@@ -305,7 +305,7 @@ export default function GestionHuespedes() {
   };
 
   return (
-    <Card className="p-6">
+    <Card className="min-w-0 p-4 sm:p-6">
       <div className="mb-6">
         <h2 className="text-2xl font-bold">Gestión de Huéspedes</h2>
         <p className="text-muted-foreground">Búsqueda y gestión de registros</p>
@@ -364,7 +364,20 @@ export default function GestionHuespedes() {
           No se encontraron huéspedes
         </div>
       ) : (
-        <div className="border rounded-lg overflow-hidden">
+        <>
+        <div className="space-y-3 md:hidden">
+          {guests.map((guest) => (
+            <article key={guest.id} className="rounded-lg border bg-card p-4 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0"><h3 className="truncate font-semibold">{guest.firstName} {guest.lastName}</h3><p className="mt-1 truncate text-sm text-muted-foreground">{guest.documentNumber || "Sin documento"} · Hab. {guest.roomNumber || "—"}</p></div>
+                <div className="shrink-0">{getStatusBadge(guest.status || "pending")}</div>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-muted-foreground"><p>Reserva: <span className="font-medium text-foreground">{guest.reservationNumber || "—"}</span></p><p>Entrada: <span className="font-medium text-foreground">{guest.checkInDate ? new Date(guest.checkInDate).toLocaleDateString() : "—"}</span></p></div>
+              <div className="mt-3 grid grid-cols-2 gap-2"><Button variant="outline" size="sm" onClick={() => handleViewDetails(guest)}><Eye className="mr-1 h-4 w-4" />Ver</Button><Button variant="outline" size="sm" onClick={() => handleEdit(guest)}><Edit className="mr-1 h-4 w-4" />Editar</Button><Button variant="outline" size="sm" onClick={() => handleDownloadPDF(guest)}><Download className="mr-1 h-4 w-4" />PDF</Button><Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleDelete(guest.id!, `${guest.firstName} ${guest.lastName}`)}><Trash2 className="mr-1 h-4 w-4" />Eliminar</Button></div>
+            </article>
+          ))}
+        </div>
+        <div className="hidden overflow-x-auto rounded-lg border md:block">
           <Table>
             <TableHeader>
               <TableRow>
@@ -431,11 +444,12 @@ export default function GestionHuespedes() {
             </TableBody>
           </Table>
         </div>
+        </>
       )}
 
       {/* Modal de Detalles */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] overflow-y-auto p-4 sm:max-h-[80vh] sm:max-w-2xl sm:p-6">
           <DialogHeader>
             <DialogTitle>Detalles del Huésped</DialogTitle>
             <DialogDescription>
@@ -463,7 +477,7 @@ export default function GestionHuespedes() {
               {/* Datos Personales */}
               <div>
                 <h3 className="font-semibold text-lg mb-3">Datos Personales</h3>
-                <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                   <div>
                     <span className="text-muted-foreground">Nombre:</span>
                     <p className="font-medium">{selectedGuest.firstName} {selectedGuest.lastName}</p>
@@ -494,7 +508,7 @@ export default function GestionHuespedes() {
               {/* Datos de Reserva */}
               <div>
                 <h3 className="font-semibold text-lg mb-3">Datos de Reserva</h3>
-                <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                   <div>
                     <span className="text-muted-foreground">Número de Reserva:</span>
                     <p className="font-medium">{selectedGuest.reservationNumber || "-"}</p>
@@ -525,7 +539,7 @@ export default function GestionHuespedes() {
               {/* Dirección */}
               <div>
                 <h3 className="font-semibold text-lg mb-3">Dirección</h3>
-                <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                   <div>
                     <span className="text-muted-foreground">Calle:</span>
                     <p className="font-medium">{selectedGuest.street || "-"}</p>
@@ -552,7 +566,7 @@ export default function GestionHuespedes() {
               {/* Información de Pago */}
               <div>
                 <h3 className="font-semibold text-lg mb-3">Información de Pago</h3>
-                <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                   <div>
                     <span className="text-muted-foreground">Tipo de Pago:</span>
                     <p className="font-medium">{selectedGuest.paymentType || "-"}</p>
@@ -626,7 +640,7 @@ export default function GestionHuespedes() {
               {/* Datos Personales */}
               <div className="space-y-4">
                 <h3 className="font-semibold text-lg">Datos Personales</h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
                     <Label htmlFor="edit-firstName">Nombre *</Label>
                     <Input
@@ -700,7 +714,7 @@ export default function GestionHuespedes() {
               {/* Dirección */}
               <div className="space-y-4">
                 <h3 className="font-semibold text-lg">Dirección</h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
                     <Label htmlFor="edit-street">Calle</Label>
                     <Input
@@ -747,7 +761,7 @@ export default function GestionHuespedes() {
               {/* Datos de Reserva */}
               <div className="space-y-4">
                 <h3 className="font-semibold text-lg">Datos de Reserva</h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
                     <Label htmlFor="edit-reservationNumber">Número de Reserva</Label>
                     <Input
@@ -788,7 +802,7 @@ export default function GestionHuespedes() {
               {/* Información de Pago */}
               <div className="space-y-4">
                 <h3 className="font-semibold text-lg">Información de Pago</h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
                     <Label htmlFor="edit-paymentType">Tipo de Pago</Label>
                     <Input
