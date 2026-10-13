@@ -3439,6 +3439,18 @@ export async function getExternalReservationCommunications(): Promise<
     .orderBy(desc(externalReservationCommunications.createdAt));
 }
 
+export async function getExternalReservationCommunicationsByReservationId(
+  externalReservationId: number
+): Promise<ExternalReservationCommunication[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(externalReservationCommunications)
+    .where(eq(externalReservationCommunications.externalReservationId, externalReservationId))
+    .orderBy(desc(externalReservationCommunications.createdAt));
+}
+
 export async function createExternalReservationCommunication(
   data: InsertExternalReservationCommunication
 ) {

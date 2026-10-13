@@ -991,11 +991,14 @@ function ArrivalConfirmation({
             icon={<KeyRound className="h-5 w-5" />}
             title={t("Tu habitación", "Your room")}
           >
-            <p>
-              <strong>
-                {roomSummary}
-              </strong>
-            </p>
+            <p className="font-medium">{roomType}</p>
+            <div className="mt-3 rounded-lg border-2 border-teal-300 bg-teal-50 p-3 text-center text-teal-950">
+              <p className="text-xs font-semibold uppercase tracking-wide">{t("Tu habitación", "Your room")}</p>
+              <p className="mt-1 text-2xl font-extrabold tracking-wide">
+                {roomNumber ? `${t("Habitación", "Room")} ${roomNumber}` : t("Habitación asignada", "Assigned room")}
+              </p>
+              {floor && <p className="mt-1 text-sm font-semibold">{floor}</p>}
+            </div>
             <p className="mt-2 whitespace-pre-line">
               {keyInstructions ||
                 t(

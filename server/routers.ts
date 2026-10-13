@@ -4500,10 +4500,11 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
         .query(async ({ input }) => {
           const reservation = await db.getExternalUpcomingReservationById(input.id);
           if (!reservation) throw new TRPCError({ code: "NOT_FOUND", message: "No se encontró la reserva importada" });
+          const communications = await db.getExternalReservationCommunicationsByReservationId(reservation.id);
           const apiKey = process.env.CLOUDBEDS_API_KEY;
           const propertyId = process.env.CLOUDBEDS_PROPERTY_ID;
           if (!apiKey || !propertyId) {
-            return { reservation, payments: null, paymentWarning: "No hay credenciales de Cloudbeds configuradas para consultar los movimientos." };
+            return { reservation, payments: null, paymentWarning: "No hay credenciales de Cloudbeds configuradas para consultar los movimientos.", communications };
           }
           try {
             const [payments, snapshot] = await Promise.all([
@@ -4520,12 +4521,13 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
               reservationStatus: updatedReservation.reservationStatus,
               ...(snapshot.amountPending !== null ? { amountPending: snapshot.amountPending } : {}),
             });
-            return { reservation: updatedReservation, payments, paymentWarning: null };
+            return { reservation: updatedReservation, payments, paymentWarning: null, communications };
           } catch (error) {
             return {
               reservation,
               payments: null,
               paymentWarning: error instanceof Error ? error.message : "No se han podido consultar los movimientos de esta reserva.",
+              communications,
             };
           }
         }),

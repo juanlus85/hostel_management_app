@@ -1849,3 +1849,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [ ] Ejecutar `SQL_PARENTESCO_MENORES.sql` en el VPS para habilitar la persistencia y visualización completa de parentesco.
 - [x] Corregir la guía final de Check-in Online: traducir tipos de habitación al español y evitar ubicaciones incompletas o repetidas cuando falte planta/número.
 - [x] Resolver siempre número y planta desde los códigos de acceso configurados en la guía final, y retirar el bloque de mapa/enlace de ubicación.
+- [x] Mostrar P0/PB, P1 y P2 como planta baja, primera y segunda planta (también en inglés), destacar la habitación en la guía y avisar cuando el Check-in Online ya se haya enviado.

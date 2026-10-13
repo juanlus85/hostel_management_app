@@ -42,15 +42,22 @@ export function translateRoomType(roomType: string | null | undefined, language:
 export function translateFloor(floor: string | null | undefined, language: "es" | "en"): string {
   if (!floor) return "";
   if (language === "es") {
-    if (/^PB$/i.test(floor)) return "Planta baja";
+    const normalized = floor.toLocaleLowerCase("es-ES").trim();
+    const exact: Record<string, string> = {
+      "p0": "Planta baja (P0/PB)", "pb": "Planta baja (P0/PB)", "planta baja": "Planta baja (P0/PB)", "ground floor": "Planta baja (P0/PB)",
+      "p1": "Primera planta (P1)", "primera planta": "Primera planta (P1)", "1ª planta": "Primera planta (P1)", "first floor": "Primera planta (P1)",
+      "p2": "Segunda planta (P2)", "segunda planta": "Segunda planta (P2)", "2ª planta": "Segunda planta (P2)", "second floor": "Segunda planta (P2)",
+      "p3": "Tercera planta (P3)", "tercera planta": "Tercera planta (P3)", "3ª planta": "Tercera planta (P3)", "third floor": "Tercera planta (P3)",
+    };
+    if (exact[normalized]) return exact[normalized];
     return floor;
   }
   const normalized = floor.toLocaleLowerCase("es-ES").trim();
   const exact: Record<string, string> = {
-    "pb": "Ground floor", "planta baja": "Ground floor", "ground floor": "Ground floor",
-    "primera planta": "First floor", "1ª planta": "First floor", "first floor": "First floor",
-    "segunda planta": "Second floor", "2ª planta": "Second floor", "second floor": "Second floor",
-    "tercera planta": "Third floor", "3ª planta": "Third floor", "third floor": "Third floor",
+    "p0": "Ground floor (P0/PB)", "pb": "Ground floor (P0/PB)", "planta baja": "Ground floor (P0/PB)", "ground floor": "Ground floor (P0/PB)",
+    "p1": "First floor (P1)", "primera planta": "First floor (P1)", "1ª planta": "First floor (P1)", "first floor": "First floor (P1)",
+    "p2": "Second floor (P2)", "segunda planta": "Second floor (P2)", "2ª planta": "Second floor (P2)", "second floor": "Second floor (P2)",
+    "p3": "Third floor (P3)", "tercera planta": "Third floor (P3)", "3ª planta": "Third floor (P3)", "third floor": "Third floor (P3)",
   };
   return exact[normalized] || floor;
 }
