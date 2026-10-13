@@ -1854,3 +1854,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Marcar la agenda con punto azul cuando se envíe la invitación de Check-in Online y con punto verde cuando el huésped lo complete.
 - [x] Separar en reservas el Check-in con códigos del Check-in anticipado sin códigos, con mensajes, enlaces y estados de agenda diferenciados.
 - [ ] Ejecutar la migración `0059_sad_zarek.sql` (o el SQL compatible de producción) en el VPS para activar el modo de enlace anticipado.
+- [x] Ocultar número de habitación en la invitación de Check-in anticipado y sustituir su pantalla final por un agradecimiento de recepción sin guía ni códigos.

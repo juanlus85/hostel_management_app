@@ -169,6 +169,8 @@ export default function CheckinOnlinePublico() {
   );
   const complete = trpc.checkin.online.completePublic.useMutation();
   const t = (es: string, en: string) => (lang === "es" ? es : en);
+  const isEarlyCheckin =
+    invitation?.checkinMode === "early" || invitation?.sendCodes === false;
   const termsUrl =
     lang === "es" ? invitation?.termsUrlEs : invitation?.termsUrlEn;
   const privacyUrl =
@@ -399,13 +401,18 @@ export default function CheckinOnlinePublico() {
                 {invitation.hostelName}
               </CardTitle>
               <CardDescription>
-                {t(
-                  "Completa tu check-in online de forma segura",
-                  "Complete your online check-in securely"
-                )}
+                {isEarlyCheckin
+                  ? t(
+                      "Completa tu Check-in anticipado de forma segura",
+                      "Complete your early check-in securely"
+                    )
+                  : t(
+                      "Completa tu check-in online de forma segura",
+                      "Complete your online check-in securely"
+                    )}
               </CardDescription>
             </div>
-            {welcomeMessage && (
+            {welcomeMessage && !isEarlyCheckin && (
               <div className="whitespace-pre-line rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm leading-6">
                 {welcomeMessage}
               </div>
@@ -463,10 +470,12 @@ export default function CheckinOnlinePublico() {
                 ) : (
                   <ShieldCheck className="mr-2 h-5 w-5" />
                 )}
-                {t(
-                  "Completar check-in y recibir códigos",
-                  "Complete check-in and receive codes"
-                )}
+                {isEarlyCheckin
+                  ? t("Completar Check-in anticipado", "Complete early check-in")
+                  : t(
+                      "Completar check-in y recibir códigos",
+                      "Complete check-in and receive codes"
+                    )}
               </Button>
             </form>
           </CardContent>
@@ -874,6 +883,63 @@ function ArrivalConfirmation({
       toast.error(t("No se pudo copiar el código", "Could not copy the code"));
     }
   };
+  if (!sendsCodes) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-teal-50 to-sky-100 p-3 py-6 sm:p-8">
+        <Card className="mx-auto max-w-xl">
+          <CardHeader className="text-center">
+            {hostelLogo && (
+              <img
+                src={hostelLogo}
+                alt={data.hostelName}
+                className="mx-auto mb-4 h-14 max-w-[220px] object-contain"
+              />
+            )}
+            <CheckCircle2 className="mx-auto h-16 w-16 text-teal-600" />
+            <CardTitle className="mt-3 text-2xl">
+              {t("¡Gracias por completar tu Check-in anticipado!", "Thank you for completing your early check-in!")}
+            </CardTitle>
+            <CardDescription>
+              {t(
+                "Hemos recibido correctamente tus datos.",
+                "We have received your details successfully."
+              )}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5 text-center">
+            <section className="rounded-xl border border-teal-200 bg-teal-50 p-5 text-sm leading-6 text-teal-950">
+              <p className="font-semibold">
+                {t(`Gracias, ${guestName || ""}.`, `Thank you, ${guestName || ""}.`)}
+              </p>
+              <p className="mt-2">
+                {t(
+                  "Tu información nos permitirá preparar tu llegada y agilizar el Check-in en recepción. Te estaremos esperando para darte la bienvenida y facilitarte los datos de tu habitación.",
+                  "Your information will help us prepare your arrival and make your check-in at reception quicker. We will be expecting you to welcome you and provide your room details."
+                )}
+              </p>
+            </section>
+            <GuideBlock
+              icon={<Phone className="h-5 w-5" />}
+              title={t("¿Necesitas ayuda?", "Need help?")}
+            >
+              <div className="space-y-1 text-left">
+                {data.hostelPhone && (
+                  <a className="block font-semibold text-teal-700 underline" href={`tel:${data.hostelPhone}`}>
+                    {data.hostelPhone}
+                  </a>
+                )}
+                {data.hostelEmail && (
+                  <a className="block font-semibold text-teal-700 underline" href={`mailto:${data.hostelEmail}`}>
+                    {data.hostelEmail}
+                  </a>
+                )}
+              </div>
+            </GuideBlock>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
   const floor = translateFloor(
     lang === "en"
       ? data.floorLevel || data.floor
