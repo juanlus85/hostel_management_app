@@ -41,6 +41,7 @@ import {
   sumLoyverseReceiptsForOperationalDay,
 } from "../shared/provisionalExternalCash";
 import { isAllowedDocumentType } from "../shared/countries";
+import { isBirthDateAtLeastOneYearAgo } from "../shared/guestAge";
 import { findAccessCodeForRoom } from "../shared/accessCodes";
 import { compareCashByDate } from "../shared/externalCashComparison";
 import {
@@ -169,6 +170,15 @@ function assertRequiredDocumentSupport(
     throw new TRPCError({
       code: "BAD_REQUEST",
       message: "El número de soporte es obligatorio para DNI/NIF y NIE europeo",
+    });
+  }
+}
+
+function assertAllowedGuestBirthDate(birthDate: string | null | undefined) {
+  if (birthDate && !isBirthDateAtLeastOneYearAgo(birthDate)) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "La fecha de nacimiento debe ser válida y tener al menos un año de antigüedad.",
     });
   }
 }
@@ -3406,6 +3416,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
               guest.documentSupport
             )
           );
+          input.guests.forEach(guest => assertAllowedGuestBirthDate(guest.birthDate));
           const groupId = `tablet-${randomBytes(12).toString("hex")}`;
           const stayDates = getMadridStayDates();
           const guestIds: number[] = [];
@@ -3630,6 +3641,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             input.nationality,
             input.documentSupport
           );
+          assertAllowedGuestBirthDate(input.birthDate);
           // Para check-ins públicos (anticipado), createdBy será null
           const id = await db.createGuest({
             ...input,
@@ -3776,6 +3788,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
         )
         .mutation(async ({ input }) => {
           const { id, ...data } = input;
+          assertAllowedGuestBirthDate(data.birthDate);
           await db.updateGuest(id, data);
 
           let recordPdfUrl: string | null = null;
@@ -4066,6 +4079,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
               guest.documentSupport
             )
           );
+          submittedGuests.forEach(guest => assertAllowedGuestBirthDate(guest.birthDate));
           const link = await db.getOnlineCheckinLinkByToken(input.token);
           if (!link)
             throw new TRPCError({

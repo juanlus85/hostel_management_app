@@ -80,12 +80,20 @@ function asList(value: unknown): ApiRecord[] {
 }
 
 function unwrapReservation(value: unknown): ApiRecord {
-  const record = asRecord(value);
-  for (const key of ["reservation", "data", "result", "reservationDetails", "reservation_details"]) {
-    const candidate = record[key];
-    if (Array.isArray(candidate) && candidate.length) return asRecord(candidate[0]);
-    const nested = asRecord(candidate);
-    if (Object.keys(nested).length) return nested;
+  let record = asRecord(value);
+  for (let depth = 0; depth < 4; depth += 1) {
+    let nestedRecord: ApiRecord | null = null;
+    for (const key of ["reservation", "data", "result", "reservationDetails", "reservation_details"]) {
+      const candidate = record[key];
+      if (Array.isArray(candidate) && candidate.length) nestedRecord = asRecord(candidate[0]);
+      else {
+        const nested = asRecord(candidate);
+        if (Object.keys(nested).length) nestedRecord = nested;
+      }
+      if (nestedRecord) break;
+    }
+    if (!nestedRecord) break;
+    record = nestedRecord;
   }
   return record;
 }
@@ -168,6 +176,13 @@ function nestedTrueByKey(value: unknown, keyPattern: RegExp, depth = 0): boolean
   );
 }
 
+function containsChannelPrepayment(value: unknown, depth = 0): boolean {
+  if (depth > 6 || value === null || value === undefined) return false;
+  if (typeof value === "string") return /(?:pre[\s-]?paid|paid\s+(?:by|at)\s+(?:the\s+)?channel|pagad[ao]\s+al\s+canal|prepago)/i.test(value);
+  if (Array.isArray(value)) return value.some(item => containsChannelPrepayment(item, depth + 1));
+  return Object.values(asRecord(value)).some(item => containsChannelPrepayment(item, depth + 1));
+}
+
 function paymentCollectionValue(reservation: ApiRecord, hotelCollect: boolean | null) {
   const explicit = firstText(
     reservation.paymentCollection,
@@ -179,7 +194,7 @@ function paymentCollectionValue(reservation: ApiRecord, hotelCollect: boolean | 
   ) || nestedTextByKey(reservation, /^(payment.?collection|collection.?type|payment.?model)$/i);
   if (explicit) return explicit;
   if (hotelCollect === true) return "Hotel Collect · cobrar en el hotel";
-  if (nestedTrueByKey(reservation, /(paid.?by.?channel|channel.?paid|channel.?collect)/i)) return "Pagada al canal";
+  if (nestedTrueByKey(reservation, /(paid.?by.?channel|channel.?paid|channel.?collect)/i) || containsChannelPrepayment(reservation)) return "Pagada al canal · prepago";
   return null;
 }
 
@@ -191,8 +206,8 @@ function channelPaymentStatusValue(reservation: ApiRecord) {
     reservation.paid_by_channel_status
   ) || nestedTextByKey(reservation, /(paid.?by.?channel.*status|channel.?payment.*status)/i);
   if (explicit) return explicit;
-  return nestedTrueByKey(reservation, /(paid.?by.?channel|channel.?paid|channel.?collect)/i)
-    ? "Reserva pagada al canal"
+  return nestedTrueByKey(reservation, /(paid.?by.?channel|channel.?paid|channel.?collect)/i) || containsChannelPrepayment(reservation)
+    ? "Reserva prepagada al canal"
     : null;
 }
 

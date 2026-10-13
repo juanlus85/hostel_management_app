@@ -37,6 +37,18 @@ describe("getGuestRecordArchiveLocation", () => {
     expect(pdf.length).toBeGreaterThan(1_000);
   });
 
+  it("incluye una página por cada huésped de la misma ficha", () => {
+    const oneGuest = createGuestPdfBuffer({ firstName: "Ana", lastName: "Pérez", checkInDate: "2026-10-03" });
+    const group = createGuestPdfBuffer([
+      { firstName: "Ana", lastName: "Pérez", checkInDate: "2026-10-03" },
+      { firstName: "Luis", lastName: "García", checkInDate: "2026-10-03" },
+    ]);
+    const content = group.toString("latin1");
+    expect(group.length).toBeGreaterThan(oneGuest.length);
+    expect(content).toContain("HUÉSPED 1 DE 2");
+    expect(content).toContain("HUÉSPED 2 DE 2");
+  });
+
   it("crea una URL pública codificada dentro de uploads", () => {
     expect(getGuestRecordPublicUrl("/srv/hostel/uploads/registros/10-2026/031026 - Ana Pérez.pdf", "/srv/hostel/uploads"))
       .toBe("/uploads/registros/10-2026/031026%20-%20Ana%20P%C3%A9rez.pdf");

@@ -95,10 +95,21 @@ describe("acciones de reserva Cloudbeds", () => {
       specialInstructions: "*** Genius booker *** This reservation has already been paid ***",
     } })).toMatchObject({
       hotelCollect: null,
-      paymentCollection: "Pagada al canal",
-      channelPaymentStatus: "Reserva pagada al canal",
+      paymentCollection: "Pagada al canal · prepago",
+      channelPaymentStatus: "Reserva prepagada al canal",
       channelMembership: "Booking.com Genius",
       specialInstructions: "*** Genius booker *** This reservation has already been paid ***",
+    });
+  });
+
+  it("reconoce el prepago de Booking dentro de una respuesta anidada", () => {
+    expect(extractCloudbedsReservationSnapshot({ data: { reservation: {
+      source_name: "Booking.com",
+      booking_instructions: "*** Genius booker *** THIS RESERVATION HAS BEEN PRE-PAID ***",
+    } } })).toMatchObject({
+      paymentCollection: "Pagada al canal · prepago",
+      channelPaymentStatus: "Reserva prepagada al canal",
+      specialInstructions: "*** Genius booker *** THIS RESERVATION HAS BEEN PRE-PAID ***",
     });
   });
 });

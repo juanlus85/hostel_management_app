@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Trash2 } from "lucide-react";
 import { COUNTRIES, getAllowedDocumentTypes } from "@/../../shared/countries";
 import { requiresDocumentSupport } from "@shared/documentSupport";
-import { calculateAge, isMinor } from "@shared/guestAge";
+import { calculateAge, isMinor, latestAllowedBirthDate } from "@shared/guestAge";
 
 export type GuestFormData = {
   firstName: string;
@@ -49,6 +49,7 @@ export function GuestFormFields({ guest, index, removable, onChange, onRemove }:
   const isEU = country?.isEU || false;
   const age = calculateAge(guest.birthDate);
   const guestIsMinor = isMinor(guest.birthDate);
+  const latestBirthDate = latestAllowedBirthDate();
 
   return (
     <Card className="p-6">
@@ -79,7 +80,7 @@ export function GuestFormFields({ guest, index, removable, onChange, onRemove }:
           <Label htmlFor={`gender-${index}`}>Sexo *</Label>
           <Select value={guest.gender} onValueChange={value => onChange("gender", value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Hombre">Hombre</SelectItem><SelectItem value="Mujer">Mujer</SelectItem><SelectItem value="Otro">Otro</SelectItem></SelectContent></Select>
         </div>
-        <div><Label htmlFor={`birthDate-${index}`}>Fecha de Nacimiento *</Label><Input id={`birthDate-${index}`} type="date" value={guest.birthDate} onChange={event => onChange("birthDate", event.target.value)} />{age !== null && <p className={`mt-1 text-xs ${guestIsMinor ? "font-medium text-amber-700" : "text-muted-foreground"}`}>{age} años{guestIsMinor ? " · Menor de edad" : ""}</p>}</div>
+        <div><Label htmlFor={`birthDate-${index}`}>Fecha de Nacimiento *</Label><Input id={`birthDate-${index}`} type="date" min="1900-01-01" max={latestBirthDate} value={guest.birthDate} onChange={event => onChange("birthDate", event.target.value)} />{age !== null && <p className={`mt-1 text-xs ${guestIsMinor ? "font-medium text-amber-700" : "text-muted-foreground"}`}>{age} años{guestIsMinor ? " · Menor de edad" : ""}</p>}<p className="mt-1 text-xs text-muted-foreground">El año admite cuatro cifras. No se admiten nacimientos de hace menos de un año.</p></div>
         {guestIsMinor && <div><Label htmlFor={`relationship-${index}`}>Parentesco del menor *</Label><Select value={guest.relationship || undefined} onValueChange={value => onChange("relationship", value)}><SelectTrigger id={`relationship-${index}`}><SelectValue placeholder="Seleccionar parentesco" /></SelectTrigger><SelectContent>{relationshipOptions.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent></Select><p className="mt-1 text-xs text-muted-foreground">Obligatorio para el parte de viajeros de un menor.</p></div>}
         <div><Label htmlFor={`phone-${index}`}>Teléfono</Label><Input id={`phone-${index}`} type="tel" value={guest.phone} onChange={event => onChange("phone", event.target.value)} /></div>
         <div><Label htmlFor={`email-${index}`}>Email</Label><Input id={`email-${index}`} type="email" value={guest.email} onChange={event => onChange("email", event.target.value)} /></div>

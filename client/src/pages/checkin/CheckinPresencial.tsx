@@ -16,7 +16,7 @@ import { Download, FileCheck2, Loader2, Plus, Printer, Save } from "lucide-react
 import { toast } from "sonner";
 import { COUNTRIES, PAYMENT_TYPES } from "@/../../shared/countries";
 import { requiresDocumentSupport } from "@shared/documentSupport";
-import { isMinor } from "@shared/guestAge";
+import { isBirthDateAtLeastOneYearAgo, isMinor } from "@shared/guestAge";
 import { GuestFormFields, type GuestFormData } from "@/components/checkin/GuestFormFields";
 
 type InitialGuest = Record<string, any>;
@@ -307,6 +307,11 @@ export default function CheckinPresencial({ initialGuest, onCompleted, showArchi
 
       if (!guest.birthDate) {
         toast.error(`La fecha de nacimiento del huésped ${i + 1} es obligatoria`);
+        return;
+      }
+
+      if (!isBirthDateAtLeastOneYearAgo(guest.birthDate)) {
+        toast.error(`La fecha de nacimiento del huésped ${i + 1} debe tener al menos un año de antigüedad`);
         return;
       }
 

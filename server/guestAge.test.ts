@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateAge, isMinor } from "../shared/guestAge";
+import { calculateAge, isBirthDateAtLeastOneYearAgo, isMinor, latestAllowedBirthDate } from "../shared/guestAge";
 
 describe("edad de huésped", () => {
   const reference = new Date(2026, 9, 11);
@@ -13,5 +13,12 @@ describe("edad de huésped", () => {
     expect(isMinor("2010-04-20", reference)).toBe(true);
     expect(isMinor("2000-04-20", reference)).toBe(false);
     expect(calculateAge("2026-13-01", reference)).toBeNull();
+  });
+
+  it("bloquea fechas de nacimiento con menos de un año", () => {
+    expect(isBirthDateAtLeastOneYearAgo("2025-10-11", reference)).toBe(true);
+    expect(isBirthDateAtLeastOneYearAgo("2025-10-12", reference)).toBe(false);
+    expect(isBirthDateAtLeastOneYearAgo("2026-10-11", reference)).toBe(false);
+    expect(latestAllowedBirthDate(reference)).toBe("2025-10-11");
   });
 });

@@ -14,3 +14,14 @@ export function isMinor(birthDate: string | null | undefined, referenceDate = ne
   const age = calculateAge(birthDate, referenceDate);
   return age !== null && age < 18;
 }
+
+export function isBirthDateAtLeastOneYearAgo(birthDate: string | null | undefined, referenceDate = new Date()): boolean {
+  const age = calculateAge(birthDate, referenceDate);
+  return age !== null && age >= 1;
+}
+
+export function latestAllowedBirthDate(referenceDate = new Date()): string {
+  const date = new Date(referenceDate);
+  date.setFullYear(date.getFullYear() - 1);
+  return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
+}

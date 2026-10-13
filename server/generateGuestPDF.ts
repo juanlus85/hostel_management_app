@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { jsPDF } from "jspdf";
-import { getGuestById } from "./db";
+import { getGuestById, getGuestsByGroupId } from "./db";
 
 type GuestRecord = {
   id?: number;
@@ -63,18 +63,31 @@ export async function generateGuestPDF(guestId: number): Promise<string | null> 
     const guest = await getGuestById(guestId);
     if (!guest) return null;
 
-    const location = getGuestRecordArchiveLocation(guest);
-    fs.mkdirSync(location.directory, { recursive: true });
-    // Se reemplaza el mismo registro si recepción completa o corrige datos después.
-    fs.writeFileSync(location.filePath, createGuestPdfBuffer(guest));
-    return location.filePath;
+    const group = await getGuestsByGroupId(guest.groupId);
+    const travelers = group.length > 1 ? group : [guest];
+    const mainGuest = travelers.find(traveler => traveler.isMainGuest) || travelers[0] || guest;
+    const groupLocation = getGuestRecordArchiveLocation(mainGuest);
+    fs.mkdirSync(groupLocation.directory, { recursive: true });
+    // El PDF asociado a la ficha principal contiene todos los huéspedes
+    // registrados juntos, uno por página. Así el enlace final de Check-in no
+    // oculta al acompañante, pero cada acompañante conserva su copia individual.
+    fs.writeFileSync(groupLocation.filePath, createGuestPdfBuffer(travelers));
+
+    if (guest.id !== mainGuest.id) {
+      const individualLocation = getGuestRecordArchiveLocation(guest);
+      fs.mkdirSync(individualLocation.directory, { recursive: true });
+      fs.writeFileSync(individualLocation.filePath, createGuestPdfBuffer(guest));
+    }
+    return groupLocation.filePath;
   } catch (error) {
     console.error("[generateGuestPDF] No se pudo archivar el registro:", error);
     return null;
   }
 }
 
-export function createGuestPdfBuffer(guest: GuestRecord): Buffer {
+export function createGuestPdfBuffer(input: GuestRecord | GuestRecord[]): Buffer {
+  const travelers = Array.isArray(input) ? input : [input];
+  const guest = travelers[0] || {};
   const pdf = new jsPDF({ unit: "mm", format: "a4" });
   const margin = 12;
   const columnWidth = 88;
@@ -103,63 +116,62 @@ export function createGuestPdfBuffer(guest: GuestRecord): Buffer {
     }
   };
 
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(16);
-  pdf.text("FICHA DE REGISTRO DE HUÉSPED", margin, y);
-  y += 7;
-  pdf.setFont("helvetica", "normal");
-  pdf.setFontSize(8);
-  pdf.text(`Generado: ${new Date().toLocaleString("es-ES")}`, margin, y);
-  y += 8;
+  travelers.forEach((traveler, index) => {
+    if (index > 0) pdf.addPage();
+    y = 14;
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(16);
+    pdf.text(travelers.length > 1 ? `FICHA DE REGISTRO · HUÉSPED ${index + 1} DE ${travelers.length}` : "FICHA DE REGISTRO DE HUÉSPED", margin, y);
+    y += 7;
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(8);
+    pdf.text(`Generado: ${new Date().toLocaleString("es-ES")}`, margin, y);
+    y += 8;
 
-  addHeading("DATOS PERSONALES");
-  addRow("Nombre", `${guest.firstName || ""} ${guest.lastName || ""}`.trim(), "Documento", `${guest.documentType || ""} ${guest.documentNumber || ""}`.trim());
-  addRow("Nacionalidad", guest.nationality, "Sexo", guest.gender);
-  addRow("Nacimiento", guest.birthDate, "Teléfono", guest.phone);
-  addRow("Email", guest.email, "Soporte", guest.documentSupport);
+    addHeading("DATOS PERSONALES");
+    addRow("Nombre", `${traveler.firstName || ""} ${traveler.lastName || ""}`.trim(), "Documento", `${traveler.documentType || ""} ${traveler.documentNumber || ""}`.trim());
+    addRow("Nacionalidad", traveler.nationality, "Sexo", traveler.gender);
+    addRow("Nacimiento", traveler.birthDate, "Teléfono", traveler.phone);
+    addRow("Email", traveler.email, "Soporte", traveler.documentSupport);
 
-  pageBreak();
-  addHeading("DIRECCIÓN Y RESERVA");
-  addRow("Dirección", `${guest.street || ""} ${guest.addressExtra || ""}`.trim(), "Ciudad", guest.city);
-  addRow("Provincia", guest.province, "Código postal", guest.postalCode);
-  addRow("País", guest.country, "Reserva", guest.reservationNumber);
-  addRow("Entrada", guest.checkInDate, "Salida", guest.checkOutDate);
-  addRow("Habitación", guest.roomNumber, "Tipo", guest.roomType);
-  addRow("Origen", guest.reservationOrigin, "Alojamiento", guest.accommodationType);
+    pageBreak();
+    addHeading("DIRECCIÓN Y RESERVA");
+    addRow("Dirección", `${traveler.street || ""} ${traveler.addressExtra || ""}`.trim(), "Ciudad", traveler.city);
+    addRow("Provincia", traveler.province, "Código postal", traveler.postalCode);
+    addRow("País", traveler.country, "Reserva", traveler.reservationNumber);
+    addRow("Entrada", traveler.checkInDate, "Salida", traveler.checkOutDate);
+    addRow("Habitación", traveler.roomNumber, "Tipo", traveler.roomType);
+    addRow("Origen", traveler.reservationOrigin, "Alojamiento", traveler.accommodationType);
 
-  pageBreak();
-  addHeading("INFORMACIÓN DE PAGO");
-  addRow("Tipo de pago", guest.paymentType, "Fecha", guest.paymentDate);
-  addRow("Abonado", `€${guest.amountPaid || "0"}`, "Pendiente", `€${guest.amountPending || "0"}`);
-  addRow("Titular", guest.paymentHolder, "Medio", guest.paymentMethod);
+    pageBreak();
+    addHeading("INFORMACIÓN DE PAGO");
+    addRow("Tipo de pago", traveler.paymentType, "Fecha", traveler.paymentDate);
+    addRow("Abonado", `€${traveler.amountPaid || "0"}`, "Pendiente", `€${traveler.amountPending || "0"}`);
+    addRow("Titular", traveler.paymentHolder, "Medio", traveler.paymentMethod);
 
-  pageBreak();
-  addHeading("ACEPTACIÓN Y FIRMA");
-  pdf.setFontSize(8.5);
-  pdf.text(
-    "El huésped declara haber leído y aceptado las normas del establecimiento y la política de protección de datos.",
-    margin,
-    y,
-    { maxWidth: 180 }
-  );
-  y += 12;
-  const signature = typeof guest.signature === "string" ? guest.signature : "";
-  if (signature.startsWith("data:image")) {
-    try {
-      pdf.addImage(signature, "PNG", margin, y, 70, 28);
-      y += 32;
-    } catch {
-      pdf.text("Firma digital registrada en el sistema.", margin, y);
+    pageBreak();
+    addHeading("ACEPTACIÓN Y FIRMA");
+    pdf.setFontSize(8.5);
+    pdf.text("El huésped declara haber leído y aceptado las normas del establecimiento y la política de protección de datos.", margin, y, { maxWidth: 180 });
+    y += 12;
+    const signature = typeof traveler.signature === "string" ? traveler.signature : "";
+    if (signature.startsWith("data:image")) {
+      try {
+        pdf.addImage(signature, "PNG", margin, y, 70, 28);
+        y += 32;
+      } catch {
+        pdf.text("Firma digital registrada en el sistema.", margin, y);
+        y += 6;
+      }
+    } else {
+      pdf.text("Firma: no disponible", margin, y);
       y += 6;
     }
-  } else {
-    pdf.text("Firma: no disponible", margin, y);
-    y += 6;
-  }
-  pdf.setDrawColor(180);
-  pdf.line(margin, y + 12, margin + 75, y + 12);
-  pdf.setFontSize(8);
-  pdf.text("Firma del huésped", margin, y + 17);
-  pdf.text(`Tipo de check-in: ${guest.checkinType || "presencial"} · Estado: ${guest.status || "completed"}`, margin, 287);
+    pdf.setDrawColor(180);
+    pdf.line(margin, y + 12, margin + 75, y + 12);
+    pdf.setFontSize(8);
+    pdf.text("Firma del huésped", margin, y + 17);
+    pdf.text(`Tipo de check-in: ${traveler.checkinType || "presencial"} · Estado: ${traveler.status || "completed"}`, margin, 287);
+  });
   return Buffer.from(pdf.output("arraybuffer"));
 }

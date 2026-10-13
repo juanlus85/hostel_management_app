@@ -3082,6 +3082,21 @@ export async function getGuestById(id: number) {
   return result.length > 0 ? result[0] : null;
 }
 
+/** Devuelve los viajeros de la misma ficha, dejando al principal en primer lugar. */
+export async function getGuestsByGroupId(groupId: string | null | undefined) {
+  if (!groupId?.trim()) return [];
+  const db = await getDb();
+  if (!db) return [];
+  const result = await withGuestRelationshipFallback(columns => {
+    const selection = columns ? (db.select(columns as any) as any) : (db.select() as any);
+    return selection
+      .from(guests)
+      .where(eq(guests.groupId, groupId.trim()))
+      .orderBy(desc(guests.isMainGuest), asc(guests.id));
+  });
+  return result;
+}
+
 export async function getGuestByToken(token: string) {
   const db = await getDb();
   if (!db) return null;
