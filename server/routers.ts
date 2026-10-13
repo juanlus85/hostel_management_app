@@ -4587,8 +4587,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
       importCloudbedsUpcomingReservations: protectedProcedure
         .input(
           z.object({
-            days: z.number().int().min(1).max(15).default(5),
-            startOffset: z.number().int().min(-1).max(14).default(-1),
+            days: z.number().int().min(5).max(15).default(5),
           })
         )
         .mutation(async ({ ctx, input }) => {
@@ -4600,7 +4599,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
               message:
                 "Configura CLOUDBEDS_API_KEY y CLOUDBEDS_PROPERTY_ID para importar reservas",
             });
-          const dates = getNextMadridCalendarDates(new Date(), input.days, input.startOffset);
+          const dates = getNextMadridCalendarDates(new Date(), input.days, -1);
           const runId = await db.createExternalImportRun({
             provider: "cloudbeds",
             importType: "future",
@@ -4632,16 +4631,6 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
                 provider: "cloudbeds",
               }))
             );
-            const staleAssignmentsRemoved = await db.reconcileExternalUpcomingReservations(
-              "cloudbeds",
-              dates[0],
-              dates.at(-1) || dates[0],
-              reservations.map(reservation => ({
-                sourceReservationId: reservation.sourceReservationId,
-                roomNumber: reservation.roomNumber,
-                checkInDate: reservation.checkInDate,
-              }))
-            );
             await db.updateExternalImportRun(runId, {
               status: "completed",
               recordsImported: reservations.length,
@@ -4650,7 +4639,6 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
                 scope: "reservation assignments and reservation details",
                 isolated: true,
                 diagnostics,
-                staleAssignmentsRemoved,
               }),
               finishedAt: new Date(),
             });
@@ -4659,7 +4647,6 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
               runId,
               dates,
               recordsImported: reservations.length,
-              staleAssignmentsRemoved,
               diagnostics,
             };
           } catch (error) {

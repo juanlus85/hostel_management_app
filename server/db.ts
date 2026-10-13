@@ -4,7 +4,6 @@ import {
   gte,
   lte,
   lt,
-  gt,
   desc,
   asc,
   sql,
@@ -129,7 +128,6 @@ import {
 import { ENV } from "./_core/env";
 import { aggregateSupplierExpenses } from "../shared/supplierExpenses";
 import { displayOrderUpdates } from "../shared/workerDisplayOrder";
-import { externalReservationAssignmentKey } from "./externalReservationIdentity";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -3380,13 +3378,11 @@ export async function upsertExternalUpcomingReservations(
   const db = await getDb();
   if (!db) return;
   for (const record of records) {
-    const candidates = await db
-      .select({
-        id: externalUpcomingReservations.id,
-        sourceReservationId: externalUpcomingReservations.sourceReservationId,
-        roomNumber: externalUpcomingReservations.roomNumber,
-        checkInDate: externalUpcomingReservations.checkInDate,
-      })
+    const assignmentCondition = record.roomNumber?.trim()
+      ? eq(externalUpcomingReservations.roomNumber, record.roomNumber.trim())
+      : isNull(externalUpcomingReservations.roomNumber);
+    const existingRecords = await db
+      .select({ id: externalUpcomingReservations.id })
       .from(externalUpcomingReservations)
       .where(
         and(
@@ -3394,17 +3390,10 @@ export async function upsertExternalUpcomingReservations(
             externalUpcomingReservations.sourceReservationId,
             record.sourceReservationId
           ),
-          eq(externalUpcomingReservations.checkInDate, record.checkInDate)
+          assignmentCondition
         )
       );
-    const incomingKey = externalReservationAssignmentKey({
-      sourceReservationId: record.sourceReservationId,
-      roomNumber: record.roomNumber ?? null,
-      checkInDate: record.checkInDate,
-    });
-    const existing = candidates.find(candidate =>
-      externalReservationAssignmentKey(candidate) === incomingKey
-    );
+    const [existing, ...duplicates] = existingRecords;
     if (existing) {
       await db
         .update(externalUpcomingReservations)
@@ -3427,72 +3416,18 @@ export async function upsertExternalUpcomingReservations(
           importedAt: new Date(),
         })
         .where(eq(externalUpcomingReservations.id, existing.id));
+      // Una versión previa pudo guardar varios tramos de la misma reserva en
+      // una misma habitación. La importación estable vuelve a usar una sola
+      // estancia oficial y elimina únicamente esas copias exactas.
+      for (const duplicate of duplicates) {
+        await db
+          .delete(externalUpcomingReservations)
+          .where(eq(externalUpcomingReservations.id, duplicate.id));
+      }
     } else {
       await db.insert(externalUpcomingReservations).values(record);
     }
   }
-}
-
-/**
- * La API de asignaciones es una fotografía por día. Después de importar una
- * ventana, retiramos las asignaciones antiguas que Cloudbeds ya no devuelve
- * para esos días: así un cambio de habitación no deja una reserva fantasma en
- * la fila anterior. Las comunicaciones se mueven a la nueva asignación de la
- * misma reserva antes de retirar el registro local obsoleto.
- */
-export async function reconcileExternalUpcomingReservations(
-  provider: "cloudbeds",
-  dateFrom: string,
-  dateTo: string,
-  incoming: Array<Pick<ExternalUpcomingReservation, "sourceReservationId" | "roomNumber" | "checkInDate">>
-) {
-  const db = await getDb();
-  if (!db) return 0;
-  const current = await db
-    .select()
-    .from(externalUpcomingReservations)
-    .where(
-      and(
-        eq(externalUpcomingReservations.provider, provider),
-        lte(externalUpcomingReservations.checkInDate, dateTo),
-        or(
-          gt(externalUpcomingReservations.checkOutDate, dateFrom),
-          isNull(externalUpcomingReservations.checkOutDate)
-        )
-      )
-  );
-  const incomingKeys = new Set(incoming.map(externalReservationAssignmentKey));
-  const currentByKey = new Map<string, ExternalUpcomingReservation>();
-  const duplicateIds = new Set<number>();
-  for (const reservation of current) {
-    const key = externalReservationAssignmentKey(reservation);
-    if (currentByKey.has(key)) {
-      duplicateIds.add(reservation.id);
-    } else {
-      currentByKey.set(key, reservation);
-    }
-  }
-  const replacementByReservation = new Map<string, ExternalUpcomingReservation>();
-  for (const record of incoming) {
-    const replacement = currentByKey.get(externalReservationAssignmentKey(record));
-    if (replacement && !replacementByReservation.has(replacement.sourceReservationId)) {
-      replacementByReservation.set(replacement.sourceReservationId, replacement);
-    }
-  }
-  const stale = current.filter(reservation =>
-    duplicateIds.has(reservation.id) || !incomingKeys.has(externalReservationAssignmentKey(reservation))
-  );
-  for (const reservation of stale) {
-    const replacement = replacementByReservation.get(reservation.sourceReservationId);
-    if (replacement && replacement.id !== reservation.id) {
-      await db
-        .update(externalReservationCommunications)
-        .set({ externalReservationId: replacement.id })
-        .where(eq(externalReservationCommunications.externalReservationId, reservation.id));
-    }
-    await db.delete(externalUpcomingReservations).where(eq(externalUpcomingReservations.id, reservation.id));
-  }
-  return stale.length;
 }
 
 export async function setExternalUpcomingReservationReviewed(
