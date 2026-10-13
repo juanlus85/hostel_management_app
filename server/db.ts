@@ -3445,6 +3445,30 @@ export async function upsertExternalUpcomingReservations(
   }
 }
 
+/** Elimina de la agenda local reservas del rango que ya no están en Cloudbeds. */
+export async function removeMissingCloudbedsUpcomingReservations(
+  dateFrom: string,
+  dateTo: string,
+  activeReservationIds: string[]
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Base de datos no disponible");
+  const activeIds = Array.from(new Set(activeReservationIds.map(id => id.trim()).filter(Boolean)));
+  const dateScope = and(
+    eq(externalUpcomingReservations.provider, "cloudbeds"),
+    lte(externalUpcomingReservations.checkInDate, dateTo),
+    or(
+      gte(externalUpcomingReservations.checkOutDate, dateFrom),
+      isNull(externalUpcomingReservations.checkOutDate)
+    )
+  );
+  const condition = activeIds.length
+    ? and(dateScope, notInArray(externalUpcomingReservations.sourceReservationId, activeIds))
+    : dateScope;
+  const result = await db.delete(externalUpcomingReservations).where(condition);
+  return Number((result as { affectedRows?: number })?.affectedRows || 0);
+}
+
 export async function setExternalUpcomingReservationReviewed(
   id: number,
   isReviewed: boolean

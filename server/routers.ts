@@ -4653,6 +4653,11 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
                 provider: "cloudbeds",
               }))
             );
+            const recordsRemoved = await db.removeMissingCloudbedsUpcomingReservations(
+              dates[0],
+              dates.at(-1) || dates[0],
+              reservations.map(reservation => reservation.sourceReservationId)
+            );
             await db.updateExternalImportRun(runId, {
               status: "completed",
               recordsImported: reservations.length,
@@ -4669,6 +4674,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
               runId,
               dates,
               recordsImported: reservations.length,
+              recordsRemoved,
               diagnostics,
             };
           } catch (error) {

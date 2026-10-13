@@ -1882,3 +1882,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Generar el PDF principal de una ficha con todos los huéspedes del mismo grupo, manteniendo una página por viajero y sus registros individuales.
 - [x] Reconocer respuestas anidadas e instrucciones de Cloudbeds que indiquen Booking prepago/pagada al canal en el detalle de reserva.
 - [x] Restringir la fecha de nacimiento a cuatro cifras y bloquear fechas de menos de un año, tanto en formularios como en el servidor.
+- [x] Al actualizar la agenda Cloudbeds, retirar las reservas que ya no devuelva la API dentro del intervalo actualizado, incluidas cancelaciones.
