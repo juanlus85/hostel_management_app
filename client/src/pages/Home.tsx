@@ -32,6 +32,7 @@ import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
 import { buildDashboardExportRows } from "@shared/dashboardExport";
 import { QuickReceivedInvoiceDialog } from "@/components/QuickReceivedInvoiceDialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend);
 
@@ -45,6 +46,25 @@ function formatDateLocal(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+function euro(value: string | number | null | undefined) {
+  const amount = Number(String(value ?? 0).replace(",", "."));
+  return new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(
+    Number.isFinite(amount) ? amount : 0
+  );
+}
+
+function madridTime(value: string | null | undefined) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat("es-ES", {
+    timeZone: "Europe/Madrid",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(date);
+}
+
 export default function Home() {
   const { user } = useAuth();
   const { selectedBusiness, setSelectedBusiness } = useBusinessContext();
@@ -53,6 +73,15 @@ export default function Home() {
   const [customStartDate, setCustomStartDate] = useState("");
   const [customEndDate, setCustomEndDate] = useState("");
   const [isQuickReceivedInvoiceOpen, setIsQuickReceivedInvoiceOpen] = useState(false);
+  const [provisionalDialog, setProvisionalDialog] = useState<"tienda" | "hostel" | null>(null);
+  const [selectedReceipt, setSelectedReceipt] = useState<{
+    id: string;
+    number: string;
+    createdAt: string | null;
+    total: number;
+    payments: Array<{ name: string; amount: number }>;
+    lines: Array<{ name: string; quantity: number; total: number }>;
+  } | null>(null);
   const isAdmin = user?.role === "admin";
   
   // Get date range based on selected period
@@ -116,6 +145,9 @@ export default function Home() {
     refetchOnMount: "always",
     staleTime: 0,
   });
+  const latestStoreReceipts = provisionalExternalCash.data?.tienda.latestReceipts || [];
+  const topStoreProducts = provisionalExternalCash.data?.tienda.topProducts || [];
+  const hostelPayments = provisionalExternalCash.data?.hostel.payments || [];
   
   const hostelId = businesses?.find(b => b.code === "hostel")?.id;
   const tiendaId = businesses?.find(b => b.code === "tienda")?.id;
@@ -279,13 +311,13 @@ export default function Home() {
 
       {/* Stats Grid - Solo visible para admin */}
       {isAdmin && <div className="grid gap-4 md:grid-cols-2">
-        <Card className="border-violet-200 bg-violet-50/40">
+        <Card role="button" tabIndex={0} onClick={() => setProvisionalDialog("tienda")} onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setProvisionalDialog("tienda"); } }} className="cursor-pointer border-violet-200 bg-violet-50/40 transition hover:-translate-y-0.5 hover:border-violet-400 hover:bg-violet-50 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">X provisional Tienda</CardTitle><Store className="h-4 w-4 text-violet-700" /></CardHeader>
-          <CardContent>{provisionalExternalCash.isLoading ? <div className="text-sm text-muted-foreground">Actualizando Loyverse…</div> : <><div className="text-2xl font-bold text-violet-700">€{Number(provisionalExternalCash.data?.tienda.total || 0).toFixed(2)}</div><p className="text-xs text-muted-foreground">Loyverse · jornada {provisionalExternalCash.data?.tienda.businessDate || "—"} · {Number(provisionalExternalCash.data?.tienda.receiptCount || 0)} recibos</p><p className="mt-1 text-xs font-medium text-violet-700">En curso desde las 07:00 · no guarda ni cierra caja</p></>}</CardContent>
+          <CardContent>{provisionalExternalCash.isLoading ? <div className="text-sm text-muted-foreground">Actualizando Loyverse…</div> : <><div className="text-2xl font-bold text-violet-700">€{Number(provisionalExternalCash.data?.tienda.total || 0).toFixed(2)}</div><p className="text-xs text-muted-foreground">Loyverse · jornada {provisionalExternalCash.data?.tienda.businessDate || "—"} · {Number(provisionalExternalCash.data?.tienda.receiptCount || 0)} recibos</p><p className="mt-1 text-xs font-medium text-violet-700">Ver tickets y artículos vendidos · desde las 07:00</p></>}</CardContent>
         </Card>
-        <Card className="border-cyan-200 bg-cyan-50/40">
+        <Card role="button" tabIndex={0} onClick={() => setProvisionalDialog("hostel")} onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setProvisionalDialog("hostel"); } }} className="cursor-pointer border-cyan-200 bg-cyan-50/40 transition hover:-translate-y-0.5 hover:border-cyan-400 hover:bg-cyan-50 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">X provisional Hostel</CardTitle><Building2 className="h-4 w-4 text-cyan-700" /></CardHeader>
-          <CardContent>{provisionalExternalCash.isLoading ? <div className="text-sm text-muted-foreground">Actualizando Cloudbeds…</div> : <><div className="text-2xl font-bold text-cyan-700">€{Number(provisionalExternalCash.data?.hostel.total || 0).toFixed(2)}</div><p className="text-xs text-muted-foreground">Cloudbeds · fecha de servicio {provisionalExternalCash.data?.hostel.serviceDate || "—"} · {provisionalExternalCash.data?.hostel.paymentCount || 0} pagos</p><p className="mt-1 text-xs font-medium text-cyan-700">En curso · no guarda ni cierra caja</p></>}</CardContent>
+          <CardContent>{provisionalExternalCash.isLoading ? <div className="text-sm text-muted-foreground">Actualizando Cloudbeds…</div> : <><div className="text-2xl font-bold text-cyan-700">€{Number(provisionalExternalCash.data?.hostel.total || 0).toFixed(2)}</div><p className="text-xs text-muted-foreground">Cloudbeds · fecha de servicio {provisionalExternalCash.data?.hostel.serviceDate || "—"} · {provisionalExternalCash.data?.hostel.paymentCount || 0} pagos</p><p className="mt-1 text-xs font-medium text-cyan-700">Ver cobros del día y abrir su reserva</p></>}</CardContent>
         </Card>
       </div>}
       {isAdmin && (
@@ -462,6 +494,43 @@ export default function Home() {
         onOpenChange={setIsQuickReceivedInvoiceOpen}
         selectedBusiness={selectedBusiness}
       />
+
+      <Dialog open={provisionalDialog !== null} onOpenChange={open => { if (!open) setProvisionalDialog(null); }}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+          {provisionalDialog === "tienda" ? <>
+            <DialogHeader>
+              <DialogTitle>Provisional Tienda · jornada {provisionalExternalCash.data?.tienda.businessDate || "actual"}</DialogTitle>
+              <DialogDescription>Datos de Loyverse desde las 07:00. Pulsa un ticket para ver su recibo.</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-6 lg:grid-cols-2">
+              <section>
+                <h3 className="mb-3 text-sm font-semibold">Últimos 5 tickets</h3>
+                {latestStoreReceipts.length ? <div className="space-y-2">{latestStoreReceipts.map(receipt => <button key={receipt.id} type="button" onClick={() => setSelectedReceipt(receipt)} className="flex w-full items-center justify-between gap-3 rounded-lg border bg-card p-3 text-left transition hover:border-violet-300 hover:bg-violet-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"><div className="min-w-0"><p className="truncate text-sm font-semibold">Ticket {receipt.number}</p><p className="text-xs text-muted-foreground">{madridTime(receipt.createdAt)} · {receipt.lines.length} artículo{receipt.lines.length !== 1 ? "s" : ""}</p></div><p className="shrink-0 font-semibold text-violet-700">{euro(receipt.total)}</p></button>)}</div> : <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">No hay tickets en esta jornada.</p>}
+              </section>
+              <section>
+                <h3 className="mb-3 text-sm font-semibold">15 artículos más vendidos</h3>
+                {topStoreProducts.length ? <div className="overflow-hidden rounded-lg border">{topStoreProducts.map((product, index) => <div key={`${product.name}-${index}`} className="flex items-center gap-3 border-b p-3 last:border-b-0"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-700">{index + 1}</span><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{product.name}</p><p className="text-xs text-muted-foreground">{product.quantity} unidades</p></div><p className="shrink-0 text-sm font-semibold">{euro(product.total)}</p></div>)}</div> : <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">Loyverse no ha devuelto líneas de artículos para los tickets de hoy.</p>}
+              </section>
+            </div>
+          </> : <>
+            <DialogHeader>
+              <DialogTitle>Provisional Hostel · cobros del día</DialogTitle>
+              <DialogDescription>Pagos contabilizados en Cloudbeds para la fecha de servicio {provisionalExternalCash.data?.hostel.serviceDate || "actual"}. Pulsa un cobro para abrir su reserva.</DialogDescription>
+            </DialogHeader>
+            {hostelPayments.length ? <div className="divide-y overflow-hidden rounded-lg border">{hostelPayments.map((payment, index) => <button key={payment.id || `${payment.reservationId || "payment"}-${index}`} type="button" onClick={() => { if (!payment.reservationId) { toast.error("Cloudbeds no ha devuelto la reserva asociada a este cobro."); return; } setProvisionalDialog(null); setLocation(`/disponibilidad-hostel?reservation=${encodeURIComponent(payment.reservationId)}`); }} className="flex w-full items-center justify-between gap-3 p-3 text-left transition hover:bg-cyan-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600"><div className="min-w-0"><p className="truncate text-sm font-semibold">{payment.paymentMethod}</p><p className="truncate text-xs text-muted-foreground">{madridTime(payment.occurredAt)} · {payment.reservationId ? `Reserva ${payment.reservationId}` : "Reserva no identificada"}</p></div><p className="shrink-0 font-semibold text-cyan-700">{euro(payment.amount)}</p></button>)}</div> : <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">No hay cobros contabilizados para esta fecha de servicio.</p>}
+          </>}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={selectedReceipt !== null} onOpenChange={open => { if (!open) setSelectedReceipt(null); }}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Recibo · Ticket {selectedReceipt?.number}</DialogTitle>
+            <DialogDescription>{madridTime(selectedReceipt?.createdAt)} · Loyverse</DialogDescription>
+          </DialogHeader>
+          {selectedReceipt && <div className="space-y-4 text-sm"><div className="divide-y rounded-lg border">{selectedReceipt.lines.length ? selectedReceipt.lines.map((line, index) => <div key={`${line.name}-${index}`} className="flex items-start justify-between gap-4 p-3"><p className="min-w-0 flex-1"><span className="font-medium">{line.name}</span><span className="block text-xs text-muted-foreground">{line.quantity} unidad{line.quantity !== 1 ? "es" : ""}</span></p><p className="shrink-0 font-medium">{euro(line.total)}</p></div>) : <p className="p-3 text-muted-foreground">Sin líneas detalladas en Loyverse.</p>}</div><div className="rounded-lg bg-muted/50 p-3">{selectedReceipt.payments.map((payment, index) => <div key={`${payment.name}-${index}`} className="flex justify-between gap-3 text-xs"><span>{payment.name}</span><span>{euro(payment.amount)}</span></div>)}<div className="mt-2 flex justify-between border-t pt-2 text-base font-bold"><span>Total</span><span>{euro(selectedReceipt.total)}</span></div></div></div>}
+        </DialogContent>
+      </Dialog>
 
     </div>
   );

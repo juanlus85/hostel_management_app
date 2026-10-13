@@ -36,6 +36,8 @@ import {
   loyverseReceiptDate,
 } from "../shared/loyverseDailyCash";
 import {
+  aggregateLoyverseDashboardProducts,
+  buildLoyverseDashboardReceipts,
   currentLoyverseOperationalDate,
   madridDateParts,
   sumLoyverseReceiptsForOperationalDay,
@@ -58,6 +60,7 @@ import {
   aggregateCloudbedsPaymentsByOperationalDay,
   fetchCloudbedsReservationPayments,
   fetchCloudbedsTransactions,
+  getCloudbedsDashboardPayments,
   getCloudbedsBookingPrepayment,
 } from "./cloudbedsTransactions";
 import {
@@ -2226,6 +2229,8 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             businessDate: loyverseDate,
             total: "0.00",
             receiptCount: 0,
+            latestReceipts: [],
+            topProducts: [],
           };
         try {
           const { start } = getLoyverseOperationalWindow(loyverseDate);
@@ -2238,11 +2243,17 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             receipts,
             loyverseDate
           );
+          const ticketDetails = buildLoyverseDashboardReceipts(
+            receipts,
+            loyverseDate
+          );
           return {
             status: "ready" as const,
             businessDate: loyverseDate,
             total: summary.total.toFixed(2),
             receiptCount: summary.receiptCount,
+            latestReceipts: ticketDetails.slice(0, 5),
+            topProducts: aggregateLoyverseDashboardProducts(ticketDetails, 15),
           };
         } catch {
           return {
@@ -2250,6 +2261,8 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             businessDate: loyverseDate,
             total: "0.00",
             receiptCount: 0,
+            latestReceipts: [],
+            topProducts: [],
           };
         }
       })();
@@ -2261,6 +2274,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             serviceDate: cloudbedsDate,
             total: "0.00",
             paymentCount: 0,
+            payments: [],
           };
         try {
           const payments = await fetchCloudbedsTransactions(
@@ -2274,11 +2288,16 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             0,
             cloudbedsPropertyId
           ).find(item => item.businessDate === cloudbedsDate);
+          const paymentDetails = getCloudbedsDashboardPayments(
+            payments,
+            cloudbedsDate
+          );
           return {
             status: "ready" as const,
             serviceDate: cloudbedsDate,
             total: row?.totalSales ?? "0.00",
-            paymentCount: payments.length,
+            paymentCount: paymentDetails.length,
+            payments: paymentDetails,
           };
         } catch {
           return {
@@ -2286,6 +2305,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             serviceDate: cloudbedsDate,
             total: "0.00",
             paymentCount: 0,
+            payments: [],
           };
         }
       })();
@@ -4743,6 +4763,20 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
               earlyCompleted,
             };
           });
+        }),
+      findCloudbedsUpcomingReservation: protectedProcedure
+        .input(z.object({ sourceReservationId: z.string().trim().min(1).max(100) }))
+        .query(async ({ input }) => {
+          const reservation = await db.getExternalUpcomingReservationBySourceId(
+            input.sourceReservationId
+          );
+          if (!reservation) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: "La reserva asociada al cobro no está disponible en la agenda local.",
+            });
+          }
+          return { id: reservation.id };
         }),
       getCloudbedsUpcomingReservationDetail: protectedProcedure
         .input(z.object({ id: z.number() }))

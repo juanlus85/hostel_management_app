@@ -1883,3 +1883,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Reconocer respuestas anidadas e instrucciones de Cloudbeds que indiquen Booking prepago/pagada al canal en el detalle de reserva.
 - [x] Restringir la fecha de nacimiento a cuatro cifras y bloquear fechas de menos de un año, tanto en formularios como en el servidor.
 - [x] Al actualizar la agenda Cloudbeds, retirar las reservas que ya no devuelva la API dentro del intervalo actualizado, incluidas cancelaciones.
+- [x] Añadir detalle interactivo a las tarjetas provisionales del Dashboard: cinco tickets y quince artículos por unidades desde Loyverse; cobros del día desde Cloudbeds con acceso directo a su reserva.
