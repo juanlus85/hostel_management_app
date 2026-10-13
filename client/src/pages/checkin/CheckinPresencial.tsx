@@ -29,6 +29,7 @@ type CheckinPresencialProps = {
 };
 
 export default function CheckinPresencial({ initialGuest, onCompleted, showArchiveConfirmation = false, preloadSource = "anticipado" }: CheckinPresencialProps) {
+  const [language, setLanguage] = useState<"es" | "en">(initialGuest?.language === "en" ? "en" : "es");
   const [guests, setGuests] = useState<GuestFormData[]>([
     {
       firstName: initialGuest?.firstName || "",
@@ -129,6 +130,11 @@ export default function CheckinPresencial({ initialGuest, onCompleted, showArchi
   const { data: settings } = trpc.checkin.settings.get.useQuery();
   const createGuest = trpc.checkin.guests.create.useMutation();
   const updateGuestRecord = trpc.checkin.guests.update.useMutation();
+  const t = language === "en" ? {
+    welcome: "Welcome to our home", booking: "Booking details", guests: "Guests", reservationNumber: "Reservation number", room: "Room", roomType: "Room type", arrival: "Arrival date and time", departure: "Departure date and time", board: "Board basis", origin: "Booking source", internet: "Internet", address: "Address (shared by all guests)", street: "Street and number", extra: "Additional address details", postalCode: "Postcode", city: "City", province: "Province", country: "Country", addGuest: "Add guest", payment: "Payment details", paymentType: "Payment type", paymentDate: "Payment date", paid: "Amount paid (€)", pending: "Amount pending (€)", holder: "Payment holder", method: "Payment method", terms: "Terms and signature", accept: "I accept the establishment conditions and privacy policy", signature: "Signature", signHere: "Sign here", clear: "Clear signature", save: "Complete check-in", saving: "Saving…", saved: "Check-in saved successfully", close: "Close", bookingData: "Data retrieved from the Cloudbeds reservation", earlyData: "Data retrieved from the early check-in", review: "Review the information, complete what is needed and confirm the registration. The assigned room is kept for reception only.", roomPlaceholder: "Select room", importedRoom: "Imported from Cloudbeds", addressPlaceholder: "Main Street, 123", extraPlaceholder: "Floor, door, etc.", holderPlaceholder: "Name and surname", methodPlaceholder: "Visa, Mastercard, PayPal, etc.", priorSignature: "The signature supplied previously will be kept if a new one is not made.",
+  } : {
+    welcome: "Bienvenido/a a nuestro hostel", booking: "Información de reserva", guests: "Huéspedes", reservationNumber: "Número de reserva", room: "Habitación", roomType: "Tipo de habitación", arrival: "Fecha y hora de entrada", departure: "Fecha y hora de salida", board: "Régimen", origin: "Origen de reserva", internet: "Internet", address: "Dirección (compartida por todos los huéspedes)", street: "Calle y número", extra: "Información adicional", postalCode: "Código postal", city: "Ciudad", province: "Provincia", country: "País", addGuest: "Añadir huésped", payment: "Información de pago", paymentType: "Tipo de pago", paymentDate: "Fecha de pago", paid: "Cantidad abonada (€)", pending: "Cantidad pendiente (€)", holder: "Titular del pago", method: "Medio de pago", terms: "Condiciones y firma", accept: "Acepto las condiciones del establecimiento y la política de protección de datos", signature: "Firma", signHere: "Firme aquí", clear: "Borrar firma", save: "Completar Check-in", saving: "Guardando…", saved: "Check-in guardado correctamente", close: "Cerrar", bookingData: "Datos recuperados de la reserva de Cloudbeds", earlyData: "Datos recuperados del Check-in anticipado", review: "Revisa la información, completa lo necesario y confirma el registro. La habitación asignada se conserva solo para recepción.", roomPlaceholder: "Seleccionar habitación", importedRoom: "Importada de Cloudbeds", addressPlaceholder: "Calle Principal, 123", extraPlaceholder: "Piso, puerta, etc.", holderPlaceholder: "Nombre y apellidos", methodPlaceholder: "Visa, Mastercard, PayPal, etc.", priorSignature: "La firma aportada previamente se conservará si no se realiza una nueva.",
+  };
 
   // Auto-completar tipo de habitación al seleccionar número
   useEffect(() => {
@@ -509,40 +515,52 @@ export default function CheckinPresencial({ initialGuest, onCompleted, showArchi
       const popup = window.open(completedPdfUrl, "_blank", "noopener,noreferrer");
       if (!popup) toast.error("El navegador bloqueó la ventana de impresión. Permite las ventanas emergentes e inténtalo de nuevo.");
     };
-    return <Card className="border-emerald-200 bg-emerald-50 p-5 text-center sm:p-8">
+    return <Card className="mx-3 border-emerald-200 bg-emerald-50 p-5 text-center sm:mx-0 sm:p-8">
       <FileCheck2 className="mx-auto h-11 w-11 text-emerald-700" />
-      <h2 className="mt-3 text-xl font-bold text-emerald-950">Check-in guardado correctamente</h2>
+      <h2 className="mt-3 text-xl font-bold text-emerald-950">{t.saved}</h2>
       <p className="mx-auto mt-2 max-w-xl text-sm text-emerald-900">Los datos se han registrado y la ficha PDF se ha guardado automáticamente en el servidor, dentro de <strong>uploads/registros</strong> y su carpeta mensual.</p>
       {completedPdfUrl ? <div className="mt-5 flex flex-col justify-center gap-2 sm:flex-row"><a href={completedPdfUrl} download className="inline-flex h-10 items-center justify-center rounded-md bg-emerald-700 px-4 text-sm font-medium text-white transition-colors hover:bg-emerald-800"><Download className="mr-2 h-4 w-4" />Guardar PDF</a><Button type="button" variant="outline" onClick={printRecord}><Printer className="mr-2 h-4 w-4" />Abrir / imprimir PDF</Button></div> : <p className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">El Check-in se guardó, pero no se pudo confirmar el enlace al PDF. Revisa la carpeta local <strong>uploads/registros</strong>.</p>}
-      <Button type="button" variant="ghost" className="mt-4" onClick={onCompleted}>Cerrar</Button>
+      <Button type="button" variant="ghost" className="mt-4" onClick={onCompleted}>{t.close}</Button>
     </Card>;
   }
 
   return (
-    <div className="space-y-6">
+    <div className="w-full min-w-0 space-y-4 overflow-x-hidden px-3 py-4 sm:space-y-6 sm:p-0">
       {/* Header */}
-      <Card className="p-6 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold mb-2">Welcome to our Home</h1>
+      <Card className="min-w-0 gap-3 p-4 sm:p-6 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950">
+        <div className="flex flex-col gap-3 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
+          <div><h1 className="text-2xl font-bold sm:text-3xl">{t.welcome}</h1>
           <p className="text-lg text-muted-foreground">
             {settings.hostelName || "Hostel"} • RTA: {settings.hostelRta || "N/A"}
           </p>
+          </div>
+          <div className="inline-flex self-center rounded-lg border bg-background/80 p-1 text-sm font-medium sm:self-auto" aria-label="Seleccionar idioma / Select language"><Button type="button" size="sm" variant={language === "es" ? "default" : "ghost"} onClick={() => setLanguage("es")}>ES</Button><Button type="button" size="sm" variant={language === "en" ? "default" : "ghost"} onClick={() => setLanguage("en")}>EN</Button></div>
         </div>
       </Card>
 
       {initialGuest && (
-        <Card className="border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950">
-          <p className="font-semibold">{preloadSource === "reserva" ? "Datos recuperados de la reserva de Cloudbeds" : "Datos recuperados del Check-in anticipado"}</p>
-          <p className="mt-1">Revisa la información, completa lo necesario y confirma el registro. La habitación asignada se conserva solo para recepción.</p>
+        <Card className="min-w-0 gap-2 border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950">
+          <p className="font-semibold">{preloadSource === "reserva" ? t.bookingData : t.earlyData}</p>
+          <p className="mt-1">{t.review}</p>
         </Card>
       )}
 
+      <nav aria-label="Navegación de Check-in" className="flex gap-2 overflow-x-auto rounded-lg border bg-muted/35 p-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {[
+          ["booking-section", t.booking],
+          ["address-section", language === "en" ? "Address" : "Dirección"],
+          ["guests-section", t.guests],
+          ["payment-section", t.payment],
+          ["signature-section", t.signature],
+        ].map(([id, label]) => <Button key={id} type="button" variant="outline" size="sm" className="shrink-0 bg-background" onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" })}>{label}</Button>)}
+      </nav>
+
       {/* Información de Reserva */}
-      <Card className="p-6">
-        <h2 className="text-xl font-bold mb-4">Información de Reserva</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <Card id="booking-section" className="min-w-0 scroll-mt-4 p-4 sm:p-6">
+        <h2 className="mb-4 text-xl font-bold">{t.booking}</h2>
+        <div className="grid min-w-0 grid-cols-1 gap-4 [&>div]:min-w-0 md:grid-cols-2">
           <div>
-            <Label htmlFor="reservationNumber">Número de Reserva</Label>
+            <Label htmlFor="reservationNumber">{t.reservationNumber}</Label>
             <Input
               id="reservationNumber"
               value={reservationData.reservationNumber}
@@ -551,23 +569,23 @@ export default function CheckinPresencial({ initialGuest, onCompleted, showArchi
           </div>
 
           <div>
-            <Label htmlFor="roomNumber">Habitación *</Label>
+            <Label htmlFor="roomNumber">{t.room} *</Label>
             <Select
               value={reservationData.roomNumber}
               onValueChange={(value) => setReservationData({ ...reservationData, roomNumber: value })}
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar habitación" />
+              <SelectTrigger className="w-full min-w-0">
+                <SelectValue placeholder={t.roomPlaceholder} />
               </SelectTrigger>
               <SelectContent>
                 {reservationData.roomNumber && !rooms?.some(room => room.roomNumber === reservationData.roomNumber) && (
                   <SelectItem value={reservationData.roomNumber}>
-                    Habitación {reservationData.roomNumber} · Importada de Cloudbeds
+                    {t.room} {reservationData.roomNumber} · {t.importedRoom}
                   </SelectItem>
                 )}
                 {rooms?.map((room) => (
                   <SelectItem key={room.id} value={room.roomNumber}>
-                    Habitación {room.roomNumber} - {room.roomType}
+                    {t.room} {room.roomNumber} - {room.roomType}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -575,7 +593,7 @@ export default function CheckinPresencial({ initialGuest, onCompleted, showArchi
           </div>
 
           <div>
-            <Label htmlFor="roomType">Tipo de Habitación</Label>
+            <Label htmlFor="roomType">{t.roomType}</Label>
             <Input
               id="roomType"
               value={reservationData.roomType}
@@ -585,7 +603,7 @@ export default function CheckinPresencial({ initialGuest, onCompleted, showArchi
           </div>
 
           <div>
-            <Label htmlFor="checkInDate">Fecha y Hora de Entrada *</Label>
+            <Label htmlFor="checkInDate">{t.arrival} *</Label>
             <Input
               id="checkInDate"
               type="datetime-local"
@@ -595,7 +613,7 @@ export default function CheckinPresencial({ initialGuest, onCompleted, showArchi
           </div>
 
           <div>
-            <Label htmlFor="checkOutDate">Fecha y Hora de Salida</Label>
+            <Label htmlFor="checkOutDate">{t.departure}</Label>
             <Input
               id="checkOutDate"
               type="datetime-local"
@@ -605,7 +623,7 @@ export default function CheckinPresencial({ initialGuest, onCompleted, showArchi
           </div>
 
           <div>
-            <Label htmlFor="accommodationType">Régimen</Label>
+            <Label htmlFor="accommodationType">{t.board}</Label>
             <Select
               value={reservationData.accommodationType}
               onValueChange={(value) => setReservationData({ ...reservationData, accommodationType: value })}
@@ -614,16 +632,16 @@ export default function CheckinPresencial({ initialGuest, onCompleted, showArchi
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="S.A. (Solo Aloj.)">S.A. (Solo Aloj.)</SelectItem>
-                <SelectItem value="A.D. (Aloj. y Desayuno)">A.D. (Aloj. y Desayuno)</SelectItem>
-                <SelectItem value="M.P. (Media Pensión)">M.P. (Media Pensión)</SelectItem>
-                <SelectItem value="P.C. (Pensión Completa)">P.C. (Pensión Completa)</SelectItem>
+                <SelectItem value="S.A. (Solo Aloj.)">S.A. ({language === "en" ? "Room only" : "Solo alojamiento"})</SelectItem>
+                <SelectItem value="A.D. (Aloj. y Desayuno)">A.D. ({language === "en" ? "Bed and breakfast" : "Alojamiento y desayuno"})</SelectItem>
+                <SelectItem value="M.P. (Media Pensión)">M.P. ({language === "en" ? "Half board" : "Media pensión"})</SelectItem>
+                <SelectItem value="P.C. (Pensión Completa)">P.C. ({language === "en" ? "Full board" : "Pensión completa"})</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div>
-            <Label htmlFor="reservationOrigin">Origen de Reserva</Label>
+            <Label htmlFor="reservationOrigin">{t.origin}</Label>
             <Select
               value={reservationData.reservationOrigin}
               onValueChange={(value) => setReservationData({ ...reservationData, reservationOrigin: value })}
@@ -632,14 +650,14 @@ export default function CheckinPresencial({ initialGuest, onCompleted, showArchi
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Walk In">Walk In</SelectItem>
+                <SelectItem value="Walk In">{language === "en" ? "Walk-in" : "Recepción directa"}</SelectItem>
                 <SelectItem value="Booking.com">Booking.com</SelectItem>
                 <SelectItem value="Airbnb">Airbnb</SelectItem>
                 <SelectItem value="Expedia">Expedia</SelectItem>
-                <SelectItem value="Website">Website</SelectItem>
-                <SelectItem value="Phone">Phone</SelectItem>
+                <SelectItem value="Website">{language === "en" ? "Website" : "Web"}</SelectItem>
+                <SelectItem value="Phone">{language === "en" ? "Phone" : "Teléfono"}</SelectItem>
                 <SelectItem value="Email">Email</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
+                <SelectItem value="Other">{language === "en" ? "Other" : "Otro"}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -650,37 +668,37 @@ export default function CheckinPresencial({ initialGuest, onCompleted, showArchi
               checked={reservationData.hasInternet}
               onCheckedChange={(checked) => setReservationData({ ...reservationData, hasInternet: checked as boolean })}
             />
-            <Label htmlFor="hasInternet">Internet</Label>
+            <Label htmlFor="hasInternet">{t.internet}</Label>
           </div>
         </div>
       </Card>
 
       {/* Dirección Compartida */}
-      <Card className="p-6">
-        <h2 className="text-xl font-bold mb-4">Dirección (Compartida por todos los huéspedes) *</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <Card id="address-section" className="min-w-0 scroll-mt-4 p-4 sm:p-6">
+        <h2 className="mb-4 text-xl font-bold">{t.address} *</h2>
+        <div className="grid min-w-0 grid-cols-1 gap-4 [&>div]:min-w-0 md:grid-cols-2">
           <div className="md:col-span-2">
-            <Label htmlFor="street">Calle y Número *</Label>
+            <Label htmlFor="street">{t.street} *</Label>
             <Input
               id="street"
               value={sharedAddress.street}
               onChange={(e) => setSharedAddress({ ...sharedAddress, street: e.target.value })}
-              placeholder="Calle Principal, 123"
+              placeholder={t.addressPlaceholder}
             />
           </div>
 
           <div className="md:col-span-2">
-            <Label htmlFor="addressExtra">Información Adicional</Label>
+            <Label htmlFor="addressExtra">{t.extra}</Label>
             <Input
               id="addressExtra"
               value={sharedAddress.addressExtra}
               onChange={(e) => setSharedAddress({ ...sharedAddress, addressExtra: e.target.value })}
-              placeholder="Piso, puerta, etc."
+              placeholder={t.extraPlaceholder}
             />
           </div>
 
           <div>
-            <Label htmlFor="postalCode">Código Postal</Label>
+            <Label htmlFor="postalCode">{t.postalCode}</Label>
             <Input
               id="postalCode"
               value={sharedAddress.postalCode}
@@ -689,7 +707,7 @@ export default function CheckinPresencial({ initialGuest, onCompleted, showArchi
           </div>
 
           <div>
-            <Label htmlFor="city">Ciudad *</Label>
+            <Label htmlFor="city">{t.city} *</Label>
             <Input
               id="city"
               value={sharedAddress.city}
@@ -698,7 +716,7 @@ export default function CheckinPresencial({ initialGuest, onCompleted, showArchi
           </div>
 
           <div>
-            <Label htmlFor="province">Provincia</Label>
+            <Label htmlFor="province">{t.province}</Label>
             <Input
               id="province"
               value={sharedAddress.province}
@@ -707,7 +725,7 @@ export default function CheckinPresencial({ initialGuest, onCompleted, showArchi
           </div>
 
           <div>
-            <Label htmlFor="country">País *</Label>
+            <Label htmlFor="country">{t.country} *</Label>
             <Select
               value={sharedAddress.country}
               onValueChange={(value) => setSharedAddress({ ...sharedAddress, country: value })}
@@ -728,30 +746,33 @@ export default function CheckinPresencial({ initialGuest, onCompleted, showArchi
       </Card>
 
       {/* Huéspedes */}
-      {guests.map((guest, index) => (
-        <GuestFormFields
-          key={index}
-          guest={guest}
-          index={index}
-          removable={index > 0}
-          onChange={(field, value) => updateGuest(index, field, value)}
-          onRemove={() => removeGuest(index)}
-        />
-      ))}
+      <section id="guests-section" className="scroll-mt-4 space-y-4">
+        {guests.map((guest, index) => (
+          <GuestFormFields
+            key={index}
+            guest={guest}
+            index={index}
+            removable={index > 0}
+            language={language}
+            onChange={(field, value) => updateGuest(index, field, value)}
+            onRemove={() => removeGuest(index)}
+          />
+        ))}
 
-      {guests.length < 3 && (
-        <Button onClick={addGuest} variant="outline" className="w-full">
-          <Plus className="h-4 w-4 mr-2" />
-          Añadir Huésped ({guests.length}/3)
-        </Button>
-      )}
+        {guests.length < 3 && (
+          <Button onClick={addGuest} variant="outline" className="w-full">
+            <Plus className="mr-2 h-4 w-4" />
+            {t.addGuest} ({guests.length}/3)
+          </Button>
+        )}
+      </section>
 
       {/* Información de Pago (OBLIGATORIA) */}
-      <Card className="p-6">
-        <h2 className="text-xl font-bold mb-4">Información de Pago *</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <Card id="payment-section" className="min-w-0 scroll-mt-4 p-4 sm:p-6">
+        <h2 className="mb-4 text-xl font-bold">{t.payment} *</h2>
+        <div className="grid min-w-0 grid-cols-1 gap-4 [&>div]:min-w-0 md:grid-cols-2">
           <div>
-            <Label htmlFor="paymentType">Tipo de Pago *</Label>
+            <Label htmlFor="paymentType">{t.paymentType} *</Label>
             <Select
               value={paymentData.paymentType}
               onValueChange={(value) => setPaymentData({ ...paymentData, paymentType: value })}
@@ -760,20 +781,20 @@ export default function CheckinPresencial({ initialGuest, onCompleted, showArchi
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="EFECT">Efectivo</SelectItem>
-                <SelectItem value="TARJT">Tarjeta</SelectItem>
-                <SelectItem value="TRANS">Transferencia</SelectItem>
-                <SelectItem value="PLATF">Plataforma (Booking, Airbnb...)</SelectItem>
-                <SelectItem value="MOVIL">Pago Móvil (Bizum, PayPal...)</SelectItem>
-                <SelectItem value="TREG">Transferencia Regalo</SelectItem>
-                <SelectItem value="DESTI">Destino</SelectItem>
-                <SelectItem value="OTRO">Otro</SelectItem>
+                <SelectItem value="EFECT">{language === "en" ? "Cash" : "Efectivo"}</SelectItem>
+                <SelectItem value="TARJT">{language === "en" ? "Card" : "Tarjeta"}</SelectItem>
+                <SelectItem value="TRANS">{language === "en" ? "Bank transfer" : "Transferencia"}</SelectItem>
+                <SelectItem value="PLATF">{language === "en" ? "Platform (Booking, Airbnb...)" : "Plataforma (Booking, Airbnb...)"}</SelectItem>
+                <SelectItem value="MOVIL">{language === "en" ? "Mobile payment (Bizum, PayPal...)" : "Pago móvil (Bizum, PayPal...)"}</SelectItem>
+                <SelectItem value="TREG">{language === "en" ? "Gift transfer" : "Transferencia regalo"}</SelectItem>
+                <SelectItem value="DESTI">{language === "en" ? "Destination" : "Destino"}</SelectItem>
+                <SelectItem value="OTRO">{language === "en" ? "Other" : "Otro"}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div>
-            <Label htmlFor="paymentDate">Fecha de Pago *</Label>
+            <Label htmlFor="paymentDate">{t.paymentDate} *</Label>
             <Input
               id="paymentDate"
               type="date"
@@ -783,7 +804,7 @@ export default function CheckinPresencial({ initialGuest, onCompleted, showArchi
           </div>
 
           <div>
-            <Label htmlFor="amountPaid">Cantidad Abonada (€)</Label>
+            <Label htmlFor="amountPaid">{t.paid}</Label>
             <Input
               id="amountPaid"
               type="number"
@@ -794,7 +815,7 @@ export default function CheckinPresencial({ initialGuest, onCompleted, showArchi
           </div>
 
           <div>
-            <Label htmlFor="amountPending">Cantidad Pendiente (€)</Label>
+            <Label htmlFor="amountPending">{t.pending}</Label>
             <Input
               id="amountPending"
               type="number"
@@ -805,28 +826,28 @@ export default function CheckinPresencial({ initialGuest, onCompleted, showArchi
           </div>
 
           <div>
-            <Label htmlFor="paymentHolder">Titular del Pago</Label>
+            <Label htmlFor="paymentHolder">{t.holder}</Label>
             <Input
               id="paymentHolder"
               value={paymentData.paymentHolder}
               onChange={(e) => setPaymentData({ ...paymentData, paymentHolder: e.target.value })}
-              placeholder="Nombre y apellidos"
+              placeholder={t.holderPlaceholder}
             />
           </div>
 
           <div>
-            <Label htmlFor="paymentMethod">Medio de Pago</Label>
+            <Label htmlFor="paymentMethod">{t.method}</Label>
             <Input
               id="paymentMethod"
               value={paymentData.paymentMethod}
               onChange={(e) => setPaymentData({ ...paymentData, paymentMethod: e.target.value })}
-              placeholder="Visa, Mastercard, PayPal, etc."
+              placeholder={t.methodPlaceholder}
             />
           </div>
 
           {paymentData.paymentType === "TARJT" && (
             <div>
-              <Label htmlFor="cardExpiry">Fecha de Caducidad Tarjeta</Label>
+              <Label htmlFor="cardExpiry">{language === "en" ? "Card expiry date" : "Fecha de caducidad de tarjeta"}</Label>
               <Input
                 id="cardExpiry"
                 value={paymentData.paymentMethod}
@@ -839,27 +860,17 @@ export default function CheckinPresencial({ initialGuest, onCompleted, showArchi
       </Card>
 
       {/* Condiciones y Firma */}
-      <Card className="p-6">
-        <h2 className="text-xl font-bold mb-4">Condiciones y Firma / Terms & Signature</h2>
+      <Card id="signature-section" className="min-w-0 scroll-mt-4 p-4 sm:p-6">
+        <h2 className="mb-4 text-xl font-bold">{t.terms}</h2>
         
         {/* Texto de condiciones */}
         <div className="mb-6 space-y-4 p-4 bg-muted rounded-lg">
           <div>
-            <p className="text-sm">
-              Los huéspedes manifiestan que han leído, conocen y se comprometen a cumplir las normas y condiciones del establecimiento.
-            </p>
-            <p className="text-sm italic text-muted-foreground mt-2">
-              The guests state that they have read, know, undertake and agree to comply with the rules and conditions of the establishment.
-            </p>
+            <p className="text-sm">{language === "en" ? "The guests state that they have read, know, undertake and agree to comply with the rules and conditions of the establishment." : "Los huéspedes manifiestan que han leído, conocen y se comprometen a cumplir las normas y condiciones del establecimiento."}</p>
           </div>
           
           <div>
-            <p className="text-sm">
-              Los huéspedes manifiestan que han leído, conocen y se comprometen a cumplir las normas y condiciones del establecimiento. Éstas se encuentran a disposición del huésped, expuestas en la recepción del establecimiento.
-            </p>
-            <p className="text-sm italic text-muted-foreground mt-2">
-              The guests state that they have read, know, undertake and agree to comply with the rules and conditions of the establishment. These are available to the guests, displayed at the reception of the establishment.
-            </p>
+            <p className="text-sm">{language === "en" ? "The guests state that they have read, know, undertake and agree to comply with the rules and conditions of the establishment. These are available to the guests, displayed at the reception of the establishment." : "Los huéspedes manifiestan que han leído, conocen y se comprometen a cumplir las normas y condiciones del establecimiento. Éstas se encuentran a disposición del huésped, expuestas en la recepción del establecimiento."}</p>
           </div>
         </div>
 
@@ -875,15 +886,15 @@ export default function CheckinPresencial({ initialGuest, onCompleted, showArchi
             htmlFor="acceptTerms"
             className="text-sm font-medium leading-relaxed cursor-pointer"
           >
-            Acepto las condiciones del establecimiento y la política de protección de datos / I accept the establishment conditions and privacy policy *
+            {t.accept} *
           </label>
         </div>
 
         {/* Firma */}
         <div className="space-y-4">
-          <Label className="text-base font-semibold">Firma / Signature *</Label>
+          <Label className="text-base font-semibold">{t.signature} *</Label>
           {initialGuest?.signature && !isDrawing && (
-            <p className="text-sm text-emerald-700">La firma aportada previamente se conservará si no se realiza una nueva.</p>
+            <p className="text-sm text-emerald-700">{t.priorSignature}</p>
           )}
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-white">
             <canvas
@@ -899,31 +910,32 @@ export default function CheckinPresencial({ initialGuest, onCompleted, showArchi
               onTouchEnd={stopDrawing}
             />
             <p className="text-xs text-muted-foreground text-center mt-2">
-              Firme aquí / Sign here
+              {t.signHere}
             </p>
           </div>
           <Button variant="outline" onClick={clearSignature}>
-            Borrar firma / Clear signature
+            {t.clear}
           </Button>
         </div>
       </Card>
 
       {/* Botón de Guardar */}
-      <div className="flex justify-end">
+      <div className="sticky bottom-0 -mx-3 flex justify-stretch border-t bg-background/95 px-3 py-3 backdrop-blur sm:static sm:mx-0 sm:justify-end sm:border-0 sm:bg-transparent sm:p-0">
         <Button
           onClick={handleSubmit}
           disabled={createGuest.isPending || updateGuestRecord.isPending}
           size="lg"
+          className="w-full sm:w-auto"
         >
           {createGuest.isPending || updateGuestRecord.isPending ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Guardando...
+              {t.saving}
             </>
           ) : (
             <>
               <Save className="mr-2 h-4 w-4" />
-              Completar Check-in
+              {t.save}
             </>
           )}
         </Button>

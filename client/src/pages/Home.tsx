@@ -503,39 +503,43 @@ export default function Home() {
       />
 
       <Dialog open={provisionalDialog !== null} onOpenChange={open => { if (!open) setProvisionalDialog(null); }}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+        <DialogContent className="grid !max-h-[calc(100dvh-1rem)] !w-[calc(100vw-1rem)] !max-w-[calc(100vw-1rem)] grid-rows-[auto_minmax(0,1fr)] !gap-0 overflow-hidden !rounded-xl !p-0 sm:!max-h-[85vh] sm:!max-w-3xl sm:!gap-4 sm:!rounded-lg sm:!p-6">
           {provisionalDialog === "tienda" ? <>
-            <DialogHeader>
+            <DialogHeader className="shrink-0 border-b px-4 pb-3 pt-5 pr-12 text-left sm:border-0 sm:p-0">
               <DialogTitle>Provisional Tienda · jornada {provisionalExternalCash.data?.tienda.businessDate || "actual"}</DialogTitle>
               <DialogDescription>Hasta los últimos 15 tickets desde las 07:00. Pulsa un ticket para ver su recibo.</DialogDescription>
             </DialogHeader>
-            <div className="grid gap-6 lg:grid-cols-2">
-              <section>
-                <h3 className="mb-3 text-sm font-semibold">Últimos {latestStoreReceipts.length} ticket{latestStoreReceipts.length !== 1 ? "s" : ""}</h3>
-                {latestStoreReceipts.length ? <div className="space-y-2">{latestStoreReceipts.map(receipt => <button key={receipt.id} type="button" onClick={() => setSelectedReceipt(receipt)} className="flex w-full items-center justify-between gap-3 rounded-lg border bg-card p-3 text-left transition hover:border-violet-300 hover:bg-violet-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"><div className="min-w-0"><p className="truncate text-sm font-semibold">Ticket {receipt.number}</p><p className="text-xs text-muted-foreground">{madridTime(receipt.createdAt)} · {receipt.lines.length} artículo{receipt.lines.length !== 1 ? "s" : ""}</p></div><p className="shrink-0 font-semibold text-violet-700">{euro(receipt.total)}</p></button>)}</div> : <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">No hay tickets en esta jornada.</p>}
-              </section>
-              <section>
-                <h3 className="mb-3 text-sm font-semibold">15 artículos más vendidos</h3>
-                {topStoreProducts.length ? <div className="overflow-hidden rounded-lg border">{topStoreProducts.map((product, index) => <div key={`${product.name}-${index}`} className="flex items-center gap-3 border-b p-3 last:border-b-0"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-700">{index + 1}</span><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{product.name}</p><p className="text-xs text-muted-foreground">{product.quantity} unidades</p></div><p className="shrink-0 text-sm font-semibold">{euro(product.total)}</p></div>)}</div> : <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">Loyverse no ha devuelto líneas de artículos para los tickets de hoy.</p>}
-              </section>
+            <div className="min-h-0 overflow-y-auto overscroll-contain px-4 py-4 sm:px-0 sm:py-0">
+              <div className="grid gap-5 lg:grid-cols-2">
+                <section>
+                  <h3 className="sticky top-0 z-10 -mx-1 mb-3 bg-background/95 px-1 py-1 text-sm font-semibold backdrop-blur">Últimos {latestStoreReceipts.length} ticket{latestStoreReceipts.length !== 1 ? "s" : ""}</h3>
+                  {latestStoreReceipts.length ? <div className="space-y-2">{latestStoreReceipts.map(receipt => <button key={receipt.id} type="button" onClick={() => setSelectedReceipt(receipt)} className="flex w-full items-center justify-between gap-3 rounded-lg border bg-card p-3 text-left transition hover:border-violet-300 hover:bg-violet-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"><div className="min-w-0"><p className="truncate text-sm font-semibold">Ticket {receipt.number}</p><p className="text-xs text-muted-foreground">{madridTime(receipt.createdAt)} · {receipt.lines.length} artículo{receipt.lines.length !== 1 ? "s" : ""}</p></div><p className="shrink-0 font-semibold text-violet-700">{euro(receipt.total)}</p></button>)}</div> : <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">No hay tickets en esta jornada.</p>}
+                </section>
+                <section>
+                  <h3 className="sticky top-0 z-10 -mx-1 mb-3 bg-background/95 px-1 py-1 text-sm font-semibold backdrop-blur">15 artículos más vendidos</h3>
+                  {topStoreProducts.length ? <div className="overflow-hidden rounded-lg border">{topStoreProducts.map((product, index) => <div key={`${product.name}-${index}`} className="flex items-center gap-3 border-b p-3 last:border-b-0"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-700">{index + 1}</span><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{product.name}</p><p className="text-xs text-muted-foreground">{product.quantity} unidades</p></div><p className="shrink-0 text-sm font-semibold">{euro(product.total)}</p></div>)}</div> : <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">Loyverse no ha devuelto líneas de artículos para los tickets de hoy.</p>}
+                </section>
+              </div>
             </div>
           </> : <>
-            <DialogHeader>
+            <DialogHeader className="shrink-0 border-b px-4 pb-3 pt-5 pr-12 text-left sm:border-0 sm:p-0">
               <DialogTitle>Provisional Hostel · cobros del día</DialogTitle>
               <DialogDescription>Pagos contabilizados en Cloudbeds para la fecha de servicio {provisionalExternalCash.data?.hostel.serviceDate || "actual"}. Pulsa un cobro para abrir su reserva.</DialogDescription>
             </DialogHeader>
-            {hostelPayments.length ? <div className="divide-y overflow-hidden rounded-lg border">{hostelPayments.map((payment, index) => <button key={payment.id || `${payment.reservationId || "payment"}-${index}`} type="button" disabled={openHostelPaymentReservation.isPending} onClick={() => { if (!payment.reservationId) { toast.error("Cloudbeds no ha devuelto la reserva asociada a este cobro."); return; } openHostelPaymentReservation.mutate({ sourceReservationId: payment.reservationId }); }} className="flex w-full items-center justify-between gap-3 p-3 text-left transition hover:bg-cyan-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600 disabled:cursor-wait disabled:opacity-60"><div className="min-w-0"><p className="truncate text-sm font-semibold">{payment.paymentMethod}</p><p className="truncate text-xs text-muted-foreground">{madridTime(payment.occurredAt)} · {payment.reservationId ? `Reserva ${payment.reservationId}` : "Reserva no identificada"}</p></div><p className="shrink-0 font-semibold text-cyan-700">{euro(payment.amount)}</p></button>)}</div> : <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">No hay cobros contabilizados para esta fecha de servicio.</p>}
+            <div className="min-h-0 overflow-y-auto overscroll-contain px-4 py-4 sm:px-0 sm:py-0">
+              {hostelPayments.length ? <div className="divide-y overflow-hidden rounded-lg border">{hostelPayments.map((payment, index) => <button key={payment.id || `${payment.reservationId || "payment"}-${index}`} type="button" disabled={openHostelPaymentReservation.isPending} onClick={() => { if (!payment.reservationId) { toast.error("Cloudbeds no ha devuelto la reserva asociada a este cobro."); return; } openHostelPaymentReservation.mutate({ sourceReservationId: payment.reservationId }); }} className="flex w-full items-center justify-between gap-3 p-3 text-left transition hover:bg-cyan-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600 disabled:cursor-wait disabled:opacity-60"><div className="min-w-0"><p className="truncate text-sm font-semibold">{payment.paymentMethod}</p><p className="truncate text-xs text-muted-foreground">{madridTime(payment.occurredAt)} · {payment.reservationId ? `Reserva ${payment.reservationId}` : "Reserva no identificada"}</p></div><p className="shrink-0 font-semibold text-cyan-700">{euro(payment.amount)}</p></button>)}</div> : <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">No hay cobros contabilizados para esta fecha de servicio.</p>}
+            </div>
           </>}
         </DialogContent>
       </Dialog>
 
       <Dialog open={selectedReceipt !== null} onOpenChange={open => { if (!open) setSelectedReceipt(null); }}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
-          <DialogHeader>
+        <DialogContent className="grid !max-h-[calc(100dvh-1rem)] !w-[calc(100vw-1rem)] !max-w-[calc(100vw-1rem)] grid-rows-[auto_minmax(0,1fr)] !gap-0 overflow-hidden !rounded-xl !p-0 sm:!max-h-[85vh] sm:!max-w-md sm:!gap-4 sm:!rounded-lg sm:!p-6">
+          <DialogHeader className="shrink-0 border-b px-4 pb-3 pt-5 pr-12 text-left sm:border-0 sm:p-0">
             <DialogTitle>Recibo · Ticket {selectedReceipt?.number}</DialogTitle>
             <DialogDescription>{madridTime(selectedReceipt?.createdAt)} · Loyverse</DialogDescription>
           </DialogHeader>
-          {selectedReceipt && <div className="space-y-4 text-sm"><div className="divide-y rounded-lg border">{selectedReceipt.lines.length ? selectedReceipt.lines.map((line, index) => <div key={`${line.name}-${index}`} className="flex items-start justify-between gap-4 p-3"><p className="min-w-0 flex-1"><span className="font-medium">{line.name}</span><span className="block text-xs text-muted-foreground">{line.quantity} unidad{line.quantity !== 1 ? "es" : ""}</span></p><p className="shrink-0 font-medium">{euro(line.total)}</p></div>) : <p className="p-3 text-muted-foreground">Sin líneas detalladas en Loyverse.</p>}</div><div className="rounded-lg bg-muted/50 p-3">{selectedReceipt.payments.map((payment, index) => <div key={`${payment.name}-${index}`} className="flex justify-between gap-3 text-xs"><span>{payment.name}</span><span>{euro(payment.amount)}</span></div>)}<div className="mt-2 flex justify-between border-t pt-2 text-base font-bold"><span>Total</span><span>{euro(selectedReceipt.total)}</span></div></div></div>}
+          {selectedReceipt && <div className="min-h-0 space-y-4 overflow-y-auto overscroll-contain px-4 py-4 text-sm sm:px-0 sm:py-0"><div className="divide-y rounded-lg border">{selectedReceipt.lines.length ? selectedReceipt.lines.map((line, index) => <div key={`${line.name}-${index}`} className="flex items-start justify-between gap-4 p-3"><p className="min-w-0 flex-1"><span className="font-medium">{line.name}</span><span className="block text-xs text-muted-foreground">{line.quantity} unidad{line.quantity !== 1 ? "es" : ""}</span></p><p className="shrink-0 font-medium">{euro(line.total)}</p></div>) : <p className="p-3 text-muted-foreground">Sin líneas detalladas en Loyverse.</p>}</div><div className="rounded-lg bg-muted/50 p-3">{selectedReceipt.payments.map((payment, index) => <div key={`${payment.name}-${index}`} className="flex justify-between gap-3 text-xs"><span>{payment.name}</span><span>{euro(payment.amount)}</span></div>)}<div className="mt-2 flex justify-between border-t pt-2 text-base font-bold"><span>Total</span><span>{euro(selectedReceipt.total)}</span></div></div></div>}
         </DialogContent>
       </Dialog>
 

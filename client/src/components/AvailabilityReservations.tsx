@@ -720,8 +720,8 @@ export function AvailabilityReservations({
     </Dialog>
 
     <Dialog open={reservationCheckinOpen} onOpenChange={setReservationCheckinOpen}>
-      <DialogContent className="h-[100dvh] max-h-[100dvh] w-screen max-w-none overflow-y-auto rounded-none p-3 sm:h-[94vh] sm:max-h-[94vh] sm:w-[min(96vw,1180px)] sm:max-w-[1180px] sm:rounded-xl sm:p-6">
-        <DialogHeader>
+      <DialogContent className="!inset-0 !h-[100dvh] !max-h-[100dvh] !w-[100dvw] !max-w-none !translate-x-0 !translate-y-0 overflow-x-hidden overflow-y-auto rounded-none p-0 sm:!inset-y-[3vh] sm:!left-1/2 sm:!right-auto sm:!h-[94vh] sm:!max-h-[94vh] sm:!w-[min(96vw,1180px)] sm:!max-w-[1180px] sm:!-translate-x-1/2 sm:rounded-xl sm:p-6">
+        <DialogHeader className="sticky top-0 z-20 border-b bg-background px-4 py-4 pr-12 text-left shadow-sm sm:static sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:pr-0 sm:shadow-none">
           <DialogTitle>Realizar Check-in de la reserva</DialogTitle>
           <DialogDescription>
             Los datos de Cloudbeds y la habitación asignada ya están cargados. Completa la información documental, revisa la firma y guarda el registro.
