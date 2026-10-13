@@ -183,12 +183,29 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
   const utils = trpc.useUtils();
   const reservations = trpc.checkin.externalImports.listCloudbedsUpcomingReservations.useQuery({ dateFrom: window.dateFrom, dateTo: window.dateTo });
   const importReservations = trpc.checkin.externalImports.importCloudbedsUpcomingReservations.useMutation({
-    onSuccess: result => {
-      toast.success(`Reservas actualizadas: ${result.recordsImported}`);
-      utils.checkin.externalImports.listCloudbedsUpcomingReservations.invalidate({ dateFrom: window.dateFrom, dateTo: window.dateTo });
-    },
     onError: error => toast.error(error.message),
   });
+  const refreshAgendaReservations = (totalDays = 15, startOffset = -1, imported = 0) => {
+    const days = Math.min(5, totalDays);
+    importReservations.mutate({ days, startOffset }, {
+      onSuccess: result => {
+        const totalImported = imported + result.recordsImported;
+        if (totalDays > days) {
+          // Cada bloque comparte el último día con el siguiente. Así se detecta
+          // si una reserva ha cambiado de habitación entre ambos períodos.
+          refreshAgendaReservations(totalDays - days + 1, startOffset + days - 1, totalImported);
+          return;
+        }
+        toast.success(`Agenda sincronizada con Cloudbeds: ${totalImported} asignaciones revisadas.`);
+        utils.checkin.externalImports.listCloudbedsUpcomingReservations.invalidate({ dateFrom: window.dateFrom, dateTo: window.dateTo });
+      },
+      onError: () => {
+        // El bloque ya completado permanece sincronizado; actualizamos la vista
+        // sin ocultar una asignación válida si falla el siguiente bloque.
+        utils.checkin.externalImports.listCloudbedsUpcomingReservations.invalidate({ dateFrom: window.dateFrom, dateTo: window.dateTo });
+      },
+    });
+  };
   const hasImportedOnEntry = useRef(false);
   const hasLoadedAgendaAvailability = useRef(false);
   const agendaAvailabilityStartDate = window.dates[1] || window.dateFrom;
@@ -206,7 +223,7 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
             setIsLoadingAgendaSecondWeek(false);
             if (importReservationsAfter && !hasImportedOnEntry.current) {
               hasImportedOnEntry.current = true;
-              importReservations.mutate({ days: 5 });
+              refreshAgendaReservations(15);
             }
           },
           onError: error => {
@@ -214,7 +231,7 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
             toast.warning(`Los próximos 7 días no se cargaron: ${error.message}`);
             if (importReservationsAfter && !hasImportedOnEntry.current) {
               hasImportedOnEntry.current = true;
-              importReservations.mutate({ days: 5 });
+              refreshAgendaReservations(15);
             }
           },
         });
@@ -524,10 +541,10 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
           <CardTitle className="flex items-center gap-2"><CalendarDays className="h-5 w-5 text-sky-700" />Agenda de reservas</CardTitle>
           <CardDescription className="mt-1">Vista por tipo de habitación y estancia. Pulsa una reserva para ver huésped, pagos y notas; pulsa un día libre para crear una reserva.</CardDescription>
         </div>
-        <div className="flex flex-wrap gap-2">{canEditAgendaRates && editedAgendaRates.length > 0 && <Button className="bg-amber-500 text-amber-950 hover:bg-amber-400" onClick={requestAgendaRateUpdate} disabled={updateAgendaRates.isPending}><Send className="mr-2 h-4 w-4" />Enviar {editedAgendaRates.length} precio{editedAgendaRates.length === 1 ? "" : "s"}</Button>}<Button variant="outline" size="sm" onClick={() => setShowUnassignedReservations(current => !current)}>{showUnassignedReservations ? "Ocultar sin habitación" : `Mostrar sin habitación${hiddenUnassignedReservations ? ` (${hiddenUnassignedReservations})` : ""}`}</Button><Button className="bg-sky-700 hover:bg-sky-800" onClick={() => importReservations.mutate({ days: 5 })} disabled={importReservations.isPending}>
+        <div className="flex flex-wrap gap-2">{canEditAgendaRates && editedAgendaRates.length > 0 && <Button className="bg-amber-500 text-amber-950 hover:bg-amber-400" onClick={requestAgendaRateUpdate} disabled={updateAgendaRates.isPending}><Send className="mr-2 h-4 w-4" />Enviar {editedAgendaRates.length} precio{editedAgendaRates.length === 1 ? "" : "s"}</Button>}<Button variant="outline" size="sm" onClick={() => setShowUnassignedReservations(current => !current)}>{showUnassignedReservations ? "Ocultar sin habitación" : `Mostrar sin habitación${hiddenUnassignedReservations ? ` (${hiddenUnassignedReservations})` : ""}`}</Button><Button className="bg-sky-700 hover:bg-sky-800" onClick={() => refreshAgendaReservations(5)} disabled={importReservations.isPending}>
           {importReservations.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
           Actualizar 5 días
-        </Button><Button variant="outline" size="sm" onClick={() => importReservations.mutate({ days: 15 })} disabled={importReservations.isPending}>
+        </Button><Button variant="outline" size="sm" onClick={() => refreshAgendaReservations(15)} disabled={importReservations.isPending}>
           Actualizar 15 días
         </Button><Button variant="outline" size="sm" onClick={() => loadAgendaAvailability()} disabled={importAgendaAvailability.isPending}>{importAgendaAvailability.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}Actualizar precios</Button></div>
       </CardHeader>
@@ -584,8 +601,11 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
               {group.rooms.map(room => <div key={room.key} className="reservation-agenda-grid grid min-h-[48px] bg-background sm:min-h-[64px]" style={{ ...gridStyle, gridAutoRows: "minmax(var(--agenda-row-height), auto)" }}>
                 <div className="sticky left-0 z-20 flex min-w-0 items-center border-r border-b bg-background px-2 shadow-[8px_0_12px_-12px_rgba(15,23,42,0.48)] sm:px-4" style={{ gridColumn: 1, gridRow: `1 / span ${room.laneCount}` }}><p title={room.label} className="truncate text-xs font-medium text-slate-800 sm:text-sm">{room.label}</p></div>
                 {window.dates.map((date, index) => {
-                  const availabilityDay = findAgendaAvailabilityDay(availabilityType, date);
-                  const canCreateFromSlot = canCreateReservations && room.key !== "unassigned" && (availabilityDay?.roomsAvailable ?? 0) > 0;
+                  // El contador agregado de un tipo puede ser cero aunque Cloudbeds
+                  // mantenga una habitación física concreta sin asignar. El detalle
+                  // posterior consulta getRooms para la estancia completa antes de
+                  // permitir confirmar; aquí solo habilitamos el hueco físico.
+                  const canCreateFromSlot = canCreateReservations && room.key !== "unassigned";
                   const cellClass = `border-b border-r ${index === todayIndex ? "border-x-2 border-amber-400 bg-amber-50/70" : isFridayOrSaturday(date) ? "bg-slate-100/80" : "bg-slate-50/35"}`;
                   return canCreateFromSlot ? <button key={date} type="button" title={`Crear reserva en ${room.label}: ${group.label} · ${date}`} aria-label={`Crear reserva en ${room.label} de ${group.label} el ${date}`} onClick={() => setNewReservationSlot({ date, roomTypeId: availabilityType?.roomTypeId, roomTypeName: group.label, roomName: room.label })} className={`${cellClass} relative z-0 cursor-pointer text-transparent transition hover:bg-sky-100 focus-visible:z-20 focus-visible:bg-sky-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-700`} style={{ gridColumn: index + 2, gridRow: `1 / span ${room.laneCount}` }}>Libre</button> : <div key={date} className={cellClass} style={{ gridColumn: index + 2, gridRow: `1 / span ${room.laneCount}` }} />;
                 })}
@@ -616,7 +636,7 @@ export function AvailabilityReservations({ autoImport = false }: { autoImport?: 
         setNewReservationSlot(null);
         // Tras crear una reserva se actualiza la misma ventana visible para incorporar
         // la nueva estancia y las posibles asignaciones de habitación de Cloudbeds.
-        importReservations.mutate({ days: 15 });
+        refreshAgendaReservations(15);
       }}
     />}
 

@@ -495,6 +495,60 @@ async function mapWithConcurrency<T, Result>(
   return results;
 }
 
+function nextIsoDate(date: string) {
+  const value = new Date(`${date}T12:00:00Z`);
+  value.setUTCDate(value.getUTCDate() + 1);
+  return value.toISOString().slice(0, 10);
+}
+
+function assignmentRoomKey(assignment: Record<string, unknown>) {
+  return firstText(
+    assignment.roomID,
+    assignment.roomId,
+    assignment.assignedRoomID,
+    assignment.assigned_room_id,
+    assignment.roomName,
+    assignment.room_name,
+    assignment.roomNumber,
+    assignment.room_number
+  ) || "unassigned";
+}
+
+type AssignmentOccurrence = {
+  assignment: Record<string, unknown>;
+  id: string;
+  date: string;
+  roomKey: string;
+};
+
+type AssignmentSegment = AssignmentOccurrence & {
+  endDate: string;
+};
+
+/** Agrupa solo días consecutivos de la misma habitación física. */
+function assignmentSegments(occurrences: AssignmentOccurrence[]): AssignmentSegment[] {
+  const grouped = new Map<string, AssignmentOccurrence[]>();
+  for (const occurrence of occurrences) {
+    const key = `${occurrence.id}\u0000${occurrence.roomKey}`;
+    const list = grouped.get(key) || [];
+    list.push(occurrence);
+    grouped.set(key, list);
+  }
+  return Array.from(grouped.values()).flatMap(list => {
+    const ordered = [...list].sort((left, right) => left.date.localeCompare(right.date));
+    const segments: AssignmentSegment[] = [];
+    for (const occurrence of ordered) {
+      const previous = segments.at(-1);
+      if (previous && nextIsoDate(previous.endDate) === occurrence.date) {
+        previous.endDate = occurrence.date;
+      } else {
+        segments.push({ ...occurrence, endDate: occurrence.date });
+      }
+    }
+    return segments;
+  });
+}
+
 export async function fetchCloudbedsUpcomingReservations(
   apiKey: string,
   propertyId: string,
@@ -512,30 +566,21 @@ export async function fetchCloudbedsUpcomingReservations(
     return { date, assignments: asList(await getJson(assignmentsUrl, apiKey)) };
   });
 
-  const uniqueAssignments = assignmentsByDate.flatMap(({ date, assignments }) =>
+  const occurrences = assignmentsByDate.flatMap(({ date, assignments }) =>
     assignments.flatMap(assignment => {
       const id = reservationId(assignment);
-      // Una misma reserva puede ocupar más de una habitación. Conservamos una
-      // entrada por habitación física, pero evitamos repetirla al consultar cada
-      // día del calendario.
-      const roomKey = firstText(
-        assignment.roomID,
-        assignment.roomId,
-        assignment.assignedRoomID,
-        assignment.assigned_room_id,
-        assignment.roomName,
-        assignment.room_name,
-        assignment.roomNumber,
-        assignment.room_number
-      ) || "unassigned";
-      const assignmentKey = `${id}:${roomKey}`;
+      const roomKey = assignmentRoomKey(assignment);
+      // La misma API puede repetir una asignación dentro de la respuesta de un
+      // día. No se elimina entre días: esa secuencia determina el tramo real.
+      const assignmentKey = `${id}:${roomKey}:${date}`;
       if (!id || seenAssignments.has(assignmentKey)) return [];
       seenAssignments.add(assignmentKey);
-      return [{ assignment, id, date }];
+      return [{ assignment, id, date, roomKey }];
     })
   );
 
-  const imported = await mapWithConcurrency(uniqueAssignments, 3, async ({ assignment, id, date }) => {
+  const details = new Map<string, { detail: Record<string, unknown>; importedReservationNotes: string | null }>();
+  await mapWithConcurrency(Array.from(new Set(occurrences.map(occurrence => occurrence.id))), 3, async id => {
       const detailUrl = new URL(
         "https://api.cloudbeds.com/api/v1.3/getReservation"
       );
@@ -549,6 +594,7 @@ export async function fetchCloudbedsUpcomingReservations(
       if (!diagnosticsReported) {
         const guest = firstGuest(detail);
         const room = firstRoom(detail);
+        const assignment = occurrences.find(occurrence => occurrence.id === id)?.assignment || {};
         onDiagnostics?.({
           assignmentKeys: Object.keys(assignment).sort(),
           responseKeys: Object.keys(asRecord(detailPayload)).sort(),
@@ -564,14 +610,38 @@ export async function fetchCloudbedsUpcomingReservations(
         });
         diagnosticsReported = true;
       }
-      return normalizeUpcomingReservation(
-        assignment,
-        { ...detail, importedReservationNotes },
-        date
-      );
+      details.set(id, { detail, importedReservationNotes });
     });
 
-  return imported.filter(
-    (reservation): reservation is ImportedUpcomingReservation => reservation !== null
-  );
+  const imported = assignmentSegments(occurrences).flatMap(segment => {
+    const detail = details.get(segment.id);
+    if (!detail) return [];
+    const normalized = normalizeUpcomingReservation(
+      segment.assignment,
+      { ...detail.detail, importedReservationNotes: detail.importedReservationNotes },
+      segment.date
+    );
+    if (!normalized) return [];
+    const firstRequestedDate = dates[0];
+    const lastRequestedDate = dates.at(-1);
+    const startsBeforeWindow = Boolean(
+      firstRequestedDate && segment.date === firstRequestedDate && normalized.checkInDate <= segment.date
+    );
+    const endsAfterWindow = Boolean(
+      lastRequestedDate &&
+      segment.endDate === lastRequestedDate &&
+      normalized.checkOutDate &&
+      normalized.checkOutDate > segment.endDate
+    );
+    // getReservationAssignments es la fuente de verdad de la habitación para
+    // cada día. Una reserva trasladada no debe ocupar la antigua habitación en
+    // toda la estancia: cada tramo termina la mañana siguiente a su último día.
+    return [{
+      ...normalized,
+      checkInDate: startsBeforeWindow ? normalized.checkInDate : segment.date,
+      checkOutDate: endsAfterWindow ? normalized.checkOutDate : nextIsoDate(segment.endDate),
+    }];
+  });
+
+  return imported;
 }

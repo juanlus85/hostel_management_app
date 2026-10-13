@@ -1332,10 +1332,10 @@ export const appRouter = router({
           // evitando crear una reserva con datos de disponibilidad desactualizados.
           const bookable = await fetchCloudbedsBookableRoomTypes({ apiKey, propertyId, ...input });
           const selectedRoomType = bookable.find(roomType => roomType.roomTypeId === input.roomTypeId);
-          if (!selectedRoomType || selectedRoomType.roomsAvailable < input.rooms) {
+          if (!selectedRoomType) {
             throw new TRPCError({
               code: "BAD_REQUEST",
-              message: "Ese tipo de habitación ya no tiene disponibilidad para toda la estancia seleccionada. Vuelve a comprobar las fechas.",
+              message: "Cloudbeds ya no reconoce este tipo de habitación para toda la estancia. Vuelve a comprobar las fechas.",
             });
           }
           if (input.roomId) {
@@ -1348,6 +1348,11 @@ export const appRouter = router({
                 message: "La habitación seleccionada ya no está libre para toda la estancia. Vuelve a pulsar el hueco y comprueba la disponibilidad.",
               });
             }
+          } else if (selectedRoomType.roomsAvailable < input.rooms) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Ese tipo de habitación ya no tiene disponibilidad para toda la estancia seleccionada. Vuelve a comprobar las fechas.",
+            });
           }
           if (selectedRoomType.maxGuests !== null && input.adults + input.children > selectedRoomType.maxGuests * input.rooms) {
             throw new TRPCError({
@@ -4582,7 +4587,8 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
       importCloudbedsUpcomingReservations: protectedProcedure
         .input(
           z.object({
-            days: z.number().int().min(5).max(15).default(5),
+            days: z.number().int().min(1).max(15).default(5),
+            startOffset: z.number().int().min(-1).max(14).default(-1),
           })
         )
         .mutation(async ({ ctx, input }) => {
@@ -4594,7 +4600,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
               message:
                 "Configura CLOUDBEDS_API_KEY y CLOUDBEDS_PROPERTY_ID para importar reservas",
             });
-          const dates = getNextMadridCalendarDates(new Date(), input.days, -1);
+          const dates = getNextMadridCalendarDates(new Date(), input.days, input.startOffset);
           const runId = await db.createExternalImportRun({
             provider: "cloudbeds",
             importType: "future",
@@ -4626,6 +4632,16 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
                 provider: "cloudbeds",
               }))
             );
+            const staleAssignmentsRemoved = await db.reconcileExternalUpcomingReservations(
+              "cloudbeds",
+              dates[0],
+              dates.at(-1) || dates[0],
+              reservations.map(reservation => ({
+                sourceReservationId: reservation.sourceReservationId,
+                roomNumber: reservation.roomNumber,
+                checkInDate: reservation.checkInDate,
+              }))
+            );
             await db.updateExternalImportRun(runId, {
               status: "completed",
               recordsImported: reservations.length,
@@ -4634,6 +4650,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
                 scope: "reservation assignments and reservation details",
                 isolated: true,
                 diagnostics,
+                staleAssignmentsRemoved,
               }),
               finishedAt: new Date(),
             });
@@ -4642,6 +4659,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
               runId,
               dates,
               recordsImported: reservations.length,
+              staleAssignmentsRemoved,
               diagnostics,
             };
           } catch (error) {

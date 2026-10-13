@@ -4,6 +4,7 @@ import {
   gte,
   lte,
   lt,
+  gt,
   desc,
   asc,
   sql,
@@ -3390,7 +3391,8 @@ export async function upsertExternalUpcomingReservations(
             externalUpcomingReservations.sourceReservationId,
             record.sourceReservationId
           ),
-          assignmentCondition
+          assignmentCondition,
+          eq(externalUpcomingReservations.checkInDate, record.checkInDate)
         )
       )
       .limit(1);
@@ -3420,6 +3422,70 @@ export async function upsertExternalUpcomingReservations(
       await db.insert(externalUpcomingReservations).values(record);
     }
   }
+}
+
+function importedReservationAssignmentKey(
+  reservation: Pick<ExternalUpcomingReservation, "sourceReservationId" | "roomNumber" | "checkInDate">
+) {
+  const room = (reservation.roomNumber || "")
+    .replace(/^habitaci[oó]n\s*/i, "")
+    .toLocaleLowerCase("es")
+    .replace(/[^a-z0-9]+/g, "")
+    .trim() || "unassigned";
+  return `${reservation.sourceReservationId}\u0000${room}\u0000${reservation.checkInDate}`;
+}
+
+/**
+ * La API de asignaciones es una fotografía por día. Después de importar una
+ * ventana, retiramos las asignaciones antiguas que Cloudbeds ya no devuelve
+ * para esos días: así un cambio de habitación no deja una reserva fantasma en
+ * la fila anterior. Las comunicaciones se mueven a la nueva asignación de la
+ * misma reserva antes de retirar el registro local obsoleto.
+ */
+export async function reconcileExternalUpcomingReservations(
+  provider: "cloudbeds",
+  dateFrom: string,
+  dateTo: string,
+  incoming: Array<Pick<ExternalUpcomingReservation, "sourceReservationId" | "roomNumber" | "checkInDate">>
+) {
+  const db = await getDb();
+  if (!db) return 0;
+  const current = await db
+    .select()
+    .from(externalUpcomingReservations)
+    .where(
+      and(
+        eq(externalUpcomingReservations.provider, provider),
+        lte(externalUpcomingReservations.checkInDate, dateTo),
+        or(
+          gt(externalUpcomingReservations.checkOutDate, dateFrom),
+          isNull(externalUpcomingReservations.checkOutDate)
+        )
+      )
+    );
+  const incomingKeys = new Set(incoming.map(importedReservationAssignmentKey));
+  const currentByKey = new Map(
+    current.map(reservation => [importedReservationAssignmentKey(reservation), reservation])
+  );
+  const replacementByReservation = new Map<string, ExternalUpcomingReservation>();
+  for (const record of incoming) {
+    const replacement = currentByKey.get(importedReservationAssignmentKey(record));
+    if (replacement && !replacementByReservation.has(replacement.sourceReservationId)) {
+      replacementByReservation.set(replacement.sourceReservationId, replacement);
+    }
+  }
+  const stale = current.filter(reservation => !incomingKeys.has(importedReservationAssignmentKey(reservation)));
+  for (const reservation of stale) {
+    const replacement = replacementByReservation.get(reservation.sourceReservationId);
+    if (replacement && replacement.id !== reservation.id) {
+      await db
+        .update(externalReservationCommunications)
+        .set({ externalReservationId: replacement.id })
+        .where(eq(externalReservationCommunications.externalReservationId, reservation.id));
+    }
+    await db.delete(externalUpcomingReservations).where(eq(externalUpcomingReservations.id, reservation.id));
+  }
+  return stale.length;
 }
 
 export async function setExternalUpcomingReservationReviewed(

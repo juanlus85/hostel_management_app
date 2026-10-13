@@ -1872,3 +1872,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Añadir y enviar el método de pago obligatorio de Cloudbeds al crear una reserva manual.
 - [x] Corregir la importación de reservas con varias habitaciones para que la agenda muestre cada asignación física y no deje huecos falsos; mantener el bloqueo cuando el tipo esté completo.
 - [x] Mostrar todas las fuentes activas, incluidos canales de terceros, y permitir registrar un cobro inicial con los métodos reales configurados en Cloudbeds (Prepago Booking, Bizum, SumUp u otros).
+- [x] Reconstruir la agenda desde los tramos diarios de asignación de Cloudbeds, limpiar filas obsoletas tras cada importación y sincronizar los 15 días en bloques seguros.
