@@ -1843,3 +1843,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Actualizar automáticamente solo ayer y los próximos cuatro días, dejando una recarga completa de quince días como acción manual para evitar esperas y 504.
 - [x] Normalizar fechas de nacimiento y caducidad del Check-in Online para aceptar formatos de navegador `DD/MM/AAAA` y enviarlos como `AAAA-MM-DD`.
 - [x] Traducir el tipo de habitación en la bienvenida española y evitar repetir el prefijo «habitación» en los mensajes de códigos.
+- [x] Añadir la acción «Copiar mensaje de códigos» al detalle de reserva para reutilizar la bienvenida dinámica en cualquier canal.
