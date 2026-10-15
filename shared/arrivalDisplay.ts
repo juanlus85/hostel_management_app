@@ -18,14 +18,19 @@ export function translateRoomType(roomType: string | null | undefined, language:
     };
     return englishExact[normalized] || roomType;
   }
-  const exact: Record<string, string> = {
-    "habitación doble con 2 camas y baño compartido": "Twin room with shared bathroom",
-    "habitación doble con cama de matrimonio y baño compartido": "Double room with shared bathroom",
-    "habitación individual con baño compartido": "Single room with shared bathroom",
-    "habitación triple con baño compartido": "Triple room with shared bathroom",
-    "habitación cuádruple con baño compartido": "Quadruple room with shared bathroom",
-    "una cama en habitación compartida mixta con 3 camas": "Single bed in a 3-bed mixed dormitory",
-    "una cama en habitación compartida mixta con 4 camas": "Single bed in a 4-bed mixed dormitory",
+    const exact: Record<string, string> = {
+      "habitación doble con 2 camas y baño compartido": "Twin room with shared bathroom",
+      "habitación doble con 2 camas y baño privado": "Twin room with private bathroom",
+      "habitación doble con cama de matrimonio y baño compartido": "Double room with shared bathroom",
+      "habitación doble con cama de matrimonio y baño privado": "Double room with private bathroom",
+      "habitación individual con baño compartido": "Single room with shared bathroom",
+      "habitación individual con baño privado": "Single room with private bathroom",
+      "habitación triple con baño compartido": "Triple room with shared bathroom",
+      "habitación triple con baño privado": "Triple room with private bathroom",
+      "habitación cuádruple con baño compartido": "Quadruple room with shared bathroom",
+      "habitación cuádruple con baño privado": "Quadruple room with private bathroom",
+      "una cama en habitación compartida mixta con 3 camas": "Single bed in a 3-bed mixed dormitory",
+      "una cama en habitación compartida mixta con 4 camas": "Single bed in a 4-bed mixed dormitory",
   };
   if (exact[normalized]) return exact[normalized];
   return roomType

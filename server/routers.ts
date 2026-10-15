@@ -351,6 +351,8 @@ async function getExternalReservationWelcomeContext(
       roomNumber: reservation.roomNumber,
       roomType: reservation.roomType || room.roomType,
       reservationCode: reservation.reservationCode,
+      floor: room.floor,
+      floorLevel: room.floorLevel,
       roomCode: room.roomCode,
       entranceCode,
     },
@@ -5166,6 +5168,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
                   address: settings?.hostelAddress,
                   phone: settings?.hostelPhone,
                   email: settings?.hostelEmail,
+                  wifiPassword: settings?.wifiPassword,
                 },
                 checkinMode
               );
@@ -5214,6 +5217,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
                     address: settings?.hostelAddress,
                     phone: settings?.hostelPhone,
                     email: settings?.hostelEmail,
+                    wifiPassword: settings?.wifiPassword,
                   }
                 );
           const { sendEmail } = await import("./email");
@@ -5312,6 +5316,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
               address: welcomeSettings?.hostelAddress,
               phone: welcomeSettings?.hostelPhone,
               email: welcomeSettings?.hostelEmail,
+              wifiPassword: welcomeSettings?.wifiPassword,
             }
           );
         }),
@@ -5385,6 +5390,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
               address: settings?.hostelAddress,
               phone: settings?.hostelPhone,
               email: settings?.hostelEmail,
+              wifiPassword: settings?.wifiPassword,
             }
           );
           await db.createExternalReservationCommunication({

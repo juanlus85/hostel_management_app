@@ -1,4 +1,5 @@
 import { renderArrivalTemplate } from "../shared/arrivalTemplate";
+import { translateFloor, translateRoomType } from "../shared/arrivalDisplay";
 
 export type ReservationMessageLanguage = "es" | "en";
 export type ReservationMessageType = "welcome" | "online_checkin" | "early_checkin";
@@ -10,6 +11,8 @@ export type ReservationMessageContext = {
   roomNumber: string | null;
   roomType: string | null;
   reservationCode: string | null;
+  floor?: string | null;
+  floorLevel?: string | null;
   entranceCode?: string | null;
   roomCode?: string | null;
 };
@@ -23,8 +26,44 @@ function checkinInvitationContext(
     ...context,
     roomNumber: null,
     roomType: null,
+    floor: null,
+    floorLevel: null,
     entranceCode: null,
     roomCode: null,
+  };
+}
+
+type TemplateHostel = {
+  name?: string | null;
+  address?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  wifiPassword?: string | null;
+};
+
+function arrivalTemplateContext(
+  context: ReservationMessageContext,
+  language: ReservationMessageLanguage,
+  hostel: TemplateHostel
+) {
+  const floorSource =
+    language === "en"
+      ? context.floorLevel || context.floor
+      : context.floor || context.floorLevel;
+  return {
+    guestName: context.guestName,
+    roomNumber: context.roomNumber,
+    roomType: translateRoomType(context.roomType, language),
+    floor: translateFloor(floorSource, language),
+    hostelName: hostel.name || "The Spot Central Hostel",
+    hostelAddress: hostel.address,
+    hostelPhone: hostel.phone,
+    hostelEmail: hostel.email,
+    wifiPassword: hostel.wifiPassword,
+    checkInDate: context.checkInDate,
+    checkOutDate: context.checkOutDate,
+    entranceCode: context.entranceCode,
+    roomCode: context.roomCode,
   };
 }
 
@@ -158,27 +197,13 @@ export function buildConfiguredReservationWelcome(
   template: string | null | undefined,
   context: ReservationMessageContext,
   language: ReservationMessageLanguage,
-  hostel: {
-    name?: string | null;
-    address?: string | null;
-    phone?: string | null;
-    email?: string | null;
-  }
+  hostel: TemplateHostel
 ) {
   if (!template?.trim()) return buildReservationWelcomeEmail(context, language);
-  const rendered = renderArrivalTemplate(template, {
-    guestName: context.guestName,
-    roomNumber: context.roomNumber,
-    roomType: context.roomType,
-    hostelName: hostel.name || "The Spot Central Hostel",
-    hostelAddress: hostel.address,
-    hostelPhone: hostel.phone,
-    hostelEmail: hostel.email,
-    checkInDate: context.checkInDate,
-    checkOutDate: context.checkOutDate,
-    entranceCode: context.entranceCode,
-    roomCode: context.roomCode,
-  }).trim();
+  const rendered = renderArrivalTemplate(
+    template,
+    arrivalTemplateContext(context, language, hostel)
+  ).trim();
   const text = appendAccessCodes(rendered, context, language);
   const subject =
     language === "en"
@@ -204,28 +229,12 @@ export function buildEditedReservationEmail(subject: string, text: string) {
 export function renderConfiguredReservationMessage(
   template: string | null | undefined,
   context: ReservationMessageContext,
-  hostel: {
-    name?: string | null;
-    address?: string | null;
-    phone?: string | null;
-    email?: string | null;
-  },
-  checkinUrl: string | null = null
+  hostel: TemplateHostel,
+  checkinUrl: string | null = null,
+  language: ReservationMessageLanguage = "es"
 ) {
   if (!template?.trim()) return null;
-  return renderArrivalTemplate(template, {
-    guestName: context.guestName,
-    roomNumber: context.roomNumber,
-    roomType: context.roomType,
-    hostelName: hostel.name || "The Spot Central Hostel",
-    hostelAddress: hostel.address,
-    hostelPhone: hostel.phone,
-    hostelEmail: hostel.email,
-    checkInDate: context.checkInDate,
-    checkOutDate: context.checkOutDate,
-    entranceCode: context.entranceCode,
-    roomCode: context.roomCode,
-  })
+  return renderArrivalTemplate(template, arrivalTemplateContext(context, language, hostel))
     .replace(/\{\{\s*ENLACE_CHECKIN\s*\}\}/gi, checkinUrl || "")
     .trim();
 }
@@ -235,12 +244,7 @@ export function buildConfiguredOnlineCheckinEmail(
   context: ReservationMessageContext,
   checkinUrl: string,
   language: ReservationMessageLanguage,
-  hostel: {
-    name?: string | null;
-    address?: string | null;
-    phone?: string | null;
-    email?: string | null;
-  },
+  hostel: TemplateHostel,
   mode: "access" | "early" = "access"
 ) {
   const privateContext = checkinInvitationContext(context);
@@ -248,7 +252,8 @@ export function buildConfiguredOnlineCheckinEmail(
     template,
     privateContext,
     hostel,
-    checkinUrl
+    checkinUrl,
+    language
   );
   if (!text) return buildOnlineCheckinInvitation(privateContext, checkinUrl, language, mode);
   const legalNotice = mode === "early"
@@ -278,12 +283,7 @@ export function buildConfiguredReservationWhatsApp(
   messageType: ReservationMessageType,
   checkinUrl: string | null,
   language: ReservationMessageLanguage,
-  hostel: {
-    name?: string | null;
-    address?: string | null;
-    phone?: string | null;
-  email?: string | null;
-  }
+  hostel: TemplateHostel
 ) {
   const safeContext =
     messageType === "welcome" ? context : checkinInvitationContext(context);
@@ -291,7 +291,8 @@ export function buildConfiguredReservationWhatsApp(
     template,
     safeContext,
     hostel,
-    checkinUrl
+    checkinUrl,
+    language
   );
   if (configured) {
     const legalNotice = messageType === "early_checkin"

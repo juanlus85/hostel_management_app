@@ -89,6 +89,41 @@ describe("mensajería manual de reservas", () => {
     expect(message.text).toContain("Código: 1469");
   });
 
+  it("traduce el tipo y resuelve la planta en las plantillas de bienvenida", () => {
+    const spanish = buildConfiguredReservationWelcome(
+      "Tipo: {{TIPO_HABITACION}} · Planta: {{PLANTA}} · Wi-Fi: {{WIFI}}",
+      {
+        ...context,
+        roomType: "Double Room with Shared Bathroom",
+        floor: "P1",
+        floorLevel: "First Floor",
+      },
+      "es",
+      { name: "The Spot", wifiPassword: "holasevilla" }
+    );
+    expect(spanish.text).toContain(
+      "Tipo: Habitación doble con cama de matrimonio y baño compartido"
+    );
+    expect(spanish.text).toContain("Planta: Primera planta (P1)");
+    expect(spanish.text).toContain("Wi-Fi: holasevilla");
+
+    const english = buildConfiguredReservationWhatsApp(
+      "Type: {{TIPO_HABITACION}} · Floor: {{PLANTA}}",
+      {
+        ...context,
+        roomType: "Habitación doble con 2 camas y baño privado",
+        floor: "P1",
+        floorLevel: "First Floor",
+      },
+      "welcome",
+      null,
+      "en",
+      { name: "The Spot" }
+    );
+    expect(english).toContain("Type: Twin room with private bathroom");
+    expect(english).toContain("Floor: First floor (P1)");
+  });
+
   it("sustituye el enlace en una invitación de Check-in configurable", () => {
     const message = buildConfiguredOnlineCheckinEmail(
       "Hola {{NOMBRE_HUESPED}}, entra aquí: {{ENLACE_CHECKIN}}. Habitación: {{NUMERO_HABITACION}}. Código: {{CODIGO_ENTRADA}}",
