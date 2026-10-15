@@ -105,6 +105,22 @@ describe("mensajería manual de reservas", () => {
     expect(message.text).not.toContain("Código: 1469");
   });
 
+  it("mantiene el aviso de documento físico en una plantilla de Pre-check-in configurable", () => {
+    const message = buildConfiguredOnlineCheckinEmail(
+      "Hola {{NOMBRE_HUESPED}}, completa el Pre-check-in: {{ENLACE_CHECKIN}}",
+      context,
+      "https://management.example/checkin-online/token",
+      "es",
+      { name: "The Spot" },
+      "early"
+    );
+    expect(message.subject).toContain("Pre-check-in");
+    expect(message.text).toContain("Hola Ana <García>");
+    expect(message.text).toContain("https://management.example/checkin-online/token");
+    expect(message.text).toContain("documento físico original");
+    expect(message.text).not.toContain("Habitación 15");
+  });
+
   it("aplica una plantilla de WhatsApp antes de abrir la conversación", () => {
     const message = buildConfiguredReservationWhatsApp(
       "Hola {{NOMBRE_HUESPED}}, llegada: {{FECHA_LLEGADA}}.",
@@ -116,6 +132,22 @@ describe("mensajería manual de reservas", () => {
     );
     expect(message).toContain("Hola Ana <García>, llegada: 2026-08-30.");
     expect(message).toContain("Código de entrada al hostel: 1469");
+  });
+
+  it("adapta una plantilla de WhatsApp de Pre-check-in sin revelar códigos", () => {
+    const message = buildConfiguredReservationWhatsApp(
+      "Hello {{NOMBRE_HUESPED}}, complete here: {{ENLACE_CHECKIN}}",
+      context,
+      "early_checkin",
+      "https://management.example/checkin-online/token",
+      "en",
+      { name: "The Spot" }
+    );
+    expect(message).toContain("Hello");
+    expect(message).toContain("https://management.example/checkin-online/token");
+    expect(message).toContain("original physical document");
+    expect(message).not.toContain("1469");
+    expect(message).not.toContain("2226");
   });
 
   it("incluye códigos en el WhatsApp de bienvenida sin crear Check-in Online", () => {

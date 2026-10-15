@@ -4345,10 +4345,14 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             reservationWelcomeEmailEn: z.string().max(10000).optional(),
             reservationCheckinEmailEs: z.string().max(10000).optional(),
             reservationCheckinEmailEn: z.string().max(10000).optional(),
+            reservationEarlyCheckinEmailEs: z.string().max(10000).optional(),
+            reservationEarlyCheckinEmailEn: z.string().max(10000).optional(),
             reservationWelcomeWhatsappEs: z.string().max(10000).optional(),
             reservationWelcomeWhatsappEn: z.string().max(10000).optional(),
             reservationCheckinWhatsappEs: z.string().max(10000).optional(),
             reservationCheckinWhatsappEn: z.string().max(10000).optional(),
+            reservationEarlyCheckinWhatsappEs: z.string().max(10000).optional(),
+            reservationEarlyCheckinWhatsappEn: z.string().max(10000).optional(),
             arrivalMapUrl: z.string().url().or(z.literal("")).optional(),
             arrivalIntroEs: z.string().optional(),
             arrivalIntroEn: z.string().optional(),
@@ -5137,9 +5141,13 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             const configuredInvitation =
               customMessage ||
               buildConfiguredOnlineCheckinEmail(
-                language === "en"
-                  ? settings?.reservationCheckinEmailEn
-                  : settings?.reservationCheckinEmailEs,
+                input.messageType === "early_checkin"
+                  ? language === "en"
+                    ? settings?.reservationEarlyCheckinEmailEn
+                    : settings?.reservationEarlyCheckinEmailEs
+                  : language === "en"
+                    ? settings?.reservationCheckinEmailEn
+                    : settings?.reservationCheckinEmailEs,
                 context,
                 invitation!.url,
                 language,
@@ -5260,9 +5268,13 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
               checkinMode
             );
             return buildConfiguredOnlineCheckinEmail(
-              input.language === "en"
-                ? settings?.reservationCheckinEmailEn
-                : settings?.reservationCheckinEmailEs,
+              input.messageType === "early_checkin"
+                ? input.language === "en"
+                  ? settings?.reservationEarlyCheckinEmailEn
+                  : settings?.reservationEarlyCheckinEmailEs
+                : input.language === "en"
+                  ? settings?.reservationCheckinEmailEn
+                  : settings?.reservationCheckinEmailEs,
               context,
               invitation.url,
               input.language,
@@ -5346,7 +5358,9 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
                 ? settings?.reservationCheckinWhatsappEn
                 : settings?.reservationCheckinWhatsappEs
               : input.messageType === "early_checkin"
-                ? null
+                ? input.language === "en"
+                  ? settings?.reservationEarlyCheckinWhatsappEn
+                  : settings?.reservationEarlyCheckinWhatsappEs
               : input.language === "en"
                 ? settings?.reservationWelcomeWhatsappEn
                 : settings?.reservationWelcomeWhatsappEs;

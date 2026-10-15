@@ -5,7 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { Loader2, Save } from "lucide-react";
+import {
+  Loader2,
+  Mail,
+  MessageCircle,
+  MessageSquareText,
+  Save,
+} from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ARRIVAL_TEMPLATE_TAGS } from "@shared/arrivalTemplate";
 
@@ -49,10 +55,14 @@ export default function ConfiguracionCheckin() {
     reservationWelcomeEmailEn: "",
     reservationCheckinEmailEs: "",
     reservationCheckinEmailEn: "",
+    reservationEarlyCheckinEmailEs: "",
+    reservationEarlyCheckinEmailEn: "",
     reservationWelcomeWhatsappEs: "",
     reservationWelcomeWhatsappEn: "",
     reservationCheckinWhatsappEs: "",
     reservationCheckinWhatsappEn: "",
+    reservationEarlyCheckinWhatsappEs: "",
+    reservationEarlyCheckinWhatsappEn: "",
     arrivalMapUrl: "",
     arrivalIntroEs: "",
     arrivalIntroEn: "",
@@ -96,6 +106,10 @@ export default function ConfiguracionCheckin() {
         reservationWelcomeEmailEn: settings.reservationWelcomeEmailEn || "",
         reservationCheckinEmailEs: settings.reservationCheckinEmailEs || "",
         reservationCheckinEmailEn: settings.reservationCheckinEmailEn || "",
+        reservationEarlyCheckinEmailEs:
+          settings.reservationEarlyCheckinEmailEs || "",
+        reservationEarlyCheckinEmailEn:
+          settings.reservationEarlyCheckinEmailEn || "",
         reservationWelcomeWhatsappEs:
           settings.reservationWelcomeWhatsappEs || "",
         reservationWelcomeWhatsappEn:
@@ -104,6 +118,10 @@ export default function ConfiguracionCheckin() {
           settings.reservationCheckinWhatsappEs || "",
         reservationCheckinWhatsappEn:
           settings.reservationCheckinWhatsappEn || "",
+        reservationEarlyCheckinWhatsappEs:
+          settings.reservationEarlyCheckinWhatsappEs || "",
+        reservationEarlyCheckinWhatsappEn:
+          settings.reservationEarlyCheckinWhatsappEn || "",
         arrivalMapUrl: settings.arrivalMapUrl || "",
         arrivalIntroEs: settings.arrivalIntroEs || "",
         arrivalIntroEn: settings.arrivalIntroEn || "",
@@ -153,10 +171,13 @@ export default function ConfiguracionCheckin() {
 
       <form onSubmit={handleSubmit}>
         <Tabs defaultValue="general" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 bg-muted/70 p-1">
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="terminos">Términos</TabsTrigger>
             <TabsTrigger value="bienvenida">Bienvenida</TabsTrigger>
+            <TabsTrigger value="mensajes" className="gap-1.5">
+              <MessageSquareText className="h-4 w-4" /> Mensajes
+            </TabsTrigger>
             <TabsTrigger value="smtp">SMTP</TabsTrigger>
           </TabsList>
 
@@ -468,155 +489,6 @@ export default function ConfiguracionCheckin() {
                 rows={6}
               />
             </div>
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-              <p className="font-medium">
-                Mensajes de bienvenida enviados desde Próximas reservas
-              </p>
-              <p className="mt-1 text-amber-900">
-                Estas plantillas son distintas del mensaje que aparece dentro
-                del formulario de Check-in Online. Puedes usar las etiquetas
-                dinámicas anteriores; la recepción podrá personalizar el texto
-                antes de cada envío.
-              </p>
-            </div>
-            <div>
-              <Label htmlFor="reservationWelcomeEmailEs">
-                Plantilla de bienvenida por correo (Español)
-              </Label>
-              <Textarea
-                id="reservationWelcomeEmailEs"
-                value={formData.reservationWelcomeEmailEs}
-                onChange={e =>
-                  setFormData({
-                    ...formData,
-                    reservationWelcomeEmailEs: e.target.value,
-                  })
-                }
-                placeholder="Hola {{NOMBRE_HUESPED}}, gracias por tu reserva en {{NOMBRE_HOSTEL}}. Te esperamos el {{FECHA_LLEGADA}}."
-                rows={7}
-              />
-            </div>
-            <div>
-              <Label htmlFor="reservationWelcomeEmailEn">
-                Welcome email template (English)
-              </Label>
-              <Textarea
-                id="reservationWelcomeEmailEn"
-                value={formData.reservationWelcomeEmailEn}
-                onChange={e =>
-                  setFormData({
-                    ...formData,
-                    reservationWelcomeEmailEn: e.target.value,
-                  })
-                }
-                placeholder="Hello {{NOMBRE_HUESPED}}, thank you for your reservation at {{NOMBRE_HOSTEL}}. We look forward to welcoming you on {{FECHA_LLEGADA}}."
-                rows={7}
-              />
-            </div>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div>
-                <Label htmlFor="reservationCheckinEmailEs">
-                  Plantilla de invitación Check-in por correo (Español)
-                </Label>
-                <Textarea
-                  id="reservationCheckinEmailEs"
-                  value={formData.reservationCheckinEmailEs}
-                  onChange={e =>
-                    setFormData({
-                      ...formData,
-                      reservationCheckinEmailEs: e.target.value,
-                    })
-                  }
-                  placeholder="Hola {{NOMBRE_HUESPED}}, completa tu Check-in Online aquí: {{ENLACE_CHECKIN}}"
-                  rows={6}
-                />
-              </div>
-              <div>
-                <Label htmlFor="reservationCheckinEmailEn">
-                  Online Check-in email template (English)
-                </Label>
-                <Textarea
-                  id="reservationCheckinEmailEn"
-                  value={formData.reservationCheckinEmailEn}
-                  onChange={e =>
-                    setFormData({
-                      ...formData,
-                      reservationCheckinEmailEn: e.target.value,
-                    })
-                  }
-                  placeholder="Hello {{NOMBRE_HUESPED}}, complete your Online Check-in here: {{ENLACE_CHECKIN}}"
-                  rows={6}
-                />
-              </div>
-              <div>
-                <Label htmlFor="reservationWelcomeWhatsappEs">
-                  Plantilla WhatsApp de bienvenida (Español)
-                </Label>
-                <Textarea
-                  id="reservationWelcomeWhatsappEs"
-                  value={formData.reservationWelcomeWhatsappEs}
-                  onChange={e =>
-                    setFormData({
-                      ...formData,
-                      reservationWelcomeWhatsappEs: e.target.value,
-                    })
-                  }
-                  placeholder="Hola {{NOMBRE_HUESPED}}, te esperamos el {{FECHA_LLEGADA}}."
-                  rows={5}
-                />
-              </div>
-              <div>
-                <Label htmlFor="reservationWelcomeWhatsappEn">
-                  Welcome WhatsApp template (English)
-                </Label>
-                <Textarea
-                  id="reservationWelcomeWhatsappEn"
-                  value={formData.reservationWelcomeWhatsappEn}
-                  onChange={e =>
-                    setFormData({
-                      ...formData,
-                      reservationWelcomeWhatsappEn: e.target.value,
-                    })
-                  }
-                  placeholder="Hello {{NOMBRE_HUESPED}}, we look forward to welcoming you on {{FECHA_LLEGADA}}."
-                  rows={5}
-                />
-              </div>
-              <div>
-                <Label htmlFor="reservationCheckinWhatsappEs">
-                  Plantilla WhatsApp de Check-in (Español)
-                </Label>
-                <Textarea
-                  id="reservationCheckinWhatsappEs"
-                  value={formData.reservationCheckinWhatsappEs}
-                  onChange={e =>
-                    setFormData({
-                      ...formData,
-                      reservationCheckinWhatsappEs: e.target.value,
-                    })
-                  }
-                  placeholder="Hola {{NOMBRE_HUESPED}}, completa tu Check-in Online aquí: {{ENLACE_CHECKIN}}"
-                  rows={6}
-                />
-              </div>
-              <div>
-                <Label htmlFor="reservationCheckinWhatsappEn">
-                  Online Check-in WhatsApp template (English)
-                </Label>
-                <Textarea
-                  id="reservationCheckinWhatsappEn"
-                  value={formData.reservationCheckinWhatsappEn}
-                  onChange={e =>
-                    setFormData({
-                      ...formData,
-                      reservationCheckinWhatsappEn: e.target.value,
-                    })
-                  }
-                  placeholder="Hello {{NOMBRE_HUESPED}}, complete your Online Check-in here: {{ENLACE_CHECKIN}}"
-                  rows={6}
-                />
-              </div>
-            </div>
             <div>
               <Label htmlFor="arrivalMapUrl">URL del mapa de llegada</Label>
               <Input
@@ -743,6 +615,289 @@ export default function ConfiguracionCheckin() {
                   rows={4}
                 />
               </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="mensajes" className="space-y-5 mt-6">
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+              <div className="flex items-start gap-3">
+                <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                  <MessageSquareText className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">
+                    Mensajes predefinidos de reservas
+                  </h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Configura la base de cada comunicación. Antes de enviar,
+                    recepción podrá revisar y personalizar el borrador para cada
+                    huésped.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4 grid gap-2 text-sm sm:grid-cols-3">
+                <div className="rounded-lg border bg-background/80 p-3">
+                  <Mail className="mb-1 h-4 w-4 text-primary" />
+                  <strong>Bienvenida</strong>
+                  <br />
+                  <span className="text-muted-foreground">
+                    Con códigos e instrucciones
+                  </span>
+                </div>
+                <div className="rounded-lg border bg-background/80 p-3">
+                  <Mail className="mb-1 h-4 w-4 text-primary" />
+                  <strong>Check-in Online</strong>
+                  <br />
+                  <span className="text-muted-foreground">
+                    Con enlace y códigos posteriores
+                  </span>
+                </div>
+                <div className="rounded-lg border bg-background/80 p-3">
+                  <MessageCircle className="mb-1 h-4 w-4 text-primary" />
+                  <strong>Pre-check-in</strong>
+                  <br />
+                  <span className="text-muted-foreground">
+                    Con enlace, sin códigos
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-lg border bg-muted/40 p-4 text-sm">
+              <p className="font-medium">Etiquetas dinámicas disponibles</p>
+              <p className="mt-1 text-muted-foreground">
+                Se completan automáticamente al preparar cada mensaje. El enlace
+                solo se usa en las plantillas de Check-in y Pre-check-in.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {ARRIVAL_TEMPLATE_TAGS.map(tag => (
+                  <code
+                    key={tag}
+                    className="rounded bg-background px-1.5 py-0.5 text-xs"
+                  >
+                    {tag}
+                  </code>
+                ))}
+                <code className="rounded bg-background px-1.5 py-0.5 text-xs">
+                  {"{{ENLACE_CHECKIN}}"}
+                </code>
+              </div>
+            </div>
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+              <p className="font-medium">
+                Mensajes de bienvenida enviados desde Próximas reservas
+              </p>
+              <p className="mt-1 text-amber-900">
+                Estas plantillas son distintas del mensaje que aparece dentro
+                del formulario de Check-in Online. Puedes usar las etiquetas
+                dinámicas anteriores; la recepción podrá personalizar el texto
+                antes de cada envío.
+              </p>
+            </div>
+            <div>
+              <Label htmlFor="reservationWelcomeEmailEs">
+                Plantilla de bienvenida por correo (Español)
+              </Label>
+              <Textarea
+                id="reservationWelcomeEmailEs"
+                value={formData.reservationWelcomeEmailEs}
+                onChange={e =>
+                  setFormData({
+                    ...formData,
+                    reservationWelcomeEmailEs: e.target.value,
+                  })
+                }
+                placeholder="Hola {{NOMBRE_HUESPED}}, gracias por tu reserva en {{NOMBRE_HOSTEL}}. Te esperamos el {{FECHA_LLEGADA}}."
+                rows={7}
+              />
+            </div>
+            <div>
+              <Label htmlFor="reservationWelcomeEmailEn">
+                Welcome email template (English)
+              </Label>
+              <Textarea
+                id="reservationWelcomeEmailEn"
+                value={formData.reservationWelcomeEmailEn}
+                onChange={e =>
+                  setFormData({
+                    ...formData,
+                    reservationWelcomeEmailEn: e.target.value,
+                  })
+                }
+                placeholder="Hello {{NOMBRE_HUESPED}}, thank you for your reservation at {{NOMBRE_HOSTEL}}. We look forward to welcoming you on {{FECHA_LLEGADA}}."
+                rows={7}
+              />
+            </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <Label htmlFor="reservationCheckinEmailEs">
+                  Plantilla de invitación Check-in por correo (Español)
+                </Label>
+                <Textarea
+                  id="reservationCheckinEmailEs"
+                  value={formData.reservationCheckinEmailEs}
+                  onChange={e =>
+                    setFormData({
+                      ...formData,
+                      reservationCheckinEmailEs: e.target.value,
+                    })
+                  }
+                  placeholder="Hola {{NOMBRE_HUESPED}}, completa tu Check-in Online aquí: {{ENLACE_CHECKIN}}"
+                  rows={6}
+                />
+              </div>
+              <div>
+                <Label htmlFor="reservationCheckinEmailEn">
+                  Online Check-in email template (English)
+                </Label>
+                <Textarea
+                  id="reservationCheckinEmailEn"
+                  value={formData.reservationCheckinEmailEn}
+                  onChange={e =>
+                    setFormData({
+                      ...formData,
+                      reservationCheckinEmailEn: e.target.value,
+                    })
+                  }
+                  placeholder="Hello {{NOMBRE_HUESPED}}, complete your Online Check-in here: {{ENLACE_CHECKIN}}"
+                  rows={6}
+                />
+              </div>
+              <div>
+                <Label htmlFor="reservationEarlyCheckinEmailEs">
+                  Plantilla de Pre-check-in por correo (Español)
+                </Label>
+                <Textarea
+                  id="reservationEarlyCheckinEmailEs"
+                  value={formData.reservationEarlyCheckinEmailEs}
+                  onChange={e =>
+                    setFormData({
+                      ...formData,
+                      reservationEarlyCheckinEmailEs: e.target.value,
+                    })
+                  }
+                  placeholder="Hola {{NOMBRE_HUESPED}}, completa tu Pre-check-in aquí: {{ENLACE_CHECKIN}}"
+                  rows={6}
+                />
+              </div>
+              <div>
+                <Label htmlFor="reservationEarlyCheckinEmailEn">
+                  Fast Check-in email template (English)
+                </Label>
+                <Textarea
+                  id="reservationEarlyCheckinEmailEn"
+                  value={formData.reservationEarlyCheckinEmailEn}
+                  onChange={e =>
+                    setFormData({
+                      ...formData,
+                      reservationEarlyCheckinEmailEn: e.target.value,
+                    })
+                  }
+                  placeholder="Hello {{NOMBRE_HUESPED}}, complete your Fast Check-in here: {{ENLACE_CHECKIN}}"
+                  rows={6}
+                />
+              </div>
+              <div>
+                <Label htmlFor="reservationWelcomeWhatsappEs">
+                  Plantilla WhatsApp de bienvenida (Español)
+                </Label>
+                <Textarea
+                  id="reservationWelcomeWhatsappEs"
+                  value={formData.reservationWelcomeWhatsappEs}
+                  onChange={e =>
+                    setFormData({
+                      ...formData,
+                      reservationWelcomeWhatsappEs: e.target.value,
+                    })
+                  }
+                  placeholder="Hola {{NOMBRE_HUESPED}}, te esperamos el {{FECHA_LLEGADA}}."
+                  rows={5}
+                />
+              </div>
+              <div>
+                <Label htmlFor="reservationWelcomeWhatsappEn">
+                  Welcome WhatsApp template (English)
+                </Label>
+                <Textarea
+                  id="reservationWelcomeWhatsappEn"
+                  value={formData.reservationWelcomeWhatsappEn}
+                  onChange={e =>
+                    setFormData({
+                      ...formData,
+                      reservationWelcomeWhatsappEn: e.target.value,
+                    })
+                  }
+                  placeholder="Hello {{NOMBRE_HUESPED}}, we look forward to welcoming you on {{FECHA_LLEGADA}}."
+                  rows={5}
+                />
+              </div>
+              <div>
+                <Label htmlFor="reservationCheckinWhatsappEs">
+                  Plantilla WhatsApp de Check-in (Español)
+                </Label>
+                <Textarea
+                  id="reservationCheckinWhatsappEs"
+                  value={formData.reservationCheckinWhatsappEs}
+                  onChange={e =>
+                    setFormData({
+                      ...formData,
+                      reservationCheckinWhatsappEs: e.target.value,
+                    })
+                  }
+                  placeholder="Hola {{NOMBRE_HUESPED}}, completa tu Check-in Online aquí: {{ENLACE_CHECKIN}}"
+                  rows={6}
+                />
+              </div>
+              <div>
+                <Label htmlFor="reservationCheckinWhatsappEn">
+                  Online Check-in WhatsApp template (English)
+                </Label>
+                <Textarea
+                  id="reservationCheckinWhatsappEn"
+                  value={formData.reservationCheckinWhatsappEn}
+                  onChange={e =>
+                    setFormData({
+                      ...formData,
+                      reservationCheckinWhatsappEn: e.target.value,
+                    })
+                  }
+                  placeholder="Hello {{NOMBRE_HUESPED}}, complete your Online Check-in here: {{ENLACE_CHECKIN}}"
+                  rows={6}
+                />
+              </div>
+                <div>
+                  <Label htmlFor="reservationEarlyCheckinWhatsappEs">
+                    Plantilla WhatsApp de Pre-check-in (Español)
+                  </Label>
+                  <Textarea
+                    id="reservationEarlyCheckinWhatsappEs"
+                    value={formData.reservationEarlyCheckinWhatsappEs}
+                    onChange={e =>
+                      setFormData({
+                        ...formData,
+                        reservationEarlyCheckinWhatsappEs: e.target.value,
+                      })
+                    }
+                    placeholder="Hola {{NOMBRE_HUESPED}}, completa tu Pre-check-in aquí: {{ENLACE_CHECKIN}}"
+                    rows={6}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="reservationEarlyCheckinWhatsappEn">
+                    Fast Check-in WhatsApp template (English)
+                  </Label>
+                  <Textarea
+                    id="reservationEarlyCheckinWhatsappEn"
+                    value={formData.reservationEarlyCheckinWhatsappEn}
+                    onChange={e =>
+                      setFormData({
+                        ...formData,
+                        reservationEarlyCheckinWhatsappEn: e.target.value,
+                      })
+                    }
+                    placeholder="Hello {{NOMBRE_HUESPED}}, complete your Fast Check-in here: {{ENLACE_CHECKIN}}"
+                    rows={6}
+                  />
+                </div>
             </div>
           </TabsContent>
 

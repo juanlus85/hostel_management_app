@@ -1,11 +1,8 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card } from "@/components/ui/card";
 import { 
   ClipboardCheck, 
   Users, 
-  Send, 
-  Globe, 
   Key, 
   FileText, 
   Settings 
@@ -15,8 +12,6 @@ import GestionHuespedes from "./checkin/GestionHuespedes";
 import ExportarPolicia from "./checkin/ExportarPolicia";
 import ConfiguracionCheckin from "./checkin/ConfiguracionCheckin";
 import CodigosAccesoReal from "./CodigosAcceso";
-import CheckinAnticipado from "./checkin/CheckinAnticipado";
-import CheckinOnline from "./checkin/CheckinOnline";
 
 export default function CheckinUnificado() {
   const [activeTab, setActiveTab] = useState("checkin");
@@ -26,7 +21,7 @@ export default function CheckinUnificado() {
       <div className="mb-6">
         <h1 className="text-3xl font-bold">Sistema de Check-in</h1>
         <p className="text-muted-foreground">
-          Gestión completa de check-ins de huéspedes
+          Registro, huéspedes, códigos, policía y ajustes. Los mensajes se envían desde cada reserva.
         </p>
       </div>
 
@@ -40,14 +35,6 @@ export default function CheckinUnificado() {
           <TabsTrigger value="huespedes" className="min-h-10 shrink-0 gap-2 px-3">
             <Users className="h-4 w-4" />
             <span>Huéspedes</span>
-          </TabsTrigger>
-          <TabsTrigger value="anticipado" className="min-h-10 shrink-0 gap-2 px-3">
-            <Send className="h-4 w-4" />
-            <span>Pre-check-in</span>
-          </TabsTrigger>
-          <TabsTrigger value="online" className="min-h-10 shrink-0 gap-2 px-3">
-            <Globe className="h-4 w-4" />
-            <span>Online</span>
           </TabsTrigger>
           <TabsTrigger value="codigos" className="min-h-10 shrink-0 gap-2 px-3">
             <Key className="h-4 w-4" />
@@ -70,14 +57,6 @@ export default function CheckinUnificado() {
 
         <TabsContent value="huespedes">
           <GestionHuespedes />
-        </TabsContent>
-
-        <TabsContent value="anticipado">
-          <CheckinAnticipado />
-        </TabsContent>
-
-        <TabsContent value="online">
-          <CheckinOnline />
         </TabsContent>
 
         <TabsContent value="codigos">
