@@ -3,6 +3,22 @@ import { translateFloor, translateRoomType } from "../shared/arrivalDisplay";
 
 export type ReservationMessageLanguage = "es" | "en";
 export type ReservationMessageType = "welcome" | "online_checkin" | "early_checkin";
+export type ReservationMessageChannel = "email" | "whatsapp";
+
+type ReservationMessageTemplates = {
+  reservationWelcomeEmailEs?: string | null;
+  reservationWelcomeEmailEn?: string | null;
+  reservationCheckinEmailEs?: string | null;
+  reservationCheckinEmailEn?: string | null;
+  reservationEarlyCheckinEmailEs?: string | null;
+  reservationEarlyCheckinEmailEn?: string | null;
+  reservationWelcomeWhatsappEs?: string | null;
+  reservationWelcomeWhatsappEn?: string | null;
+  reservationCheckinWhatsappEs?: string | null;
+  reservationCheckinWhatsappEn?: string | null;
+  reservationEarlyCheckinWhatsappEs?: string | null;
+  reservationEarlyCheckinWhatsappEn?: string | null;
+};
 
 export type ReservationMessageContext = {
   guestName: string | null;
@@ -16,6 +32,32 @@ export type ReservationMessageContext = {
   entranceCode?: string | null;
   roomCode?: string | null;
 };
+
+/**
+ * Cada canal admite un texto propio. Si uno no se ha configurado, reutiliza la
+ * plantilla equivalente del otro para que el borrador desde la agenda refleje
+ * el mensaje que ya se ha preparado en Configuración.
+ */
+export function configuredReservationTemplate(
+  templates: ReservationMessageTemplates | null | undefined,
+  messageType: ReservationMessageType,
+  channel: ReservationMessageChannel,
+  language: ReservationMessageLanguage
+) {
+  if (!templates) return null;
+  const base =
+    messageType === "welcome"
+      ? "reservationWelcome"
+      : messageType === "online_checkin"
+        ? "reservationCheckin"
+        : "reservationEarlyCheckin";
+  const locale = language === "en" ? "En" : "Es";
+  const primaryChannel = channel === "email" ? "Email" : "Whatsapp";
+  const alternateChannel = channel === "email" ? "Whatsapp" : "Email";
+  const primaryKey = `${base}${primaryChannel}${locale}` as keyof ReservationMessageTemplates;
+  const alternateKey = `${base}${alternateChannel}${locale}` as keyof ReservationMessageTemplates;
+  return templates[primaryKey]?.trim() || templates[alternateKey]?.trim() || null;
+}
 
 // La habitación y los códigos se comunican solo después de completar el formulario.
 // Esta vista se usa para todas las invitaciones previas de Check-in.

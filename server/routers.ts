@@ -92,6 +92,7 @@ import {
   buildConfiguredReservationWelcome,
   buildConfiguredOnlineCheckinEmail,
   buildConfiguredReservationWhatsApp,
+  configuredReservationTemplate,
   buildEditedReservationEmail,
   buildOnlineCheckinInvitation,
   buildReservationWelcomeEmail,
@@ -5153,13 +5154,12 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             const configuredInvitation =
               customMessage ||
               buildConfiguredOnlineCheckinEmail(
-                input.messageType === "early_checkin"
-                  ? language === "en"
-                    ? settings?.reservationEarlyCheckinEmailEn
-                    : settings?.reservationEarlyCheckinEmailEs
-                  : language === "en"
-                    ? settings?.reservationCheckinEmailEn
-                    : settings?.reservationCheckinEmailEs,
+                configuredReservationTemplate(
+                  settings,
+                  input.messageType,
+                  "email",
+                  language
+                ),
                 context,
                 invitation!.url,
                 language,
@@ -5202,9 +5202,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           const { settings, context: welcomeContext } =
             await getExternalReservationWelcomeContext(reservation);
           const configuredTemplate =
-            language === "en"
-              ? settings?.reservationWelcomeEmailEn
-              : settings?.reservationWelcomeEmailEs;
+            configuredReservationTemplate(settings, "welcome", "email", language);
           const message =
             input.subject && input.message
               ? buildEditedReservationEmail(input.subject, input.message)
@@ -5282,13 +5280,12 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
               checkinMode
             );
             return buildConfiguredOnlineCheckinEmail(
-              input.messageType === "early_checkin"
-                ? input.language === "en"
-                  ? settings?.reservationEarlyCheckinEmailEn
-                  : settings?.reservationEarlyCheckinEmailEs
-                : input.language === "en"
-                  ? settings?.reservationCheckinEmailEn
-                  : settings?.reservationCheckinEmailEs,
+              configuredReservationTemplate(
+                settings,
+                input.messageType,
+                "email",
+                input.language
+              ),
               context,
               invitation.url,
               input.language,
@@ -5304,9 +5301,12 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           const { settings: welcomeSettings, context: welcomeContext } =
             await getExternalReservationWelcomeContext(reservation);
           const template =
-            input.language === "en"
-              ? welcomeSettings?.reservationWelcomeEmailEn
-              : welcomeSettings?.reservationWelcomeEmailEs;
+            configuredReservationTemplate(
+              welcomeSettings,
+              "welcome",
+              "email",
+              input.language
+            );
           return buildConfiguredReservationWelcome(
             template,
             welcomeContext,
@@ -5368,17 +5368,12 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
               ? (await getExternalReservationWelcomeContext(reservation)).context
               : context;
           const configuredTemplate =
-            input.messageType === "online_checkin"
-              ? input.language === "en"
-                ? settings?.reservationCheckinWhatsappEn
-                : settings?.reservationCheckinWhatsappEs
-              : input.messageType === "early_checkin"
-                ? input.language === "en"
-                  ? settings?.reservationEarlyCheckinWhatsappEn
-                  : settings?.reservationEarlyCheckinWhatsappEs
-              : input.language === "en"
-                ? settings?.reservationWelcomeWhatsappEn
-                : settings?.reservationWelcomeWhatsappEs;
+            configuredReservationTemplate(
+              settings,
+              input.messageType,
+              "whatsapp",
+              input.language
+            );
           const templatedMessage = buildConfiguredReservationWhatsApp(
             configuredTemplate,
             welcomeContext,

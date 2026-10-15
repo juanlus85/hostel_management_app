@@ -6,6 +6,7 @@ import {
   buildOnlineCheckinInvitation,
   buildReservationWelcomeEmail,
   buildReservationWhatsAppMessage,
+  configuredReservationTemplate,
 } from "./reservationMessaging";
 
 const context = {
@@ -20,6 +21,19 @@ const context = {
 };
 
 describe("mensajería manual de reservas", () => {
+  it("reutiliza la plantilla del otro canal cuando la específica está vacía", () => {
+    const templates = {
+      reservationWelcomeWhatsappEs: "Bienvenida unificada {{NOMBRE_HUESPED}}",
+      reservationCheckinEmailEn: "Unified online check-in {{ENLACE_CHECKIN}}",
+    };
+    expect(
+      configuredReservationTemplate(templates, "welcome", "email", "es")
+    ).toBe("Bienvenida unificada {{NOMBRE_HUESPED}}");
+    expect(
+      configuredReservationTemplate(templates, "online_checkin", "whatsapp", "en")
+    ).toBe("Unified online check-in {{ENLACE_CHECKIN}}");
+  });
+
   it("genera una bienvenida completa con códigos de acceso", () => {
     const message = buildReservationWelcomeEmail(context, "es");
     expect(message.subject).toContain("Bienvenido");

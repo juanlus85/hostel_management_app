@@ -687,10 +687,10 @@ export default function ConfiguracionCheckin() {
                 Mensajes de bienvenida enviados desde Próximas reservas
               </p>
               <p className="mt-1 text-amber-900">
-                Estas plantillas son distintas del mensaje que aparece dentro
-                del formulario de Check-in Online. Puedes usar las etiquetas
-                dinámicas anteriores; la recepción podrá personalizar el texto
-                antes de cada envío.
+                Si rellenas una plantilla específica de correo o WhatsApp, se
+                usará en ese canal. Si dejas una de las dos vacía, se reutiliza
+                automáticamente su equivalente para que el mismo mensaje salga
+                desde la agenda. La recepción podrá revisarlo antes de enviar.
               </p>
             </div>
             <div>
