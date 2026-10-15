@@ -1894,3 +1894,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Unificar el área de Check-in: retirar las pestañas redundantes de Pre-check-in y Online, centralizar sus envíos en el detalle de cada reserva y reunir las plantillas en Configuración > Mensajes.
 - [x] En Huéspedes, mostrar por defecto los Check-ins completados de los últimos 7 días, permitir cambiar a últimos 30 días, todos o intervalo personalizado, y eliminar varios registros seleccionados.
 - [x] En Cajas F, permitir editar apuntes y recalcular el acumulado completo por fecha e identificador tras crear, modificar o borrar un movimiento, incluidos apuntes retroactivos.
+- [x] Mantener operativa la configuración y mensajería de Check-in en bases de datos sin las columnas nuevas de plantillas de Pre-check-in, usando las plantillas existentes como respaldo.
