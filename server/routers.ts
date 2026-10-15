@@ -5165,7 +5165,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
               messageType: input.messageType,
               notes: result.success
                 ? input.messageType === "early_checkin"
-                  ? "Invitación de Check-in anticipado enviada por recepción"
+                  ? "Invitación de Pre-check-in enviada por recepción"
                   : "Invitación de Check-in Online con códigos enviada por recepción"
                 : result.error || "No se pudo enviar la invitación",
               sentAt: result.success ? new Date() : null,
@@ -5368,7 +5368,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             channel: "whatsapp",
             status: "prepared",
             messageType: input.messageType,
-            notes: `Borrador de ${input.messageType === "online_checkin" ? "Check-in Online con códigos" : input.messageType === "early_checkin" ? "Check-in anticipado" : "bienvenida"} preparado para confirmación manual`,
+            notes: `Borrador de ${input.messageType === "online_checkin" ? "Check-in Online con códigos" : input.messageType === "early_checkin" ? "Pre-check-in" : "bienvenida"} preparado para confirmación manual`,
             sentAt: null,
             createdBy: ctx.user.id,
           });

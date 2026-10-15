@@ -48,6 +48,10 @@ export default function CheckinAnticipadoPublico() {
   const createGuestMutation = trpc.checkin.guests.create.useMutation();
 
   const t = (es: string, en: string) => (lang === "es" ? es : en);
+  const originalDocumentNotice = t(
+    "Aunque completes este Pre-check-in para agilizar tu llegada, al llegar será obligatorio presentar en recepción el documento físico original de cada huésped. Comprobaremos y validaremos los datos facilitados. Sin presentar el documento físico original, la entrada será denegada conforme a la normativa aplicable.",
+    "Although this Fast Check-in helps speed up your arrival, every guest must present the original physical document at reception. We will check and validate the information provided. Without the original physical document, admission will be refused in accordance with applicable legal requirements."
+  );
   const allowedDocumentTypes = getAllowedDocumentTypes(formData.nationality);
   const documentLabel = (code: string) => ({
     NIF: t("DNI / NIF", "Spanish ID / NIF"),
@@ -201,7 +205,7 @@ export default function CheckinAnticipadoPublico() {
       });
 
       setIsSubmitted(true);
-      toast.success(t("Check-in anticipado completado correctamente", "Early check-in completed successfully"));
+      toast.success(t("Pre-check-in completado correctamente", "Fast check-in completed successfully"));
     } catch (error: any) {
       toast.error(t(`Error: ${error.message}`, `Error: ${error.message}`));
     } finally {
@@ -216,7 +220,7 @@ export default function CheckinAnticipadoPublico() {
           <CardContent className="pt-6 text-center space-y-4">
             <CheckCircle2 className="w-16 h-16 text-green-600 mx-auto" />
             <h2 className="text-2xl font-bold text-green-900">
-              {t("¡Check-in Anticipado Completado!", "Early Check-in Completed!")}
+              {t("¡Pre-check-in completado!", "Fast Check-in completed!")}
             </h2>
             <div className="space-y-4 text-left">
               <p className="text-base font-semibold text-gray-800">
@@ -227,8 +231,8 @@ export default function CheckinAnticipadoPublico() {
               </p>
               <p className="text-sm text-muted-foreground">
                 {t(
-                  "Tu información nos permitirá agilizar significativamente tu proceso de check-in a la llegada. Nuestro equipo de recepción ya tiene tus datos y podrá completar el registro de forma rápida y eficiente.",
-                  "Your information will allow us to significantly speed up your check-in process upon arrival. Our reception team already has your details and will be able to complete the registration quickly and efficiently."
+                  "Tu información ayudará a agilizar tu llegada. Nuestro equipo de recepción ya tiene tus datos y podrá completar el registro de forma más rápida.",
+                  "Your information will help speed up your arrival. Our reception team already has your details and can complete the registration more quickly."
                 )}
               </p>
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mt-4">
@@ -237,8 +241,8 @@ export default function CheckinAnticipadoPublico() {
                 </p>
                 <p className="text-sm text-amber-800">
                   {t(
-                    "Es obligatorio presentar el documento original (DNI, Pasaporte, etc.) a la llegada. Este será utilizado para verificar que los datos facilitados sean correctos y completar el registro oficial.",
-                    "It is mandatory to present the original document (ID, Passport, etc.) upon arrival. This will be used to verify that the information provided is correct and to complete the official registration."
+                    "Aunque hayas completado el Pre-check-in, es obligatorio presentar el documento físico original de cada huésped en recepción. Comprobaremos y validaremos los datos facilitados; sin el documento original físico, la entrada será denegada conforme a la normativa aplicable.",
+                    "Even after completing Fast Check-in, every guest must present the original physical document at reception. We will check and validate the information provided; without the original physical document, admission will be refused in accordance with applicable legal requirements."
                   )}
                 </p>
               </div>
@@ -260,25 +264,32 @@ export default function CheckinAnticipadoPublico() {
       <div className="max-w-3xl mx-auto">
         <Card>
           <CardHeader>
-            <div className="mb-4 flex justify-center gap-2">
-              <Button type="button" size="sm" onClick={() => setLang("es")} className={`border-0 bg-gradient-to-r from-red-600 via-yellow-300 to-red-600 font-bold text-slate-950 shadow-sm hover:opacity-90 ${lang === "es" ? "ring-2 ring-slate-900 ring-offset-2" : "opacity-70"}`}>ESPAÑOL</Button>
-              <Button type="button" size="sm" onClick={() => setLang("en")} className={`border-0 bg-gradient-to-r from-blue-900 via-white to-red-600 font-bold text-slate-900 shadow-sm hover:opacity-90 ${lang === "en" ? "ring-2 ring-slate-900 ring-offset-2" : "opacity-70"}`}>ENGLISH</Button>
+            <div className="mb-5 rounded-xl border-2 border-slate-300 bg-slate-50 p-2 shadow-sm">
+              <p className="mb-2 text-center text-xs font-bold uppercase tracking-[0.16em] text-slate-700">Idioma / Language</p>
+              <div className="grid grid-cols-2 gap-2">
+                <Button type="button" size="lg" onClick={() => setLang("es")} className={`min-h-12 border-0 bg-gradient-to-r from-red-600 via-yellow-300 to-red-600 text-sm font-extrabold text-slate-950 shadow-sm hover:opacity-90 ${lang === "es" ? "ring-3 ring-slate-900 ring-offset-2" : "opacity-60"}`}>ES · ESPAÑOL</Button>
+                <Button type="button" size="lg" onClick={() => setLang("en")} className={`min-h-12 border-0 bg-gradient-to-r from-blue-900 via-white to-red-600 text-sm font-extrabold text-slate-900 shadow-sm hover:opacity-90 ${lang === "en" ? "ring-3 ring-slate-900 ring-offset-2" : "opacity-60"}`}>EN · ENGLISH</Button>
+              </div>
             </div>
             <div className="text-center">
               <CardTitle className="text-2xl">
-                {t("Check-in Anticipado", "Early Check-in")}
+                {t("Pre-check-in", "Fast Check-in")}
               </CardTitle>
             </div>
             <p className="text-sm text-muted-foreground">
               {t(
-                "Completa tus datos antes de llegar para agilizar el proceso de check-in",
-                "Complete your information before arrival to speed up the check-in process"
+                "Completa tus datos antes de llegar para agilizar tu registro en recepción",
+                "Complete your information before arrival to make registration at reception faster"
               )}
             </p>
           </CardHeader>
 
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="rounded-xl border-2 border-amber-300 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
+                <p className="font-bold">{t("Documento físico original obligatorio", "Original physical document required")}</p>
+                <p className="mt-1">{originalDocumentNotice}</p>
+              </div>
               {/* Datos Personales */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold border-b pb-2">
@@ -581,7 +592,7 @@ export default function CheckinAnticipadoPublico() {
                     {t("Enviando...", "Submitting...")}
                   </>
                 ) : (
-                  t("Completar Check-in Anticipado", "Complete Early Check-in")
+                  t("Completar Pre-check-in", "Complete Fast Check-in")
                 )}
               </Button>
             </form>

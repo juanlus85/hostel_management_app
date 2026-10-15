@@ -293,7 +293,7 @@ export async function sendShiftNotificationEmail(
 }
 
 
-// Send check-in anticipado confirmation email
+// Send Pre-check-in confirmation email
 export async function sendCheckinAnticipadoConfirmation(
   guestData: {
     firstName: string;
@@ -307,8 +307,8 @@ export async function sendCheckinAnticipadoConfirmation(
   const isSpanish = guestData.language === "es" || !guestData.language;
   
   const subject = isSpanish 
-    ? "Confirmación de Check-in Anticipado - The Spot Central Hostel"
-    : "Early Check-in Confirmation - The Spot Central Hostel";
+    ? "Confirmación de Pre-check-in - The Spot Central Hostel"
+    : "Fast Check-in Confirmation - The Spot Central Hostel";
   
   const html = isSpanish ? `
     <!DOCTYPE html>
@@ -329,12 +329,12 @@ export async function sendCheckinAnticipadoConfirmation(
     <body>
       <div class="container">
         <div class="header">
-          <h1>¡Check-in Anticipado Recibido!</h1>
+          <h1>¡Pre-check-in recibido!</h1>
         </div>
         <div class="content">
           <p>Hola <strong>${guestData.firstName} ${guestData.lastName}</strong>,</p>
           
-          <p>Hemos recibido correctamente tu información de check-in anticipado. Gracias por completar el formulario.</p>
+          <p>Hemos recibido correctamente tu información de Pre-check-in. Gracias por completar el formulario.</p>
           
           <div class="info-box">
             <h3>Resumen de tu Reserva</h3>
@@ -344,13 +344,13 @@ export async function sendCheckinAnticipadoConfirmation(
           </div>
           
           <div class="warning">
-            <h3>⚠️ Importante - Documento Original</h3>
-            <p>Recuerda que <span class="highlight">debes presentar tu documento de identidad original</span> al hacer el check-in en recepción. Es un requisito obligatorio de la policía española.</p>
+            <h3>⚠️ Documento físico original obligatorio</h3>
+            <p>Aunque hayas completado el Pre-check-in, <span class="highlight">cada huésped deberá presentar en recepción su documento físico original</span>. Comprobaremos y validaremos los datos facilitados. Sin presentar el documento físico original, la entrada será denegada conforme a la normativa aplicable.</p>
           </div>
           
           <p>Nuestro equipo revisará tu información y te asignará una habitación. Al llegar, solo tendrás que pasar por recepción para:</p>
           <ul>
-            <li>Verificar tu documento original</li>
+            <li>Presentar y verificar tu documento físico original</li>
             <li>Recoger las llaves de tu habitación</li>
             <li>Recibir información sobre el hostel</li>
           </ul>
@@ -387,12 +387,12 @@ export async function sendCheckinAnticipadoConfirmation(
     <body>
       <div class="container">
         <div class="header">
-          <h1>Early Check-in Received!</h1>
+          <h1>Fast Check-in received!</h1>
         </div>
         <div class="content">
           <p>Hello <strong>${guestData.firstName} ${guestData.lastName}</strong>,</p>
           
-          <p>We have successfully received your early check-in information. Thank you for completing the form.</p>
+          <p>We have successfully received your Fast Check-in information. Thank you for completing the form.</p>
           
           <div class="info-box">
             <h3>Booking Summary</h3>
@@ -402,13 +402,13 @@ export async function sendCheckinAnticipadoConfirmation(
           </div>
           
           <div class="warning">
-            <h3>⚠️ Important - Original Document</h3>
-            <p>Remember that <span class="highlight">you must present your original ID document</span> when checking in at reception. This is a mandatory requirement by Spanish police.</p>
+            <h3>⚠️ Original physical document required</h3>
+            <p>Although you have completed Fast Check-in, <span class="highlight">every guest must present the original physical document at reception</span>. We will check and validate the information provided. Without the original physical document, admission will be refused in accordance with applicable legal requirements.</p>
           </div>
           
           <p>Our team will review your information and assign you a room. Upon arrival, you just need to stop by reception to:</p>
           <ul>
-            <li>Verify your original document</li>
+            <li>Present and verify your original physical document</li>
             <li>Collect your room keys</li>
             <li>Receive information about the hostel</li>
           </ul>
@@ -534,7 +534,7 @@ export async function sendOnlineCheckinConfirmation(guestData: {
 }
 
 
-// Send notification to reception when early check-in is received
+// Send notification to reception when Pre-check-in is received
 export async function sendCheckinAnticipadoNotificationToReception(
   guestData: {
     firstName: string;
@@ -562,7 +562,7 @@ export async function sendCheckinAnticipadoNotificationToReception(
     numberOfGuests?: number;
   }
 ): Promise<{ success: boolean; error?: string }> {
-  const subject = `Nuevo Check-in Anticipado Recibido - ${guestData.firstName} ${guestData.lastName}`;
+  const subject = `Nuevo Pre-check-in recibido - ${guestData.firstName} ${guestData.lastName}`;
   
   const html = `
     <!DOCTYPE html>
@@ -585,10 +585,10 @@ export async function sendCheckinAnticipadoNotificationToReception(
     <body>
       <div class="container">
         <div class="header">
-          <h1>📋 Nuevo Check-in Anticipado</h1>
+          <h1>📋 Nuevo Pre-check-in</h1>
         </div>
         <div class="content">
-          <p>Se ha recibido un nuevo formulario de check-in anticipado que requiere revisión y asignación de habitación.</p>
+          <p>Se ha recibido un nuevo formulario de Pre-check-in que requiere revisión y asignación de habitación.</p>
           
           <div class="info-box">
             <h3>Datos del Huésped</h3>

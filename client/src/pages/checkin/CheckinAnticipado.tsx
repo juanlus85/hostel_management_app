@@ -27,7 +27,7 @@ export default function CheckinAnticipado() {
 
   const deleteGuest = trpc.checkin.guests.delete.useMutation({
     onSuccess: () => {
-      toast.success("Check-in anticipado eliminado");
+      toast.success("Pre-check-in eliminado");
       refetch();
     },
   });
@@ -60,7 +60,7 @@ export default function CheckinAnticipado() {
   };
 
   const handleDelete = (id: number) => {
-    if (confirm("¿Eliminar este check-in anticipado?")) {
+    if (confirm("¿Eliminar este Pre-check-in?")) {
       deleteGuest.mutate({ id });
     }
   };
@@ -86,9 +86,9 @@ export default function CheckinAnticipado() {
   return (
     <Card className="min-w-0 p-4 sm:p-6">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold">Check-in Anticipado</h2>
+        <h2 className="text-2xl font-bold">Pre-check-in</h2>
         <p className="text-muted-foreground">
-          Gestiona los check-ins anticipados pendientes. Los completados aparecen en Huéspedes.
+          Gestiona los Pre-check-ins pendientes. Los completados aparecen en Huéspedes.
         </p>
       </div>
 
@@ -126,8 +126,8 @@ export default function CheckinAnticipado() {
       {/* Lista de Pendientes */}
       {filteredGuests.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
-          <p>No hay check-ins anticipados pendientes</p>
-          <p className="text-sm mt-2">Los check-ins completados aparecen en la pestaña Huéspedes</p>
+          <p>No hay Pre-check-ins pendientes</p>
+          <p className="text-sm mt-2">Los registros completados aparecen en la pestaña Huéspedes</p>
         </div>
       ) : (
         <>
@@ -202,7 +202,7 @@ export default function CheckinAnticipado() {
       <Dialog open={showDetails} onOpenChange={setShowDetails}>
         <DialogContent className="max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] overflow-y-auto p-4 sm:max-h-[80vh] sm:max-w-2xl sm:p-6">
           <DialogHeader>
-            <DialogTitle>Detalles del Check-in Anticipado</DialogTitle>
+            <DialogTitle>Detalles del Pre-check-in</DialogTitle>
           </DialogHeader>
 
           {selectedGuest && (

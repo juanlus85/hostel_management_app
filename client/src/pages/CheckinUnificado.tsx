@@ -43,7 +43,7 @@ export default function CheckinUnificado() {
           </TabsTrigger>
           <TabsTrigger value="anticipado" className="min-h-10 shrink-0 gap-2 px-3">
             <Send className="h-4 w-4" />
-            <span>Anticipado</span>
+            <span>Pre-check-in</span>
           </TabsTrigger>
           <TabsTrigger value="online" className="min-h-10 shrink-0 gap-2 px-3">
             <Globe className="h-4 w-4" />

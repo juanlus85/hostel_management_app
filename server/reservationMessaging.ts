@@ -251,18 +251,24 @@ export function buildConfiguredOnlineCheckinEmail(
     checkinUrl
   );
   if (!text) return buildOnlineCheckinInvitation(privateContext, checkinUrl, language, mode);
+  const legalNotice = mode === "early"
+    ? language === "en"
+      ? "Every guest must present the original physical document at reception, where the information provided will be checked and validated. Without the original physical document, admission will be refused in accordance with applicable legal requirements."
+      : "Cada huésped deberá presentar en recepción el documento físico original, donde se comprobarán y validarán los datos facilitados. Sin presentar el documento físico original, la entrada será denegada conforme a la normativa aplicable."
+    : "";
+  const completeText = legalNotice ? `${text}\n\n${legalNotice}` : text;
   const subject =
     language === "en"
       ? mode === "early"
-        ? "Complete your early check-in · The Spot Central Hostel"
+        ? "Complete your Fast Check-in · The Spot Central Hostel"
         : "Complete your online check-in · The Spot Central Hostel"
       : mode === "early"
-        ? "Completa tu Check-in anticipado · The Spot Central Hostel"
+        ? "Completa tu Pre-check-in · The Spot Central Hostel"
         : "Completa tu Check-in Online · The Spot Central Hostel";
   return {
     subject,
-    text,
-    html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#1f2937;line-height:1.6;white-space:pre-line">${escapeHtml(text)}</div>`,
+    text: completeText,
+    html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#1f2937;line-height:1.6;white-space:pre-line">${escapeHtml(completeText)}</div>`,
   };
 }
 
@@ -288,9 +294,14 @@ export function buildConfiguredReservationWhatsApp(
     checkinUrl
   );
   if (configured) {
+    const legalNotice = messageType === "early_checkin"
+      ? language === "en"
+        ? "Every guest must present the original physical document at reception for the information to be checked and validated. Without it, admission will be refused."
+        : "Cada huésped deberá presentar el documento físico original en recepción para comprobar y validar los datos. Sin él, la entrada será denegada."
+      : "";
     return messageType === "welcome"
       ? appendAccessCodes(configured, context, language)
-      : configured;
+      : legalNotice ? `${configured}\n\n${legalNotice}` : configured;
   }
   return buildReservationWhatsAppMessage(
     safeContext,
@@ -321,15 +332,15 @@ export function buildOnlineCheckinInvitation(
   const subject =
     language === "en"
       ? isEarly
-        ? "Complete your early check-in · The Spot Central Hostel"
+        ? "Complete your Fast Check-in · The Spot Central Hostel"
         : "Complete your online check-in for your stay in Seville · The Spot Central Hostel"
       : isEarly
-        ? "Completa tu Check-in anticipado · The Spot Central Hostel"
+        ? "Completa tu Pre-check-in · The Spot Central Hostel"
         : "Completa tu Check-in Online para tu estancia en Sevilla · The Spot Central Hostel";
   const text =
     language === "en"
-      ? `Hello ${displayName(privateContext.guestName)},\n\nWe are writing to you from The Spot Central Hostel in Seville. You have a reservation with us on ${arrivalDate}${privateContext.roomType ? ` for a ${roomType}${roomSuffix}` : ""}.\n\n${isEarly ? "To make your arrival quicker and avoid unnecessary waiting at reception, please complete the information in the early check-in link as soon as possible:" : "Before we provide your room details and access codes, please complete the document information for every guest in the online check-in form:"}\n${checkinUrl}\n\nWe have prefilled the booking information available. Please review it, complete the document details for every guest and sign the form.${isEarly ? " This will help us prepare your arrival. Our reception team will be expecting you and will provide your room details when you arrive." : " Once it is complete, you will receive your room details, location and access instructions."}\n\nWe look forward to welcoming you :)\n\nThe Spot Central Hostel`
-      : `Hola ${displayName(privateContext.guestName)},\n\nTe escribimos desde The Spot Central Hostel, en Sevilla. Tienes una reserva con nosotros el ${arrivalDate}${privateContext.roomType ? ` para una ${roomType}${roomSuffix}` : ""}.\n\n${isEarly ? "Para agilizar tu llegada y evitar esperas innecesarias en recepción, te agradeceríamos que completaras los datos del enlace de Check-in anticipado lo antes posible:" : "Antes de facilitarte los datos de tu habitación y los códigos de acceso, te pedimos que completes la información documental de todos los huéspedes en el siguiente formulario de Check-in Online:"}\n${checkinUrl}\n\nHemos precargado la información disponible de la reserva. Revísala, completa los datos documentales de todos los huéspedes y firma el formulario.${isEarly ? " Esto nos ayudará a preparar tu llegada. Te estaremos esperando en recepción y allí te facilitaremos los datos de tu habitación." : " Cuando lo completes, recibirás la habitación asignada, su ubicación y las instrucciones de acceso."}\n\n¡Te esperamos! :)\n\nThe Spot Central Hostel`;
+      ? `Hello ${displayName(privateContext.guestName)},\n\nWe are writing to you from The Spot Central Hostel in Seville. You have a reservation with us on ${arrivalDate}${privateContext.roomType ? ` for a ${roomType}${roomSuffix}` : ""}.\n\n${isEarly ? "To make your arrival quicker and avoid unnecessary waiting at reception, please complete the information in the Fast Check-in link as soon as possible:" : "Before we provide your room details and access codes, please complete the document information for every guest in the online check-in form:"}\n${checkinUrl}\n\nWe have prefilled the booking information available. Please review it, complete the document details for every guest and sign the form.${isEarly ? " This will help us prepare your arrival. Please note that every guest must present the original physical document at reception, where the data will be checked and validated. Without the original physical document, admission will be refused in accordance with applicable legal requirements." : " Once it is complete, you will receive your room details, location and access instructions."}\n\nWe look forward to welcoming you :)\n\nThe Spot Central Hostel`
+      : `Hola ${displayName(privateContext.guestName)},\n\nTe escribimos desde The Spot Central Hostel, en Sevilla. Tienes una reserva con nosotros el ${arrivalDate}${privateContext.roomType ? ` para una ${roomType}${roomSuffix}` : ""}.\n\n${isEarly ? "Para agilizar tu llegada y evitar esperas innecesarias en recepción, te agradeceríamos que completaras los datos del enlace de Pre-check-in lo antes posible:" : "Antes de facilitarte los datos de tu habitación y los códigos de acceso, te pedimos que completes la información documental de todos los huéspedes en el siguiente formulario de Check-in Online:"}\n${checkinUrl}\n\nHemos precargado la información disponible de la reserva. Revísala, completa los datos documentales de todos los huéspedes y firma el formulario.${isEarly ? " Esto nos ayudará a preparar tu llegada. Recuerda que cada huésped deberá presentar en recepción su documento físico original, donde comprobaremos y validaremos los datos facilitados. Sin presentar el documento físico original, la entrada será denegada conforme a la normativa aplicable." : " Cuando lo completes, recibirás la habitación asignada, su ubicación y las instrucciones de acceso."}\n\n¡Te esperamos! :)\n\nThe Spot Central Hostel`;
   const intro =
     language === "en"
       ? "We are writing to you from <strong>The Spot Central Hostel</strong>, in Seville."
@@ -337,20 +348,20 @@ export function buildOnlineCheckinInvitation(
   const request =
     language === "en"
       ? isEarly
-        ? "To make your arrival quicker and avoid unnecessary waiting at reception, please complete the information in the early check-in link as soon as possible:"
+        ? "To make your arrival quicker and avoid unnecessary waiting at reception, please complete the information in the Fast Check-in link as soon as possible:"
         : "Before we provide your room details and access codes, please complete the document information for every guest in the online check-in form:"
       : isEarly
-        ? "Para agilizar tu llegada y evitar esperas innecesarias en recepción, te agradeceríamos que completaras los datos del enlace de Check-in anticipado lo antes posible:"
+        ? "Para agilizar tu llegada y evitar esperas innecesarias en recepción, te agradeceríamos que completaras los datos del enlace de Pre-check-in lo antes posible:"
         : "Antes de facilitarte los datos de tu habitación y los códigos de acceso, te pedimos que completes la información documental de todos los huéspedes en el siguiente formulario de Check-in Online:";
   const completion =
     language === "en"
       ? isEarly
-        ? "We have prefilled the booking information available. Please review it, complete the document details for every guest and sign the form. This will help us prepare your arrival at reception."
+        ? "We have prefilled the booking information available. Please review it, complete the document details for every guest and sign the form. This will help us prepare your arrival at reception. Every guest must still present the original physical document at reception for the information to be checked and validated. Without it, admission will be refused in accordance with applicable legal requirements."
         : "We have prefilled the booking information available. Please review it, complete the document details for every guest and sign the form. Once it is complete, you will receive your room details, location and access instructions."
       : isEarly
-        ? "Hemos precargado la información disponible de la reserva. Revísala, completa los datos documentales de todos los huéspedes y firma el formulario. Esto nos ayudará a preparar tu llegada en recepción."
+        ? "Hemos precargado la información disponible de la reserva. Revísala, completa los datos documentales de todos los huéspedes y firma el formulario. Esto nos ayudará a preparar tu llegada en recepción. Cada huésped deberá presentar igualmente su documento físico original para comprobar y validar los datos facilitados. Sin el documento físico original, la entrada será denegada conforme a la normativa aplicable."
         : "Hemos precargado la información disponible de la reserva. Revísala, completa los datos documentales de todos los huéspedes y firma el formulario. Cuando lo completes, recibirás la habitación asignada, su ubicación y las instrucciones de acceso.";
-  const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#1f2937;line-height:1.6"><div style="background:#0f766e;color:#fff;padding:22px;border-radius:10px 10px 0 0"><h1 style="margin:0;font-size:22px">${escapeHtml(subject)}</h1></div><div style="background:#f8fafc;padding:26px;border-radius:0 0 10px 10px"><p>${language === "en" ? "Hello" : "Hola"} <strong>${name}</strong>,</p><p>${intro}</p><p>${bookingSummary}</p><p>${request}</p><p style="text-align:center;margin:28px 0"><a href="${safeUrl}" style="display:inline-block;background:#0f766e;color:#fff;text-decoration:none;font-weight:bold;padding:13px 20px;border-radius:7px">${language === "en" ? "Open online check-in" : "Abrir Check-in Online"}</a></p><p style="font-size:13px;color:#475569;word-break:break-all">${safeUrl}</p><p>${completion}</p><p>${language === "en" ? "We look forward to welcoming you :)" : "¡Te esperamos! :)"}</p><p><strong>The Spot Central Hostel</strong></p></div></div>`;
+  const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#1f2937;line-height:1.6"><div style="background:#0f766e;color:#fff;padding:22px;border-radius:10px 10px 0 0"><h1 style="margin:0;font-size:22px">${escapeHtml(subject)}</h1></div><div style="background:#f8fafc;padding:26px;border-radius:0 0 10px 10px"><p>${language === "en" ? "Hello" : "Hola"} <strong>${name}</strong>,</p><p>${intro}</p><p>${bookingSummary}</p><p>${request}</p><p style="text-align:center;margin:28px 0"><a href="${safeUrl}" style="display:inline-block;background:#0f766e;color:#fff;text-decoration:none;font-weight:bold;padding:13px 20px;border-radius:7px">${isEarly ? language === "en" ? "Open Fast Check-in" : "Abrir Pre-check-in" : language === "en" ? "Open online check-in" : "Abrir Check-in Online"}</a></p><p style="font-size:13px;color:#475569;word-break:break-all">${safeUrl}</p><p>${completion}</p><p>${language === "en" ? "We look forward to welcoming you :)" : "¡Te esperamos! :)"}</p><p><strong>The Spot Central Hostel</strong></p></div></div>`;
   return { subject, text, html };
 }
 
@@ -364,8 +375,8 @@ export function buildReservationWhatsAppMessage(
   if (messageType === "online_checkin" || messageType === "early_checkin") {
     const isEarly = messageType === "early_checkin";
     return language === "en"
-      ? `Hello ${name}, you can complete your ${isEarly ? "early check-in" : "online check-in"} for The Spot Central Hostel here:\n\n${checkinUrl}\n\nYour booking details have been prefilled where available. Please complete the documents and signature for all guests.${isEarly ? " This helps us prepare your arrival and reduce waiting time at reception." : " You will receive the access instructions once it is completed."}`
-      : `Hola ${name}, puedes completar tu ${isEarly ? "Check-in anticipado" : "Check-in Online"} de The Spot Central Hostel aquí:\n\n${checkinUrl}\n\nHemos precargado los datos disponibles de tu reserva. Completa los documentos y la firma de todos los huéspedes.${isEarly ? " Esto nos ayudará a preparar tu llegada y reducir el tiempo de espera en recepción." : " Recibirás las instrucciones de acceso cuando esté terminado."}`;
+      ? `Hello ${name}, you can complete your ${isEarly ? "Fast Check-in" : "online check-in"} for The Spot Central Hostel here:\n\n${checkinUrl}\n\nYour booking details have been prefilled where available. Please complete the documents and signature for all guests.${isEarly ? " This helps us prepare your arrival and reduce waiting time at reception. Every guest must still present the original physical document at reception for validation; without it, admission will be refused." : " You will receive the access instructions once it is completed."}`
+      : `Hola ${name}, puedes completar tu ${isEarly ? "Pre-check-in" : "Check-in Online"} de The Spot Central Hostel aquí:\n\n${checkinUrl}\n\nHemos precargado los datos disponibles de tu reserva. Completa los documentos y la firma de todos los huéspedes.${isEarly ? " Esto nos ayudará a preparar tu llegada y reducir el tiempo de espera en recepción. Cada huésped deberá presentar igualmente el documento físico original en recepción para validarlo; sin él, la entrada será denegada." : " Recibirás las instrucciones de acceso cuando esté terminado."}`;
   }
   return buildReservationWelcomeEmail(context, language).text;
 }

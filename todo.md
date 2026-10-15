@@ -1889,3 +1889,5 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Convertir las pestañas de Check-in en navegación horizontal desplazable y con etiquetas visibles para móvil y tablet.
 - [x] Mostrar Check-ins anticipados en tarjetas táctiles en móvil, conservando la tabla completa en escritorio y adaptando sus detalles a una columna.
 - [x] Mostrar gestión de huéspedes como tarjetas en móvil, mantener tabla en escritorio y apilar los detalles y ediciones en pantallas pequeñas.
+- [x] Renombrar el Check-in anticipado visible como «Pre-check-in»/«Fast Check-in», destacar claramente ES/EN y avisar en formulario, invitaciones y confirmaciones de que cada huésped debe presentar el documento físico original para su validación.
+- [x] Ordenar la mensajería de cada reserva por canal: correo a la izquierda y WhatsApp a la derecha para códigos, Pre-check-in sin códigos y Check-in con códigos.

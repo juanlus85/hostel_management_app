@@ -403,8 +403,8 @@ export default function CheckinOnlinePublico() {
               <CardDescription>
                 {isEarlyCheckin
                   ? t(
-                      "Completa tu Check-in anticipado de forma segura",
-                      "Complete your early check-in securely"
+                      "Completa tu Pre-check-in de forma segura",
+                      "Complete your Fast Check-in securely"
                     )
                   : t(
                       "Completa tu check-in online de forma segura",
@@ -432,6 +432,12 @@ export default function CheckinOnlinePublico() {
               <strong>{t("Huéspedes:", "Guests:")}</strong>{" "}
               {invitation.numberOfGuests}
             </div>
+            {isEarlyCheckin && (
+              <div className="rounded-xl border-2 border-amber-300 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
+                <p className="font-bold">{t("Documento físico original obligatorio", "Original physical document required")}</p>
+                <p className="mt-1">{t("Este Pre-check-in agiliza la llegada, pero cada huésped deberá presentar en recepción su documento físico original. Comprobaremos y validaremos los datos facilitados; sin el documento original físico, la entrada será denegada conforme a la normativa aplicable.", "Fast Check-in speeds up your arrival, but every guest must present the original physical document at reception. We will check and validate the information provided; without the original physical document, admission will be refused in accordance with applicable legal requirements.")}</p>
+              </div>
+            )}
           </CardHeader>
           <CardContent className="px-4 pb-6 sm:px-6">
             <form
@@ -471,7 +477,7 @@ export default function CheckinOnlinePublico() {
                   <ShieldCheck className="mr-2 h-5 w-5" />
                 )}
                 {isEarlyCheckin
-                  ? t("Completar Check-in anticipado", "Complete early check-in")
+                  ? t("Completar Pre-check-in", "Complete Fast Check-in")
                   : t(
                       "Completar check-in y recibir códigos",
                       "Complete check-in and receive codes"
@@ -897,7 +903,7 @@ function ArrivalConfirmation({
             )}
             <CheckCircle2 className="mx-auto h-16 w-16 text-teal-600" />
             <CardTitle className="mt-3 text-2xl">
-              {t("¡Gracias por completar tu Check-in anticipado!", "Thank you for completing your early check-in!")}
+              {t("¡Gracias por completar tu Pre-check-in!", "Thank you for completing your Fast Check-in!")}
             </CardTitle>
             <CardDescription>
               {t(
@@ -917,6 +923,10 @@ function ArrivalConfirmation({
                   "Your information will help us prepare your arrival and make your check-in at reception quicker. We will be expecting you to welcome you and provide your room details."
                 )}
               </p>
+            </section>
+            <section className="rounded-xl border-2 border-amber-300 bg-amber-50 p-5 text-left text-sm leading-6 text-amber-950">
+              <p className="font-bold">{t("Documento físico original obligatorio", "Original physical document required")}</p>
+              <p className="mt-2">{t("Para completar el registro al llegar, cada huésped deberá presentar en recepción su documento físico original. Comprobaremos y validaremos los datos facilitados; sin presentar el documento original físico, la entrada será denegada conforme a la normativa aplicable.", "To complete registration on arrival, every guest must present the original physical document at reception. We will check and validate the information provided; without the original physical document, admission will be refused in accordance with applicable legal requirements.")}</p>
             </section>
             <GuideBlock
               icon={<Phone className="h-5 w-5" />}
@@ -1032,8 +1042,8 @@ function ArrivalConfirmation({
                   "Your codes and this guide have also been sent to your email."
                 )
               : t(
-                  "Hemos recibido tus datos. Gracias por completar el Check-in anticipado.",
-                  "We have received your details. Thank you for completing the early check-in."
+                  "Hemos recibido tus datos. Gracias por completar el Pre-check-in.",
+                  "We have received your details. Thank you for completing Fast Check-in."
                 )}
           </CardDescription>
         </CardHeader>
@@ -1265,23 +1275,26 @@ function LanguageSwitch({
   setLang: (language: Language) => void;
 }) {
   return (
-    <div className="flex justify-center gap-2">
-      <Button
-        type="button"
-        size="sm"
-        onClick={() => setLang("es")}
-        className={`border-0 bg-gradient-to-r from-red-600 via-yellow-300 to-red-600 font-bold text-slate-950 shadow-sm hover:opacity-90 ${lang === "es" ? "ring-2 ring-slate-900 ring-offset-2" : "opacity-70"}`}
-      >
-        ESPAÑOL
-      </Button>
-      <Button
-        type="button"
-        size="sm"
-        onClick={() => setLang("en")}
-        className={`border-0 bg-gradient-to-r from-blue-900 via-white to-red-600 font-bold text-slate-900 shadow-sm hover:opacity-90 ${lang === "en" ? "ring-2 ring-slate-900 ring-offset-2" : "opacity-70"}`}
-      >
-        ENGLISH
-      </Button>
+    <div className="rounded-xl border-2 border-slate-300 bg-slate-50 p-2 shadow-sm">
+      <p className="mb-2 text-center text-xs font-bold uppercase tracking-[0.16em] text-slate-700">Idioma / Language</p>
+      <div className="grid grid-cols-2 gap-2">
+        <Button
+          type="button"
+          size="lg"
+          onClick={() => setLang("es")}
+          className={`min-h-12 border-0 bg-gradient-to-r from-red-600 via-yellow-300 to-red-600 text-sm font-extrabold text-slate-950 shadow-sm hover:opacity-90 ${lang === "es" ? "ring-3 ring-slate-900 ring-offset-2" : "opacity-60"}`}
+        >
+          ES · ESPAÑOL
+        </Button>
+        <Button
+          type="button"
+          size="lg"
+          onClick={() => setLang("en")}
+          className={`min-h-12 border-0 bg-gradient-to-r from-blue-900 via-white to-red-600 text-sm font-extrabold text-slate-900 shadow-sm hover:opacity-90 ${lang === "en" ? "ring-3 ring-slate-900 ring-offset-2" : "opacity-60"}`}
+        >
+          EN · ENGLISH
+        </Button>
+      </div>
     </div>
   );
 }

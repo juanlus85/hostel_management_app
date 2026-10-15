@@ -48,16 +48,17 @@ describe("mensajería manual de reservas", () => {
     expect(message.html).toContain("The Spot Central Hostel");
   });
 
-  it("mantiene la petición de agilidad solo para el Check-in anticipado", () => {
+  it("mantiene la petición de agilidad y la validación física solo para el Pre-check-in", () => {
     const message = buildOnlineCheckinInvitation(
       { ...context, roomType: "Twin Room with Shared Bathroom" },
       "https://management.example/checkin-online/token",
       "es",
       "early"
     );
-    expect(message.subject).toContain("anticipado");
+    expect(message.subject).toContain("Pre-check-in");
     expect(message.text).toContain("30 de agosto de 2026");
     expect(message.text).toContain("evitar esperas innecesarias en recepción");
+    expect(message.text).toContain("documento físico original");
     expect(message.text).not.toContain("Habitación 15");
   });
 

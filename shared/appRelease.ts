@@ -1,1 +1,1 @@
-export const APP_RELEASE_LABEL = "Versión v81. 13/10/2026 23:12";
+export const APP_RELEASE_LABEL = "Versión v83. 15/10/2026 11:10";

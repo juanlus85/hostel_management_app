@@ -211,7 +211,7 @@ export default function EditGuestModal({ guest, open, onOpenChange, onSuccess }:
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[calc(100vw-1rem)] max-w-none overflow-x-hidden sm:max-w-4xl lg:max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Editar Check-in Anticipado</DialogTitle>
+          <DialogTitle>Editar Pre-check-in</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
