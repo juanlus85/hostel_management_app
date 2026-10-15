@@ -8,6 +8,7 @@ import {
   buildReservationWhatsAppMessage,
   configuredReservationTemplate,
 } from "./reservationMessaging";
+import { reservationMessageTemplate } from "../shared/reservationMessageTemplates";
 
 const context = {
   guestName: "Ana <García>",
@@ -32,6 +33,32 @@ describe("mensajería manual de reservas", () => {
     expect(
       configuredReservationTemplate(templates, "online_checkin", "whatsapp", "en")
     ).toBe("Unified online check-in {{ENLACE_CHECKIN}}");
+  });
+
+  it("reemplaza los ejemplos antiguos por las tres redacciones completas", () => {
+    expect(
+      configuredReservationTemplate(
+        {
+          reservationWelcomeEmailEs:
+            "Hola {{NOMBRE_HUESPED}}, gracias por tu reserva en {{NOMBRE_HOSTEL}}.",
+        },
+        "welcome",
+        "email",
+        "es"
+      )
+    ).toBe(reservationMessageTemplate("welcome", "es"));
+    expect(reservationMessageTemplate("early_checkin", "es")).toContain(
+      "documento original físico"
+    );
+    expect(reservationMessageTemplate("early_checkin", "es")).not.toContain(
+      "{{CODIGO_ENTRADA}}"
+    );
+    expect(reservationMessageTemplate("online_checkin", "en")).toContain(
+      "Once the Online Check-in has been completed"
+    );
+    expect(reservationMessageTemplate("welcome", "en")).toContain(
+      "{{CODIGO_ENTRADA}}"
+    );
   });
 
   it("genera una bienvenida completa con códigos de acceso", () => {

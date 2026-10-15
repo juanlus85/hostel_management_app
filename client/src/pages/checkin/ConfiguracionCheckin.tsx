@@ -14,6 +14,51 @@ import {
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ARRIVAL_TEMPLATE_TAGS } from "@shared/arrivalTemplate";
+import {
+  isLegacyReservationMessageTemplate,
+  reservationMessageTemplate,
+  type ReservationMessageTemplateKind,
+} from "@shared/reservationMessageTemplates";
+
+const reservationMessageFields = {
+  welcome: {
+    es: ["reservationWelcomeEmailEs", "reservationWelcomeWhatsappEs"],
+    en: ["reservationWelcomeEmailEn", "reservationWelcomeWhatsappEn"],
+  },
+  online_checkin: {
+    es: ["reservationCheckinEmailEs", "reservationCheckinWhatsappEs"],
+    en: ["reservationCheckinEmailEn", "reservationCheckinWhatsappEn"],
+  },
+  early_checkin: {
+    es: ["reservationEarlyCheckinEmailEs", "reservationEarlyCheckinWhatsappEs"],
+    en: ["reservationEarlyCheckinEmailEn", "reservationEarlyCheckinWhatsappEn"],
+  },
+} as const;
+
+const reservationMessageDefinitions: Array<{
+  kind: ReservationMessageTemplateKind;
+  title: string;
+  description: string;
+}> = [
+  {
+    kind: "early_checkin",
+    title: "Pre-check-in / Fast Check-in",
+    description:
+      "Para agilizar la recepción. No comparte habitación ni códigos y exige presentar los documentos físicos originales.",
+  },
+  {
+    kind: "online_checkin",
+    title: "Check-in Online con códigos posteriores",
+    description:
+      "Solicita completar los datos; los códigos e instrucciones se reciben al terminar el formulario.",
+  },
+  {
+    kind: "welcome",
+    title: "Acceso directo con códigos",
+    description:
+      "Para el día de llegada cuando la recepción esté cerrada. Comparte habitación, códigos e instrucciones de acceso.",
+  },
+];
 
 export default function ConfiguracionCheckin() {
   const { data: settings, isLoading } = trpc.checkin.settings.get.useQuery();
@@ -140,11 +185,45 @@ export default function ConfiguracionCheckin() {
     }
   }, [settings]);
 
+  const messageTemplateValue = (
+    kind: ReservationMessageTemplateKind,
+    language: "es" | "en"
+  ) => {
+    const [emailKey, whatsappKey] = reservationMessageFields[kind][language];
+    const saved = [formData[emailKey], formData[whatsappKey]]
+      .map(value => value.trim())
+      .filter(value => value && !isLegacyReservationMessageTemplate(value))
+      .sort((left, right) => right.length - left.length)[0];
+    return saved || reservationMessageTemplate(kind, language);
+  };
+
+  const setMessageTemplate = (
+    kind: ReservationMessageTemplateKind,
+    language: "es" | "en",
+    value: string
+  ) => {
+    const [emailKey, whatsappKey] = reservationMessageFields[kind][language];
+    setFormData(current => ({
+      ...current,
+      [emailKey]: value,
+      [whatsappKey]: value,
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
-      await updateSettings.mutateAsync(formData);
+      const synchronized = { ...formData };
+      for (const { kind } of reservationMessageDefinitions) {
+        for (const language of ["es", "en"] as const) {
+          const [emailKey, whatsappKey] = reservationMessageFields[kind][language];
+          const value = messageTemplateValue(kind, language);
+          synchronized[emailKey] = value;
+          synchronized[whatsappKey] = value;
+        }
+      }
+      await updateSettings.mutateAsync(synchronized);
     } finally {
       setSaving(false);
     }
@@ -619,6 +698,64 @@ export default function ConfiguracionCheckin() {
           </TabsContent>
 
           <TabsContent value="mensajes" className="space-y-5 mt-6">
+            <div className="space-y-5">
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                    <MessageSquareText className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">Mensajes de reservas</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Hay tres mensajes operativos. Cada redacción se usa igual
+                      para correo y WhatsApp; solo cambia el canal de entrega.
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-1.5">
+                  {[...ARRIVAL_TEMPLATE_TAGS, "{{ENLACE_CHECKIN}}"].map(tag => (
+                    <code key={tag} className="rounded bg-background px-1.5 py-0.5 text-xs">
+                      {tag}
+                    </code>
+                  ))}
+                </div>
+              </div>
+
+              {reservationMessageDefinitions.map(definition => (
+                <section key={definition.kind} className="rounded-xl border bg-card p-4 shadow-sm">
+                  <h3 className="font-semibold">{definition.title}</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {definition.description}
+                  </p>
+                  <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                    {(["es", "en"] as const).map(language => (
+                      <div key={language} className="space-y-2">
+                        <Label htmlFor={`reservation-message-${definition.kind}-${language}`}>
+                          {language === "es" ? "Español" : "English"}
+                        </Label>
+                        <Textarea
+                          id={`reservation-message-${definition.kind}-${language}`}
+                          value={messageTemplateValue(definition.kind, language)}
+                          onChange={event =>
+                            setMessageTemplate(
+                              definition.kind,
+                              language,
+                              event.target.value
+                            )
+                          }
+                          rows={definition.kind === "welcome" ? 15 : 13}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              ))}
+              <p className="rounded-lg border border-sky-200 bg-sky-50 p-3 text-sm text-sky-950">
+                Al guardar, cada mensaje se sincroniza automáticamente para correo y WhatsApp.
+              </p>
+            </div>
+
+            <div className="hidden" aria-hidden="true">
             <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
               <div className="flex items-start gap-3">
                 <div className="rounded-lg bg-primary/10 p-2 text-primary">
@@ -898,6 +1035,7 @@ export default function ConfiguracionCheckin() {
                     rows={6}
                   />
                 </div>
+            </div>
             </div>
           </TabsContent>
 

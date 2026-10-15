@@ -1897,3 +1897,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Mantener operativa la configuración y mensajería de Check-in en bases de datos sin las columnas nuevas de plantillas de Pre-check-in, usando las plantillas existentes como respaldo.
 - [x] Traducir automáticamente tipo de habitación y planta en las plantillas de bienvenida según el idioma elegido, tomando la planta desde los códigos de acceso y completando también Wi‑Fi.
 - [x] Reutilizar automáticamente la plantilla equivalente entre correo y WhatsApp cuando el campo específico esté vacío, para que los borradores desde la agenda coincidan con lo configurado en Check-in.
+- [x] Unificar las plantillas de correo y WhatsApp en tres mensajes únicos por idioma: Pre-check-in/Fast Check-in sin códigos y con documento físico obligatorio; Check-in Online con códigos posteriores; y acceso directo con códigos para llegadas con recepción cerrada.

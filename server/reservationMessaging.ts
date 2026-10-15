@@ -1,5 +1,9 @@
 import { renderArrivalTemplate } from "../shared/arrivalTemplate";
 import { translateFloor, translateRoomType } from "../shared/arrivalDisplay";
+import {
+  isLegacyReservationMessageTemplate,
+  reservationMessageTemplate,
+} from "../shared/reservationMessageTemplates";
 
 export type ReservationMessageLanguage = "es" | "en";
 export type ReservationMessageType = "welcome" | "online_checkin" | "early_checkin";
@@ -34,17 +38,17 @@ export type ReservationMessageContext = {
 };
 
 /**
- * Cada canal admite un texto propio. Si uno no se ha configurado, reutiliza la
- * plantilla equivalente del otro para que el borrador desde la agenda refleje
- * el mensaje que ya se ha preparado en Configuración.
+ * Los dos canales comparten la misma redacción. De las antiguas plantillas
+ * duplicadas se toma la más completa como texto común, con una redacción base
+ * completa si todavía no se ha guardado ninguna.
  */
 export function configuredReservationTemplate(
   templates: ReservationMessageTemplates | null | undefined,
   messageType: ReservationMessageType,
-  channel: ReservationMessageChannel,
+  _channel: ReservationMessageChannel,
   language: ReservationMessageLanguage
 ) {
-  if (!templates) return null;
+  if (!templates) return reservationMessageTemplate(messageType, language);
   const base =
     messageType === "welcome"
       ? "reservationWelcome"
@@ -52,11 +56,13 @@ export function configuredReservationTemplate(
         ? "reservationCheckin"
         : "reservationEarlyCheckin";
   const locale = language === "en" ? "En" : "Es";
-  const primaryChannel = channel === "email" ? "Email" : "Whatsapp";
-  const alternateChannel = channel === "email" ? "Whatsapp" : "Email";
-  const primaryKey = `${base}${primaryChannel}${locale}` as keyof ReservationMessageTemplates;
-  const alternateKey = `${base}${alternateChannel}${locale}` as keyof ReservationMessageTemplates;
-  return templates[primaryKey]?.trim() || templates[alternateKey]?.trim() || null;
+  const emailKey = `${base}Email${locale}` as keyof ReservationMessageTemplates;
+  const whatsappKey = `${base}Whatsapp${locale}` as keyof ReservationMessageTemplates;
+  const configured = [templates[emailKey], templates[whatsappKey]]
+    .map(template => template?.trim() || "")
+    .filter(template => template && !isLegacyReservationMessageTemplate(template))
+    .sort((left, right) => right.length - left.length)[0];
+  return configured || reservationMessageTemplate(messageType, language);
 }
 
 // La habitación y los códigos se comunican solo después de completar el formulario.
