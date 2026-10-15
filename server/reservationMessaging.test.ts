@@ -181,9 +181,9 @@ describe("mensajería manual de reservas", () => {
     expect(message.text).not.toContain("Código: 1469");
   });
 
-  it("mantiene el aviso de documento físico en una plantilla de Pre-check-in configurable", () => {
+  it("no añade dos veces el aviso de documento físico a una plantilla de Pre-check-in", () => {
     const message = buildConfiguredOnlineCheckinEmail(
-      "Hola {{NOMBRE_HUESPED}}, completa el Pre-check-in: {{ENLACE_CHECKIN}}",
+      "Hola {{NOMBRE_HUESPED}}, completa el Pre-check-in: {{ENLACE_CHECKIN}}\n\nCada huésped deberá presentar en recepción el documento físico original, donde se comprobarán y validarán los datos facilitados. Sin presentar el documento físico original, la entrada será denegada conforme a la normativa aplicable.",
       context,
       "https://management.example/checkin-online/token",
       "es",
@@ -193,7 +193,7 @@ describe("mensajería manual de reservas", () => {
     expect(message.subject).toContain("Pre-check-in");
     expect(message.text).toContain("Hola Ana <García>");
     expect(message.text).toContain("https://management.example/checkin-online/token");
-    expect(message.text).toContain("documento físico original");
+    expect(message.text.match(/documento físico original/g)).toHaveLength(2);
     expect(message.text).not.toContain("Habitación 15");
   });
 
@@ -210,9 +210,9 @@ describe("mensajería manual de reservas", () => {
     expect(message).toContain("Código de entrada al hostel: 1469");
   });
 
-  it("adapta una plantilla de WhatsApp de Pre-check-in sin revelar códigos", () => {
+  it("mantiene una sola redacción de Pre-check-in por WhatsApp sin revelar códigos", () => {
     const message = buildConfiguredReservationWhatsApp(
-      "Hello {{NOMBRE_HUESPED}}, complete here: {{ENLACE_CHECKIN}}",
+      "Hello {{NOMBRE_HUESPED}}, complete here: {{ENLACE_CHECKIN}}\n\nEvery guest must present the original physical document upon arrival.",
       context,
       "early_checkin",
       "https://management.example/checkin-online/token",
@@ -221,7 +221,7 @@ describe("mensajería manual de reservas", () => {
     );
     expect(message).toContain("Hello");
     expect(message).toContain("https://management.example/checkin-online/token");
-    expect(message).toContain("original physical document");
+    expect(message.match(/original physical document/g)).toHaveLength(1);
     expect(message).not.toContain("1469");
     expect(message).not.toContain("2226");
   });

@@ -304,12 +304,6 @@ export function buildConfiguredOnlineCheckinEmail(
     language
   );
   if (!text) return buildOnlineCheckinInvitation(privateContext, checkinUrl, language, mode);
-  const legalNotice = mode === "early"
-    ? language === "en"
-      ? "Every guest must present the original physical document at reception, where the information provided will be checked and validated. Without the original physical document, admission will be refused in accordance with applicable legal requirements."
-      : "Cada huésped deberá presentar en recepción el documento físico original, donde se comprobarán y validarán los datos facilitados. Sin presentar el documento físico original, la entrada será denegada conforme a la normativa aplicable."
-    : "";
-  const completeText = legalNotice ? `${text}\n\n${legalNotice}` : text;
   const subject =
     language === "en"
       ? mode === "early"
@@ -320,8 +314,8 @@ export function buildConfiguredOnlineCheckinEmail(
         : "Completa tu Check-in Online · The Spot Central Hostel";
   return {
     subject,
-    text: completeText,
-    html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#1f2937;line-height:1.6;white-space:pre-line">${escapeHtml(completeText)}</div>`,
+    text,
+    html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#1f2937;line-height:1.6;white-space:pre-line">${escapeHtml(text)}</div>`,
   };
 }
 
@@ -343,14 +337,9 @@ export function buildConfiguredReservationWhatsApp(
     language
   );
   if (configured) {
-    const legalNotice = messageType === "early_checkin"
-      ? language === "en"
-        ? "Every guest must present the original physical document at reception for the information to be checked and validated. Without it, admission will be refused."
-        : "Cada huésped deberá presentar el documento físico original en recepción para comprobar y validar los datos. Sin él, la entrada será denegada."
-      : "";
     return messageType === "welcome"
       ? appendAccessCodes(configured, context, language)
-      : legalNotice ? `${configured}\n\n${legalNotice}` : configured;
+      : configured;
   }
   return buildReservationWhatsAppMessage(
     safeContext,
