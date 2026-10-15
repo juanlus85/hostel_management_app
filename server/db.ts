@@ -11,7 +11,6 @@ import {
   like,
   notInArray,
   isNull,
-  getTableColumns,
 } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { aggregateDailyCashSales } from "../shared/dailyCashSales";
@@ -134,31 +133,43 @@ import { displayOrderUpdates } from "../shared/workerDisplayOrder";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
-const {
-  reservationEarlyCheckinEmailEs: _reservationEarlyCheckinEmailEs,
-  reservationEarlyCheckinEmailEn: _reservationEarlyCheckinEmailEn,
-  reservationEarlyCheckinWhatsappEs: _reservationEarlyCheckinWhatsappEs,
-  reservationEarlyCheckinWhatsappEn: _reservationEarlyCheckinWhatsappEn,
-  ...legacyHostelSettingsColumns
-} = getTableColumns(hostelSettingsCheckin);
-
-function isMissingEarlyCheckinTemplateColumn(error: unknown) {
-  const message = error instanceof Error ? error.message : String(error);
+function isMissingHostelSettingsColumn(error: unknown) {
+  const messages: string[] = [];
+  let current: unknown = error;
+  for (let depth = 0; current && depth < 4; depth += 1) {
+    if (current instanceof Error) {
+      messages.push(current.message);
+      current = (current as Error & { cause?: unknown }).cause;
+    } else {
+      messages.push(String(current));
+      break;
+    }
+  }
+  const message = messages.join(" ");
   return (
-    /reservationEarlyCheckin(?:Email|Whatsapp)(?:Es|En)/i.test(message) &&
+    /hostel_settings_checkin/i.test(message) &&
     /(unknown column|doesn't exist|no such column)/i.test(message)
   );
 }
 
-function withoutEarlyCheckinTemplateFields(data: Partial<InsertHostelSettingCheckin>) {
-  const {
-    reservationEarlyCheckinEmailEs: _emailEs,
-    reservationEarlyCheckinEmailEn: _emailEn,
-    reservationEarlyCheckinWhatsappEs: _whatsappEs,
-    reservationEarlyCheckinWhatsappEn: _whatsappEn,
-    ...legacyData
-  } = data;
-  return legacyData;
+function resultRows(result: any): Record<string, unknown>[] {
+  if (Array.isArray(result?.[0])) return result[0];
+  return Array.isArray(result) ? result : [];
+}
+
+async function supportedHostelSettingsData(
+  db: any,
+  data: Partial<InsertHostelSettingCheckin>
+) {
+  const columnsResult = await db.execute(sql`SHOW COLUMNS FROM hostel_settings_checkin`);
+  const availableColumns = new Set(
+    resultRows(columnsResult)
+      .map(column => typeof column.Field === "string" ? column.Field : "")
+      .filter(Boolean)
+  );
+  return Object.fromEntries(
+    Object.entries(data).filter(([key]) => availableColumns.has(key))
+  ) as Partial<InsertHostelSettingCheckin>;
 }
 
 export async function getDb() {
@@ -3208,18 +3219,9 @@ export async function getHostelSettings() {
   try {
     result = await db.select().from(hostelSettingsCheckin).limit(1);
   } catch (error) {
-    if (!isMissingEarlyCheckinTemplateColumn(error)) throw error;
-    const legacyResult = await db
-      .select(legacyHostelSettingsColumns)
-      .from(hostelSettingsCheckin)
-      .limit(1);
-    result = legacyResult.map(settings => ({
-      ...settings,
-      reservationEarlyCheckinEmailEs: null,
-      reservationEarlyCheckinEmailEn: null,
-      reservationEarlyCheckinWhatsappEs: null,
-      reservationEarlyCheckinWhatsappEn: null,
-    })) as HostelSettingCheckin[];
+    if (!isMissingHostelSettingsColumn(error)) throw error;
+    const rawResult = await db.execute(sql`SELECT * FROM hostel_settings_checkin LIMIT 1`);
+    result = resultRows(rawResult) as HostelSettingCheckin[];
   }
   return result.length > 0 ? result[0] : null;
 }
@@ -3240,11 +3242,14 @@ export async function upsertHostelSettings(
         .set(data)
         .where(eq(hostelSettingsCheckin.id, existing.id));
     } catch (error) {
-      if (!isMissingEarlyCheckinTemplateColumn(error)) throw error;
-      await db
-        .update(hostelSettingsCheckin)
-        .set(withoutEarlyCheckinTemplateFields(data))
-        .where(eq(hostelSettingsCheckin.id, existing.id));
+      if (!isMissingHostelSettingsColumn(error)) throw error;
+      const compatibleData = await supportedHostelSettingsData(db, data);
+      if (Object.keys(compatibleData).length > 0) {
+        await db
+          .update(hostelSettingsCheckin)
+          .set(compatibleData)
+          .where(eq(hostelSettingsCheckin.id, existing.id));
+      }
     }
     return existing.id;
   } else {
@@ -3254,10 +3259,10 @@ export async function upsertHostelSettings(
         .insert(hostelSettingsCheckin)
         .values(data as InsertHostelSettingCheckin);
     } catch (error) {
-      if (!isMissingEarlyCheckinTemplateColumn(error)) throw error;
+      if (!isMissingHostelSettingsColumn(error)) throw error;
       result = await db
         .insert(hostelSettingsCheckin)
-        .values(withoutEarlyCheckinTemplateFields(data) as InsertHostelSettingCheckin);
+        .values((await supportedHostelSettingsData(db, data)) as InsertHostelSettingCheckin);
     }
     return result[0].insertId;
   }
