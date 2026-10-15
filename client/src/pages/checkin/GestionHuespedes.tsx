@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
-import { Loader2, Search, Eye, Edit, Trash2, Download, FileText, ClipboardCheck } from "lucide-react";
+import { Loader2, Search, Eye, Edit, Trash2, Download, ClipboardCheck } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -14,6 +14,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -21,25 +29,37 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useLocation } from "wouter";
 import CheckinPresencial from "./CheckinPresencial";
+import { getGuestListPeriodRange, type GuestListPeriod } from "@shared/guestListPeriod";
 
 export default function GestionHuespedes() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [period, setPeriod] = useState<GuestListPeriod>("week");
+  const [customStartDate, setCustomStartDate] = useState("");
+  const [customEndDate, setCustomEndDate] = useState("");
+  const [selectedGuestIds, setSelectedGuestIds] = useState<number[]>([]);
   const [selectedGuest, setSelectedGuest] = useState<any>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isCheckinOpen, setIsCheckinOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingGuest, setEditingGuest] = useState<any>(null);
-  const [, setLocation] = useLocation();
+  const periodRange = useMemo(() => getGuestListPeriodRange(period), [period]);
+  const guestQuery = useMemo(
+    () => ({
+      search: searchTerm || undefined,
+      startDate: period === "custom" ? customStartDate || undefined : periodRange.startDate,
+      endDate: period === "custom" ? customEndDate || undefined : periodRange.endDate,
+      status: periodRange.status,
+    }),
+    [customEndDate, customStartDate, period, periodRange, searchTerm]
+  );
+  const { data: guests, isLoading, isError, error, refetch } = trpc.checkin.guests.search.useQuery(guestQuery);
+  const selectedGuestIdSet = useMemo(() => new Set(selectedGuestIds), [selectedGuestIds]);
 
-  const { data: guests, isLoading, isError, error, refetch } = trpc.checkin.guests.search.useQuery({
-    search: searchTerm || undefined,
-    startDate: startDate || undefined,
-    endDate: endDate || undefined,
-  });
+  useEffect(() => {
+    const visibleIds = new Set((guests || []).map(guest => guest.id));
+    setSelectedGuestIds(ids => ids.filter(id => visibleIds.has(id)));
+  }, [guests]);
 
   const deleteGuest = trpc.checkin.guests.delete.useMutation({
     onSuccess: () => {
@@ -51,9 +71,37 @@ export default function GestionHuespedes() {
     },
   });
 
+  const deleteGuests = trpc.checkin.guests.deleteMany.useMutation({
+    onSuccess: result => {
+      alert(`${result.deletedCount} huésped(es) eliminado(s) correctamente`);
+      setSelectedGuestIds([]);
+      refetch();
+    },
+    onError: error => {
+      alert(`Error: ${error.message}`);
+    },
+  });
+
   const handleDelete = async (id: number, name: string) => {
     if (confirm(`¿Estás seguro de eliminar a ${name}?`)) {
       await deleteGuest.mutateAsync({ id });
+    }
+  };
+
+  const toggleSelectedGuest = (id: number, checked: boolean) => {
+    setSelectedGuestIds(ids =>
+      checked ? Array.from(new Set(ids.concat(id))) : ids.filter(selectedId => selectedId !== id)
+    );
+  };
+
+  const toggleAllVisibleGuests = (checked: boolean) => {
+    setSelectedGuestIds(checked ? (guests || []).map(guest => guest.id) : []);
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedGuestIds.length === 0) return;
+    if (confirm(`¿Eliminar los ${selectedGuestIds.length} huéspedes seleccionados? Esta acción no se puede deshacer.`)) {
+      deleteGuests.mutate({ ids: selectedGuestIds });
     }
   };
 
@@ -311,8 +359,7 @@ export default function GestionHuespedes() {
         <p className="text-muted-foreground">Búsqueda y gestión de registros</p>
       </div>
 
-      {/* Filtros */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <div>
           <Label htmlFor="search">Buscar</Label>
           <div className="relative">
@@ -326,25 +373,50 @@ export default function GestionHuespedes() {
             />
           </div>
         </div>
-        
+
         <div>
-          <Label htmlFor="startDate">Desde</Label>
-          <Input
-            id="startDate"
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-          />
+          <Label htmlFor="guest-period">Período</Label>
+          <Select value={period} onValueChange={value => setPeriod(value as GuestListPeriod)}>
+            <SelectTrigger id="guest-period"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="week">Última semana · completados</SelectItem>
+              <SelectItem value="month">Último mes · completados</SelectItem>
+              <SelectItem value="all">Todos los huéspedes</SelectItem>
+              <SelectItem value="custom">Intervalo personalizado</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        
-        <div>
-          <Label htmlFor="endDate">Hasta</Label>
-          <Input
-            id="endDate"
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-          />
+
+        {period === "custom" && <>
+          <div>
+            <Label htmlFor="startDate">Desde</Label>
+            <Input id="startDate" type="date" value={customStartDate} onChange={e => setCustomStartDate(e.target.value)} />
+          </div>
+          <div>
+            <Label htmlFor="endDate">Hasta</Label>
+            <Input id="endDate" type="date" value={customEndDate} onChange={e => setCustomEndDate(e.target.value)} />
+          </div>
+        </>}
+      </div>
+
+      <div className="my-5 flex flex-col gap-3 rounded-lg border bg-muted/25 p-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-muted-foreground">
+          {selectedGuestIds.length > 0
+            ? `${selectedGuestIds.length} huésped(es) seleccionado(s)`
+            : period === "week"
+              ? "Por defecto: Check-ins completados en los últimos 7 días."
+              : "Selecciona registros para eliminarlos juntos."}
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="outline" onClick={() => toggleAllVisibleGuests(true)} disabled={!guests?.length}>
+            Seleccionar visibles
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setSelectedGuestIds([])} disabled={selectedGuestIds.length === 0}>
+            Quitar selección
+          </Button>
+          <Button size="sm" variant="destructive" onClick={handleDeleteSelected} disabled={selectedGuestIds.length === 0 || deleteGuests.isPending}>
+            <Trash2 className="mr-2 h-4 w-4" />Eliminar seleccionados
+          </Button>
         </div>
       </div>
 
@@ -369,7 +441,15 @@ export default function GestionHuespedes() {
           {guests.map((guest) => (
             <article key={guest.id} className="rounded-lg border bg-card p-4 shadow-sm">
               <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0"><h3 className="truncate font-semibold">{guest.firstName} {guest.lastName}</h3><p className="mt-1 truncate text-sm text-muted-foreground">{guest.documentNumber || "Sin documento"} · Hab. {guest.roomNumber || "—"}</p></div>
+                <div className="flex min-w-0 gap-3">
+                  <Checkbox
+                    className="mt-1"
+                    checked={selectedGuestIdSet.has(guest.id)}
+                    onCheckedChange={checked => toggleSelectedGuest(guest.id, checked === true)}
+                    aria-label={`Seleccionar a ${guest.firstName} ${guest.lastName}`}
+                  />
+                  <div className="min-w-0"><h3 className="truncate font-semibold">{guest.firstName} {guest.lastName}</h3><p className="mt-1 truncate text-sm text-muted-foreground">{guest.documentNumber || "Sin documento"} · Hab. {guest.roomNumber || "—"}</p></div>
+                </div>
                 <div className="shrink-0">{getStatusBadge(guest.status || "pending")}</div>
               </div>
               <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-muted-foreground"><p>Reserva: <span className="font-medium text-foreground">{guest.reservationNumber || "—"}</span></p><p>Entrada: <span className="font-medium text-foreground">{guest.checkInDate ? new Date(guest.checkInDate).toLocaleDateString() : "—"}</span></p></div>
@@ -381,6 +461,13 @@ export default function GestionHuespedes() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox
+                    checked={guests.length > 0 && guests.every(guest => selectedGuestIdSet.has(guest.id))}
+                    onCheckedChange={checked => toggleAllVisibleGuests(checked === true)}
+                    aria-label="Seleccionar todos los huéspedes visibles"
+                  />
+                </TableHead>
                 <TableHead>Nombre</TableHead>
                 <TableHead>Documento</TableHead>
                 <TableHead>Reserva</TableHead>
@@ -393,6 +480,13 @@ export default function GestionHuespedes() {
             <TableBody>
               {guests.map((guest) => (
                 <TableRow key={guest.id}>
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedGuestIdSet.has(guest.id)}
+                      onCheckedChange={checked => toggleSelectedGuest(guest.id, checked === true)}
+                      aria-label={`Seleccionar a ${guest.firstName} ${guest.lastName}`}
+                    />
+                  </TableCell>
                   <TableCell className="font-medium">
                     {guest.firstName} {guest.lastName}
                   </TableCell>

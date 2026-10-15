@@ -20,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Check, X, Minus, Plus, Trash2 } from "lucide-react";
+import { Check, X, Minus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 const TYPE_LABELS: Record<string, string> = {
@@ -45,8 +45,31 @@ export default function CajasF() {
     concept: "",
     amount: "",
   });
+  const [editingMovement, setEditingMovement] = useState<any | null>(null);
 
   const businessId = activeTab === "hostel" ? 1 : 2;
+
+  const resetForm = () => {
+    setShowForm(false);
+    setEditingMovement(null);
+    setFormData({
+      date: new Date().toISOString().split("T")[0],
+      type: "" as any,
+      concept: "",
+      amount: "",
+    });
+  };
+
+  const startEditing = (movement: any) => {
+    setEditingMovement(movement);
+    setShowForm(true);
+    setFormData({
+      date: movement.date,
+      type: movement.type,
+      concept: movement.concept || "",
+      amount: String(movement.amount),
+    });
+  };
 
   const { data: movements, refetch } = trpc.safeBoxes.list.useQuery({
     businessId,
@@ -57,16 +80,21 @@ export default function CajasF() {
     onSuccess: () => {
       toast.success("Movimiento agregado correctamente");
       refetch();
-      setShowForm(false);
-      setFormData({
-        date: new Date().toISOString().split("T")[0],
-        type: "" as any,
-        concept: "",
-        amount: "",
-      });
+      resetForm();
     },
     onError: (error) => {
       toast.error("Error al agregar movimiento: " + error.message);
+    },
+  });
+
+  const updateMutation = trpc.safeBoxes.update.useMutation({
+    onSuccess: () => {
+      toast.success("Movimiento actualizado y acumulados recalculados");
+      refetch();
+      resetForm();
+    },
+    onError: (error) => {
+      toast.error("Error al actualizar movimiento: " + error.message);
     },
   });
 
@@ -96,10 +124,11 @@ export default function CajasF() {
       toast.error("Por favor completa todos los campos obligatorios");
       return;
     }
-    createMutation.mutate({
-      businessId,
-      ...formData,
-    });
+    if (editingMovement) {
+      updateMutation.mutate({ id: editingMovement.id, ...formData });
+      return;
+    }
+    createMutation.mutate({ businessId, ...formData });
   };
 
   const handleCheckStatusClick = (id: number, currentStatus: string) => {
@@ -118,12 +147,15 @@ export default function CajasF() {
     <div className="container py-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold">Cajas Fuertes</h1>
-        <Button onClick={() => setShowForm(!showForm)}>
-          {showForm ? "Cancelar" : "Agregar Movimiento"}
+        <Button onClick={() => (showForm ? resetForm() : setShowForm(true))}>
+          {showForm ? "Cancelar" : "Agregar movimiento"}
         </Button>
       </div>
 
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
+      <Tabs value={activeTab} onValueChange={(v) => {
+        setActiveTab(v as "hostel" | "tienda");
+        resetForm();
+      }}>
         <TabsList className="grid w-full max-w-md grid-cols-2">
           <TabsTrigger value="hostel">C.F. Hostel</TabsTrigger>
           <TabsTrigger value="tienda">C.F. Tienda (Cambio)</TabsTrigger>
@@ -133,7 +165,7 @@ export default function CajasF() {
           {showForm && (
             <Card className="mb-6">
               <CardHeader>
-                <CardTitle>Nuevo Movimiento</CardTitle>
+                <CardTitle>{editingMovement ? "Editar movimiento" : "Nuevo movimiento"}</CardTitle>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -204,12 +236,16 @@ export default function CajasF() {
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => setShowForm(false)}
+                      onClick={resetForm}
                     >
                       Cancelar
                     </Button>
-                    <Button type="submit" disabled={createMutation.isPending}>
-                      {createMutation.isPending ? "Guardando..." : "Guardar"}
+                    <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                      {createMutation.isPending || updateMutation.isPending
+                        ? "Guardando..."
+                        : editingMovement
+                          ? "Guardar cambios"
+                          : "Guardar"}
                     </Button>
                   </div>
                 </form>
@@ -232,7 +268,7 @@ export default function CajasF() {
                       <TableHead>Tipología</TableHead>
                       <TableHead>Concepto</TableHead>
                       <TableHead className="text-right">Cantidad</TableHead>
-                      <TableHead className="text-right">Total Acumula</TableHead>
+                      <TableHead className="text-right">Acumulado</TableHead>
                       <TableHead className="text-center">Chequeo</TableHead>
                       <TableHead className="text-center">Acciones</TableHead>
                     </TableRow>
@@ -279,6 +315,14 @@ export default function CajasF() {
                               </Button>
                             </TableCell>
                             <TableCell className="text-center">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                title="Editar movimiento"
+                                onClick={() => startEditing(movement)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"

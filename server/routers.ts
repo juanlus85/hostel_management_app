@@ -3828,6 +3828,16 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           await db.deleteGuest(input.id);
           return { success: true };
         }),
+      deleteMany: adminProcedure
+        .input(
+          z.object({
+            ids: z.array(z.number().int().positive()).min(1).max(100),
+          })
+        )
+        .mutation(async ({ input }) => {
+          const deletedCount = await db.deleteGuests(input.ids);
+          return { success: true, deletedCount };
+        }),
     }),
 
     // Enlaces públicos de un solo uso para check-in completamente online.

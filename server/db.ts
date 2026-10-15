@@ -17,6 +17,7 @@ import { aggregateDailyCashSales } from "../shared/dailyCashSales";
 import { reservationReleasesAssignedRoom } from "../shared/reservationStatus";
 import { aggregateDashboardTrend } from "../shared/dashboardTrend";
 import { aggregateClosedCashSummary } from "../shared/dashboardCashSummary";
+import { calculateSafeBoxAccumulations } from "../shared/safeBoxAccumulation";
 import {
   InsertUser,
   users,
@@ -1884,25 +1885,11 @@ export async function createSafeBoxMovement(data: InsertSafeBox) {
   const db = await getDb();
   if (!db) return;
 
-  // Calculate accumulated based on previous movements
-  const previousMovements = await db
-    .select()
-    .from(safeBoxes)
-    .where(eq(safeBoxes.businessId, data.businessId))
-    .orderBy(desc(safeBoxes.date), desc(safeBoxes.id))
-    .limit(1);
-
-  const previousAccumulated =
-    previousMovements.length > 0
-      ? parseFloat(previousMovements[0].accumulated)
-      : 0;
-
-  const newAccumulated = previousAccumulated + parseFloat(data.amount);
-
   const result = await db.insert(safeBoxes).values({
     ...data,
-    accumulated: newAccumulated.toFixed(2),
+    accumulated: "0.00",
   });
+  await recalculateSafeBoxAccumulated(data.businessId);
 
   return result;
 }
@@ -1914,10 +1901,15 @@ export async function updateSafeBoxMovement(
   const db = await getDb();
   if (!db) return;
 
-  await db.update(safeBoxes).set(data).where(eq(safeBoxes.id, id));
+  const currentMovement = await db
+    .select({ businessId: safeBoxes.businessId })
+    .from(safeBoxes)
+    .where(eq(safeBoxes.id, id))
+    .limit(1);
+  if (currentMovement.length === 0) return;
 
-  // Recalculate accumulated for all subsequent movements
-  await recalculateSafeBoxAccumulated(id);
+  await db.update(safeBoxes).set(data).where(eq(safeBoxes.id, id));
+  await recalculateSafeBoxAccumulated(currentMovement[0].businessId);
 }
 
 export async function deleteSafeBoxMovement(id: number) {
@@ -1933,27 +1925,12 @@ export async function deleteSafeBoxMovement(id: number) {
 
   await db.delete(safeBoxes).where(eq(safeBoxes.id, id));
 
-  // Recalculate accumulated for all subsequent movements
-  await recalculateSafeBoxAccumulated(id, movement[0].businessId);
+  await recalculateSafeBoxAccumulated(movement[0].businessId);
 }
 
-async function recalculateSafeBoxAccumulated(
-  fromId: number,
-  businessId?: number
-) {
+async function recalculateSafeBoxAccumulated(businessId: number) {
   const db = await getDb();
   if (!db) return;
-
-  // Get the movement to find its businessId if not provided
-  if (!businessId) {
-    const movement = await db
-      .select()
-      .from(safeBoxes)
-      .where(eq(safeBoxes.id, fromId))
-      .limit(1);
-    if (movement.length === 0) return;
-    businessId = movement[0].businessId;
-  }
 
   // Get all movements for this business ordered by date and id
   const allMovements = await db
@@ -1962,13 +1939,11 @@ async function recalculateSafeBoxAccumulated(
     .where(eq(safeBoxes.businessId, businessId))
     .orderBy(safeBoxes.date, safeBoxes.id);
 
-  // Recalculate accumulated for each movement
-  let accumulated = 0;
+  const accumulatedById = calculateSafeBoxAccumulations(allMovements);
   for (const movement of allMovements) {
-    accumulated += parseFloat(movement.amount);
     await db
       .update(safeBoxes)
-      .set({ accumulated: accumulated.toFixed(2) })
+      .set({ accumulated: accumulatedById.get(movement.id) || "0.00" })
       .where(eq(safeBoxes.id, movement.id));
   }
 }
@@ -3148,7 +3123,7 @@ export async function searchGuests(filters: {
   if (conditions.length === 0) {
     return withGuestRelationshipFallback(columns => {
       const selection = columns ? (db.select(columns as any) as any) : (db.select() as any);
-      return selection.from(guests).orderBy(guests.createdAt);
+      return selection.from(guests).orderBy(desc(guests.checkInDate), desc(guests.createdAt));
     });
   }
 
@@ -3157,7 +3132,7 @@ export async function searchGuests(filters: {
     return selection
       .from(guests)
       .where(and(...conditions))
-      .orderBy(guests.createdAt);
+      .orderBy(desc(guests.checkInDate), desc(guests.createdAt));
   });
 }
 
@@ -3183,6 +3158,17 @@ export async function deleteGuest(id: number) {
   const { eq } = await import("drizzle-orm");
 
   await db.delete(guests).where(eq(guests.id, id));
+}
+
+export async function deleteGuests(ids: number[]) {
+  const uniqueIds = Array.from(new Set(ids));
+  if (uniqueIds.length === 0) return 0;
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { inArray } = await import("drizzle-orm");
+
+  await db.delete(guests).where(inArray(guests.id, uniqueIds));
+  return uniqueIds.length;
 }
 
 // ==================== HOSTEL SETTINGS (Check-in) ====================
