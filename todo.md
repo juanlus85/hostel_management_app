@@ -1899,3 +1899,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Reutilizar automáticamente la plantilla equivalente entre correo y WhatsApp cuando el campo específico esté vacío, para que los borradores desde la agenda coincidan con lo configurado en Check-in.
 - [x] Unificar las plantillas de correo y WhatsApp en tres mensajes únicos por idioma: Pre-check-in/Fast Check-in sin códigos y con documento físico obligatorio; Check-in Online con códigos posteriores; y acceso directo con códigos para llegadas con recepción cerrada.
 - [x] Evitar duplicar el aviso de documento físico: en Pre-check-in se muestra una sola vez, dentro de la plantilla única configurada.
+- [x] Corregir duplicados en la agenda: cada asignación física de Cloudbeds solo importa su propia habitación y la actualización elimina habitaciones sobrantes que dejó una importación anterior.

@@ -3586,6 +3586,70 @@ export async function upsertExternalUpcomingReservations(
   }
 }
 
+function normalizedImportedRoom(value: string | null | undefined) {
+  return (value || "")
+    .toLocaleLowerCase("es-ES")
+    .replace(/^\s*habitaci[oó]n\s*/i, "")
+    .replace(/\s+/g, " ")
+    .trim() || "unassigned";
+}
+
+/**
+ * El importador guarda una fila por habitación real. Tras corregir una
+ * importación anterior, elimina las habitaciones sobrantes de la misma
+ * reserva dentro del intervalo sincronizado; conserva las asignaciones que
+ * Cloudbeds acaba de confirmar en este mismo ciclo.
+ */
+export async function reconcileCloudbedsUpcomingRoomAssignments(
+  dateFrom: string,
+  dateTo: string,
+  records: Array<Pick<InsertExternalUpcomingReservation, "sourceReservationId" | "roomNumber">>
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Base de datos no disponible");
+  const expectedRoomsByReservation = new Map<string, Set<string>>();
+  for (const record of records) {
+    const sourceReservationId = record.sourceReservationId.trim();
+    if (!sourceReservationId) continue;
+    const expected = expectedRoomsByReservation.get(sourceReservationId) || new Set<string>();
+    expected.add(normalizedImportedRoom(record.roomNumber));
+    expectedRoomsByReservation.set(sourceReservationId, expected);
+  }
+
+  let removed = 0;
+  for (const [sourceReservationId, expectedRooms] of Array.from(
+    expectedRoomsByReservation.entries()
+  )) {
+    const existing = await db
+      .select({
+        id: externalUpcomingReservations.id,
+        roomNumber: externalUpcomingReservations.roomNumber,
+      })
+      .from(externalUpcomingReservations)
+      .where(
+        and(
+          eq(externalUpcomingReservations.provider, "cloudbeds"),
+          eq(externalUpcomingReservations.sourceReservationId, sourceReservationId),
+          lte(externalUpcomingReservations.checkInDate, dateTo),
+          or(
+            gte(externalUpcomingReservations.checkOutDate, dateFrom),
+            isNull(externalUpcomingReservations.checkOutDate)
+          )
+        )
+      );
+    const stale = existing.filter(
+      reservation => !expectedRooms.has(normalizedImportedRoom(reservation.roomNumber))
+    );
+    for (const reservation of stale) {
+      await db
+        .delete(externalUpcomingReservations)
+        .where(eq(externalUpcomingReservations.id, reservation.id));
+      removed += 1;
+    }
+  }
+  return removed;
+}
+
 /** Elimina de la agenda local reservas del rango que ya no están en Cloudbeds. */
 export async function removeMissingCloudbedsUpcomingReservations(
   dateFrom: string,

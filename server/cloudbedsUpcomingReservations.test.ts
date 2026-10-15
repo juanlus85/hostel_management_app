@@ -133,6 +133,35 @@ describe("normalizeUpcomingReservation", () => {
     vi.unstubAllGlobals();
   });
 
+  it("no expande el grupo completo dentro de cada asignación física", async () => {
+    const fetchMock = vi.fn(async (url: URL) => {
+      if (url.pathname.endsWith("/getReservationAssignments")) {
+        return new Response(JSON.stringify([
+          { reservationID: "R-77B", date: "2026-08-28", roomID: "room-7", roomName: "7", roomTypeName: "Doble" },
+          { reservationID: "R-77B", date: "2026-08-28", roomID: "room-8", roomName: "8", roomTypeName: "Doble" },
+        ]), { status: 200 });
+      }
+      if (url.pathname.endsWith("/getReservation")) {
+        return new Response(JSON.stringify({ reservation: {
+          reservationID: "R-77B", checkInDate: "2026-08-28", checkOutDate: "2026-08-30",
+          guestList: [{ guestName: "Grupo Prueba" }],
+          reservationRooms: [
+            { roomID: "room-7", roomName: "7", roomTypeName: "Doble" },
+            { roomID: "room-8", roomName: "8", roomTypeName: "Doble" },
+            { roomID: "room-23", roomName: "23", roomTypeName: "Doble" },
+          ],
+        } }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ data: [] }), { status: 200 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await fetchCloudbedsUpcomingReservations("cbat_test", "204754", ["2026-08-28"]);
+
+    expect(result.map(reservation => reservation.roomNumber).sort()).toEqual(["7", "8"]);
+    vi.unstubAllGlobals();
+  });
+
   it("expande las habitaciones cuando Cloudbeds las incluye dentro del detalle", async () => {
     const fetchMock = vi.fn(async (url: URL) => {
       if (url.pathname.endsWith("/getReservationAssignments")) {

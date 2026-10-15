@@ -744,11 +744,22 @@ export async function fetchCloudbedsUpcomingReservations(
         });
         diagnosticsReported = true;
       }
-      // Según el tipo de reserva, Cloudbeds puede devolver una fila por
-      // habitación en getReservationAssignments o una única fila cuyo detalle
-      // contiene todas las habitaciones asignadas. Expandimos esta segunda
-      // forma sin alterar las fechas oficiales de la reserva.
-      const rooms = collectNestedPhysicalRooms({ assignment, detail, roomDetailsPayloads });
+      // Si getReservationAssignments ya identifica una habitación física, esa
+      // asignación es la autoridad. El detalle de reserva contiene a menudo
+      // *todas* las habitaciones de un grupo; expandirlo en cada fila creaba
+      // copias cruzadas en las demás habitaciones de la agenda.
+      // Solo expandimos el detalle cuando la asignación no revela habitación.
+      const directRoom = roomIdentity(assignment)
+        ? {
+            ...assignment,
+            ...asRecord(
+              assignment.room ?? assignment.assignedRoom ?? assignment.assigned_room
+            ),
+          }
+        : null;
+      const rooms = directRoom
+        ? [directRoom]
+        : collectNestedPhysicalRooms({ assignment, detail, roomDetailsPayloads });
       const assignments = rooms.length ? rooms.map(room => ({
         ...assignment,
         ...room,

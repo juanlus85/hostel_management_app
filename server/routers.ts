@@ -4691,6 +4691,12 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
                 provider: "cloudbeds",
               }))
             );
+            const roomAssignmentsRemoved =
+              await db.reconcileCloudbedsUpcomingRoomAssignments(
+                dates[0],
+                dates.at(-1) || dates[0],
+                reservations
+              );
             const recordsRemoved = await db.removeMissingCloudbedsUpcomingReservations(
               dates[0],
               dates.at(-1) || dates[0],
@@ -4712,7 +4718,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
               runId,
               dates,
               recordsImported: reservations.length,
-              recordsRemoved,
+              recordsRemoved: recordsRemoved + roomAssignmentsRemoved,
               diagnostics,
             };
           } catch (error) {
