@@ -603,7 +603,12 @@ export function AvailabilityReservations({
               })}
             </div>
             {agenda.map((group, groupIndex) => {
-              const availabilityType = availabilityByType.get(availabilityRoomTypeKey(group.label));
+              // El rótulo está fijado para mantener el orden del Hostel, pero el
+              // precio debe resolver primero el literal exacto de Cloudbeds que
+              // venía con las reservas de este separador.
+              const availabilityType = [...group.availabilityTypeNames, group.label]
+                .map(typeName => availabilityByType.get(availabilityRoomTypeKey(typeName)))
+                .find((roomType): roomType is NonNullable<typeof roomType> => Boolean(roomType));
               return <section key={group.key} className="border-b last:border-b-0">
               <div className="reservation-agenda-grid grid h-8 border-y border-slate-200 bg-slate-100/95" style={gridStyle}>
                 <div className="sticky left-0 z-20 flex min-w-0 items-center border-r bg-slate-100 px-2 shadow-[8px_0_12px_-12px_rgba(15,23,42,0.5)] sm:px-4"><p title={group.label} className="flex min-w-0 items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-slate-700 sm:gap-2 sm:text-xs"><BedDouble className="h-3 w-3 shrink-0 text-sky-700" /><span className="truncate">{group.label}</span><span className="shrink-0 text-[9px] font-medium normal-case tracking-normal text-slate-500">· {group.reservationsCount} res.</span></p></div>

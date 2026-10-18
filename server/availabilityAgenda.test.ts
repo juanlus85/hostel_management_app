@@ -37,6 +37,9 @@ describe("tarifas en separadores de agenda", () => {
     expect(availabilityRoomTypeKey("Bed in 3-bed mixed dormitory")).toBe(
       availabilityRoomTypeKey("Cama en habitación compartida de 3 camas")
     );
+    expect(availabilityRoomTypeKey("Bed in 3-Bed Mixed Room")).toBe(
+      availabilityRoomTypeKey("Bed in 3-bed mixed dormitory")
+    );
 
     const byType = buildAgendaAvailabilityByType([
       {

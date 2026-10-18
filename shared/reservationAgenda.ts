@@ -44,6 +44,8 @@ export type ReservationAgendaRoom<T extends ReservationAgendaItem> = {
 export type ReservationAgendaGroup<T extends ReservationAgendaItem> = {
   key: string;
   label: string;
+  /** Literales de tipo recibidos de Cloudbeds, en orden de preferencia. */
+  availabilityTypeNames: string[];
   rooms: Array<ReservationAgendaRoom<T>>;
   reservationsCount: number;
 };
@@ -150,6 +152,7 @@ export function buildReservationAgenda<T extends ReservationAgendaItem>(
   const groups = new Map<string, {
     label: string;
     order: number;
+    availabilityCandidates: Map<string, number>;
     rooms: Map<string, ReservationAgendaRoom<T>>;
     count: number;
   }>();
@@ -202,9 +205,17 @@ export function buildReservationAgenda<T extends ReservationAgendaItem>(
     const group = groups.get(groupKey) || {
       label: groupLabel,
       order: configuredRoom?.groupOrder ?? 1_000 + roomTypeRank(groupLabel),
+      availabilityCandidates: new Map(),
       rooms: new Map(),
       count: 0,
     };
+    if (reservation.roomType?.trim()) {
+      const candidate = reservation.roomType.trim();
+      group.availabilityCandidates.set(
+        candidate,
+        (group.availabilityCandidates.get(candidate) || 0) + 1
+      );
+    }
     const room = group.rooms.get(roomKey) || {
       key: roomKey,
       label: configuredRoom ? `Habitación ${configuredRoom.roomNumber}` : roomLabel(reservation),
@@ -236,9 +247,12 @@ export function buildReservationAgenda<T extends ReservationAgendaItem>(
     const group = groups.get(groupKey) || {
       label: configuredRoom.roomType,
       order: configuredRoom.groupOrder,
+      availabilityCandidates: new Map([[configuredRoom.roomType, 0]]),
       rooms: new Map(),
       count: 0,
     };
+    if (!group.availabilityCandidates.size)
+      group.availabilityCandidates.set(configuredRoom.roomType, 0);
     if (!group.rooms.has(roomKey)) {
       group.rooms.set(roomKey, {
         key: roomKey,
@@ -255,6 +269,11 @@ export function buildReservationAgenda<T extends ReservationAgendaItem>(
     .map(([key, group]) => ({
       key,
       label: group.label,
+      availabilityTypeNames: Array.from(group.availabilityCandidates.entries())
+        .sort(([leftName, leftCount], [rightName, rightCount]) =>
+          rightCount - leftCount || leftName.localeCompare(rightName, "es")
+        )
+        .map(([name]) => name),
       reservationsCount: group.count,
       rooms: Array.from(group.rooms.values())
         .sort((left, right) => {

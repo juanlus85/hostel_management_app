@@ -80,6 +80,8 @@ describe("buildReservationAgenda", () => {
     ]);
     const room51 = agenda.flatMap(group => group.rooms).find(room => room.label === "Habitación 51");
     expect(room51?.cards.map(card => card.reservation.id)).toEqual([71]);
+    const privateDouble = agenda.find(group => group.label === "Double Room with Private Bathroom");
+    expect(privateDouble?.availabilityTypeNames).toContain("Tipo inesperado");
   });
 
   it("agrupa las variantes de 42-1 en una única cama configurada", () => {

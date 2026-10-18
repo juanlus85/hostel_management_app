@@ -22,7 +22,7 @@ export function availabilityRoomTypeKey(value: string) {
   // Cloudbeds no mantiene necesariamente el mismo literal entre reservas y
   // tarifas: por ejemplo, "Private Bath", "baño privado" o "en suite". La
   // agenda necesita una clave semántica estable para no perder sus precios.
-  const isDorm = /\bdorm(?:itory)?\b|\bdormitorio\b|\bbunk\b|\bcama\s+en\s+.*compartid/.test(normalized);
+  const isDorm = /\bdorm(?:itory)?\b|\bdormitorio\b|\bbunk\b|\bbed\s+in\b|\bcama\s+en\s+.*compartid|\bmixed\s+(?:bed|room)\b|\bmixta?\s+(?:cama|habitacion)\b/.test(normalized);
   const bedKind = isDorm
     ? "dorm"
     : /\btwin\b|\b2\s*camas?\b|\btwo\s*beds?\b/.test(normalized)

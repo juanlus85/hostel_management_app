@@ -1903,3 +1903,5 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Fijar y persistir el orden físico de la agenda de reservas (35, 18, 51, 4, 15, 7, 8, 23, 16, 42-1, 42-2, 42-3), conservando filas vacías y reservas aunque Cloudbeds devuelva otro tipo de habitación.
 - [x] Unificar las variantes importadas de 42-1/42-2/42-3 (guiones, espacios o prefijos) con la misma cama física configurada, evitando un segundo separador de dormitorio.
 - [x] Mantener los precios y disponibilidad de todos los separadores fijos de agenda aunque Cloudbeds use variantes como «Private Bath», «ensuite», español o dormitorio compartido.
+- [x] Asociar también la variante Cloudbeds «Bed in 3-Bed Mixed Room» a la tarifa de las camas de dormitorio compartido.
+- [x] Resolver cada precio de agenda primero con el nombre original de tipo recibido de Cloudbeds y solo después con equivalencias, manteniendo por separado el rótulo y orden visual fijo.
