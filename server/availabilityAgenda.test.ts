@@ -26,4 +26,27 @@ describe("tarifas en separadores de agenda", () => {
 
     expect(findAgendaAvailabilityDay(byType.get(availabilityRoomTypeKey("twin")), "2026-10-14")?.rateId).toBe("two");
   });
+
+  it("vincula precios cuando Cloudbeds cambia el literal de baño o dormitorio", () => {
+    expect(availabilityRoomTypeKey("Twin Room with Private Bath")).toBe(
+      availabilityRoomTypeKey("Habitación doble con 2 camas y baño privado")
+    );
+    expect(availabilityRoomTypeKey("Double ensuite room")).toBe(
+      availabilityRoomTypeKey("Habitación doble con cama de matrimonio y baño privado")
+    );
+    expect(availabilityRoomTypeKey("Bed in 3-bed mixed dormitory")).toBe(
+      availabilityRoomTypeKey("Cama en habitación compartida de 3 camas")
+    );
+
+    const byType = buildAgendaAvailabilityByType([
+      {
+        roomTypeName: "Twin Room with Private Bath",
+        days: [{ date: "2026-10-13", roomsAvailable: 1, roomRate: 115, totalRate: 115, rateId: "private-twin" }],
+      },
+    ]);
+    expect(findAgendaAvailabilityDay(
+      byType.get(availabilityRoomTypeKey("Twin Room with Private Bathroom")),
+      "2026-10-13"
+    )).toMatchObject({ roomRate: 115, rateId: "private-twin" });
+  });
 });

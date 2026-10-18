@@ -15,20 +15,32 @@ export function availabilityRoomTypeKey(value: string) {
   const normalized = value
     .toLocaleLowerCase("es")
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/\b(twin)(?:\s+beds?)?\b|\b(?:2|dos)\s+camas?\b/g, " twin ")
-    .replace(/\bdouble\b|\bdoble\b|\bcama\s+doble\b/g, " double ")
-    .replace(/\btriple\b|\b(?:3|tres)\s+camas?\b/g, " triple ")
-    .replace(/\bprivate\b|\bprivado\b/g, " privado ")
-    .replace(/\bshared\b|\bcompartido\b/g, " compartido ")
-    .replace(/\bbathroom\b|\bbano\b/g, " bano ")
-    .replace(/\bhabitacion\b|\broom\b|\bwith\b|\bcon\b|\bbed(?:s)?\b|\bcama(?:s)?\b/g, " ");
-  return normalized
+    .replace(/[\u0300-\u036f]/g, " ")
     .replace(/[^a-z0-9]+/g, " ")
-    .split(" ")
-    .filter(Boolean)
-    .sort()
-    .join(" ");
+    .trim();
+
+  // Cloudbeds no mantiene necesariamente el mismo literal entre reservas y
+  // tarifas: por ejemplo, "Private Bath", "baño privado" o "en suite". La
+  // agenda necesita una clave semántica estable para no perder sus precios.
+  const isDorm = /\bdorm(?:itory)?\b|\bdormitorio\b|\bbunk\b|\bcama\s+en\s+.*compartid/.test(normalized);
+  const bedKind = isDorm
+    ? "dorm"
+    : /\btwin\b|\b2\s*camas?\b|\btwo\s*beds?\b/.test(normalized)
+      ? "twin"
+      : /\btriple\b|\b3\s*camas?\b|\bthree\s*beds?\b/.test(normalized)
+        ? "triple"
+        : /\bdouble\b|\bdoble\b|\bmatrimonio\b|\bqueen\b|\bking\b/.test(normalized)
+          ? "double"
+          : "";
+  const bathroom = isDorm
+    ? ""
+    : /\bprivate\b|\bprivad[oa]\b|\ben\s*suite\b|\bensuite\b/.test(normalized)
+      ? "private"
+      : /\bshared\b|\bcompartid[oa]\b|\bcommunal\b/.test(normalized)
+        ? "shared"
+        : "";
+
+  return [bedKind, bathroom].filter(Boolean).join(" ") || normalized;
 }
 
 export function buildAgendaAvailabilityByType<T extends AgendaAvailabilityRoomType>(roomTypes: T[]) {
