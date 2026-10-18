@@ -1184,6 +1184,9 @@ export const appRouter = router({
   }),
 
   cloudbedsAvailability: router({
+    reservationAgendaLayout: protectedProcedure.query(async () => {
+      return db.getReservationAgendaRoomLayout();
+    }),
     importWeek: protectedProcedure
       .input(
         z.object({

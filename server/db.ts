@@ -19,6 +19,10 @@ import { aggregateDashboardTrend } from "../shared/dashboardTrend";
 import { aggregateClosedCashSummary } from "../shared/dashboardCashSummary";
 import { calculateSafeBoxAccumulations } from "../shared/safeBoxAccumulation";
 import {
+  DEFAULT_RESERVATION_AGENDA_LAYOUT,
+  parseReservationAgendaLayout,
+} from "../shared/reservationAgendaLayout";
+import {
   InsertUser,
   users,
   businesses,
@@ -2246,6 +2250,21 @@ export async function upsertSetting(
       isEncrypted: false,
     });
   }
+}
+
+const RESERVATION_AGENDA_LAYOUT_SETTING = "reservation_agenda_room_layout_v1";
+
+/** Devuelve el orden físico permanente que utiliza la agenda de reservas. */
+export async function getReservationAgendaRoomLayout() {
+  const setting = await getSetting(RESERVATION_AGENDA_LAYOUT_SETTING);
+  if (setting?.settingValue) return parseReservationAgendaLayout(setting.settingValue);
+  const defaultLayout = JSON.stringify(DEFAULT_RESERVATION_AGENDA_LAYOUT);
+  await upsertSetting(
+    RESERVATION_AGENDA_LAYOUT_SETTING,
+    defaultLayout,
+    "Orden físico persistente de las habitaciones en la agenda Cloudbeds"
+  );
+  return DEFAULT_RESERVATION_AGENDA_LAYOUT;
 }
 
 export async function deleteSetting(key: string): Promise<void> {

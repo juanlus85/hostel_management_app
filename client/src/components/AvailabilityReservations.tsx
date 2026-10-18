@@ -3,6 +3,7 @@ import { BedDouble, CalendarDays, CheckCircle2, ClipboardCheck, ClipboardCopy, C
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { buildReservationAgenda, type ReservationAgendaTone } from "@shared/reservationAgenda";
+import { DEFAULT_RESERVATION_AGENDA_LAYOUT } from "@shared/reservationAgendaLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -188,6 +189,10 @@ export function AvailabilityReservations({
   const [hasConfirmedLargeAgendaChanges, setHasConfirmedLargeAgendaChanges] = useState(false);
   const utils = trpc.useUtils();
   const reservations = trpc.checkin.externalImports.listCloudbedsUpcomingReservations.useQuery({ dateFrom: window.dateFrom, dateTo: window.dateTo });
+  const reservationAgendaLayout =
+    trpc.cloudbedsAvailability.reservationAgendaLayout.useQuery(undefined, {
+      staleTime: Infinity,
+    });
   const importReservations = trpc.checkin.externalImports.importCloudbedsUpcomingReservations.useMutation({
     onSuccess: result => {
       toast.success(`Reservas actualizadas: ${result.recordsImported}`);
@@ -354,7 +359,15 @@ export function AvailabilityReservations({
     0,
     (reservations.data || []).filter(reservation => !reservation.roomNumber?.trim()).length
   );
-  const agenda = useMemo(() => buildReservationAgenda(displayedReservations, window.dates), [displayedReservations, window.dates]);
+  const agenda = useMemo(
+    () =>
+      buildReservationAgenda(
+        displayedReservations,
+        window.dates,
+        reservationAgendaLayout.data ?? DEFAULT_RESERVATION_AGENDA_LAYOUT
+      ),
+    [displayedReservations, reservationAgendaLayout.data, window.dates]
+  );
   const availabilityByType = useMemo(
     () => buildAgendaAvailabilityByType(agendaAvailability?.roomTypes || []),
     [agendaAvailability]

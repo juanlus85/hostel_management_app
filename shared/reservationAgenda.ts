@@ -1,4 +1,8 @@
 import { reservationReleasesAssignedRoom } from "./reservationStatus";
+import {
+  normalizeAgendaRoomNumber,
+  type ReservationAgendaRoomLayout,
+} from "./reservationAgendaLayout";
 
 export type ReservationAgendaItem = {
   id: number;
@@ -138,8 +142,20 @@ function visibleSpan(reservation: ReservationAgendaItem, dates: string[]) {
   return { startColumn, span: Math.max(1, exclusiveEnd - startColumn), startSlot, endSlot };
 }
 
-export function buildReservationAgenda<T extends ReservationAgendaItem>(reservations: T[], dates: string[]): Array<ReservationAgendaGroup<T>> {
-  const groups = new Map<string, { label: string; rooms: Map<string, ReservationAgendaRoom<T>>; count: number }>();
+export function buildReservationAgenda<T extends ReservationAgendaItem>(
+  reservations: T[],
+  dates: string[],
+  roomLayout: readonly ReservationAgendaRoomLayout[] = []
+): Array<ReservationAgendaGroup<T>> {
+  const groups = new Map<string, {
+    label: string;
+    order: number;
+    rooms: Map<string, ReservationAgendaRoom<T>>;
+    count: number;
+  }>();
+  const layoutByRoom = new Map(
+    roomLayout.map(room => [normalizeAgendaRoomNumber(room.roomNumber), room])
+  );
   const visibleReservations = reservations.flatMap(reservation => {
     if (reservationReleasesAssignedRoom(reservation.reservationStatus)) return [];
     const span = visibleSpan(reservation, dates);
@@ -167,6 +183,14 @@ export function buildReservationAgenda<T extends ReservationAgendaItem>(reservat
     )[0]!;
     canonicalTypeByRoom.set(roomKey, { key, label: candidate.label });
   });
+  roomLayout.forEach(room => {
+    const roomKey = normalizeAgendaRoomNumber(room.roomNumber);
+    if (!roomKey) return;
+    canonicalTypeByRoom.set(roomKey, {
+      key: `configured-${room.groupOrder}-${normalize(room.roomType)}`,
+      label: room.roomType,
+    });
+  });
 
   for (const { reservation, span } of visibleReservations) {
     const roomKey = physicalRoomKey(reservation);
@@ -174,7 +198,13 @@ export function buildReservationAgenda<T extends ReservationAgendaItem>(reservat
     const canonicalType = canonicalTypeByRoom.get(roomKey);
     const groupLabel = canonicalType?.label || ownGroupLabel;
     const groupKey = canonicalType?.key || normalize(ownGroupLabel) || "pending-room-type";
-    const group = groups.get(groupKey) || { label: groupLabel, rooms: new Map(), count: 0 };
+    const configuredRoom = layoutByRoom.get(roomKey);
+    const group = groups.get(groupKey) || {
+      label: groupLabel,
+      order: configuredRoom?.groupOrder ?? 1_000 + roomTypeRank(groupLabel),
+      rooms: new Map(),
+      count: 0,
+    };
     const room = group.rooms.get(roomKey) || { key: roomKey, label: roomLabel(reservation), cards: [], laneCount: 1 };
     const hasPendingAmount = reservationHasPendingAmount(reservation.amountPending);
     room.cards.push({
@@ -192,14 +222,43 @@ export function buildReservationAgenda<T extends ReservationAgendaItem>(reservat
     groups.set(groupKey, group);
   }
 
+  // El catálogo configurado define también las filas vacías: la agenda no
+  // altera su orden cuando una habitación no tenga reservas en la quincena.
+  roomLayout.forEach(configuredRoom => {
+    const roomKey = normalizeAgendaRoomNumber(configuredRoom.roomNumber);
+    if (!roomKey) return;
+    const groupKey = `configured-${configuredRoom.groupOrder}-${normalize(configuredRoom.roomType)}`;
+    const group = groups.get(groupKey) || {
+      label: configuredRoom.roomType,
+      order: configuredRoom.groupOrder,
+      rooms: new Map(),
+      count: 0,
+    };
+    if (!group.rooms.has(roomKey)) {
+      group.rooms.set(roomKey, {
+        key: roomKey,
+        label: `Habitación ${configuredRoom.roomNumber}`,
+        cards: [],
+        laneCount: 1,
+      });
+    }
+    groups.set(groupKey, group);
+  });
+
   return Array.from(groups.entries())
-    .sort(([, left], [, right]) => roomTypeRank(left.label) - roomTypeRank(right.label) || left.label.localeCompare(right.label, "es"))
+    .sort(([, left], [, right]) => left.order - right.order || roomTypeRank(left.label) - roomTypeRank(right.label) || left.label.localeCompare(right.label, "es"))
     .map(([key, group]) => ({
       key,
       label: group.label,
       reservationsCount: group.count,
       rooms: Array.from(group.rooms.values())
-        .sort((left, right) => left.label.localeCompare(right.label, "es", { numeric: true }))
+        .sort((left, right) => {
+          const leftOrder = layoutByRoom.get(left.key)?.roomOrder;
+          const rightOrder = layoutByRoom.get(right.key)?.roomOrder;
+          if (leftOrder !== undefined || rightOrder !== undefined)
+            return (leftOrder ?? Number.MAX_SAFE_INTEGER) - (rightOrder ?? Number.MAX_SAFE_INTEGER);
+          return left.label.localeCompare(right.label, "es", { numeric: true });
+        })
         .map(room => {
           const laneEnds: number[] = [];
           const sortedCards = [...room.cards]

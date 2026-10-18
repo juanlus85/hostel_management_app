@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildReservationAgenda, reservationAgendaTone } from "../shared/reservationAgenda";
+import { DEFAULT_RESERVATION_AGENDA_LAYOUT } from "../shared/reservationAgendaLayout";
 
 const dates = ["2026-10-10", "2026-10-11", "2026-10-12", "2026-10-13", "2026-10-14"];
 
@@ -47,6 +48,38 @@ describe("buildReservationAgenda", () => {
     const roomRows = agenda.flatMap(group => group.rooms).filter(room => room.label === "Habitación 15");
     expect(roomRows).toHaveLength(1);
     expect(roomRows[0]?.cards.map(card => card.reservation.id).sort()).toEqual([30, 31, 32]);
+  });
+
+  it("conserva las filas físicas y el orden operativo aunque Cloudbeds cambie el tipo", () => {
+    const agenda = buildReservationAgenda([
+      { id: 71, guestName: "Reserva 51", checkInDate: "2026-10-10", checkOutDate: "2026-10-12", roomType: "Tipo inesperado", roomNumber: "Habitación 51", reservationStatus: "confirmed", amountPending: "0", reservationNotes: null },
+      { id: 72, guestName: "Reserva 4", checkInDate: "2026-10-10", checkOutDate: "2026-10-12", roomType: "Otro tipo", roomNumber: "4", reservationStatus: "confirmed", amountPending: "0", reservationNotes: null },
+    ], dates, DEFAULT_RESERVATION_AGENDA_LAYOUT);
+
+    expect(agenda.map(group => group.label)).toEqual([
+      "Twin Room with Private Bathroom",
+      "Double Room with Private Bathroom",
+      "Twin Room with Shared Bathroom",
+      "Double Room with Shared Bathroom",
+      "Triple Room with Private Bathroom",
+      "Bed in 3-Bed Mixed Dormitory",
+    ]);
+    expect(agenda.flatMap(group => group.rooms.map(room => room.label))).toEqual([
+      "Habitación 35",
+      "Habitación 18",
+      "Habitación 51",
+      "Habitación 4",
+      "Habitación 15",
+      "Habitación 7",
+      "Habitación 8",
+      "Habitación 23",
+      "Habitación 16",
+      "Habitación 42-1",
+      "Habitación 42-2",
+      "Habitación 42-3",
+    ]);
+    const room51 = agenda.flatMap(group => group.rooms).find(room => room.label === "Habitación 51");
+    expect(room51?.cards.map(card => card.reservation.id)).toEqual([71]);
   });
 
   it("muestra estancias iniciadas antes del período y no muestra salidas previas", () => {
