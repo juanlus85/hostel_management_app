@@ -1901,3 +1901,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Evitar duplicar el aviso de documento físico: en Pre-check-in se muestra una sola vez, dentro de la plantilla única configurada.
 - [x] Corregir duplicados en la agenda: cada asignación física de Cloudbeds solo importa su propia habitación y la actualización elimina habitaciones sobrantes que dejó una importación anterior.
 - [x] Fijar y persistir el orden físico de la agenda de reservas (35, 18, 51, 4, 15, 7, 8, 23, 16, 42-1, 42-2, 42-3), conservando filas vacías y reservas aunque Cloudbeds devuelva otro tipo de habitación.
+- [x] Unificar las variantes importadas de 42-1/42-2/42-3 (guiones, espacios o prefijos) con la misma cama física configurada, evitando un segundo separador de dormitorio.

@@ -28,8 +28,13 @@ export function normalizeAgendaRoomNumber(value: string | null | undefined) {
   const normalized = String(value || "")
     .trim()
     .replace(/^\s*(habitaci[oó]n|hab\.?|room)\s*/i, "")
-    .replace(/\.0+$/, "");
-  return normalized.toLocaleLowerCase("es-ES");
+    .replace(/\.0+$/, "")
+    .toLocaleLowerCase("es-ES")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+  return normalized;
 }
 
 export function parseReservationAgendaLayout(value: string | null | undefined) {

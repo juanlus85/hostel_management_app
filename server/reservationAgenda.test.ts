@@ -82,6 +82,23 @@ describe("buildReservationAgenda", () => {
     expect(room51?.cards.map(card => card.reservation.id)).toEqual([71]);
   });
 
+  it("agrupa las variantes de 42-1 en una única cama configurada", () => {
+    const agenda = buildReservationAgenda([
+      { id: 81, guestName: "Cama con guion", checkInDate: "2026-10-10", checkOutDate: "2026-10-11", roomType: "Bed in 3-bed mixed dormitory", roomNumber: "42-1", reservationStatus: "confirmed", amountPending: "0", reservationNotes: null },
+      { id: 82, guestName: "Cama con espacios", checkInDate: "2026-10-11", checkOutDate: "2026-10-12", roomType: "Bed in 3-bed mixed dormitory", roomNumber: "Habitación 42 1", reservationStatus: "confirmed", amountPending: "0", reservationNotes: null },
+      { id: 83, guestName: "Segunda cama", checkInDate: "2026-10-10", checkOutDate: "2026-10-11", roomType: "Bed in 3-bed mixed dormitory", roomNumber: "42-2", reservationStatus: "confirmed", amountPending: "0", reservationNotes: null },
+    ], dates, DEFAULT_RESERVATION_AGENDA_LAYOUT);
+
+    const dormGroups = agenda.filter(group => group.label === "Bed in 3-Bed Mixed Dormitory");
+    expect(dormGroups).toHaveLength(1);
+    expect(dormGroups[0]?.rooms.map(room => room.label)).toEqual([
+      "Habitación 42-1",
+      "Habitación 42-2",
+      "Habitación 42-3",
+    ]);
+    expect(dormGroups[0]?.rooms[0]?.cards.map(card => card.reservation.id)).toEqual([81, 82]);
+  });
+
   it("muestra estancias iniciadas antes del período y no muestra salidas previas", () => {
     const agenda = buildReservationAgenda([
       {

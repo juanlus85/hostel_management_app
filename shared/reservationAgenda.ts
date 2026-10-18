@@ -113,7 +113,7 @@ function roomLabel(reservation: ReservationAgendaItem) {
 function physicalRoomKey(reservation: ReservationAgendaItem) {
   const number = reservation.roomNumber?.trim();
   if (!number) return "unassigned";
-  return normalize(number.replace(/^habitaci[oó]n\s*/i, "")) || "unassigned";
+  return normalizeAgendaRoomNumber(number) || "unassigned";
 }
 
 function visibleSpan(reservation: ReservationAgendaItem, dates: string[]) {
@@ -205,7 +205,12 @@ export function buildReservationAgenda<T extends ReservationAgendaItem>(
       rooms: new Map(),
       count: 0,
     };
-    const room = group.rooms.get(roomKey) || { key: roomKey, label: roomLabel(reservation), cards: [], laneCount: 1 };
+    const room = group.rooms.get(roomKey) || {
+      key: roomKey,
+      label: configuredRoom ? `Habitación ${configuredRoom.roomNumber}` : roomLabel(reservation),
+      cards: [],
+      laneCount: 1,
+    };
     const hasPendingAmount = reservationHasPendingAmount(reservation.amountPending);
     room.cards.push({
       reservation,
