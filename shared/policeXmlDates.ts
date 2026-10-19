@@ -1,7 +1,8 @@
 import { normalizeDateOnly } from "./checkinDateInput";
 
 const POLICE_TIMEZONE = "+01:00";
-const MIDNIGHT = "00:00:00.000";
+const ARRIVAL_TIME = "13:00:00.000";
+const DEPARTURE_TIME = "11:00:00.000";
 
 function twoDigits(value: number) {
   return String(value).padStart(2, "0");
@@ -27,8 +28,12 @@ export function policeDate(value: unknown, fallback?: Date) {
   return `${policeCalendarDate(value, fallback)}${POLICE_TIMEZONE}`;
 }
 
-export function policeDateTime(value: unknown, fallback?: Date) {
-  return `${policeCalendarDate(value, fallback)}T${MIDNIGHT}${POLICE_TIMEZONE}`;
+export function policeArrivalDateTime(value: unknown, fallback?: Date) {
+  return `${policeCalendarDate(value, fallback)}T${ARRIVAL_TIME}${POLICE_TIMEZONE}`;
+}
+
+export function policeDepartureDateTime(value: unknown, fallback?: Date) {
+  return `${policeCalendarDate(value, fallback)}T${DEPARTURE_TIME}${POLICE_TIMEZONE}`;
 }
 
 export function nextPoliceCalendarDate(date: string) {

@@ -1,17 +1,21 @@
 import { describe, expect, it } from "vitest";
 import {
   nextPoliceCalendarDate,
+  policeArrivalDateTime,
   policeCalendarDate,
   policeDate,
-  policeDateTime,
+  policeDepartureDateTime,
 } from "../shared/policeXmlDates";
 
 describe("fechas del XML del Sistema de Hospedajes", () => {
   it("conserva el día almacenado sin convertirlo a UTC", () => {
     expect(policeCalendarDate("2026-10-19")).toBe("2026-10-19");
     expect(policeDate("2026-10-19")).toBe("2026-10-19+01:00");
-    expect(policeDateTime("2026-10-19")).toBe(
-      "2026-10-19T00:00:00.000+01:00"
+    expect(policeArrivalDateTime("2026-10-19")).toBe(
+      "2026-10-19T13:00:00.000+01:00"
+    );
+    expect(policeDepartureDateTime("2026-10-20")).toBe(
+      "2026-10-20T11:00:00.000+01:00"
     );
   });
 

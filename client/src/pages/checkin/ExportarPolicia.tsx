@@ -12,9 +12,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Eye, Printer, FileDown } from "lucide-react";
 import {
   nextPoliceCalendarDate,
+  policeArrivalDateTime,
   policeCalendarDate,
   policeDate,
-  policeDateTime,
+  policeDepartureDateTime,
 } from "@shared/policeXmlDates";
 
 export default function ExportarPolicia() {
@@ -130,8 +131,8 @@ export default function ExportarPolicia() {
         : nextPoliceCalendarDate(checkInDate);
       
       xml += `        <fechaContrato>${policeDate(checkInDate)}</fechaContrato>\n`;
-      xml += `        <fechaEntrada>${policeDateTime(checkInDate)}</fechaEntrada>\n`;
-      xml += `        <fechaSalida>${policeDateTime(checkOutDate)}</fechaSalida>\n`;
+      xml += `        <fechaEntrada>${policeArrivalDateTime(checkInDate)}</fechaEntrada>\n`;
+      xml += `        <fechaSalida>${policeDepartureDateTime(checkOutDate)}</fechaSalida>\n`;
       xml += `        <numPersonas>1</numPersonas>\n`;
       xml += `        <numHabitaciones>1</numHabitaciones>\n`;
       xml += `        <internet>${guest.hasInternet !== false ? 'true' : 'false'}</internet>\n`;
