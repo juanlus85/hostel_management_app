@@ -1905,3 +1905,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Mantener los precios y disponibilidad de todos los separadores fijos de agenda aunque Cloudbeds use variantes como «Private Bath», «ensuite», español o dormitorio compartido.
 - [x] Asociar también la variante Cloudbeds «Bed in 3-Bed Mixed Room» a la tarifa de las camas de dormitorio compartido.
 - [x] Resolver cada precio de agenda primero con el nombre original de tipo recibido de Cloudbeds y solo después con equivalencias, manteniendo por separado el rótulo y orden visual fijo.
+- [x] Guardar la habitación física real en Check-in Online usando el código de llave cuando Cloudbeds aportó el texto genérico «Habitación», y reparar automáticamente las fichas existentes equivalentes al abrir Huéspedes.

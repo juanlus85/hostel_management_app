@@ -134,6 +134,10 @@ import {
 import { ENV } from "./_core/env";
 import { aggregateSupplierExpenses } from "../shared/supplierExpenses";
 import { displayOrderUpdates } from "../shared/workerDisplayOrder";
+import {
+  hasPhysicalRoomNumber,
+  resolveGuestRoomAssignment,
+} from "../shared/guestRoomAssignment";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -3081,9 +3085,49 @@ async function withGuestRelationshipFallback(
   }
 }
 
+/**
+ * Corrige los Check-ins ya guardados que conservaban el literal genérico
+ * «Habitación» aunque el código de llave permite reconocer su habitación real.
+ * No toca fichas sin código o con un número físico ya confirmado.
+ */
+export async function reconcileGuestRoomNumbersFromAccessCodes() {
+  const db = await getDb();
+  if (!db) return 0;
+  const [storedGuests, configuredRooms] = await Promise.all([
+    db
+      .select({
+        id: guests.id,
+        roomNumber: guests.roomNumber,
+        roomCode: guests.roomCode,
+        roomType: guests.roomType,
+      })
+      .from(guests),
+    db.select().from(accessCodes),
+  ]);
+  const repairs = storedGuests
+    .filter(
+      guest =>
+        !hasPhysicalRoomNumber(guest.roomNumber) && Boolean(guest.roomCode?.trim())
+    )
+    .map(guest => ({ guest, assignment: resolveGuestRoomAssignment(guest, configuredRooms) }))
+    .filter(({ assignment }) => Boolean(assignment.roomNumber))
+    .map(({ guest, assignment }) =>
+      db
+        .update(guests)
+        .set({
+          roomNumber: assignment.roomNumber,
+          roomType: assignment.roomType,
+        })
+        .where(eq(guests.id, guest.id))
+    );
+  await Promise.all(repairs);
+  return repairs.length;
+}
+
 export async function getAllGuests() {
   const db = await getDb();
   if (!db) return [];
+  await reconcileGuestRoomNumbersFromAccessCodes();
   const { and, or, eq, ne } = await import("drizzle-orm");
 
   // Excluir check-ins anticipados no completados (status pending)
@@ -3108,6 +3152,7 @@ export async function getAllGuests() {
 export async function getGuestById(id: number) {
   const db = await getDb();
   if (!db) return null;
+  await reconcileGuestRoomNumbersFromAccessCodes();
   const { eq } = await import("drizzle-orm");
   const result = await withGuestRelationshipFallback(columns => {
     const selection = columns ? (db.select(columns as any) as any) : (db.select() as any);
@@ -3150,6 +3195,7 @@ export async function searchGuests(filters: {
 }) {
   const db = await getDb();
   if (!db) return [];
+  await reconcileGuestRoomNumbersFromAccessCodes();
   const { and, or, like, gte, lte, eq } = await import("drizzle-orm");
 
   const conditions: any[] = [];

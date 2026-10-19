@@ -45,6 +45,7 @@ import {
 import { isAllowedDocumentType } from "../shared/countries";
 import { isBirthDateAtLeastOneYearAgo } from "../shared/guestAge";
 import { findAccessCodeForRoom } from "../shared/accessCodes";
+import { resolveGuestRoomAssignment } from "../shared/guestRoomAssignment";
 import { reservationReleasesAssignedRoom } from "../shared/reservationStatus";
 import { compareCashByDate } from "../shared/externalCashComparison";
 import {
@@ -3992,9 +3993,11 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
 
           const settings = await db.getHostelSettings();
           const accessCodeList = await db.getAllAccessCodes();
-          const room = accessCodeList.find(
-            code => code.roomNumber === link.roomNumber
+          const assignment = resolveGuestRoomAssignment(
+            link,
+            accessCodeList
           );
+          const room = assignment.configuredRoom;
           const completedGuest =
             link.status === "completed" && link.guestId
               ? await db.getGuestById(link.guestId)
@@ -4012,8 +4015,8 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             reservationNumber: link.reservationNumber,
             checkInDate: link.checkInDate,
             checkOutDate: link.checkOutDate,
-            roomType: link.roomType,
-            roomNumber: link.roomNumber,
+            roomType: assignment.roomType || link.roomType,
+            roomNumber: assignment.roomNumber || link.roomNumber,
             roomCode:
               link.status === "completed" && link.checkinMode === "access"
                 ? link.roomCode
@@ -4159,15 +4162,10 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           // El huésped de un Check-in anticipado no recibe la habitación,
           // pero recepción sí debe conservarla en su ficha para completar el registro.
           const accessCodeList = await db.getAllAccessCodes();
-          const assignedRoom =
-            link.roomNumber && link.roomNumber !== "Por asignar"
-              ? findAccessCodeForRoom(accessCodeList, link.roomNumber)
-              : null;
-          const storedRoomNumber =
-            link.roomNumber && link.roomNumber !== "Por asignar"
-              ? link.roomNumber
-              : assignedRoom?.roomNumber || null;
-          const storedRoomType = link.roomType || assignedRoom?.roomType || null;
+          const assignment = resolveGuestRoomAssignment(link, accessCodeList);
+          const assignedRoom = assignment.configuredRoom;
+          const storedRoomNumber = assignment.roomNumber;
+          const storedRoomType = assignment.roomType;
 
           const groupId = randomBytes(16).toString("hex");
           const guestIds: number[] = [];
@@ -4229,6 +4227,8 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             status: "completed",
             guestId,
             completedAt: new Date(),
+            roomNumber: storedRoomNumber || link.roomNumber,
+            roomType: storedRoomType,
             entranceCode: sendsCodes ? entranceCode : null,
             expiresAt: dayAfter(link.checkInDate),
             language: input.language,
@@ -4244,13 +4244,12 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           }
 
           const settings = await db.getHostelSettings();
-          const hasRoomNumber = /\d/.test(link.roomNumber || "");
           const roomDetails =
             assignedRoom ||
             accessCodeList.find(code => code.roomNumber === link.roomNumber) ||
             accessCodeList.find(code => code.roomCode === link.roomCode);
           const resolvedRoomNumber =
-            hasRoomNumber ? link.roomNumber : roomDetails?.roomNumber || storedRoomNumber;
+            storedRoomNumber || roomDetails?.roomNumber || link.roomNumber;
           const resolvedRoomType = roomDetails?.roomType || storedRoomType;
           if (sendsCodes) try {
             const { sendOnlineCheckinConfirmation } = await import("./email");
