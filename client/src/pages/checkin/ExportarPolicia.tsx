@@ -10,7 +10,12 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Eye, Printer, FileDown } from "lucide-react";
-import { parseCheckinDate } from "@shared/checkinDateInput";
+import {
+  nextPoliceCalendarDate,
+  policeCalendarDate,
+  policeDate,
+  policeDateTime,
+} from "@shared/policeXmlDates";
 
 export default function ExportarPolicia() {
   // Inicializar con el primer y último día del mes actual
@@ -18,8 +23,8 @@ export default function ExportarPolicia() {
   const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
   const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
   
-  const [startDate, setStartDate] = useState(firstDay.toISOString().split('T')[0]);
-  const [endDate, setEndDate] = useState(lastDay.toISOString().split('T')[0]);
+  const [startDate, setStartDate] = useState(policeCalendarDate(firstDay));
+  const [endDate, setEndDate] = useState(policeCalendarDate(lastDay));
   const [selectedGuests, setSelectedGuests] = useState<number[]>([]);
   const [viewingGuest, setViewingGuest] = useState<any>(null);
 
@@ -103,7 +108,6 @@ export default function ExportarPolicia() {
 
   const generatePoliceXML = (guests: any[], policeCode: string) => {
     const now = new Date();
-    const timezone = '+01:00'; // Timezone de España
     
     let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
     xml += '<ns2:peticion xmlns:ns2="http://www.neg.hospedajes.mir.es/altaParteHospedaje">\n';
@@ -120,12 +124,14 @@ export default function ExportarPolicia() {
       xml += `        <referencia>${escapeXml(guest.reservationNumber || 'SIN-REF')}</referencia>\n`;
       
       // Fechas del contrato
-      const checkInDate = parseCheckinDate(guest.checkInDate) || now;
-      const checkOutDate = parseCheckinDate(guest.checkOutDate) || new Date(checkInDate.getTime() + 86400000);
+      const checkInDate = policeCalendarDate(guest.checkInDate, now);
+      const checkOutDate = guest.checkOutDate
+        ? policeCalendarDate(guest.checkOutDate, now)
+        : nextPoliceCalendarDate(checkInDate);
       
-      xml += `        <fechaContrato>${checkInDate.toISOString().split('T')[0]}${timezone}</fechaContrato>\n`;
-      xml += `        <fechaEntrada>${checkInDate.toISOString().replace('Z', timezone)}</fechaEntrada>\n`;
-      xml += `        <fechaSalida>${checkOutDate.toISOString().replace('Z', timezone)}</fechaSalida>\n`;
+      xml += `        <fechaContrato>${policeDate(checkInDate)}</fechaContrato>\n`;
+      xml += `        <fechaEntrada>${policeDateTime(checkInDate)}</fechaEntrada>\n`;
+      xml += `        <fechaSalida>${policeDateTime(checkOutDate)}</fechaSalida>\n`;
       xml += `        <numPersonas>1</numPersonas>\n`;
       xml += `        <numHabitaciones>1</numHabitaciones>\n`;
       xml += `        <internet>${guest.hasInternet !== false ? 'true' : 'false'}</internet>\n`;
@@ -148,7 +154,7 @@ export default function ExportarPolicia() {
       }
       
       xml += `          <tipoPago>${tipoPago}</tipoPago>\n`;
-      xml += `          <fechaPago>${checkInDate.toISOString().split('T')[0]}${timezone}</fechaPago>\n`;
+      xml += `          <fechaPago>${policeDate(checkInDate)}</fechaPago>\n`;
       xml += `          <medioPago>${escapeXml(guest.paymentMethod || 'No especificado')}</medioPago>\n`;
       xml += `          <titular>${escapeXml(guest.paymentHolder || guest.firstName + ' ' + guest.lastName)}</titular>\n`;
       
@@ -187,7 +193,7 @@ export default function ExportarPolicia() {
       
       // Fecha de nacimiento
       if (guest.birthDate) {
-        xml += `        <fechaNacimiento>${guest.birthDate}${timezone}</fechaNacimiento>\n`;
+        xml += `        <fechaNacimiento>${policeDate(guest.birthDate)}</fechaNacimiento>\n`;
       }
       
       // Nacionalidad (código ISO alfa-3)
@@ -428,7 +434,7 @@ export default function ExportarPolicia() {
                       </div>
                       <div className="text-sm text-muted-foreground">
                         {guest.documentNumber} • {guest.reservationNumber || "Sin reserva"} • 
-                        {parseCheckinDate(guest.checkInDate)?.toLocaleDateString() ? ` ${parseCheckinDate(guest.checkInDate)?.toLocaleDateString()}` : " Sin fecha"}
+                        {guest.checkInDate ? ` ${policeCalendarDate(guest.checkInDate)}` : " Sin fecha"}
                       </div>
                     </div>
                   </div>

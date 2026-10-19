@@ -1906,3 +1906,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Asociar también la variante Cloudbeds «Bed in 3-Bed Mixed Room» a la tarifa de las camas de dormitorio compartido.
 - [x] Resolver cada precio de agenda primero con el nombre original de tipo recibido de Cloudbeds y solo después con equivalencias, manteniendo por separado el rótulo y orden visual fijo.
 - [x] Guardar la habitación física real en Check-in Online usando el código de llave cuando Cloudbeds aportó el texto genérico «Habitación», y reparar automáticamente las fichas existentes equivalentes al abrir Huéspedes.
+- [x] Corregir el XML de Policía para conservar el día exacto de contrato, entrada, salida, pago y nacimiento sin convertir fechas de calendario a UTC ni restar un día.
