@@ -3651,6 +3651,55 @@ export async function upsertExternalUpcomingReservations(
   }
 }
 
+/**
+ * Cuando una agenda se importa por bloques, no se pueden retirar reservas tras
+ * el primer bloque: una estancia que empieza más adelante todavía no ha sido
+ * consultada. Esta reconciliación se ejecuta una sola vez al recibir todos los
+ * bloques de la misma ventana y elimina únicamente datos ya confirmados como
+ * ausentes en Cloudbeds.
+ */
+export async function reconcileCloudbedsUpcomingImportRuns(
+  dateFrom: string,
+  dateTo: string,
+  importRunIds: number[]
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Base de datos no disponible");
+  const ids = Array.from(new Set(importRunIds.filter(id => Number.isInteger(id) && id > 0)));
+  if (!ids.length) return { recordsRemoved: 0, roomAssignmentsRemoved: 0 };
+  const importedCondition = or(
+    ...ids.map(importRunId => eq(externalUpcomingReservations.importRunId, importRunId))
+  );
+  const records = await db
+    .select({
+      sourceReservationId: externalUpcomingReservations.sourceReservationId,
+      roomNumber: externalUpcomingReservations.roomNumber,
+    })
+    .from(externalUpcomingReservations)
+    .where(
+      and(
+        eq(externalUpcomingReservations.provider, "cloudbeds"),
+        importedCondition,
+        lte(externalUpcomingReservations.checkInDate, dateTo),
+        or(
+          gte(externalUpcomingReservations.checkOutDate, dateFrom),
+          isNull(externalUpcomingReservations.checkOutDate)
+        )
+      )
+    );
+  const roomAssignmentsRemoved = await reconcileCloudbedsUpcomingRoomAssignments(
+    dateFrom,
+    dateTo,
+    records
+  );
+  const recordsRemoved = await removeMissingCloudbedsUpcomingReservations(
+    dateFrom,
+    dateTo,
+    records.map(record => record.sourceReservationId)
+  );
+  return { recordsRemoved, roomAssignmentsRemoved };
+}
+
 function normalizedImportedRoom(value: string | null | undefined) {
   return (value || "")
     .toLocaleLowerCase("es-ES")

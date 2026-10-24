@@ -197,6 +197,7 @@ export function AvailabilityReservations({
       staleTime: Infinity,
     });
   const importReservations = trpc.checkin.externalImports.importCloudbedsUpcomingReservations.useMutation();
+  const reconcileReservations = trpc.checkin.externalImports.reconcileCloudbedsUpcomingReservations.useMutation();
   const lastAutomaticLoadDate = useRef<string | null>(null);
   const agendaAvailabilityStartDate = window.dateFrom;
   const importAgendaAvailability = trpc.cloudbedsAvailability.importWeek.useMutation();
@@ -205,23 +206,35 @@ export function AvailabilityReservations({
     const dateTo = window.dateTo;
     setAgendaSyncPhase("priority");
     importReservations.mutate(
-      { startDate: dateFrom, days: 1 },
+      { startDate: dateFrom, days: 2, finalize: false },
       {
-        onSuccess: () => {
+        onSuccess: firstBatch => {
           utils.checkin.externalImports.listCloudbedsUpcomingReservations.invalidate({ dateFrom, dateTo });
           onPrioritySettled?.();
           setAgendaSyncPhase("remaining");
           importReservations.mutate(
-            { startDate: addCalendarDays(dateFrom, 1), days: 14 },
+            { startDate: addCalendarDays(dateFrom, 2), days: 13, finalize: false },
             {
-              onSuccess: result => {
-                utils.checkin.externalImports.listCloudbedsUpcomingReservations.invalidate({ dateFrom, dateTo });
-                setAgendaSyncPhase("idle");
-                toast.success(`Agenda actualizada: ${result.recordsImported} asignaciones sincronizadas.`);
+              onSuccess: secondBatch => {
+                reconcileReservations.mutate(
+                  { dateFrom, dateTo, importRunIds: [firstBatch.runId, secondBatch.runId] },
+                  {
+                    onSuccess: result => {
+                      utils.checkin.externalImports.listCloudbedsUpcomingReservations.invalidate({ dateFrom, dateTo });
+                      setAgendaSyncPhase("idle");
+                      toast.success(`Agenda actualizada: ${firstBatch.recordsImported + secondBatch.recordsImported} asignaciones sincronizadas${result.recordsRemoved ? ` · ${result.recordsRemoved} retiradas` : ""}.`);
+                    },
+                    onError: error => {
+                      utils.checkin.externalImports.listCloudbedsUpcomingReservations.invalidate({ dateFrom, dateTo });
+                      setAgendaSyncPhase("idle");
+                      toast.warning(`Las reservas ya se han cargado, pero no se pudo limpiar la agenda: ${error.message}`);
+                    },
+                  }
+                );
               },
               onError: error => {
                 setAgendaSyncPhase("idle");
-                toast.warning(`El día ${dateFrom} ya está actualizado. No se pudieron completar los 14 días siguientes: ${error.message}`);
+                toast.warning(`Los dos primeros días ya están actualizados. No se pudieron completar los 13 días siguientes: ${error.message}`);
               },
             }
           );
@@ -585,25 +598,25 @@ export function AvailabilityReservations({
     <Card className="border-sky-100 shadow-sm">
       <CardContent className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-slate-900">Reservas desde una fecha</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">Se sincroniza primero el día elegido y después los 14 días siguientes.</p>
+          <p className="text-sm font-semibold text-slate-900">Reservas por fecha</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">Se sincroniza primero el día anterior y el día elegido; después se completan los 13 días siguientes.</p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <label className="flex h-9 items-center gap-2 rounded-md border bg-background px-2 text-xs font-medium text-muted-foreground" htmlFor="agenda-start-date"><CalendarDays className="h-3.5 w-3.5 text-sky-700" /><span>Desde</span><Input id="agenda-start-date" type="date" min={today} value={agendaStartDate} onChange={event => setAgendaStartDate(event.target.value || today)} className="h-7 min-w-0 flex-1 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0 sm:w-[138px] sm:flex-none" /></label>
+          <label className="flex h-9 items-center gap-2 rounded-md border bg-background px-2 text-xs font-medium text-muted-foreground" htmlFor="agenda-start-date"><CalendarDays className="h-3.5 w-3.5 text-sky-700" /><span>Día</span><Input id="agenda-start-date" type="date" min={today} value={agendaStartDate} onChange={event => setAgendaStartDate(event.target.value || today)} className="h-7 min-w-0 flex-1 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0 sm:w-[138px] sm:flex-none" /></label>
           <Button className="bg-sky-700 hover:bg-sky-800" onClick={() => syncAgendaReservations()} disabled={importReservations.isPending || agendaSyncPhase !== "idle"}>
             {importReservations.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-            {agendaSyncPhase === "priority" ? "Actualizando día…" : agendaSyncPhase === "remaining" ? "Cargando 14 días…" : "Actualizar 15 días"}
+            {agendaSyncPhase === "priority" ? "Actualizando 2 días…" : agendaSyncPhase === "remaining" ? "Cargando 13 días…" : "Actualizar 15 días"}
           </Button>
         </div>
       </CardContent>
-      {agendaSyncPhase === "priority" && <CardContent className="border-t bg-sky-50 py-2 text-xs text-sky-900">Actualizando primero las reservas de {formatDate(window.dateFrom)}…</CardContent>}
-      {agendaSyncPhase === "remaining" && <CardContent className="border-t bg-sky-50 py-2 text-xs text-sky-900">Las reservas de {formatDate(window.dateFrom)} ya están disponibles. Completando los 14 días siguientes…</CardContent>}
+      {agendaSyncPhase === "priority" && <CardContent className="border-t bg-sky-50 py-2 text-xs text-sky-900">Actualizando primero las reservas de {formatDate(window.dateFrom)} y {formatDate(agendaStartDate)}…</CardContent>}
+      {agendaSyncPhase === "remaining" && <CardContent className="border-t bg-sky-50 py-2 text-xs text-sky-900">Las reservas del día anterior y del día elegido ya están disponibles. Completando los 13 días siguientes…</CardContent>}
     </Card>
     <Card className="order-2 border-sky-100 shadow-sm">
       <CardHeader className="py-5">
         <div>
           <CardTitle className="flex items-center gap-2"><CalendarDays className="h-5 w-5 text-sky-700" />Agenda de reservas</CardTitle>
-          <CardDescription className="mt-1">Vista por tipo de habitación y estancia desde la fecha elegida. Pulsa una reserva para ver huésped, pagos y notas; pulsa un día libre para crear una reserva.</CardDescription>
+          <CardDescription className="mt-1">Vista por tipo de habitación y estancia, incluyendo siempre el día anterior para revisar salidas. Pulsa una reserva para ver huésped, pagos y notas; pulsa un día libre para crear una reserva.</CardDescription>
         </div>
       </CardHeader>
       <CardContent className="flex flex-wrap gap-x-5 gap-y-2 border-t bg-sky-50/30 py-3 text-xs text-muted-foreground">
@@ -628,13 +641,14 @@ export function AvailabilityReservations({
           <div className="min-w-[472px] sm:min-w-[935px]">
             <div className="reservation-agenda-grid grid border-b bg-slate-50/80" style={gridStyle}>
               <div className="sticky left-0 z-30 border-r bg-slate-50 px-2 py-3 text-[10px] font-bold uppercase tracking-wide text-slate-600 shadow-[8px_0_12px_-12px_rgba(15,23,42,0.55)] sm:px-4 sm:py-4 sm:text-xs">Tipo · hab.</div>
-              {window.dates.map((date, index) => {
+              {window.dates.map(date => {
                 const day = formatDay(date);
                 const isToday = date === today;
-                const isStartDate = date === window.dateFrom;
+                const isSelectedDate = date === agendaStartDate;
+                const isPreviousDate = date === window.dateFrom;
                 const isWeekend = isFridayOrSaturday(date);
                 const arrivals = arrivalsByDate.get(date) || 0;
-                return <div key={date} className={`border-r px-1 py-2 text-center ${isToday ? "z-10 border-x-2 border-amber-400 bg-amber-100 text-amber-950 shadow-[inset_0_3px_0_rgb(251_191_36)]" : isStartDate ? "z-10 border-x-2 border-sky-400 bg-sky-50 text-sky-950 shadow-[inset_0_3px_0_rgb(56_189_248)]" : isWeekend ? "bg-slate-200/70" : ""} sm:px-3 sm:py-3`}><p className="text-[9px] font-semibold uppercase tracking-wide sm:text-[11px]">{isToday ? "Hoy" : isStartDate ? "Inicio" : day.weekday}</p><p className="mt-0.5 text-lg font-bold leading-none sm:text-2xl">{day.date}</p><p className="mt-1 text-[9px] capitalize text-muted-foreground sm:text-[11px]"><span className="sm:hidden">{arrivals} lleg.</span><span className="hidden sm:inline">{day.month} · {arrivals} llegada{arrivals === 1 ? "" : "s"}</span></p></div>;
+                return <div key={date} className={`border-r px-1 py-2 text-center ${isToday ? "z-10 border-x-2 border-amber-400 bg-amber-100 text-amber-950 shadow-[inset_0_3px_0_rgb(251_191_36)]" : isSelectedDate ? "z-10 border-x-2 border-sky-400 bg-sky-50 text-sky-950 shadow-[inset_0_3px_0_rgb(56_189_248)]" : isPreviousDate ? "bg-slate-100 text-slate-700" : isWeekend ? "bg-slate-200/70" : ""} sm:px-3 sm:py-3`}><p className="text-[9px] font-semibold uppercase tracking-wide sm:text-[11px]">{isToday ? "Hoy" : isSelectedDate ? "Elegido" : isPreviousDate ? (agendaStartDate === today ? "Ayer" : "Previo") : day.weekday}</p><p className="mt-0.5 text-lg font-bold leading-none sm:text-2xl">{day.date}</p><p className="mt-1 text-[9px] capitalize text-muted-foreground sm:text-[11px]"><span className="sm:hidden">{arrivals} lleg.</span><span className="hidden sm:inline">{day.month} · {arrivals} llegada{arrivals === 1 ? "" : "s"}</span></p></div>;
               })}
             </div>
             {agenda.map((group, groupIndex) => {
@@ -652,8 +666,8 @@ export function AvailabilityReservations({
                   const currentRate = day?.totalRate ?? day?.roomRate ?? null;
                   const editor = day?.rateId && currentRate !== null ? { roomTypeName: group.label, date, rateId: day.rateId, previousRate: currentRate } : null;
                   const draft = editor ? agendaRateDrafts[agendaRateKey(editor.rateId, editor.date)] : null;
-                  const todayStyle = date === today ? "border-x-2 border-amber-400 bg-amber-50" : date === window.dateFrom ? "border-x-2 border-sky-400 bg-sky-50" : "";
-                  const weekendStyle = date !== today && date !== window.dateFrom && isFridayOrSaturday(date) ? "bg-slate-200/60" : "";
+                  const todayStyle = date === today ? "border-x-2 border-amber-400 bg-amber-50" : date === agendaStartDate ? "border-x-2 border-sky-400 bg-sky-50" : "";
+                  const weekendStyle = date !== today && date !== agendaStartDate && isFridayOrSaturday(date) ? "bg-slate-200/60" : "";
                   const isEdited = Boolean(draft && hasAgendaRateChanged(draft));
                   return <div key={date} className={`flex min-w-0 items-center justify-center border-r px-0.5 ${todayStyle} ${weekendStyle} sm:px-1`}>
                     {day ? <>
@@ -670,7 +684,7 @@ export function AvailabilityReservations({
                   // La creación exige disponibilidad agregada positiva del tipo,
                   // además de comprobar de nuevo la habitación física al confirmar.
                   const canCreateFromSlot = canCreateReservations && room.key !== "unassigned" && (availabilityDay?.roomsAvailable ?? 0) > 0;
-                  const cellClass = `border-b border-r ${date === today ? "border-x-2 border-amber-400 bg-amber-50/70" : date === window.dateFrom ? "border-x-2 border-sky-400 bg-sky-50/70" : isFridayOrSaturday(date) ? "bg-slate-100/80" : "bg-slate-50/35"}`;
+                  const cellClass = `border-b border-r ${date === today ? "border-x-2 border-amber-400 bg-amber-50/70" : date === agendaStartDate ? "border-x-2 border-sky-400 bg-sky-50/70" : isFridayOrSaturday(date) ? "bg-slate-100/80" : "bg-slate-50/35"}`;
                   return canCreateFromSlot ? <button key={date} type="button" title={`Crear reserva en ${room.label}: ${group.label} · ${date}`} aria-label={`Crear reserva en ${room.label} de ${group.label} el ${date}`} onClick={() => setNewReservationSlot({ date, roomTypeId: availabilityType?.roomTypeId, roomTypeName: group.label, roomName: room.label })} className={`${cellClass} relative z-0 cursor-pointer text-transparent transition hover:bg-sky-100 focus-visible:z-20 focus-visible:bg-sky-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-700`} style={{ gridColumn: index + 2, gridRow: `1 / span ${room.laneCount}` }}>Libre</button> : <div key={date} className={cellClass} style={{ gridColumn: index + 2, gridRow: `1 / span ${room.laneCount}` }} />;
                 })}
                 {room.cards.map(card => <button key={card.reservation.id} type="button" title={`${card.reservation.guestName || "Huésped sin nombre"} · Entrada ${compactDate(card.reservation.checkInDate)} · Salida ${compactDate(card.reservation.checkOutDate)}`} onClick={() => { setSelectedId(card.reservation.id); setDetailTab("information"); }} className={`relative z-10 min-w-0 self-center overflow-visible border px-1.5 py-1 text-left shadow-sm transition duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-700 sm:px-3 sm:py-2 ${card.startSlot % 1 ? "rounded-l-none" : "rounded-l-md"} ${card.endSlot % 1 ? "rounded-r-none" : "rounded-r-full"} ${agendaToneClasses[card.tone]}`} style={agendaCardGridStyle(card)}>

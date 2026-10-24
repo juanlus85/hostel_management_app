@@ -4652,6 +4652,7 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
           z.object({
             days: z.number().int().min(1).max(15).default(5),
             startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+            finalize: z.boolean().default(true),
           })
         )
         .mutation(async ({ ctx, input }) => {
@@ -4697,17 +4698,21 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
                 provider: "cloudbeds",
               }))
             );
-            const roomAssignmentsRemoved =
-              await db.reconcileCloudbedsUpcomingRoomAssignments(
+            let recordsRemoved = 0;
+            let roomAssignmentsRemoved = 0;
+            if (input.finalize) {
+              roomAssignmentsRemoved =
+                await db.reconcileCloudbedsUpcomingRoomAssignments(
+                  dates[0],
+                  dates.at(-1) || dates[0],
+                  reservations
+                );
+              recordsRemoved = await db.removeMissingCloudbedsUpcomingReservations(
                 dates[0],
                 dates.at(-1) || dates[0],
-                reservations
+                reservations.map(reservation => reservation.sourceReservationId)
               );
-            const recordsRemoved = await db.removeMissingCloudbedsUpcomingReservations(
-              dates[0],
-              dates.at(-1) || dates[0],
-              reservations.map(reservation => reservation.sourceReservationId)
-            );
+            }
             await db.updateExternalImportRun(runId, {
               status: "completed",
               recordsImported: reservations.length,
@@ -4739,6 +4744,25 @@ Responde SOLO con un JSON válido con estos campos. Si no puedes extraer algún 
             });
             throw new TRPCError({ code: "BAD_GATEWAY", message });
           }
+        }),
+      reconcileCloudbedsUpcomingReservations: protectedProcedure
+        .input(
+          z.object({
+            dateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+            dateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+            importRunIds: z.array(z.number().int().positive()).min(1).max(15),
+          })
+        )
+        .mutation(async ({ input }) => {
+          const result = await db.reconcileCloudbedsUpcomingImportRuns(
+            input.dateFrom,
+            input.dateTo,
+            input.importRunIds
+          );
+          return {
+            success: true,
+            recordsRemoved: result.recordsRemoved + result.roomAssignmentsRemoved,
+          };
         }),
       listCloudbedsUpcomingReservations: protectedProcedure
         .input(
