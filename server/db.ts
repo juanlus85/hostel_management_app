@@ -18,6 +18,7 @@ import { reservationReleasesAssignedRoom } from "../shared/reservationStatus";
 import { aggregateDashboardTrend } from "../shared/dashboardTrend";
 import { aggregateClosedCashSummary } from "../shared/dashboardCashSummary";
 import { calculateSafeBoxAccumulations } from "../shared/safeBoxAccumulation";
+import { preserveImportedStayDates } from "../shared/cloudbedsReservationStay";
 import {
   DEFAULT_RESERVATION_AGENDA_LAYOUT,
   parseReservationAgendaLayout,
@@ -3603,7 +3604,17 @@ export async function upsertExternalUpcomingReservations(
       ? eq(externalUpcomingReservations.roomNumber, record.roomNumber.trim())
       : isNull(externalUpcomingReservations.roomNumber);
     const existingRecords = await db
-      .select({ id: externalUpcomingReservations.id })
+      .select({
+        id: externalUpcomingReservations.id,
+        checkInDate: externalUpcomingReservations.checkInDate,
+        checkOutDate: externalUpcomingReservations.checkOutDate,
+        roomType: externalUpcomingReservations.roomType,
+        roomNumber: externalUpcomingReservations.roomNumber,
+        reservationStatus: externalUpcomingReservations.reservationStatus,
+        guestCount: externalUpcomingReservations.guestCount,
+        reservationNotes: externalUpcomingReservations.reservationNotes,
+        bookingSource: externalUpcomingReservations.bookingSource,
+      })
       .from(externalUpcomingReservations)
       .where(
         and(
@@ -3616,6 +3627,10 @@ export async function upsertExternalUpcomingReservations(
       );
     const [existing, ...duplicates] = existingRecords;
     if (existing) {
+      const stayDates = preserveImportedStayDates(existing, {
+        checkInDate: record.checkInDate,
+        checkOutDate: record.checkOutDate ?? null,
+      });
       await db
         .update(externalUpcomingReservations)
         .set({
@@ -3624,14 +3639,14 @@ export async function upsertExternalUpcomingReservations(
           guestName: record.guestName,
           guestEmail: record.guestEmail,
           guestPhone: record.guestPhone,
-          checkInDate: record.checkInDate,
-          checkOutDate: record.checkOutDate,
-          roomType: record.roomType,
-          roomNumber: record.roomNumber,
-          reservationStatus: record.reservationStatus,
-          guestCount: record.guestCount,
-          reservationNotes: record.reservationNotes,
-          bookingSource: record.bookingSource,
+          checkInDate: stayDates.checkInDate,
+          checkOutDate: stayDates.checkOutDate,
+          roomType: record.roomType ?? existing.roomType,
+          roomNumber: record.roomNumber ?? existing.roomNumber,
+          reservationStatus: record.reservationStatus ?? existing.reservationStatus,
+          guestCount: record.guestCount ?? existing.guestCount,
+          reservationNotes: record.reservationNotes ?? existing.reservationNotes,
+          bookingSource: record.bookingSource ?? existing.bookingSource,
           amountPending: record.amountPending,
           rawData: record.rawData,
           importedAt: new Date(),
