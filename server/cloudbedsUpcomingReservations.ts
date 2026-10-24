@@ -366,6 +366,29 @@ export function getNextMadridCalendarDates(
   });
 }
 
+/** Construye fechas de calendario sin desplazar la fecha elegida por zona horaria. */
+export function getMadridCalendarDatesFrom(startDate: string, count: number) {
+  const match = startDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) throw new Error("La fecha de inicio no es válida");
+  const [, yearText, monthText, dayText] = match;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const start = new Date(Date.UTC(year, month - 1, day));
+  if (
+    start.getUTCFullYear() !== year ||
+    start.getUTCMonth() !== month - 1 ||
+    start.getUTCDate() !== day
+  ) {
+    throw new Error("La fecha de inicio no es válida");
+  }
+  return Array.from({ length: count }, (_, index) => {
+    const date = new Date(start);
+    date.setUTCDate(start.getUTCDate() + index);
+    return date.toISOString().slice(0, 10);
+  });
+}
+
 export function normalizeUpcomingReservation(
   assignment: CloudbedsReservationAssignment,
   detail: CloudbedsReservationDetail,

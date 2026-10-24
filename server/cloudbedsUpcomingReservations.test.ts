@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   fetchCloudbedsUpcomingReservations,
+  getMadridCalendarDatesFrom,
   getNextMadridCalendarDates,
   normalizeUpcomingReservation,
 } from "./cloudbedsUpcomingReservations";
@@ -56,6 +57,19 @@ describe("normalizeUpcomingReservation", () => {
     expect(dates[0]).toBe("2026-08-26");
     expect(dates[1]).toBe("2026-08-27");
     expect(dates.at(-1)).toBe("2026-09-09");
+  });
+
+  it("construye la ventana desde una fecha futura seleccionada", () => {
+    expect(getMadridCalendarDatesFrom("2026-12-28", 5)).toEqual([
+      "2026-12-28",
+      "2026-12-29",
+      "2026-12-30",
+      "2026-12-31",
+      "2027-01-01",
+    ]);
+    expect(() => getMadridCalendarDatesFrom("2026-02-30", 1)).toThrow(
+      "La fecha de inicio no es válida"
+    );
   });
 
   it("desanida el detalle real de una reserva antes de extraer huésped y habitación", async () => {
