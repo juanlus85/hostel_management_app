@@ -1910,3 +1910,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Fijar en el XML de Policía la hora de entrada a las 13:00 y la hora de salida a las 11:00, sobre las fechas correctas de estancia.
 - [x] Priorizar al abrir Reservas la sincronización del día anterior y del día elegido (hoy por defecto), continuar después con los 13 días restantes, conservar estancias solapadas al importar por bloques y permitir elegir una fecha futura de inicio.
 - [x] Evitar que una asignación diaria parcial de Cloudbeds desplace la entrada o recorte la salida de una estancia ya importada al completar una fecha futura.
+- [x] Cargar precios y disponibilidad de la agenda inmediatamente y en paralelo a la importación de reservas, sin esperar a los detalles de huéspedes de Cloudbeds.

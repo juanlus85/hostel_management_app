@@ -201,7 +201,7 @@ export function AvailabilityReservations({
   const lastAutomaticLoadDate = useRef<string | null>(null);
   const agendaAvailabilityStartDate = window.dateFrom;
   const importAgendaAvailability = trpc.cloudbedsAvailability.importWeek.useMutation();
-  const syncAgendaReservations = (onPrioritySettled?: () => void) => {
+  const syncAgendaReservations = () => {
     const dateFrom = window.dateFrom;
     const dateTo = window.dateTo;
     setAgendaSyncPhase("priority");
@@ -210,7 +210,6 @@ export function AvailabilityReservations({
       {
         onSuccess: firstBatch => {
           utils.checkin.externalImports.listCloudbedsUpcomingReservations.invalidate({ dateFrom, dateTo });
-          onPrioritySettled?.();
           setAgendaSyncPhase("remaining");
           importReservations.mutate(
             { startDate: addCalendarDays(dateFrom, 2), days: 13, finalize: false },
@@ -241,7 +240,6 @@ export function AvailabilityReservations({
         },
         onError: error => {
           setAgendaSyncPhase("idle");
-          onPrioritySettled?.();
           toast.error(`No se pudo actualizar el día ${dateFrom}: ${error.message}`);
         },
       }
@@ -275,7 +273,11 @@ export function AvailabilityReservations({
     if (!autoImport || lastAutomaticLoadDate.current === window.dateFrom) return;
     lastAutomaticLoadDate.current = window.dateFrom;
     setAgendaAvailability(null);
-    syncAgendaReservations(loadAgendaAvailability);
+    // Los precios y disponibilidad no dependen de que termine la importación
+    // de reservas. Se consultan ya, en paralelo, para recuperar la respuesta
+    // rápida de la agenda aunque Cloudbeds tarde en los detalles de huéspedes.
+    loadAgendaAvailability();
+    syncAgendaReservations();
   }, [agendaAvailabilityStartDate, autoImport]);
   const detail = trpc.checkin.externalImports.getCloudbedsUpcomingReservationDetail.useQuery(
     { id: selectedId ?? 0 },
