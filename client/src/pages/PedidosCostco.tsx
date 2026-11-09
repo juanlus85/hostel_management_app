@@ -387,10 +387,10 @@ export default function PedidosCostco() {
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            Al copiar: Item, Descripción, Cantidad, PVP unidad y PVP total. No
-            se incluyen las columnas internas ni los artículos con cantidad 0.
-            «Hay» es el stock actual; «Total previsto» = Hay + Cantidad ×
-            Unidad/Paquete.
+            Al copiar: solo Item, Descripción y Cantidad, sin precios ni
+            totales. No se incluyen las columnas internas ni los artículos con
+            cantidad 0. «Hay» es el stock actual; «Total previsto» = Hay +
+            Cantidad × Unidad/Paquete.
           </p>
           {busy && (
             <p

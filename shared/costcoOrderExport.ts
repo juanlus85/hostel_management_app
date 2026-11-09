@@ -14,8 +14,18 @@ export const costcoCurrency = (amount: string | number) =>
 const cleanCell = (value: string) => value.replace(/[\t\r\n]+/g, " ");
 const csvCell = (value: string) => `"${value.replace(/"/g, '""')}"`;
 
-/** La copia se prepara sobre el pedido completo, no sobre un filtro de pantalla. */
+/** La copia incluye solo Item, Descripción y Cantidad, sobre el pedido completo. */
 export function costcoOrderCopy(rows: CostcoExportRow[]): string {
+  const ordered = rows.filter(row => row.quantity > 0);
+  const lines = [
+    ["Item", "Descripción", "Cantidad"],
+    ...ordered.map(row => [row.costcoCode, row.name, String(row.quantity)]),
+  ];
+  return lines.map(line => line.map(cleanCell).join("\t")).join("\n");
+}
+
+/** El CSV mantiene el detalle de precios y el total; es independiente de la copia. */
+export function costcoOrderCsv(rows: CostcoExportRow[]): string {
   const ordered = rows.filter(row => row.quantity > 0);
   const lines = [
     ["Item", "Descripción", "Cantidad", "PVP unidad", "PVP total"],
@@ -34,12 +44,7 @@ export function costcoOrderCopy(rows: CostcoExportRow[]): string {
       costcoCurrency(calculateCostcoOrderTotal(ordered)),
     ],
   ];
-  return lines.map(line => line.map(cleanCell).join("\t")).join("\n");
-}
-
-export function costcoOrderCsv(rows: CostcoExportRow[]): string {
-  return costcoOrderCopy(rows)
-    .split("\n")
-    .map(line => line.split("\t").map(csvCell).join(";"))
+  return lines
+    .map(line => line.map(cleanCell).map(csvCell).join(";"))
     .join("\r\n");
 }

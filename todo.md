@@ -1917,3 +1917,4 @@ Estas variables son específicas del entorno de Manus y no se pueden usar en pro
 - [x] Añadir Pedidos Costco con cantidades editables, unidades/paquete, stock, total previsto, importes exactos y copia que excluye las columnas internas y filas con cantidad cero.
 - [x] Validar persistencia en MySQL, cálculo de 296,89 € del ejemplo, permisos, 262 pruebas y diseño móvil/escritorio. Reutiliza app_settings sin nueva migración SQL.
 - [x] Permitir crear y editar artículos Costco (nombre, código y coste), conservar relaciones y cantidades y actualizar sus datos en Pedidos Costco. Validado en MySQL, formulario de 320/390/768/1440 px, 312 pruebas y compilación; datos temporales de prueba retirados. No requiere SQL adicional.
+- [x] Simplificar Copiar pedido Costco a Item, Descripción y Cantidad, sin precios ni fila de total; conservar el CSV detallado y excluir cantidades cero.

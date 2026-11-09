@@ -34,16 +34,18 @@ const rows = example.map(([id, quantity]) => {
 });
 
 describe("Costco: copia del pedido", () => {
-  it("respeta el pedido del usuario y calcula exactamente 296,89 euros", () => {
+  it("copia solo item, descripción y cantidad en el orden del pedido", () => {
     const text = costcoOrderCopy(rows);
-    expect(text.split("\n")[0]).toBe(
-      "Item\tDescripción\tCantidad\tPVP unidad\tPVP total"
+    expect(text.split("\n")).toEqual([
+      "Item\tDescripción\tCantidad",
+      ...rows.map(row => `${row.costcoCode}\t${row.name}\t${row.quantity}`),
+    ]);
+    expect(text).not.toContain("PVP");
+    expect(text).not.toContain("TOTAL PEDIDO");
+    expect(text).not.toContain("€");
+    expect(text.split("\n").every(line => line.split("\t").length === 3)).toBe(
+      true
     );
-    expect(text).toContain(
-      "1138180\tKS Agua mineral embotellada, 40 x 50cl\t15\t"
-    );
-    expect(text).toMatch(/296,89\s?€/);
-    expect(text.split("\n")).toHaveLength(15);
   });
   it("excluye cantidades cero y campos internos del inventario", () => {
     const text = costcoOrderCopy([
@@ -55,6 +57,21 @@ describe("Costco: copia del pedido", () => {
     expect(text).not.toContain("Total previsto");
     expect(text).not.toContain("Unidad/Paquete");
     expect(text).not.toContain("Hay");
+  });
+  it("limpia tabuladores y saltos de línea sin añadir columnas ni filas", () => {
+    const text = costcoOrderCopy([{ ...rows[0], name: "Agua\tCostco\nextra" }]);
+    expect(text).toBe(
+      "Item\tDescripción\tCantidad\n1138180\tAgua Costco extra\t15"
+    );
+    expect(costcoOrderCopy([])).toBe("Item\tDescripción\tCantidad");
+  });
+  it("mantiene el CSV detallado con precios y total de 296,89 euros", () => {
+    const csv = costcoOrderCsv(rows);
+    expect(csv.split("\r\n")[0]).toBe(
+      '"Item";"Descripción";"Cantidad";"PVP unidad";"PVP total"'
+    );
+    expect(csv).toContain("TOTAL PEDIDO");
+    expect(csv).toMatch(/296,89\s?€/);
   });
   it("exporta CSV escapando comillas y evitando columnas rotas", () => {
     const csv = costcoOrderCsv([
