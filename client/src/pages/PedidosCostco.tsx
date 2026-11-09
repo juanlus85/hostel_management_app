@@ -30,9 +30,11 @@ import {
 } from "@shared/costcoOrders";
 import {
   costcoCurrency,
-  costcoOrderCopy,
   costcoOrderCsv,
+  costcoOrderEmailHtml,
+  costcoOrderEmailText,
 } from "@shared/costcoOrderExport";
+import { copyCostcoOrderClipboard } from "@/lib/costcoClipboard";
 
 function IntegerField({
   value,
@@ -109,7 +111,13 @@ export default function PedidosCostco() {
   const [addOpen, setAddOpen] = useState(false);
   const [addSearch, setAddSearch] = useState("");
   const [resetOpen, setResetOpen] = useState(false);
-  const [copyFallback, setCopyFallback] = useState<string | null>(null);
+  const [copyFallback, setCopyFallback] = useState<{
+    html: string;
+    text: string;
+  } | null>(null);
+  const [copying, setCopying] = useState(false);
+  const copyLock = useRef(false);
+  const copyTableRef = useRef<HTMLDivElement>(null);
   const refresh = async () => {
     await Promise.all([
       utils.costco.order.invalidate(),
@@ -195,13 +203,39 @@ export default function PedidosCostco() {
         .includes(addSearch.toLocaleLowerCase("es"))
   );
   const copy = async () => {
-    const text = costcoOrderCopy(rows);
+    if (copyLock.current) return;
+    copyLock.current = true;
+    setCopying(true);
+    const payload = {
+      html: costcoOrderEmailHtml(rows),
+      text: costcoOrderEmailText(rows),
+    };
     try {
-      await navigator.clipboard.writeText(text);
-      toast.success("Pedido copiado, sin columnas internas ni cantidades a 0");
-    } catch {
-      setCopyFallback(text);
+      const format = await copyCostcoOrderClipboard(payload);
+      if (format === "table")
+        toast.success(
+          "Tabla copiada: pega normalmente en el correo para conservar el formato"
+        );
+      else if (format === "text")
+        toast.info(
+          "Pedido copiado en texto legible. Este navegador no ha permitido copiar la tabla."
+        );
+      else setCopyFallback(payload);
+    } catch (error) {
+      setCopyFallback(payload);
+    } finally {
+      copyLock.current = false;
+      setCopying(false);
     }
+  };
+  const selectCopyTable = () => {
+    if (!copyTableRef.current) return;
+    const selection = window.getSelection();
+    if (!selection) return;
+    const range = document.createRange();
+    range.selectNodeContents(copyTableRef.current);
+    selection.removeAllRanges();
+    selection.addRange(range);
   };
   const download = () => {
     const url = URL.createObjectURL(
@@ -341,10 +375,14 @@ export default function PedidosCostco() {
             </Button>
             <Button
               onClick={copy}
-              disabled={busy || selectedCount === 0}
+              disabled={busy || copying || selectedCount === 0}
               className="bg-sky-700 hover:bg-sky-800"
             >
-              <Copy className="mr-2 h-4 w-4" />
+              {copying ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Copy className="mr-2 h-4 w-4" />
+              )}
               Copiar pedido
             </Button>
             <Button
@@ -387,10 +425,11 @@ export default function PedidosCostco() {
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            Al copiar: solo Item, Descripción y Cantidad, sin precios ni
-            totales. No se incluyen las columnas internas ni los artículos con
-            cantidad 0. «Hay» es el stock actual; «Total previsto» = Hay +
-            Cantidad × Unidad/Paquete.
+            Copia una tabla lista para pegar en un correo: Item, Descripción y
+            Cantidad, sin precios, totales ni artículos con cantidad 0. Pega
+            normalmente (Ctrl+V), no como texto sin formato, para conservar los
+            bordes y las columnas. «Hay» es el stock actual; «Total previsto» =
+            Hay + Cantidad × Unidad/Paquete.
           </p>
           {busy && (
             <p
@@ -640,21 +679,43 @@ export default function PedidosCostco() {
         open={copyFallback !== null}
         onOpenChange={open => !open && setCopyFallback(null)}
       >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Copiar pedido</DialogTitle>
+        <DialogContent className="flex max-h-[calc(100dvh_-_2rem)] w-[calc(100vw_-_2rem)] max-w-[calc(100vw_-_2rem)] flex-col overflow-hidden sm:max-w-2xl">
+          <DialogHeader className="shrink-0 text-left">
+            <DialogTitle>Pedido para copiar en un correo</DialogTitle>
             <DialogDescription>
-              El navegador no permitió acceder al portapapeles. Selecciona y
-              copia este texto.
+              El navegador ha bloqueado el copiado automático. Pulsa Seleccionar
+              tabla, copia con Ctrl+C (o Copiar en el móvil) y pégala
+              normalmente en el correo.
             </DialogDescription>
           </DialogHeader>
-          <textarea
-            aria-label="Texto del pedido para copiar"
-            readOnly
-            value={copyFallback ?? ""}
-            onFocus={event => event.currentTarget.select()}
-            className="h-64 w-full rounded-md border p-3 text-xs"
-          />
+          <Button
+            type="button"
+            variant="outline"
+            onClick={selectCopyTable}
+            className="min-h-11 shrink-0 self-start"
+          >
+            <Copy className="mr-2 h-4 w-4" /> Seleccionar tabla
+          </Button>
+          <div className="min-h-0 overflow-y-auto overscroll-contain space-y-4">
+            <div
+              ref={copyTableRef}
+              aria-label="Tabla del pedido para correo"
+              className="select-text bg-white text-slate-900"
+              dangerouslySetInnerHTML={{ __html: copyFallback?.html ?? "" }}
+            />
+            <details className="rounded-md border p-3">
+              <summary className="cursor-pointer text-sm font-medium">
+                Alternativa en texto sin formato
+              </summary>
+              <textarea
+                aria-label="Texto del pedido para copiar"
+                readOnly
+                value={copyFallback?.text ?? ""}
+                onFocus={event => event.currentTarget.select()}
+                className="mt-3 h-64 w-full rounded-md border p-3 text-base sm:text-sm"
+              />
+            </details>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
