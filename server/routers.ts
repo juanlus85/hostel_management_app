@@ -1,6 +1,7 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
+import { costcoRouter } from "./costcoRouter";
 import {
   publicProcedure,
   protectedProcedure,
@@ -361,10 +362,9 @@ async function getExternalReservationWelcomeContext(
     },
   };
 }
-
 export const appRouter = router({
   system: systemRouter,
-
+  costco: costcoRouter,
   // Global utility procedures
   utils: router({
     // Get available years from database (for all modules)
