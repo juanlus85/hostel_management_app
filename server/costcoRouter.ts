@@ -3,12 +3,15 @@ import { z } from "zod";
 import { protectedProcedure, router } from "./_core/trpc";
 import {
   addCostcoOrderItem,
+  costcoCatalogInputSchema,
+  createCostco,
   getCostcoOrder,
   listCostco,
   removeCostcoOrderItem,
   resetCostcoOrder,
   setCostcoBinding,
   setCostcoOrderItem,
+  updateCostco,
   validateCostcoId,
 } from "./costcoStore";
 
@@ -39,6 +42,18 @@ const success = () => ({ success: true }) as const;
 
 export const costcoRouter = router({
   list: adminProcedure.query(() => listCostco()),
+  create: adminProcedure
+    .input(costcoCatalogInputSchema)
+    .mutation(async ({ input }) => ({
+      success: true as const,
+      id: await createCostco(input),
+    })),
+  update: adminProcedure
+    .input(costcoCatalogInputSchema.extend({ id: catalogId }))
+    .mutation(async ({ input }) => {
+      await updateCostco(input);
+      return success();
+    }),
   setBinding: adminProcedure
     .input(
       z.object({

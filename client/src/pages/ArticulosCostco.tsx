@@ -4,6 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import { CostcoArticleEditor } from "@/components/CostcoArticleEditor";
 import {
   Command,
   CommandEmpty,
@@ -25,6 +26,8 @@ import {
   Link2,
   Loader2,
   Package,
+  Pencil,
+  Plus,
   RefreshCw,
   Search,
   Unlink,
@@ -275,6 +278,10 @@ export default function ArticulosCostco() {
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
   const [refreshing, setRefreshing] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editedArticle, setEditedArticle] = useState<CostcoArticle | null>(
+    null
+  );
   // Bloqueo síncrono por fila: una segunda pulsación no dispara otra mutación antes del render.
   const rowLocks = useRef(new Set<string>());
   const searchId = useId();
@@ -513,6 +520,29 @@ export default function ArticulosCostco() {
     );
   };
 
+  const renderEdit = (article: CostcoArticle, compact = false) =>
+    canEdit && (
+      <Button
+        type="button"
+        variant={compact ? "ghost" : "outline"}
+        aria-label={`Editar artículo Costco ${article.name}`}
+        title="Editar artículo"
+        disabled={busy || Boolean(pendingBindings[article.id])}
+        className={
+          compact
+            ? "h-11 w-11 shrink-0 p-0"
+            : "min-h-11 shrink-0 gap-2 bg-white"
+        }
+        onClick={() => {
+          setEditedArticle(article);
+          setEditorOpen(true);
+        }}
+      >
+        <Pencil className="h-4 w-4" />
+        {!compact && "Editar"}
+      </Button>
+    );
+
   const loading = authLoading || (Boolean(user) && catalogQuery.isLoading);
   const catalogUnavailable = catalogQuery.data === undefined;
 
@@ -530,9 +560,9 @@ export default function ArticulosCostco() {
                 Costco
               </h2>
               <p className="max-w-2xl text-sm leading-relaxed text-slate-600">
-                Catálogo y precios de coste suministrados. Vincula cada artículo
-                con cualquier producto del inventario para consultar su stock.
-                Cada selección se guarda automáticamente.
+                Añade artículos y edita sus nombres, códigos y precios de coste.
+                Vincula cada artículo con un producto del inventario para
+                consultar su stock. Cada selección se guarda automáticamente.
               </p>
               <p className="text-xs leading-relaxed text-slate-500">
                 No se consulta Costco en directo. El stock procede del
@@ -541,6 +571,19 @@ export default function ArticulosCostco() {
               </p>
             </div>
             <div className="flex flex-wrap gap-2 xl:max-w-lg xl:justify-end">
+              {canEdit && (
+                <Button
+                  type="button"
+                  className="min-h-11 gap-2"
+                  disabled={loading || busy || hasPending || catalogUnavailable}
+                  onClick={() => {
+                    setEditedArticle(null);
+                    setEditorOpen(true);
+                  }}
+                >
+                  <Plus className="h-4 w-4 shrink-0" /> Añadir artículo Costco
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="outline"
@@ -742,10 +785,11 @@ export default function ArticulosCostco() {
               </caption>
               <colgroup>
                 <col className="w-[27%]" />
+                <col className="w-[12%]" />
+                <col className="w-[12%]" />
+                <col className="w-[28%]" />
                 <col className="w-[13%]" />
-                <col className="w-[13%]" />
-                <col className="w-[33%]" />
-                <col className="w-[14%]" />
+                <col className="w-[8%]" />
               </colgroup>
               <thead className="border-b border-sky-100 bg-sky-50 text-slate-700">
                 <tr>
@@ -763,6 +807,9 @@ export default function ArticulosCostco() {
                   </th>
                   <th scope="col" className="p-4 text-right font-semibold">
                     Stock Inventario
+                  </th>
+                  <th scope="col" className="p-2 text-center">
+                    <span className="sr-only">Editar artículo</span>
                   </th>
                 </tr>
               </thead>
@@ -790,6 +837,9 @@ export default function ArticulosCostco() {
                     >
                       {stockLabel(article)}
                     </td>
+                    <td className="p-2 text-center">
+                      {renderEdit(article, true)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -802,9 +852,12 @@ export default function ArticulosCostco() {
                 className="min-w-0 gap-0 border-sky-200 bg-white py-4"
               >
                 <CardContent className="min-w-0 space-y-4 px-4">
-                  <h3 className="break-words font-semibold leading-relaxed [overflow-wrap:anywhere]">
-                    {article.name}
-                  </h3>
+                  <div className="flex items-start justify-between gap-3">
+                    <h3 className="min-w-0 flex-1 break-words font-semibold leading-relaxed [overflow-wrap:anywhere]">
+                      {article.name}
+                    </h3>
+                    {renderEdit(article)}
+                  </div>
                   <dl className="grid min-w-0 grid-cols-2 gap-3">
                     <div className="min-w-0">
                       <dt className="text-xs text-slate-500">Código Costco</dt>
@@ -841,6 +894,14 @@ export default function ArticulosCostco() {
           </div>
         </>
       ) : null}
+      {editorOpen && (
+        <CostcoArticleEditor
+          key={editedArticle?.id ?? "new"}
+          article={editedArticle}
+          onClose={() => setEditorOpen(false)}
+          onSaved={() => setSearch("")}
+        />
+      )}
     </section>
   );
 }

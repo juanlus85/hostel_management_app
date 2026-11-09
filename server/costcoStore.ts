@@ -1,5 +1,6 @@
 import { TRPCError } from "@trpc/server";
-import { eq, inArray, sql } from "drizzle-orm";
+import { randomUUID } from "node:crypto";
+import { and, eq, like, sql } from "drizzle-orm";
 import { z } from "zod";
 import { appSettings, inventoryProducts } from "../drizzle/schema";
 import { COSTCO_CATALOG } from "../shared/costcoCatalog";
@@ -14,8 +15,34 @@ import { getDb } from "./db";
 export const COSTCO_SETTING_PREFIX = "costco.row.v1.";
 export const costcoSettingKey = (id: string) => `${COSTCO_SETTING_PREFIX}${id}`;
 const catalogIds = new Set(COSTCO_CATALOG.map(item => item.id));
-const settingKeys = COSTCO_CATALOG.map(item => costcoSettingKey(item.id));
+const customIdPattern =
+  "costco-custom-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
+const customIdRegex = new RegExp(`^${customIdPattern}$`);
+const settingKeyPattern = `^costco[.]row[.]v1[.](${COSTCO_CATALOG.map(item => item.id).join("|")}|${customIdPattern})$`;
+const isCostcoId = (id: string) => catalogIds.has(id) || customIdRegex.test(id);
+const costcoSettingsFilter = () =>
+  and(
+    like(appSettings.settingKey, `${COSTCO_SETTING_PREFIX}%`),
+    sql`${appSettings.settingKey} REGEXP ${settingKeyPattern}`
+  );
 const orderNumber = z.number().int().min(0).max(100000);
+
+export const costcoCatalogInputSchema = z.object({
+  name: z.string().trim().min(1).max(255),
+  costcoCode: z.string().trim().min(1).max(50),
+  cost: z
+    .string()
+    .trim()
+    .regex(
+      /^(?:0|[1-9]\d{0,7})(?:\.\d{1,2})?$/,
+      "El coste debe estar entre 0 y 99999999.99, con un máximo de dos decimales"
+    )
+    .transform(value => {
+      const [whole, fraction = ""] = value.split(".");
+      return `${whole}.${fraction.padEnd(2, "0")}`;
+    }),
+});
+type CatalogInput = z.input<typeof costcoCatalogInputSchema>;
 
 const storedRowSchema = z.object({
   version: z.literal(1),
@@ -55,11 +82,20 @@ const productColumns = {
 };
 
 export function validateCostcoId(id: string): void {
-  if (!catalogIds.has(id))
+  if (!isCostcoId(id))
     throw new TRPCError({
       code: "BAD_REQUEST",
       message: "Artículo Costco desconocido",
     });
+}
+
+function emptyBinding(): StoredRow["binding"] {
+  return {
+    inventoryProductId: null,
+    inventoryProductHandle: null,
+    inventoryProductName: null,
+    inventoryProductCreatedAt: null,
+  };
 }
 
 function defaultRow(id: string): StoredRow {
@@ -69,12 +105,7 @@ function defaultRow(id: string): StoredRow {
   return {
     version: 1,
     catalog: { ...catalog },
-    binding: {
-      inventoryProductId: null,
-      inventoryProductHandle: null,
-      inventoryProductName: null,
-      inventoryProductCreatedAt: null,
-    },
+    binding: emptyBinding(),
     order: {
       included: !!order,
       quantity: order?.quantity ?? 0,
@@ -102,14 +133,18 @@ function parseRow(value: string | null, id: string): StoredRow {
 }
 
 async function readSettings(db: Connection) {
-  // Lista cerrada de claves: jamás leer otros ajustes, credenciales o secretos.
-  return db
-    .select({
-      settingKey: appSettings.settingKey,
-      settingValue: appSettings.settingValue,
-    })
-    .from(appSettings)
-    .where(inArray(appSettings.settingKey, settingKeys));
+  // Prefijo Y patrón cerrados en SQL: no cargar otros ajustes ni secretos.
+  return (
+    db
+      .select({
+        settingKey: appSettings.settingKey,
+        settingValue: appSettings.settingValue,
+      })
+      .from(appSettings)
+      .where(costcoSettingsFilter())
+      // ID autoincremental: orden de creación estable incluso en el mismo segundo.
+      .orderBy(appSettings.id)
+  );
 }
 
 async function ensureRows(db: Database): Promise<void> {
@@ -185,11 +220,21 @@ function publicRow(row: StoredRow, products: Product[]): CostcoCatalogRow {
 
 async function loadRows(db: Database) {
   const saved = new Map(
-    (await readSettings(db)).map(item => [item.settingKey, item.settingValue])
+    (await readSettings(db))
+      .filter(
+        item =>
+          item.settingKey.startsWith(COSTCO_SETTING_PREFIX) &&
+          isCostcoId(item.settingKey.slice(COSTCO_SETTING_PREFIX.length))
+      )
+      .map(item => [item.settingKey, item.settingValue])
   );
   const rows = COSTCO_CATALOG.map(item =>
     parseRow(saved.get(costcoSettingKey(item.id)) ?? null, item.id)
   );
+  for (const [key, value] of Array.from(saved.entries())) {
+    const id = key.slice(COSTCO_SETTING_PREFIX.length);
+    if (!catalogIds.has(id)) rows.push(parseRow(value, id));
+  }
   const products = await db.select(productColumns).from(inventoryProducts);
   return { rows, products };
 }
@@ -235,7 +280,12 @@ async function mutateRow(
         .from(appSettings)
         .where(eq(appSettings.settingKey, costcoSettingKey(id)))
         .for("update");
-      const row = parseRow(saved?.settingValue ?? null, id);
+      if (!saved)
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Artículo Costco desconocido",
+        });
+      const row = parseRow(saved.settingValue, id);
       await mutate(row, tx);
       await tx
         .update(appSettings)
@@ -245,13 +295,54 @@ async function mutateRow(
   );
 }
 
+function parseCatalogInput(input: CatalogInput) {
+  const result = costcoCatalogInputSchema.safeParse(input);
+  if (!result.success)
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Nombre, código o coste Costco no válidos",
+    });
+  return result.data;
+}
+
+export async function createCostco(input: CatalogInput): Promise<string> {
+  const catalog = parseCatalogInput(input);
+  const id = `costco-custom-${randomUUID()}`;
+  const row: StoredRow = {
+    version: 1,
+    catalog: { id, ...catalog },
+    binding: emptyBinding(),
+    order: { included: false, quantity: 0, unitsPerPackage: 1, position: 0 },
+  };
+  await withDatabase(async db => {
+    // Insert puro: jamás reemplazar filas existentes, ni deduplicar códigos.
+    await db.insert(appSettings).values({
+      settingKey: costcoSettingKey(id),
+      settingValue: JSON.stringify(row),
+      isEncrypted: false,
+      description: "Catálogo, vínculo y pedido Costco",
+    });
+  });
+  return id;
+}
+
+export async function updateCostco(
+  input: CatalogInput & { id: string }
+): Promise<void> {
+  const catalog = parseCatalogInput(input);
+  await mutateRow(input.id, async row => {
+    // Solo catálogo sobre la fila bloqueada: conservar binding/order/position.
+    row.catalog = { ...row.catalog, ...catalog };
+  });
+}
+
 export async function setCostcoBinding(
   id: string,
   inventoryProductId: number | null
 ): Promise<void> {
   await mutateRow(id, async (row, tx) => {
     if (inventoryProductId === null) {
-      row.binding = defaultRow(id).binding;
+      row.binding = emptyBinding();
       return;
     }
     const [product] = await tx
@@ -316,11 +407,16 @@ export async function resetCostcoOrder(): Promise<void> {
           settingValue: appSettings.settingValue,
         })
         .from(appSettings)
-        .where(inArray(appSettings.settingKey, settingKeys))
+        .where(costcoSettingsFilter())
         .orderBy(appSettings.settingKey)
         .for("update");
       for (const item of saved) {
         const id = item.settingKey.slice(COSTCO_SETTING_PREFIX.length);
+        if (
+          !item.settingKey.startsWith(COSTCO_SETTING_PREFIX) ||
+          !isCostcoId(id)
+        )
+          continue;
         const row = parseRow(item.settingValue, id);
         // Reiniciar solo cantidades, sin reinsertar artículos retirados ni perder paquetes.
         row.order.quantity = 0;
