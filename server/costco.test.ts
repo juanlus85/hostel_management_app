@@ -45,11 +45,13 @@ function memoryDatabase() {
     params: unknown[];
     columns: string[];
     locked: boolean;
+    orderColumn: string | undefined;
   }[] = [];
   const writes: string[] = [];
   let nextSettingId = 1;
   let failSelect = false;
   let failUpdate = false;
+  let updatesUntilFailure: number | undefined;
   let beforeInsert: (() => void) | undefined;
   let transactionTail = Promise.resolve();
 
@@ -97,6 +99,7 @@ function memoryDatabase() {
               params,
               columns: Object.keys(selection ?? {}),
               locked,
+              orderColumn,
             });
             let rows: Record<string, unknown>[] =
               table === "app_settings" ? [...settings.values()] : products;
@@ -190,6 +193,11 @@ function memoryDatabase() {
           return {
             async where(condition: SQL) {
               if (failUpdate) throw new Error("MySQL write failed");
+              if (updatesUntilFailure !== undefined) {
+                if (updatesUntilFailure === 0)
+                  throw new Error("MySQL write failed");
+                updatesUntilFailure--;
+              }
               const [key] = dialect.sqlToQuery(condition).params;
               const row = settings.get(String(key));
               if (!row) throw new Error("Missing setting");
@@ -238,6 +246,9 @@ function memoryDatabase() {
     },
     failWrites() {
       failUpdate = true;
+    },
+    failAfterUpdates(count: number) {
+      updatesUntilFailure = count;
     },
     onBeforeInsert(work: () => void) {
       beforeInsert = work;
@@ -298,6 +309,7 @@ const allCalls = (api: ReturnType<typeof caller>) => [
   () => api.setOrderItem({ id: "costco-08", quantity: 2 }),
   () => api.addOrderItem({ id: "costco-05" }),
   () => api.removeOrderItem({ id: "costco-08" }),
+  () => api.moveOrder({ id: "costco-08", direction: "down" }),
   () => api.resetOrder(),
 ];
 
@@ -316,6 +328,314 @@ describe("Costco permissions", () => {
   it("registers trpc.costco on the application router", async () => {
     const { appRouter } = await import("./routers");
     expect(appRouter._def.record.costco).toBeDefined();
+  });
+});
+
+describe("Costco order movement", () => {
+  const savedRow = (id: string) =>
+    JSON.parse(memory.settings.get(costcoSettingKey(id))!.settingValue!);
+  const setPosition = (id: string, position: number) => {
+    const key = costcoSettingKey(id);
+    const row = savedRow(id);
+    row.order.position = position;
+    memory.settings.set(key, {
+      ...memory.settings.get(key)!,
+      settingValue: JSON.stringify(row),
+    });
+  };
+
+  it.each(["up", "down"] as const)(
+    "moves exactly one global included position %s and persists across a DB/caller reload",
+    async direction => {
+      const before = await caller().order();
+      const index = 2;
+      const id = before[index].id;
+      const adjacent = index + (direction === "up" ? -1 : 1);
+      const expected = before.map(row => row.id);
+      [expected[index], expected[adjacent]] = [
+        expected[adjacent],
+        expected[index],
+      ];
+      expect(await caller().moveOrder({ id, direction })).toEqual({
+        success: true,
+      });
+      const after = await caller().order();
+      expect(after.map(row => row.id)).toEqual(expected);
+      expect(after).toEqual(
+        expected.map(id => before.find(row => row.id === id))
+      );
+      expected.forEach((id, position) =>
+        expect(savedRow(id).order.position).toBe(position)
+      );
+      const reloaded = memoryDatabase();
+      for (const [key, value] of Array.from(memory.settings.entries()))
+        reloaded.settings.set(key, { ...value });
+      memory = reloaded;
+      vi.mocked(getDb).mockResolvedValue(
+        memory.db as unknown as NonNullable<Awaited<ReturnType<typeof getDb>>>
+      );
+      expect((await caller().order()).map(row => row.id)).toEqual(expected);
+    }
+  );
+
+  it("leaves both extremes byte-for-byte unchanged, including legacy positions", async () => {
+    const rows = await caller().order();
+    rows.forEach((row, index) => setPosition(row.id, 1700000000000 + index));
+    const before = [...memory.settings.entries()];
+    memory.writes.length = 0;
+    expect(
+      await caller().moveOrder({ id: rows[0].id, direction: "up" })
+    ).toEqual({ success: true });
+    expect(
+      await caller().moveOrder({ id: rows.at(-1)!.id, direction: "down" })
+    ).toEqual({ success: true });
+    expect([...memory.settings.entries()]).toEqual(before);
+    expect(memory.writes).toEqual([]);
+    expect((await caller().order()).map(row => row.id)).toEqual(
+      rows.map(row => row.id)
+    );
+  });
+
+  it("treats a single included row as both extremes", async () => {
+    const rows = await caller().order();
+    const id = rows[0].id;
+    for (const row of rows.slice(1))
+      await caller().removeOrderItem({ id: row.id });
+    const before = [...memory.settings.entries()];
+    memory.writes.length = 0;
+    await caller().moveOrder({ id, direction: "up" });
+    await caller().moveOrder({ id, direction: "down" });
+    expect([...memory.settings.entries()]).toEqual(before);
+    expect(memory.writes).toEqual([]);
+  });
+
+  it("normalizes tied legacy timestamps using current ID tie-break order without losing rows", async () => {
+    await caller().order();
+    const first = await caller().create({
+      name: "Zulu",
+      costcoCode: "DUP",
+      cost: "2.00",
+    });
+    const second = await caller().create({
+      name: "Alpha",
+      costcoCode: "DUP",
+      cost: "3.00",
+    });
+    await caller().addOrderItem({ id: first.id });
+    await caller().addOrderItem({ id: second.id });
+    const initial = await caller().order();
+    initial.forEach(row => setPosition(row.id, 1700000000000));
+    const before = await caller().order();
+    const expected = before.map(row => row.id);
+    expect(expected).toEqual([...expected].sort((a, b) => a.localeCompare(b)));
+    const index = expected.indexOf(first.id);
+    const direction = index > 0 ? "up" : "down";
+    const adjacent = index + (direction === "up" ? -1 : 1);
+    [expected[index], expected[adjacent]] = [
+      expected[adjacent],
+      expected[index],
+    ];
+    await caller().moveOrder({ id: first.id, direction });
+    expect((await caller().order()).map(row => row.id)).toEqual(expected);
+    expect(new Set(expected).size).toBe(initial.length);
+    expected.forEach((id, position) =>
+      expect(savedRow(id).order.position).toBe(position)
+    );
+  });
+
+  it("includes zero-quantity neighbors, ignores excluded rows, and preserves every non-position field and exports", async () => {
+    memory.setProducts([product()]);
+    const created = await caller().create({
+      name: "Personalizado",
+      costcoCode: "CODIGO",
+      cost: "7.25",
+    });
+    await caller().addOrderItem({ id: created.id });
+    await caller().setBinding({ id: created.id, inventoryProductId: 7 });
+    await caller().setOrderItem({
+      id: created.id,
+      quantity: 3,
+      unitsPerPackage: 9,
+    });
+    const initial = await caller().order();
+    const zeroId = initial.at(-2)!.id;
+    await caller().setOrderItem({ id: zeroId, quantity: 0 });
+    setPosition("costco-05", 0);
+    const before = [...memory.settings.entries()].map(([key, setting]) => ({
+      key,
+      row: JSON.parse(setting.settingValue!),
+    }));
+    const expected = (await caller().order()).map(row => row.id);
+    [expected[expected.length - 2], expected[expected.length - 1]] = [
+      expected[expected.length - 1],
+      expected[expected.length - 2],
+    ];
+    await caller().moveOrder({ id: created.id, direction: "up" });
+    const rows = await caller().order();
+    expect(rows.map(row => row.id)).toEqual(expected);
+    expect(rows.at(-1)).toMatchObject({ id: zeroId, quantity: 0 });
+    before.forEach(({ key, row }) => {
+      const current = JSON.parse(memory.settings.get(key)!.settingValue!);
+      expect(current).toEqual({
+        ...row,
+        order: { ...row.order, position: current.order.position },
+      });
+      if (!row.order.included) expect(current).toEqual(row);
+    });
+    expect(rows.find(row => row.id === created.id)).toMatchObject({
+      name: "Personalizado",
+      costcoCode: "CODIGO",
+      cost: "7.25",
+      quantity: 3,
+      unitsPerPackage: 9,
+      inventoryProductId: 7,
+      inventoryStock: "12.500",
+      bindingMissing: false,
+    });
+    // Mover otra vez cruza un vecino con cantidad positiva para comprobar exportación.
+    await caller().moveOrder({ id: created.id, direction: "up" });
+    const exportedRows = await caller().order();
+    const positive = exportedRows.filter(row => row.quantity > 0);
+    expect(
+      costcoOrderCopy(exportedRows)
+        .split("\n")
+        .slice(1)
+        .map(line => line.split("\t")[1])
+    ).toEqual(positive.map(row => row.name));
+    expect(
+      costcoOrderCsv(exportedRows)
+        .split("\r\n")
+        .slice(1, -1)
+        .map(line => line.split(";")[1])
+    ).toEqual(positive.map(row => `"${row.name}"`));
+  });
+
+  it("rejects excluded seeded/custom rows without writing", async () => {
+    const { id } = await caller().create({
+      name: "Fuera",
+      costcoCode: "123",
+      cost: "1.00",
+    });
+    const before = [...memory.settings.entries()];
+    memory.writes.length = 0;
+    for (const idToMove of ["costco-05", id])
+      await expect(
+        caller().moveOrder({ id: idToMove, direction: "up" })
+      ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect([...memory.settings.entries()]).toEqual(before);
+    expect(memory.writes).toEqual([]);
+  });
+
+  it.each(["left", "", null, undefined, 1])(
+    "rejects invalid direction %s before DB access",
+    async direction => {
+      await expect(
+        caller().moveOrder({ id: "costco-08", direction: direction as "up" })
+      ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+      expect(getDb).not.toHaveBeenCalled();
+    }
+  );
+
+  it("serializes simultaneous moves from the latest positions without losing either move", async () => {
+    const expected = (await caller().order()).map(row => row.id);
+    const id = expected[0];
+    expected.splice(0, 1);
+    expected.splice(2, 0, id);
+    await Promise.all([
+      caller().moveOrder({ id, direction: "down" }),
+      caller().moveOrder({ id, direction: "down" }),
+    ]);
+    expect((await caller().order()).map(row => row.id)).toEqual(expected);
+  });
+
+  it.each([true, false])(
+    "preserves concurrent field patches and movement (move first: %s)",
+    async moveFirst => {
+      memory.setProducts([product()]);
+      const before = (await caller().order()).map(row => row.id);
+      const id = before[0];
+      [before[0], before[1]] = [before[1], before[0]];
+      const patches = [
+        () => caller().setOrderItem({ id, quantity: 23 }),
+        () => caller().setOrderItem({ id, unitsPerPackage: 8 }),
+        () => caller().setBinding({ id, inventoryProductId: 7 }),
+        () =>
+          caller().update({
+            id,
+            name: "Concurrente",
+            costcoCode: "EDITADO",
+            cost: "6.75",
+          }),
+      ];
+      const move = () => caller().moveOrder({ id, direction: "down" });
+      await Promise.all(
+        (moveFirst ? [move, ...patches] : [...patches, move]).map(call =>
+          call()
+        )
+      );
+      const rows = await caller().order();
+      expect(rows.map(row => row.id)).toEqual(before);
+      expect(rows[1]).toMatchObject({
+        id,
+        quantity: 23,
+        unitsPerPackage: 8,
+        inventoryProductId: 7,
+        name: "Concurrente",
+        costcoCode: "EDITADO",
+        cost: "6.75",
+      });
+    }
+  );
+
+  it("uses the same scoped deterministic locks as reset and preserves concurrent membership changes", async () => {
+    const before = (await caller().order()).map(row => row.id);
+    const { id: added } = await caller().create({
+      name: "Nuevo",
+      costcoCode: "NUEVO",
+      cost: "1.00",
+    });
+    memory.settings.set("smtp_password", {
+      settingKey: "smtp_password",
+      settingValue: "PRIVATE",
+    });
+    memory.queries.length = 0;
+    await Promise.all([
+      caller().moveOrder({ id: before[0], direction: "down" }),
+      caller().removeOrderItem({ id: before.at(-1)! }),
+      caller().addOrderItem({ id: added }),
+      caller().resetOrder(),
+    ]);
+    const rows = await caller().order();
+    expect(rows.map(row => row.id)).toEqual([
+      before[1],
+      before[0],
+      ...before.slice(2, -1),
+      added,
+    ]);
+    expect(rows.every(row => row.quantity === 0)).toBe(true);
+    const multiRowLocks = memory.queries.filter(
+      query => query.locked && /\blike\b/i.test(query.sql)
+    );
+    expect(multiRowLocks).toHaveLength(2);
+    multiRowLocks.forEach(query => {
+      expect(query.orderColumn).toBe("settingKey");
+      expect(query.params[0]).toBe(`${COSTCO_SETTING_PREFIX}%`);
+      expect(query.sql).toMatch(/\bREGEXP\b/);
+    });
+    expect(memory.settings.get("smtp_password")!.settingValue).toBe("PRIVATE");
+  });
+
+  it("rolls back the whole reorder on a later write failure", async () => {
+    const rows = await caller().order();
+    rows.forEach((row, index) => setPosition(row.id, 1700000000000 + index));
+    const before = [...memory.settings.entries()];
+    memory.writes.length = 0;
+    memory.failAfterUpdates(1);
+    await expect(
+      caller().moveOrder({ id: rows[0].id, direction: "down" })
+    ).rejects.toMatchObject({ code: "INTERNAL_SERVER_ERROR" });
+    expect(memory.writes).toHaveLength(1);
+    expect([...memory.settings.entries()]).toEqual(before);
   });
 });
 
@@ -915,6 +1235,9 @@ describe("Costco dynamic catalog", () => {
     await expect(
       caller().setBinding({ id, inventoryProductId: null })
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    await expect(
+      caller().moveOrder({ id, direction: "up" })
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
     expect(getDb).not.toHaveBeenCalled();
   });
 
@@ -929,6 +1252,7 @@ describe("Costco dynamic catalog", () => {
         () => caller().setOrderItem({ id, quantity: 3 }),
         () => caller().addOrderItem({ id }),
         () => caller().removeOrderItem({ id }),
+        () => caller().moveOrder({ id, direction: "up" }),
       ]) {
         await expect(call()).rejects.toMatchObject({ code: "BAD_REQUEST" });
       }

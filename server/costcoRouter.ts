@@ -7,6 +7,7 @@ import {
   createCostco,
   getCostcoOrder,
   listCostco,
+  moveCostcoOrderItem,
   removeCostcoOrderItem,
   resetCostcoOrder,
   setCostcoBinding,
@@ -91,6 +92,12 @@ export const costcoRouter = router({
     await removeCostcoOrderItem(input.id);
     return success();
   }),
+  moveOrder: adminProcedure
+    .input(idInput.extend({ direction: z.enum(["up", "down"]) }))
+    .mutation(async ({ input }) => {
+      await moveCostcoOrderItem(input);
+      return success();
+    }),
   resetOrder: adminProcedure.mutation(async () => {
     await resetCostcoOrder();
     return success();

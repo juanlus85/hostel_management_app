@@ -246,16 +246,20 @@ export async function listCostco(): Promise<CostcoCatalogRow[]> {
   });
 }
 
+// Compartir el desempate con los movimientos: posiciones heredadas pueden repetirse.
+function compareOrderRows(a: StoredRow, b: StoredRow): number {
+  return (
+    a.order.position - b.order.position ||
+    a.catalog.id.localeCompare(b.catalog.id)
+  );
+}
+
 export async function getCostcoOrder(): Promise<CostcoOrderRow[]> {
   return withDatabase(async db => {
     const { rows, products } = await loadRows(db);
     return rows
       .filter(row => row.order.included)
-      .sort(
-        (a, b) =>
-          a.order.position - b.order.position ||
-          a.catalog.id.localeCompare(b.catalog.id)
-      )
+      .sort(compareOrderRows)
       .map(row => {
         const item = {
           ...publicRow(row, products),
@@ -397,33 +401,86 @@ export async function removeCostcoOrderItem(id: string): Promise<void> {
   });
 }
 
+async function lockCostcoRows(tx: Transaction): Promise<StoredRow[]> {
+  // Todas las operaciones multifila adquieren locks en el mismo orden. Nunca
+  // bloquear primero el artículo solicitado y después sus vecinos (deadlock).
+  // La lectura FOR UPDATE obtiene el estado vigente, no un snapshot previo.
+  const saved = await tx
+    .select({
+      settingKey: appSettings.settingKey,
+      settingValue: appSettings.settingValue,
+    })
+    .from(appSettings)
+    .where(costcoSettingsFilter())
+    .orderBy(appSettings.settingKey)
+    .for("update");
+  return saved.map(item =>
+    parseRow(
+      item.settingValue,
+      item.settingKey.slice(COSTCO_SETTING_PREFIX.length)
+    )
+  );
+}
+
+export async function moveCostcoOrderItem(input: {
+  id: string;
+  direction: "up" | "down";
+}): Promise<void> {
+  validateCostcoId(input.id);
+  if (input.direction !== "up" && input.direction !== "down")
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Dirección de movimiento Costco no válida",
+    });
+  await withDatabase(db =>
+    db.transaction(async tx => {
+      const rows = await lockCostcoRows(tx);
+      const item = rows.find(row => row.catalog.id === input.id);
+      if (!item)
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Artículo Costco desconocido",
+        });
+      if (!item.order.included)
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "El artículo Costco no está incluido en el pedido",
+        });
+      // Pedido completo, también cantidades cero; nunca depende de la búsqueda UI.
+      const ordered = rows
+        .filter(row => row.order.included)
+        .sort(compareOrderRows);
+      const index = ordered.indexOf(item);
+      const next = index + (input.direction === "up" ? -1 : 1);
+      // Extremos son un no-op real, incluso con posiciones heredadas sin normalizar.
+      if (next < 0 || next >= ordered.length) return;
+      [ordered[index], ordered[next]] = [ordered[next], ordered[index]];
+      for (let position = 0; position < ordered.length; position++) {
+        const row = ordered[position];
+        if (row.order.position === position) continue;
+        // Normalizar desde el orden actual evita intercambios ambiguos por empates
+        // o Date.now. Solo modificar position sobre la versión recién bloqueada.
+        row.order.position = position;
+        await tx
+          .update(appSettings)
+          .set({ settingValue: JSON.stringify(row), updatedAt: new Date() })
+          .where(eq(appSettings.settingKey, costcoSettingKey(row.catalog.id)));
+      }
+    })
+  );
+}
+
 export async function resetCostcoOrder(): Promise<void> {
   await withDatabase(db =>
     db.transaction(async tx => {
-      // Bloquear todas las filas para reset atómico, conservando todos los vínculos/catalog.
-      const saved = await tx
-        .select({
-          settingKey: appSettings.settingKey,
-          settingValue: appSettings.settingValue,
-        })
-        .from(appSettings)
-        .where(costcoSettingsFilter())
-        .orderBy(appSettings.settingKey)
-        .for("update");
-      for (const item of saved) {
-        const id = item.settingKey.slice(COSTCO_SETTING_PREFIX.length);
-        if (
-          !item.settingKey.startsWith(COSTCO_SETTING_PREFIX) ||
-          !isCostcoId(id)
-        )
-          continue;
-        const row = parseRow(item.settingValue, id);
+      const rows = await lockCostcoRows(tx);
+      for (const row of rows) {
         // Reiniciar solo cantidades, sin reinsertar artículos retirados ni perder paquetes.
         row.order.quantity = 0;
         await tx
           .update(appSettings)
           .set({ settingValue: JSON.stringify(row), updatedAt: new Date() })
-          .where(eq(appSettings.settingKey, item.settingKey));
+          .where(eq(appSettings.settingKey, costcoSettingKey(row.catalog.id)));
       }
     })
   );

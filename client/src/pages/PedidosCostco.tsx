@@ -21,6 +21,8 @@ import {
   Loader2,
   ShoppingCart,
   Search,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { InventoryProductPicker } from "./ArticulosCostco";
@@ -35,6 +37,7 @@ import {
   costcoOrderEmailText,
 } from "@shared/costcoOrderExport";
 import { copyCostcoOrderClipboard } from "@/lib/costcoClipboard";
+import { moveCostcoOrderRows } from "@shared/costcoOrderPosition";
 
 function IntegerField({
   value,
@@ -180,13 +183,32 @@ export default function PedidosCostco() {
     },
     onError: error => toast.error(error.message),
   });
+  const move = trpc.costco.moveOrder.useMutation({
+    onMutate: async input => {
+      await utils.costco.order.cancel();
+      const previous = utils.costco.order.getData();
+      utils.costco.order.setData(undefined, current =>
+        current
+          ? moveCostcoOrderRows(current, input.id, input.direction)
+          : current
+      );
+      return { previous };
+    },
+    onError: (error, _input, context) => {
+      if (context?.previous)
+        utils.costco.order.setData(undefined, context.previous);
+      toast.error(`No se pudo guardar el orden: ${error.message}`);
+    },
+    onSettled: () => utils.costco.order.invalidate(),
+  });
   const busy =
     update.isPending ||
     link.isPending ||
     add.isPending ||
     remove.isPending ||
     reset.isPending ||
-    sync.isPending;
+    sync.isPending ||
+    move.isPending;
   const rows = order.data ?? [];
   const total = calculateCostcoOrderTotal(rows);
   const selectedCount = rows.filter(row => row.quantity > 0).length;
@@ -340,6 +362,41 @@ export default function PedidosCostco() {
       <Trash2 className="h-4 w-4" />
     </Button>
   );
+  const orderButtons = (row: (typeof rows)[number]) => {
+    const index = rows.findIndex(item => item.id === row.id);
+    return (
+      <div
+        role="group"
+        aria-label={`Orden de ${row.name}`}
+        className="flex shrink-0 items-center gap-1"
+      >
+        <Button
+          type="button"
+          size="icon"
+          variant="outline"
+          className="h-11 w-11"
+          aria-label={`Subir ${row.name} una posición`}
+          title="Subir una posición"
+          disabled={busy || index <= 0}
+          onClick={() => move.mutate({ id: row.id, direction: "up" })}
+        >
+          <ArrowUp className="h-4 w-4" />
+        </Button>
+        <Button
+          type="button"
+          size="icon"
+          variant="outline"
+          className="h-11 w-11"
+          aria-label={`Bajar ${row.name} una posición`}
+          title="Bajar una posición"
+          disabled={busy || index < 0 || index >= rows.length - 1}
+          onClick={() => move.mutate({ id: row.id, direction: "down" })}
+        >
+          <ArrowDown className="h-4 w-4" />
+        </Button>
+      </div>
+    );
+  };
 
   return (
     <div className="min-w-0 space-y-4">
@@ -352,8 +409,9 @@ export default function PedidosCostco() {
                 Pedidos Costco
               </h2>
               <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-                Las cantidades y relaciones se guardan automáticamente. El
-                precio unitario corresponde al artículo o paquete de Costco.
+                Las cantidades, el orden y las relaciones se guardan
+                automáticamente. El precio unitario corresponde al artículo o
+                paquete de Costco.
               </p>
             </div>
             <div className="shrink-0 rounded-xl border border-sky-200 bg-background px-5 py-3">
@@ -431,6 +489,11 @@ export default function PedidosCostco() {
             bordes y las columnas. «Hay» es el stock actual; «Total previsto» =
             Hay + Cantidad × Unidad/Paquete.
           </p>
+          <p className="text-xs text-muted-foreground">
+            Usa las flechas para ordenar el pedido. El mismo orden se conserva
+            al volver a abrirlo, al copiarlo y en el CSV. Con una búsqueda
+            activa, las flechas mueven en el pedido completo.
+          </p>
           {busy && (
             <p
               role="status"
@@ -473,6 +536,7 @@ export default function PedidosCostco() {
           <thead className="bg-slate-50 text-xs text-muted-foreground">
             <tr>
               {[
+                "Orden",
                 "Item",
                 "Descripción",
                 "Producto en inventario",
@@ -496,6 +560,7 @@ export default function PedidosCostco() {
                 key={row.id}
                 className="border-t align-middle hover:bg-slate-50/50"
               >
+                <td className="w-[110px] px-3 py-3">{orderButtons(row)}</td>
                 <td className="px-3 py-3 font-mono text-xs">
                   {row.costcoCode}
                 </td>
@@ -523,7 +588,7 @@ export default function PedidosCostco() {
           </tbody>
           <tfoot className="border-t bg-sky-50">
             <tr>
-              <td colSpan={8} className="px-3 py-4 text-right font-semibold">
+              <td colSpan={9} className="px-3 py-4 text-right font-semibold">
                 TOTAL PEDIDO (todos los artículos)
               </td>
               <td className="whitespace-nowrap px-3 py-4 text-right font-bold text-sky-800">
@@ -603,6 +668,13 @@ export default function PedidosCostco() {
                   </dd>
                 </div>
               </dl>
+              <div className="flex items-center justify-between gap-2 border-t pt-3">
+                <p className="text-xs text-muted-foreground">
+                  Posición {rows.findIndex(item => item.id === row.id) + 1} de{" "}
+                  {rows.length}
+                </p>
+                {orderButtons(row)}
+              </div>
             </CardContent>
           </Card>
         ))}

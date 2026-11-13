@@ -19,6 +19,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
+import { formatInventoryQuantity } from "@shared/inventoryQuantityDisplay";
 
 export default function InventarioProductos() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -431,7 +432,7 @@ export default function InventarioProductos() {
                   €{parseFloat(product.price).toFixed(2)}
                 </td>
                 <td className="p-3 text-right">
-                  {parseFloat(product.inStock).toFixed(3)}
+                  {formatInventoryQuantity(product.inStock)}
                 </td>
                 <td className="p-3">
                   <div className="flex items-center justify-center gap-2">
